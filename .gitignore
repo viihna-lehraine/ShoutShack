@@ -1,3 +1,5 @@
-./dev
-./doc
+.dev
+.scripts
 *node_modules
+*.env
+jsconfig.json
