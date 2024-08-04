@@ -1,5 +1,5 @@
 .dev
-.scripts
 *node_modules
 *.env
 jsconfig.json
+nodemon.json

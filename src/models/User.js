@@ -1,9 +1,17 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const argon2 = require('argon2');
+const crypto = require('crypto');
+
+const PEPPER = process.env.PEPPER;
 
 
 const User = sequelize.define('User', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true
+    },
     username: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -18,12 +26,16 @@ const User = sequelize.define('User', {
         allowNull: false,
         unique: true
     },
-    isVerified: {
+    totpSecret: {
+        type: DataTypes.STRING
+    },
+    hibpCheckFailed: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
-    totpSecret: {
-        type: DataTypes.STRING
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     },
     guestbookProfile: {
         type: DataTypes.JSON,
@@ -31,22 +43,33 @@ const User = sequelize.define('User', {
     },
     customStyles: {
         types: DataTypes.JSON,
-        allowNull: true
+        allowNull: true,
     }
 }, {
     hooks: {
         beforeCreate: async (user) => {
-            const salt = crypto.randomBytes(16).toString('hex');
-            user.password = await argon2.hash(user.password, { type: argon2.argon2id, salt });
+            const salt = crypto.randomBytes(32).toString('hex');
+            user.password = await argon2.hash(user.password + PEPPER, {
+                type: argon2.argon2id,
+                memoryCost: 19456, // 19 MiB memory
+                timeCost: 2, // 2 iterations
+                parallelism: 1,
+                salt,
+            })
         }
     }
 });
 
 
 // Password validation
-User.validatePassword = async (password) => {
-    const isValid = password.length >= 8 && password.length <= 128;
-    return isValid;
+User.validatePassword = (password) => {
+    const isValidLength = password.Length >= 8 && password.length <= 128;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[^A-za-z0-9]/.test(password);
+
+    return isValidLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial;
 };
 
 

@@ -1,0 +1,37 @@
+<? xml version="1.0" encoding="UTF-8">
+
+<urlset xmlns="https=http://www.sitemaps.org/schema/sitemap/0.9">
+
+    <url>
+
+        <loc>https://www.[WEBPAGE].html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/confirm.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/password-reset.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/register.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+</urlunset>
