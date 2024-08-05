@@ -14,6 +14,7 @@ Disallow: /src/
 # Explicitly allow all bots to access these directories 
 # User-agent: *
 # Allow: /public/*.html
+# Allow: /public/guestbook/
 # Allow: /public/css/main.css
 # Allow: /public/js/
 # Allow: /public/sitemap.xml

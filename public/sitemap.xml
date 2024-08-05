@@ -12,7 +12,31 @@
 
     <url>
 
+        <loc>https://www.[WEBPAGE]/about.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
         <loc>https://www.[WEBPAGE]/confirm.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/dashboard.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/faq.html</loc>
 
         <lastmod>2024-08-03</lastmod>
     
@@ -29,6 +53,22 @@
     <url>
 
         <loc>https://www.[WEBPAGE]/register.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/resources.html</loc>
+
+        <lastmod>2024-08-03</lastmod>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[WEBPAGE]/tos.html</loc>
 
         <lastmod>2024-08-03</lastmod>
     

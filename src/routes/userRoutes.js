@@ -73,7 +73,7 @@ router.post('/register', async (req, res) => {
             const mailOptions = {
                 from: process.env.EMAIL_FROM,
                 to: newUser.email,
-                subject: 'Please confirm your email',
+                subject: 'Guestbook - Account Confirmation',
                 html: confirmationEmailTemplate(newUser.username, confirmationUrl)
             };
 

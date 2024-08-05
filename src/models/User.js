@@ -1,12 +1,17 @@
-const { DataTypes } = require('sequelize');
+const { Sequelize, DataTypes, Model } = require('sequelize');
 const sequelize = require('../config/database');
 const argon2 = require('argon2');
 const crypto = require('crypto');
 
-const PEPPER = process.env.PEPPER;
+
+class User extends Model {
+    async comparePassword(password) {
+        return await argon2.verify(this.password, password + process.env.PEPPER);
+    }
+};
 
 
-const User = sequelize.define('User', {
+User.init({
     id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
@@ -29,11 +34,19 @@ const User = sequelize.define('User', {
     totpSecret: {
         type: DataTypes.STRING
     },
-    hibpCheckFailed: {
+    isVerified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
-    isVerified: {
+    resetPasswordToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    resetPasswordExpires: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    hibpCheckFailed: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
@@ -42,10 +55,12 @@ const User = sequelize.define('User', {
         allowNull: true
     },
     customStyles: {
-        types: DataTypes.JSON,
+        types: DataTypes.TEXT,
         allowNull: true,
     }
 }, {
+    sequelize,
+    modelName: 'User',
     hooks: {
         beforeCreate: async (user) => {
             const salt = crypto.randomBytes(32).toString('hex');

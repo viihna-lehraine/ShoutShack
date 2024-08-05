@@ -1,11 +1,15 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env')});
 const express = require('express');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 const sequelize = require('./config/database');
+const apiRoutes = require('./routes/apiRoutes');
 const userRoutes = require('./routes/userRoutes');
+const staticRoutes = require('./routes/staticRoutes');
 const https = require('https');
 const fs = require('fs');
+const helmet = require('helmet');
 require('./config/passport')(passport);
 
 const app = express();
@@ -13,8 +17,26 @@ const app = express();
 const SERVER_PORT = process.env.SERVER_PORT || 3000;
 
 
-// Middleware
+// Middleware for parsing JSON/URL-encoded bodies and setting secure HTTP headers
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(helmet({   // set secure HTTP headers
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://api.haveibeenpwned.com'],
+            connectSrc: ["'self'", 'https://api.haveibeenpwned.com', 'https://cdnjs.cloudflare.com']
+        }
+    },
+    referrerPolicy: { policy: 'no-referrer' },
+    frameguard: { action: 'deny' }
+}));
+
+
+// Initialize passport
 app.use(passport.initialize());
 
 
@@ -35,6 +57,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/', staticRoutes);
 
 
 // Enforce HTTPS and TLS

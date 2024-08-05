@@ -1,7 +1,15 @@
+@import 'global';
+
 @import 'keyframes';
 @import 'mixins';
 @import 'variables';
 
-@import 'base';
-
+@import 'about';
+@import 'confirm';
+@import 'dashboard';
+@import 'faq';
 @import 'index';
+@import 'password-reset';
+@import 'register';
+@import 'resources';
+@import 'tos';

@@ -2,7 +2,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  color: #0A0A0A;
+  color: var(--black-green);
 }
 
 h1 {
@@ -23,7 +23,7 @@ label {
   width: 100vw;
   justify-content: flex-start;
   align-items: center;
-  background-color: var(--dark-blue);
+  background-color: var(--white-green);
   overflow-x: hidden;
   overflow-y: scroll;
 }
@@ -31,6 +31,13 @@ label {
 #main-title-box {
   top: 3vh;
   padding: 12px;
+}
+
+:root {
+  --white-green: #D8F0A0;
+  --light-green: #1E8E43;
+  --dark-blue: #1E1E3A;
+  --black-green: #011206;
 }
 
 #primary-container-box {
