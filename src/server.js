@@ -1,3 +1,9 @@
+// Guestbook - version 0.0.0 (initial development)
+// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
+// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+
+
+
 const path = require('path');
 const express = require('express');
 const passport = require('passport');
@@ -10,14 +16,12 @@ const https = require('https');
 const fs = require('fs');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const logger = require('../config/logger'); 
+const logger = require('./config/logger'); 
 const getSecrets = require('./config/sops');
 require('./config/passport')(passport);
 
 const secrets = getSecrets();
 const app = express();
-
-const PORT = secrets.PORT;
 
 
 // Middleware for parsing JSON/URL-encoded bodies and setting secure HTTP headers
@@ -55,6 +59,17 @@ app.use(passport.initialize());
 app.use(express.static(path.join(__dirname, '../public')));
 
 
+// Use static routes
+app.use('/', staticRoutes);
+
+
+// Middleware for error handling
+app.use((err, req, res, next) => {
+    logger.error(err.stack);
+    res.status(500).send('server.js - Server error - something failed');
+});
+
+
 // Test database connection and sync models
 (async () => {
     try {
@@ -64,12 +79,6 @@ app.use(express.static(path.join(__dirname, '../public')));
         console.error('Database Connection Test and Sync: Server error: ', err);
     }
 })();
-
-
-// Routes
-app.use('./routes/users', userRoutes);
-app.use('./routes/staticRoutes', staticRoutes);
-app.use('./routes/apiRoutes', apiRoutes);
 
 
 // Enforce HTTPS and TLS
@@ -92,6 +101,6 @@ const options = {
 };
 
 
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+https.createServer(options, app).listen(secrets.PORT, () => {
+    console.log(`Server running on port ${secrets.PORT}`);
 });

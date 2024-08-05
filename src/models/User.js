@@ -1,5 +1,11 @@
+// Guestbook - version 0.0.0 (initial development)
+// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
+// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+
+
+
 const { Sequelize, DataTypes, Model } = require('sequelize');
-const sequelize = require('../config/database');
+const initializeDatabase = require('../config/database');
 const getSecrets = require('../config/sops');
 const argon2 = require('argon2'); 
 const crypto = require('crypto');
@@ -14,79 +20,85 @@ class User extends Model {
 }
 
 
-User.init({
-    userid: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        allowNull: false,
-        unique: true
-    },
-    username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    totpSecret: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
-    },
-    isAccountVerified: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    },
-    resetPasswordToken: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    resetPasswordExpires: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
-    hibpCheckFailed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false
-    },
-    guestbookProfile: {
-        type: DataTypes.JSON,
-        allowNull: true
-    },
-    customStyles: {
-        types: DataTypes.TEXT,
-        allowNull: true,
-    },
-    created_at: {
-        type: DataTypes.DATE,
-        defaultValue: Sequelize.NOW
-    }
-}, {
-    sequelize,
-    modelName: 'User',
-    timestamps: false,
-    hooks: {
-        beforeCreate: async (user) => {
-            const salt = crypto.randomBytes(32).toString('hex');
-            user.password = await argon2.hash(user.password + PEPPER, {
-                type: argon2.argon2id,
-                memoryCost: 19456, // 19 MiB memory
-                timeCost: 2, // 2 iterations
-                parallelism: 1,
-                salt,
-            })
+async function initializeUserModel() {
+    const sequelize = await initializeDatabase();
+
+    User.init({
+        userid: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+            allowNull: false,
+            unique: true
+        },
+        username: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true
+        },
+        password: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true
+        },
+        totpSecret: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true
+        },
+        isAccountVerified: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        resetPasswordToken: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        resetPasswordExpires: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        hibpCheckFailed: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            allowNull: false
+        },
+        guestbookProfile: {
+            type: DataTypes.JSON,
+            allowNull: true
+        },
+        customStyles: {
+            types: DataTypes.TEXT,
+            allowNull: true,
+        },
+        created_at: {
+            type: DataTypes.DATE,
+            defaultValue: Sequelize.NOW
         }
-    }
-});
+    }, {
+        sequelize,
+        modelName: 'User',
+        timestamps: false,
+        hooks: {
+            beforeCreate: async (user) => {
+                const salt = crypto.randomBytes(32).toString('hex');
+                user.password = await argon2.hash(user.password + PEPPER, {
+                    type: argon2.argon2id,
+                    memoryCost: 19456, // 19 MiB memory
+                    timeCost: 2, // 2 iterations
+                    parallelism: 1,
+                    salt,
+                })
+            }
+        }
+    });
+
+    await User.sync();
+};
 
 
 // Password validation
@@ -106,5 +118,7 @@ User.prototype.comparePassword = async function(password) {
     return await argon2.verify(this.password, password);
 };
 
+
+initializeUserModel();
 
 module.exports = User;

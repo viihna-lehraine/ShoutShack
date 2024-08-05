@@ -1,3 +1,9 @@
+// Guestbook - version 0.0.0 (initial development)
+// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
+// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+
+
+
 const express = require('express');
 const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
@@ -6,7 +12,7 @@ const zxcvbn = require('zxcvbn');
 const crypto = require('crypto');
 const User = require('../models/User');
 const transporter = require('../config/mailer');
-const confirmationEmailTemplate = require('../utils/confirmationEmailTemplate');
+const confirmationEmailTemplate = require('../utils/emailTemplates/confirmationEmailTemplate');
 const email2FAUtil = require('../utils/email2FAUtil');
 const totpUtil = require('../utils/totpUtil');
 const getSecrets = require('../config/sops');

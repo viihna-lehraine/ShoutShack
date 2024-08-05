@@ -1,12 +1,15 @@
+// Guestbook - version 0.0.0 (initial development)
+// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
+// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+
+
+
 const getSecrets = require('../../../src/config/sops');
 const path = require('path');
 
 const secrets = getSecrets();
 
 import { sanitizeInput, validatePassword, } from '../exports.js';
-
-
-const PORT = secrets.env.PORT;
 
 
 document.getElementById('login-box-form').addEventListener('submit', async (e) => {
@@ -24,7 +27,7 @@ document.getElementById('login-box-form').addEventListener('submit', async (e) =
         return;
     }
 
-    const response = await fetch(`https://localhost:${PORT}}/index`, {
+    const response = await fetch(`https://localhost:${secrets.PORT}}/index`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -33,7 +36,7 @@ document.getElementById('login-box-form').addEventListener('submit', async (e) =
     })
 
     try {
-        const response = await fetch(`https://localhost:${PORT}/index`, {
+        const response = await fetch(`https://localhost:${secrets.PORT}/index`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

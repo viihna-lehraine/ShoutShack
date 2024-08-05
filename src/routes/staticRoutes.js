@@ -1,16 +1,14 @@
+// Guestbook - version 0.0.0 (initial development)
+// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
+// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+
+
+
 const express = require('express');
 const path = require('path');
-const morgan = require('morgan');
 const logger = require('../config/logger');
 
 const router = express.Router();
-
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    logger.error(err.stack);
-    res.status(500).send('Server error - something failed');
-});
 
 
 // Home / Login page route
