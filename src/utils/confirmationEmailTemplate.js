@@ -55,7 +55,7 @@ module.exports = (username, confirmationUrl) => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Account Confirmation</h1>
+                        <h1>Guestbook - Account Confirmation</h1>
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
@@ -66,7 +66,8 @@ module.exports = (username, confirmationUrl) => {
                     </div>
                     <div class="footer">
                         <p>If you did not register for an account at guestbook.com, please ignore this email.</p>
-                        <p>If you experience any issues registering your account, please send an email to me at <a href="mailto:admin@viihnatech.com"</p>
+                        <p>If you experience any issues registering your account, please send an email to me at <a href="mailto:admin@viihnatech.com" and I'll respond to you as soon as possible.</p>
+                        <p>Have a great day! :)</p>
                     </div>
                 </div>
             </body>

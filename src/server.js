@@ -9,6 +9,8 @@ const staticRoutes = require('./routes/staticRoutes');
 const https = require('https');
 const fs = require('fs');
 const helmet = require('helmet');
+const morgan = require('morgan');
+const logger = require('../config/logger'); 
 const getSecrets = require('./config/sops');
 require('./config/passport')(passport);
 
@@ -37,6 +39,14 @@ app.use(helmet({   // set secure HTTP headers
 }));
 
 
+// HTTP request logging
+app.use(morgan('combined', {
+    stream: {
+        write: (message) => logger.info(message.trim())
+    }
+}));
+
+
 // Initialize passport
 app.use(passport.initialize());
 
@@ -57,8 +67,9 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 
 // Routes
-app.use('/api/users', userRoutes);
-app.use('/', staticRoutes);
+app.use('./routes/users', userRoutes);
+app.use('./routes/staticRoutes', staticRoutes);
+app.use('./routes/apiRoutes', apiRoutes);
 
 
 // Enforce HTTPS and TLS

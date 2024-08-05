@@ -1,7 +1,7 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
 const sequelize = require('../config/database');
-const getSecrets = require('./sops');
-const argon2 = require('argon2');
+const getSecrets = require('../config/sops');
+const argon2 = require('argon2'); 
 const crypto = require('crypto');
 
 secrets = getSecrets();
@@ -20,7 +20,7 @@ User.init({
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
-        unqiue: true
+        unique: true
     },
     username: {
         type: DataTypes.STRING,
@@ -41,7 +41,7 @@ User.init({
         allowNull: true,
         unique: true
     },
-    isVerified: {
+    isAccountVerified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },

@@ -7,7 +7,7 @@ const secrets = getSecrets();
 const sequelize = new Sequelize(secrets.DB_URL, {
     dialect: secrets.SEQ_DIALECT,
     protocol: secrets.SEQ_PROTOCOL,
-    logging: false,
+    logging: true,
 });
 
 
