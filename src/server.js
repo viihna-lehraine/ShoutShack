@@ -1,16 +1,12 @@
 // Guestbook - version 0.0.0 (initial development)
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
-// Author: Viihna Lehraine (viihna@voidfucker.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
+// Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 
 
 const path = require('path');
-const express = require('express');
 const passport = require('passport');
 const bodyParser = require('body-parser');
-const sequelize = require('./config/database');
-const apiRoutes = require('./routes/apiRoutes');
-const userRoutes = require('./routes/userRoutes');
 const staticRoutes = require('./routes/staticRoutes');
 const https = require('https');
 const fs = require('fs');
@@ -19,6 +15,8 @@ const morgan = require('morgan');
 const logger = require('./config/logger'); 
 const getSecrets = require('./config/sops');
 require('./config/passport')(passport);
+const sequelize = require('./config/database');
+const express = require('express');
 
 const secrets = getSecrets();
 const app = express();

@@ -4,13 +4,13 @@
 
 
 
-module.exports = (username, twoFactorEmail => {
+module.exports = (username) => {
     return `
         <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <title>Guestbook - Account Confirmation</title>
+                <title>Guestbook - 2 Factor Authentication Enabled</title>
                 <style>
                     body {
                     margin: 0;
@@ -61,20 +61,14 @@ module.exports = (username, twoFactorEmail => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Guestbook - Your Login Code</h1>
+                        <h1>Guestbook - 2 Factor Authentication Enabled</h1>
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
-                        <p>Here is the code you requested so that you may log into your acount. Please know that this code will be valid for the next 30 minutes. If you are unable to login by then, please request.
-                        <h2>${emailVerificationCode}</h2>
+                        <p>Two-factor authentciation has been enabled for your <a href="URL">Guestbook</a> account. If you did not perform this action, your account may be compromised. In that event, please reach out to me directly at <a href="mailto:admin@viihnatech.com">viihna@viihnatech.com</a< and I will investigate this as soon as possible.</p>
                     </div>
-                    <footer>
-                        <p>If you did not request this code, then someone else may have access to your password and is trying to access your account. If this is the case, please log in and change your password at your earliest convenience.</p>
-                        <p>Please feel free to reach out to my by sendi an email to me at <a href="mailto:admin@viihnatech.com" and I'll respond to you as soon as possible.</p>
-                        <p>Have a great day! :)</p>
-                    </footer>
                 </div>
             </body>
         </html>
     `;
-});
+};
