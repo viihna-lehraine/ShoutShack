@@ -13,7 +13,7 @@ const confirmationEmailTemplate = require('../utils/confirmationEmailTemplate');
 
 const router = express.Router();
 
-const PORT = process.env.SERVER_PORT || 3000;
+const PORT = process.env.PORT;
 const PEPPER = process.env.PEPPER;
 
 
@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
             
             // Generate a confirmation token
             const confirmationToken = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            const confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
+            const confirmationUrl = `http://localhost:${process.env.PORT}/api/users/confirm/${confirmationToken}`;
 
             // Send confirmation email
             const mailOptions = {
@@ -140,7 +140,7 @@ router.post('/recover-password', async (req, res) => {
         }
         // Generate a token (customize this later)
         const token = crypto.randomBytes(20).toString('hex');
-        const passwordResetUrl = `https://localhost:${SERVER_PORT}/password-reset${token}`;
+        const passwordResetUrl = `https://localhost:${PORT}/password-reset${token}`;
 
         // Store the token in the database (simplified for now)
         user.resetPasswordToken = token;

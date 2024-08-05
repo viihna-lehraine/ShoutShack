@@ -1,21 +1,26 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
 const sequelize = require('../config/database');
+const getSecrets = require('./sops');
 const argon2 = require('argon2');
 const crypto = require('crypto');
+
+secrets = getSecrets();
 
 
 class User extends Model {
     async comparePassword(password) {
         return await argon2.verify(this.password, password + process.env.PEPPER);
     }
-};
+}
 
 
 User.init({
-    id: {
+    userid: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false,
+        unqiue: true
     },
     username: {
         type: DataTypes.STRING,
@@ -32,7 +37,9 @@ User.init({
         unique: true
     },
     totpSecret: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true
     },
     isVerified: {
         type: DataTypes.BOOLEAN,
@@ -48,7 +55,8 @@ User.init({
     },
     hibpCheckFailed: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
+        allowNull: false
     },
     guestbookProfile: {
         type: DataTypes.JSON,
@@ -57,10 +65,15 @@ User.init({
     customStyles: {
         types: DataTypes.TEXT,
         allowNull: true,
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        defaultValue: Sequelize.NOW
     }
 }, {
     sequelize,
     modelName: 'User',
+    timestamps: false,
     hooks: {
         beforeCreate: async (user) => {
             const salt = crypto.randomBytes(32).toString('hex');

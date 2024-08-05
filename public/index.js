@@ -1,9 +1,11 @@
-require('dotenv').config();
+const getSecrets = require('../src/config/sops');
 const express = require('express');
 const path = require('path');
-import { fileURLToPath } from 'url';
+const fileURLToPath = require('url');
 
-const FRONTEND_PORT = process.env.FRONTEND_SERVER_PORT;
+secrets = getSecrets();
+
+const PORT = secrets.PORT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -18,6 +20,6 @@ app.get('*', (req, res) => {
 });
 
 
-app.listen(FRONTEND_SERVER_PORT, () => {
-    console.log(`Frontend server is running on port ${FRONTEND_SERVER_PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

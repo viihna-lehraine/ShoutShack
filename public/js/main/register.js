@@ -1,11 +1,4 @@
-import dotenv from 'dotenv';
-import path from 'path';
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
-
 import { updatePasswordStrength, validatePasswordsMatch } from "../exports.js"
-
-
-const FRONTEND_SERVER_PORT = process.env.FRONTEND_SERVER_PORT || 3100;
 
 
 document.getElementById('registration-form').addEventListener('submit', function (e) {

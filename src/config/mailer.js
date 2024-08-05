@@ -1,14 +1,17 @@
-require('dotenv').config();
+const getSecrets = require('./sops');
+
+const secrets = getSecrets();
+
 const nodemailer = require('nodemailer');
 
 
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: process.env.EMAIL_SECURE,
+    host: secrets.EMAIL_HOST,
+    port: secrets.EMAIL_PORT,
+    secure: secrets.EMAIL_SECURE,
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.SMTP_TOKEN
+        user: secrets.EMAIL_USER,
+        pass: secrets.SMTP_TOKEN
     } 
 });
 

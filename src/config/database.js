@@ -1,16 +1,18 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config();
+const getSecrets = require('./sops');
+
+const secrets = getSecrets();
 
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    protocol: 'postgres',
+const sequelize = new Sequelize(secrets.DB_URL, {
+    dialect: secrets.SEQ_DIALECT,
+    protocol: secrets.SEQ_PROTOCOL,
     logging: false,
 });
 
 
 sequelize.authenticate()
-    .then(() => console.log('PostgreSQL connected'))
+    .then(() => console.log('Database connected'))
     .catch(err => console.log('Error: ' + err));
 
 

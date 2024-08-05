@@ -1,11 +1,12 @@
-import dotenv from 'dotenv';
-import path from 'path';
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+const getSecrets = require('../../../src/config/sops');
+const path = require('path');
+
+const secrets = getSecrets();
 
 import { sanitizeInput, validatePassword, } from '../exports.js';
 
 
-const FRONTEND_SERVER_PORT = process.env.FRONTEND_SERVER_PORT || 3100;
+const PORT = secrets.env.PORT;
 
 
 document.getElementById('login-box-form').addEventListener('submit', async (e) => {
@@ -23,7 +24,7 @@ document.getElementById('login-box-form').addEventListener('submit', async (e) =
         return;
     }
 
-    const response = await fetch(`https://localhost:${FRONTEND_SERVER_PORT}}/index`, {
+    const response = await fetch(`https://localhost:${PORT}}/index`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -32,7 +33,7 @@ document.getElementById('login-box-form').addEventListener('submit', async (e) =
     })
 
     try {
-        const response = await fetch(`https://localhost:${FRONTEND_SERVER_PORT}/index`, {
+        const response = await fetch(`https://localhost:${PORT}/index`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
