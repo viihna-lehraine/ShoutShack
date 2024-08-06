@@ -17,7 +17,7 @@ const email2FAUtil = require('../utils/email2FAUtil');
 const totpUtil = require('../utils/totpUtil');
 const getSecrets = require('../config/sops');
 
-const secrets = getSecrets();
+const secrets = await getSecrets();
 
 const router = express.Router();
 

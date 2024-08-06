@@ -9,30 +9,30 @@ const QRCode = require('qrcode');
 
 
 function generateTOTPSecret() {
-    const secret = speakeasy.generateSecret({ length: 20 });
+    const totpSecret = speakeasy.generateSecret({ length: 20 });
     return {
-        ascii: secret.ascii,
-        hex: secret.hex,
-        base32: secret.base32,
-        otpauth_url: secret.otpauth_url,
+        ascii: totpSecret.ascii,
+        hex: totpSecret.hex,
+        base32: totpSecret.base32,
+        otpauth_url: totpSecret.otpauth_url,
     };
 };
 
 
-function generateTOTPToken(secret) {
+function generateTOTPToken(totpSecret) {
     const totpToken = speakeasy.totp({
-        secret: secret,
+        totpSecret: totpSecret,
         encoding: 'base32',
     });
     return totpToken;
 };
 
 
-function verifyTOTPToken(secret, token) {
+function verifyTOTPToken(totpSecret, totpToken) {
     const isTOTPTokenValid = speakeasy.totp.verify({
-        secret: secret,
+        totpSecret: totpSecret,
         encoding: 'base32',
-        token: token,
+        totpToken: totpToken,
         window: 1, // gives leeway for clock drift
     });
     return isTOTPTokenValid;

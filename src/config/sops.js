@@ -21,4 +21,4 @@ async function getSecrets() {
 };
 
 
-module.exports = getSecrets
+module.exports = getSecrets;

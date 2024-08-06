@@ -10,17 +10,17 @@ const getSecrets = require('./sops');
 
 async function initializeDatabase() {
     const secrets = await getSecrets();
-    console.log('database.js - Secrets: ', secrets);
+    console.log('db.js - Secrets: ', secrets);
     const dbUrl = secrets.DB_URL;
     if (!dbUrl) {
-        throw new Error('database.js - Database URL not found in secrets');
+        throw new Error('db.js - Database URL not found in secrets');
     }
 
     const sequelize = new Sequelize(databaseUrl, {
         dialect: secrets.DB_DIALECT,
         protocol: secrets.DB_PROTOCOL,
         dialectOptions: {
-            ssl: secrets.USE_SSL || false,
+            ssl: secrets.USE_SSL,
         },
         define: {
             timstamps: true,
@@ -30,9 +30,9 @@ async function initializeDatabase() {
 
     try {
         await sequelize.authenticate();
-        console.log('database.js - Connection has been established successfully.');
+        console.log('db.js - Connection has been established successfully.');
     } catch (error) {
-        console.error('database.js - Unable to connect to the database: ', error);
+        console.error('db.js - Unable to connect to the database: ', error);
     }
 
     return sequelize;
