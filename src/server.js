@@ -13,14 +13,15 @@ const fs = require('fs');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const logger = require('./config/logger'); 
+require('./config/passport')(passport);
 const getSecrets = require('./config/sops');
-const sequelize = require('./config/db');
-passport = require('./config/passport')(passport);
+const initializeDatabase = require('./config/db');
 const express = require('express');
 
 
 (async () => {
     const secrets = await getSecrets();
+    const sequelize = await initializeDatabase();
     const app = express();
 
     // Middleware for parsing JSON/URL-encoded bodies and setting secure HTTP headers
@@ -95,8 +96,8 @@ const express = require('express');
 
     // Start the server with HTTPS
     const options = {
-        key: fs.readFileSync(secrets.SSL_TEST_KEY_PATH),
-        cert: fs.readFileSync(secrets.SSL_TEST_CERT_PATH)
+        key: fs.readFileSync(secrets.APP_SSL_KEY),
+        cert: fs.readFileSync(secrets.APP_SSL_CERT)
     };
 
 

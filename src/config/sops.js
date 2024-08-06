@@ -12,7 +12,6 @@ async function getSecrets() {
     try {
         const secretsPath = path.join(__dirname, 'secrets.json.gpg');
         const decryptedFile = execSync(`sops -d --output-type json ${secretsPath}`).toString();
-        console.log('Decrypted secrets: ', decryptedFile);
         return JSON.parse(decryptedFile);
     } catch (err) {
         console.error('Error retrieving secrets from SOPS: ', err);

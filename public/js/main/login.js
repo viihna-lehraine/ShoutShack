@@ -4,7 +4,7 @@
 
 
 
-const getSecrets = require('../../../src/config/sops');
+const getSecrets = require('../../../src/config/sops.js');
 const path = require('path');
 
 const secrets = getSecrets();
