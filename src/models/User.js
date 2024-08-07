@@ -8,7 +8,7 @@ const { Sequelize, DataTypes, Model } = require('sequelize');
 const initializeDatabase = require('../config/db');
 const { getSecrets } = require('../config/sops');
 const argon2 = require('argon2'); 
-const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 
 
 (async () => {
@@ -16,7 +16,7 @@ const crypto = require('crypto');
 
     class User extends Model {
         async comparePassword(password) {
-            return await argon2.verify(this.password, password + process.env.PEPPER);
+            return await argon2.verify(this.password, password + secrets.PEPPER);
         }
     }
 
@@ -85,9 +85,11 @@ const crypto = require('crypto');
             timestamps: false,
             hooks: {
                 beforeCreate: async (user) => {
-                    const salt = crypto.randomBytes(32).toString('hex');
+                    const saltRounds = 16;
+                    const salt = await bcrypt.genSalt(saltRounds);
                     user.password = await argon2.hash(user.password + secrets.PEPPER, {
                         type: argon2.argon2id,
+                        salt: Buffer.from(salt, 'hex'),
                         memoryCost: 19456, // 19 MiB memory
                         timeCost: 2, // 2 iterations
                         parallelism: 1,

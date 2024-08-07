@@ -1,7 +1,7 @@
 .dev/
 .keys/
-.logs/
 .scripts/
+logs
 *node_modules/
 
 *.env

@@ -6,18 +6,21 @@
 
 const { Sequelize } = require('sequelize');
 const { getSecrets } = require('./sops');
+const setupLogger = require('./logger');
 
 
 async function initializeDatabase() {
     const secrets = await getSecrets();
+    const logger = await setupLogger();
 
     if (secrets) {
-        console.log('db.js - secrets retrieved');
+        logger.info('db.js - secrets retrieved');
     }
 
     const dbUrl = secrets.DB_URL;
 
     if (!dbUrl) {
+        logger.error('db.js - Datbase URL not found in secrets');
         throw new Error('db.js - Database URL not found in secrets');
     }
 
@@ -38,13 +41,14 @@ async function initializeDatabase() {
             timestamps: true,
             underscored: true
         },
-    });
+        logging: (msg) => logger.debug(`Sequelize: ${msg}`)
+    })
 
     try {
         await sequelize.authenticate();
-        console.log('db.js - Connection has been established successfully.');
+        logger.info('db.js - Connection has been established successfully.');
     } catch (error) {
-        console.error('db.js - Unable to connect to the database: ', error);
+        logger.error('db.js - Unable to connect to the database: ', error);
     }
 
     return sequelize;

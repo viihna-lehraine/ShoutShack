@@ -2,35 +2,32 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-
-
 const { createLogger, format, transports } = require('winston');
-const { timestamp, printf, colorize } = format;
+const { combine, timestamp, printf, colorize, errors, json } = format;
 const DailyRotateFile = require('winston-daily-rotate-file');
 const { getSecrets } = require('./sops');
 
+const logFormat = printf(({ level, message, timestamp, stack }) => {
+    return `${timestamp}, ${level}: ${stack || message}`;
+});
 
 async function setupLogger() {
     const secrets = await getSecrets();
 
-    const logFormat = printf(({ level, message, timestamp }) => {
-        return `${timestamp}, ${level}: ${message}`;
-    });
-
     const logger = createLogger({
-        level: 'info',
-        format: format.combine(
-            timestamp({ format: 'YYYY-MM-DD HH:mm:ss:uu' }),
-            format.errors({ stack: true }),
-            format.splat(),
-            format.json(),
-            colorize(),
-            logFormat
+        level: secrets.NODE_ENV === 'production' ? 'info' : 'debug',
+        format: combine(
+            timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            errors({ stack: true }),
+            json(),
         ),
-        defaultMeta: { service: 'user-service' },
+        defaultMeta: { service: 'guestbook-service' },
         transports: [
             new transports.Console({
-                level: secrets.NODE_ENV === 'production' ? 'info' : 'debug'
+                format: combine(
+                    colorize(),
+                    logFormat
+                )
             }),
             new DailyRotateFile({
                 filename: 'logs/error-%DATE%.log',
@@ -38,7 +35,8 @@ async function setupLogger() {
                 datePattern: 'YYYY-MM-DD',
                 zippedArchive: true,
                 maxSize: '20m',
-                maxFiles: '21d'
+                maxFiles: '14d',
+                format: logFormat
             })
         ]
     });
@@ -46,5 +44,4 @@ async function setupLogger() {
     return logger;
 }
 
-
-module.exports = setupLogger();
+module.exports = setupLogger;

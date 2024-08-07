@@ -9,6 +9,7 @@ const passport = require('passport');
 const bodyParser = require('body-parser');
 const staticRoutes = require('./routes/staticRoutes');
 const https = require('https');
+const fs = require('fs');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const setupLogger = require('./config/logger'); 
@@ -19,17 +20,20 @@ const express = require('express');
 
 
 async function initializeServer() {
+    const logger = await setupLogger();
+
     try {
         const secrets = await getSecrets();
         const sslKeys = await getSSLKeys();
         const sequelize = await initializeDatabase();
-        const logger = await setupLogger;
 
         const app = express();
 
-        // Middleware for parsing JSON/URL-encoded bodies and setting secure HTTP headers
+        // Middleware for parsing JSON/URL-encoded bodies and
         app.use(bodyParser.json());
         app.use(express.urlencoded({ extended: true }));
+
+        // Middleware for setting secure HTTP headers
         app.use(helmet({
             contentSecurityPolicy: {
                 directives: {
@@ -61,25 +65,30 @@ async function initializeServer() {
         // Use static routes
         app.use('/', staticRoutes);
 
+        // 404 error handling
+        app.use((req, res, next) => {
+            res.status(404).sendFile(path.join(__dirname, '../public', 'not-found.html'));
+        });
+
         // Middleware for error handling
         app.use((err, req, res, next) => {
-            logger.error(err.stack);
+            logger.error('Error occurred: ', err.stack);
             res.status(500).send('server.js - Server error - something failed');
         });
 
         // Test database connection and sync models
         try {
             await sequelize.sync();
-            console.log('Database and tables created!');
+            logger.info('Database and tables created!');
         } catch (err) {
-            console.error('Database Connection Test and Sync: Server error: ', err);
+            logger.error('Database Connection Test and Sync: Server error: ', err);
             throw err;
         }
 
         // Enforce HTTPS and TLS
         if (secrets.NODE_ENV === 'production') {
-            app.use((req, res, next) => {
-                // Redirect HTTP to HTTPS
+            logger.info('Enforcing HTTPS redirects');
+            app.use((req, res, next) => { // redirect HTTP to HTTPS
                 if (req.header('x-forwarded-proto') !== 'https') {
                     res.redirect(`https://${req.header('host')}${req.url}`);
                 } else {
@@ -110,10 +119,10 @@ async function initializeServer() {
 
         // Create HTTPS server
         https.createServer(options, app).listen(secrets.PORT, () => {
-            console.log(`Server running on port ${secrets.PORT}`);
+            logger.info(`Server running on port ${secrets.PORT}`);
         });
     } catch (err) {
-        console.error('Failed to start server: ', err);
+        logger.error('Failed to start server: ', err);
     }
 }
 

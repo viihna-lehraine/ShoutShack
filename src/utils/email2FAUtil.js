@@ -5,7 +5,7 @@
 
 
 const  { getSecrets } = require('../config/sops');
-const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 
@@ -13,9 +13,12 @@ const jwt = require('jsonwebtoken');
     const secrets = await getSecrets();
 
     function generateEmail2FACode() {
-        const email2FACode = crypto.randomBytes(3).toString('hex'); // generates a 6-character hex code
+        const email2FACode = bcrypt.genSalt(6); // generates a 6-character hex code
         const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, { expiresIn: '30m' });
-        return { email2FACode, email2FAToken };
+        return {
+            email2FACode,
+            email2FAToken
+        }
     }
 
     function verifyEmail2FACode() {
