@@ -2,18 +2,20 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
+
+
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf, colorize, errors, json } = format;
 const DailyRotateFile = require('winston-daily-rotate-file');
-const { getSecrets } = require('./sops');
+const { getSecrets } = require('./secrets');
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
     return `${timestamp}, ${level}: ${stack || message}`;
 });
 
+
 async function setupLogger() {
     const secrets = await getSecrets();
-
     const logger = createLogger({
         level: secrets.NODE_ENV === 'production' ? 'info' : 'debug',
         format: combine(

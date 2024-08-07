@@ -63,7 +63,7 @@ async function initializeServer() {
         app.use(express.static(path.join(__dirname, '../public')));
 
         // Use static routes
-        app.use('/', staticRoutes);
+        app.use('/', staticRoutes );
 
         // 404 error handling
         app.use((req, res, next) => {

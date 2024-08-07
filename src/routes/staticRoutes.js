@@ -10,7 +10,7 @@ const setupLogger = require('../config/logger');
 const router = express.Router();
 
 
-(async () => {
+async function setupRoutes() {
     const logger = await setupLogger();
 
     // Routes for /public/
@@ -101,6 +101,13 @@ const router = express.Router();
         res.sendFile(path.join(__dirname, '../../public/guestbook/guestbook-blank.html'));
         logger.info('guestbook/guestbook-blank.html was accessed');
     });
+};
 
-    module.exports = router;
-})();
+
+// Call setupRoutes to initialize routes
+setupRoutes().catch(err => {
+    console.error('Error setting up routes: ', err);
+});
+
+
+module.exports = router;
