@@ -7,10 +7,10 @@
 const { createLogger, format, transports } = require('winston');
 const { timestamp, printf, colorize } = format;
 const DailyRotateFile = require('winston-daily-rotate-file');
-const getSecrets = require('./sops');
+const { getSecrets } = require('./sops');
 
 
-(async () => {
+async function setupLogger() {
     const secrets = await getSecrets();
 
     const logFormat = printf(({ level, message, timestamp }) => {
@@ -43,5 +43,8 @@ const getSecrets = require('./sops');
         ]
     });
 
-    module.exports = logger;
-})();
+    return logger;
+}
+
+
+module.exports = setupLogger();

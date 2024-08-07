@@ -4,7 +4,7 @@
 
 
 
-const getSecrets = require('../config/sops');
+const  { getSecrets } = require('../config/sops');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 

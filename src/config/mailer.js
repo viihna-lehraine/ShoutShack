@@ -4,7 +4,7 @@
 
 
 
-const getSecrets = require('./sops');
+const { getSecrets } = require('./sops');
 const nodemailer = require('nodemailer');
 
 

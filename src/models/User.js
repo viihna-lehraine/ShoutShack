@@ -6,7 +6,7 @@
 
 const { Sequelize, DataTypes, Model } = require('sequelize');
 const initializeDatabase = require('../config/db');
-const getSecrets = require('../config/sops');
+const { getSecrets } = require('../config/sops');
 const argon2 = require('argon2'); 
 const crypto = require('crypto');
 

@@ -15,7 +15,7 @@ const transporter = require('../config/mailer');
 const confirmationEmailTemplate = require('../utils/emailTemplates/confirmationEmailTemplate');
 const email2FAUtil = require('../utils/email2FAUtil');
 const totpUtil = require('../utils/totpUtil');
-const getSecrets = require('../config/sops');
+const { getSecrets } = require('../config/sops');
 
 const secrets = await getSecrets();
 

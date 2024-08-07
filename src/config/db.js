@@ -5,7 +5,7 @@
 
 
 const { Sequelize } = require('sequelize');
-const getSecrets = require('./sops');
+const { getSecrets } = require('./sops');
 
 
 async function initializeDatabase() {

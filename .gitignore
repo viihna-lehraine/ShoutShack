@@ -1,5 +1,6 @@
 .dev/
 .keys/
+.logs/
 .scripts/
 *node_modules/
 
