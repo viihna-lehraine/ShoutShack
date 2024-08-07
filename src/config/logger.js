@@ -14,13 +14,13 @@ async function setupLogger() {
     const secrets = await getSecrets();
 
     const logFormat = printf(({ level, message, timestamp }) => {
-        return `${timestamp} ${level}: ${message}`;
+        return `${timestamp}, ${level}: ${message}`;
     });
 
     const logger = createLogger({
         level: 'info',
         format: format.combine(
-            format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:uu' }),
+            timestamp({ format: 'YYYY-MM-DD HH:mm:ss:uu' }),
             format.errors({ stack: true }),
             format.splat(),
             format.json(),

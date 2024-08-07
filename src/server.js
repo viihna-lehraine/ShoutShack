@@ -11,7 +11,7 @@ const staticRoutes = require('./routes/staticRoutes');
 const https = require('https');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const logger = require('./config/logger'); 
+const setupLogger = require('./config/logger'); 
 require('./config/passport')(passport);
 const { getSecrets, getSSLKeys } = require('./config/sops');
 const initializeDatabase = require('./config/db');
@@ -23,6 +23,7 @@ async function initializeServer() {
         const secrets = await getSecrets();
         const sslKeys = await getSSLKeys();
         const sequelize = await initializeDatabase();
+        const logger = await setupLogger;
 
         const app = express();
 
