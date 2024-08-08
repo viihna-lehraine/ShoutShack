@@ -2,19 +2,24 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-const path = require('path');
-const passport = require('passport');
-const bodyParser = require('body-parser');
-const staticRoutes = require('./routes/staticRoutes');
-const https = require('https');
-const fs = require('fs');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const setupLogger = require('./config/logger');
-require('./config/passport')(passport);
-const { getSecrets, getSSLKeys } = require('./config/sops');
-const initializeDatabase = require('./config/db');
-const express = require('express');
+import path from 'path';
+import passport from 'passport';
+import bodyParser from 'body-parser';
+import staticRoutes from './routes/staticRoutes';
+import https from 'https';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import setupLogger from './config/logger';
+import configurePassport from './config/passport';
+import { getSecrets, getSSLKeys } from './config/sops';
+import initializeDatabase from './config/db';
+import express from 'express';
+
+// Set up __dirname and __filename for ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
 
 async function initializeServer() {
   const logger = await setupLogger();
@@ -24,9 +29,9 @@ async function initializeServer() {
     const sslKeys = await getSSLKeys();
     const sequelize = await initializeDatabase();
 
-    const app = express();
+    await configurePassport(passport);
 
-    // Middleware for parsing JSON/URL-encoded bodies and
+    // Middleware for parsing JSON/URL-encoded bodies
     app.use(bodyParser.json());
     app.use(express.urlencoded({ extended: true }));
 
@@ -113,9 +118,7 @@ async function initializeServer() {
     const options = {
       key: sslKeys.key,
       cert: sslKeys.cert,
-      secureOptions:
-        require('constants').SSL_OP_NO_TLSv1 |
-        require('constants').SSL_OP_NO_TLSv1_1,
+      secureOptions: constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
       ciphers: [
         'ECDHE-ECDSA-AES256-GCM-SHA384',
         'ECDHE-RSA-AES256-GCM-SHA384',

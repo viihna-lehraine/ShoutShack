@@ -36,12 +36,10 @@ router.post('/register', async (req, res) => {
     logger.info(
       'Registration failure: passwords does not meet complexity requirements',
     );
-    return res
-      .status(400)
-      .json({
-        password:
-          'Registration failure: password does not meet complexity requirements',
-      });
+    return res.status(400).json({
+      password:
+        'Registration failure: password does not meet complexity requirements',
+    });
   }
 
   if (!checkPasswordStrength(password)) {
@@ -62,12 +60,10 @@ router.post('/register', async (req, res) => {
       logger.warn(
         'Registration warning: password has been ex[psed in a data breach',
       );
-      return res
-        .status(400)
-        .json({
-          password:
-            'Registration warning: password has been exposed in a data breach',
-        });
+      return res.status(400).json({
+        password:
+          'Registration warning: password has been exposed in a data breach',
+      });
     }
   } catch (error) {
     logger.error('Registration error: HIBP API check failed');

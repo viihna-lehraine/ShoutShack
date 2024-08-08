@@ -1,11 +1,10 @@
-const JwtStrategy = require('passport-jwt').Strategy;
-const ExtractJwt = require('passport-jwt').ExtractJwt;
-const LocalStrategy = require('passport-local').Strategy;
-const User = require('../models/User');
-const { getSecrets } = require('./sops');
-const setupLogger = require('./logger');
+import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import { Strategy as LocalStrategy } from 'passport-local';
+import User from '../models/User';
+import { getSecrets } from './sops';
+import setupLogger from './logger';
 
-module.exports = async (passport) => {
+export default async function configurePassport(passport) {
   const secrets = await getSecrets();
   const logger = await setupLogger();
   const opts = {};
@@ -70,4 +69,4 @@ module.exports = async (passport) => {
       }
     }),
   );
-};
+}
