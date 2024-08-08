@@ -1,6 +1,5 @@
 import Sequelize from 'sequelize';
-import { getSecrets } from './sops';
-import setupLogger from './logger';
+import { getSecrets, setupLogger } from '../index.js';
 
 const initializeDatabase = async () => {
   const secrets = await getSecrets();

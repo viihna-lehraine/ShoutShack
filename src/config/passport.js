@@ -1,8 +1,8 @@
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
-import User from '../models/User';
-import { getSecrets } from './sops';
-import setupLogger from './logger';
+import { getSecrets, modelPromises, setupLogger } from '../index.js';
+
+const { UserModelPromise } = modelPromises;
 
 export default async function configurePassport(passport) {
   const secrets = await getSecrets();
@@ -14,7 +14,7 @@ export default async function configurePassport(passport) {
   passport.use(
     new JwtStrategy(opts, async (jwt_payload, done) => {
       try {
-        const user = await User.findByPk(jwt_payload.id);
+        const user = await UserModelPromise.findByPk(jwt_payload.id);
         if (user) {
           logger.info(
             'JWT authentication successful for user ID: ',
@@ -38,7 +38,7 @@ export default async function configurePassport(passport) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        const user = await User.findOne({ where: { username } });
+        const user = await UserModelPromise.findOne({ where: { username } });
         if (!user) {
           logger.warn(
             'Local authentication failed: User not found: ',

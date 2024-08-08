@@ -1,7 +1,7 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import initializeDatabase from '../config/db';
+import { initializeDatabase } from '../index.js';
 
-class GuestbookEntry extends Model {};
+class GuestbookEntry extends Model {}
 
 async function initializeGuestbookEntryModel() {
   const sequelize = await initializeDatabase();
@@ -43,13 +43,12 @@ async function initializeGuestbookEntryModel() {
   );
 
   await GuestbookEntry.sync();
-};
+}
 
-// Initialize and export the GuestbookEntry model
-async function initializeAndExportGuestbookEntry() {
+// Export a promise thast resolves to the GuestbookEntryModel
+const GuestbookEntryModelPromise = (async () => {
   await initializeGuestbookEntryModel();
   return GuestbookEntry;
-};
+})();
 
-const GuestbookEntryModel = await initializeAndExportGuestbookEntry();
-export default GuestbookEntryModel;
+export default GuestbookEntryModelPromise;

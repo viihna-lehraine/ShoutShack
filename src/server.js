@@ -7,19 +7,12 @@ import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
 import https from 'https';
-import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import setupLogger from './config/logger';
-import configurePassport from './config/passport';
-import { getSecrets, getSSLKeys } from './config/sops';
-import staticRoutes from './routes/staticRoutes';
-import apiRoutes from './routes/apiRoutes';
-import initializeDatabase from './config/db';
-
-// Set up __dirname and __filename for ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import staticRoutes from './routes/staticRoutes.js';
+import apiRoutes from './routes/apiRoutes.js';
+import loadEnv from './config/loadEnv.js';
+import { getSSLKeys, configurePassport, initializeDatabase, routes, setupLogger, __dirname, __filename } from './index.js';
 
 const app = express();
 
@@ -27,7 +20,6 @@ async function initializeServer() {
   const logger = await setupLogger();
 
   try {
-    const secrets = await getSecrets();
     const sslKeys = await getSSLKeys();
     const sequelize = await initializeDatabase();
 
@@ -107,7 +99,7 @@ async function initializeServer() {
     }
 
     // Enforce HTTPS and TLS
-    if (secrets.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production') {
       logger.info('Enforcing HTTPS redirects');
       app.use((req, res, next) => {
         // redirect HTTP to HTTPS
@@ -140,12 +132,13 @@ async function initializeServer() {
     };
 
     // Create HTTPS server
-    https.createServer(options, app).listen(secrets.PORT, () => {
-      logger.info(`Server running on port ${secrets.PORT}`);
+    https.createServer(options, app).listen(process.env.SERVER_PORT, () => {
+      logger.info(`Server running on port ${process.env.SERVER_PORT}`);
     });
   } catch (err) {
     logger.error('Failed to start server: ', err);
   }
 }
 
+loadEnv();
 initializeServer();

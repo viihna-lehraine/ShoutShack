@@ -2,13 +2,13 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-module.exports = (username, confirmationUrl) => {
+const generate2FAEnabledEmailTemplate = (username) => {
   return `
         <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <title>Guestbook - Your Account Has Been Deleted</title>
+                <title>Guestbook - 2 Factor Authentication Enabled</title>
                 <style>
                     body {
                     margin: 0;
@@ -59,15 +59,16 @@ module.exports = (username, confirmationUrl) => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Guestbook - Your Account Has Been Deleted</h1>
+                        <h1>Guestbook - 2 Factor Authentication Enabled</h1>
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
-                    </div>
-                    <div class="footer">
+                        <p>Two-factor authentciation has been enabled for your <a href="URL">Guestbook</a> account. If you did not perform this action, your account may be compromised. In that event, please reach out to me directly at <a href="mailto:admin@viihnatech.com">viihna@viihnatech.com</a< and I will investigate this as soon as possible.</p>
                     </div>
                 </div>
             </body>
         </html>
     `;
 };
+
+export default generate2FAEnabledEmailTemplate;

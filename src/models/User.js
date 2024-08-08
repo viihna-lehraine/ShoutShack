@@ -1,8 +1,8 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import initializeDatabase from '../config/db';
-import { getSecrets } from '../config/sops';
 import argon2 from 'argon2';
 import bcrypt from 'bcrypt';
+import { getSecrets, initializeDatabase } from '../index.js';
+
 
 class User extends Model {
   async comparePassword(password) {
@@ -92,11 +92,11 @@ async function initializeUserModel() {
           });
         },
       },
-    }
+    },
   );
 
   await User.sync();
-};
+}
 
 // Password validation
 User.validatePassword = (password) => {
@@ -111,11 +111,10 @@ User.validatePassword = (password) => {
   );
 };
 
-// Initialize the User model and export it
-async function initializeAndExportUser() {
+// Export a promise that resolves to the User model
+const UserModelPromise = (async () => {
   await initializeUserModel();
   return User;
-};
+})();
 
-const UserModel = await initializeAndExportUser();
-export default UserModel;
+export default UserModelPromise;

@@ -1,5 +1,5 @@
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 
 function generateTOTPSecret() {
   const totpSecret = speakeasy.generateSecret({ length: 20 });
@@ -29,11 +29,11 @@ function verifyTOTPToken(totpSecret, totpToken) {
   return isTOTPTokenValid;
 }
 
-function generateQRCode(otpauth_url) {
-  return QRCode.toDataURL(otpauth_url);
+async function generateQRCode(otpauth_url) {
+  return await  QRCode.toDataURL(otpauth_url);
 }
 
-module.exports = {
+export {
   generateTOTPSecret,
   generateTOTPToken,
   verifyTOTPToken,

@@ -2,7 +2,7 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-module.exports = (username, confirmationUrl) => {
+const generateAccountDeletionStartedEmailTemplate = (username) => {
   return `
         <!DOCTYPE html>
         <html lang="en">
@@ -71,3 +71,5 @@ module.exports = (username, confirmationUrl) => {
         </html>
     `;
 };
+
+export default generateAccountDeletionStartedEmailTemplate;

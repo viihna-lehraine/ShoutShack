@@ -4,13 +4,10 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import zxcvbn from 'zxcvbn';
-import User from '../models/User';
-import transporter from '../config/mailer';
-import confirmationEmailTemplate from '../utils/emailTemplates/confirmationEmailTemplate';
-import email2FAUtil from '../utils/email2FAUtil';
-import totpUtil from '../utils/totpUtil';
-import { getSecrets } from '../config/sops';
-import setupLogger from './logger';
+import { emailTemplates, email2FACode, getSecrets, getTransporter, modelPromises, setupLogger, verifyEmail2FACode, verifyTOTPToken } from '../index.js';
+
+const { generateConfirmationEmailTemplate } = emailTemplates;
+const { UserModelPromise } = modelPromises;
 
 const router = express.Router();
 
@@ -22,9 +19,9 @@ const checkPasswordStrength = (password) => {
 
 // Register
 router.post('/register', async (req, res) => {
+  const { username, email, password, confirmPassword } = req.body;
   const secrets = await getSecrets();
   const logger = await setupLogger();
-  const { username, email, password, confirmPassword } = req.body;
 
   if (password !== confirmPassword) {
     logger.info('Registration failure: passwords do not match');
@@ -33,7 +30,7 @@ router.post('/register', async (req, res) => {
       .json({ password: 'Registration failure: passwords do not match' });
   }
 
-  if (!User.validatePassword(password)) {
+  if (!UserModelPromise.validatePassword(password)) {
     logger.info(
       'Registration failure: passwords does not meet complexity requirements',
     );
@@ -72,7 +69,7 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserModelPromise.findOne({ where: { email } });
     if (user) {
       logger.info('Registration failure: email already exists');
       return res
@@ -85,7 +82,7 @@ router.post('/register', async (req, res) => {
         type: argon2.argon2id,
         salt,
       });
-      const newUser = await User.create({
+      const newUser = await UserModelPromise.create({
         username,
         email,
         password: hashedPassword,
@@ -102,17 +99,17 @@ router.post('/register', async (req, res) => {
         secrets.JWT_SECRET,
         { expiresIn: '1d' },
       );
-      const confirmationUrl = `http://localhost:${secrets.PORT}/api/users/confirm/${confirmationToken}`;
+      const confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
 
       // Send confirmation email
       const mailOptions = {
-        from: secrets.EMAIL_FROM,
+        from: process.env.EMAIL_USER,
         to: newUser.email,
         subject: 'Guestbook - Account Confirmation',
-        html: confirmationEmailTemplate(newUser.username, confirmationUrl),
+        html: generateConfirmationEmailTemplate(newUser.username, confirmationUrl),
       };
 
-      await transporter.sendMail(mailOptions);
+      await getTransporter.sendMail(mailOptions);
 
       logger.info('User registration complete');
       res.json({
@@ -133,7 +130,7 @@ router.get('/confirm/:token', async (req, res) => {
 
   try {
     const decoded = jwt.verify(req.params.token, secrets.JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
+    const user = await UserModelPromise.findByPk(decoded.id);
     if (!user) {
       return res.status(400).json({ error: 'Invalid token' });
     }
@@ -154,7 +151,7 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserModelPromise.findOne({ where: { email } });
     if (!user) {
       logger.info('400 - User not found');
       return res.status(400).json({ email: 'User not found' });
@@ -178,18 +175,19 @@ router.post('/login', async (req, res) => {
 
 // Password Recovery (simplified)
 router.post('/recover-password', async (req, res) => {
-  const secrets = await getSecrets();
   const logger = await setupLogger();
   const { email } = req.body;
 
+  loadEnv();
+
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserModelPromise.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ email: 'User not found' });
     }
     // Generate a token (customize this later)
     const token = await bcrypt.genSalt(20);
-    const passwordResetUrl = `https://localhost:${secrets.PORT}/password-reset${token}`;
+    const passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
 
     // Store the token in the database (simplified for now)
     user.resetPasswordToken = token;
@@ -226,11 +224,11 @@ router.post('/verify-totp', async (req, res) => {
   const { username, token } = req.body;
 
   try {
-    const user = await User.findOne({ where: { username } });
+    const user = await UserModelPromise.findOne({ where: { username } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const isTOTPTokenValid = totpUtil.verifyTOTPToken(user.totpSecret, token);
+    const isTOTPTokenValid = verifyTOTPToken(user.totpSecret, token);
     res.json({ isTOTPTokenValid });
   } catch (err) {
     logger.error('Error verifying TOTP token: ', err);
@@ -244,19 +242,18 @@ router.post('/generate-2fa', async (req, res) => {
   const { email } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserModelPromise.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ error: 'Generate 2FA: user not found' });
     }
 
-    const { code, token } = email2FAUtil.generateEmail2FACode();
+    const { token } = generateEmail2FACode();
 
     user.resetPasswordToken = token;
     user, (resetPasswodExpires = new Date(Date.now() + 30 * 60000)); // 30 min
     await user.save();
 
-    await mailer.sendMail({
-      // send the 2FA code to user's email
+    await mailer.sendMail({ // send the 2FA code to user's email
       to: email,
       subject: 'Guestbook - Your Login Code',
       text: `Your 2FA code is ${email2FACode}`,
@@ -275,13 +272,13 @@ router.post('/verify-2fa', async (req, res) => {
   const { email, email2FACode } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserModelPromise.findOne({ where: { email } });
     if (!user) {
       logger.error('Verify 2FA: user not found');
       return res.status(404).json({ error: 'Verify 2FA: User not found' });
     }
 
-    const isEmail2FACodeValid = email2FAUtil.verifyEmail2FACode(
+    const isEmail2FACodeValid = verifyEmail2FACode(
       user.resetPasswordToken,
       email2FACode,
     );
@@ -297,4 +294,4 @@ router.post('/verify-2fa', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

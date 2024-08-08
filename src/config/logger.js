@@ -1,16 +1,21 @@
-import { createLogger, format, transports } from 'winston';
-import { combine, timestamp, printf, colorize, errors, json } from 'format';
+import pkg from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { getSecrets } from './secrets';
+import loadEnv from './loadEnv.js';
+import { getSecrets } from '../index.js';
+
+const { createLogger, format, transports } = pkg;
+const { combine, timestamp, printf, colorize, errors, json } = format;
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
   return `${timestamp}, ${level}: ${stack || message}`;
 });
 
 async function setupLogger() {
+  loadEnv();
+
   const secrets = await getSecrets();
   const logger = createLogger({
-    level: secrets.NODE_ENV === 'production' ? 'info' : 'debug',
+    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     format: combine(
       timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
       errors({ stack: true }),

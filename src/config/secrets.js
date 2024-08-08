@@ -1,9 +1,7 @@
-import { execSync } from 'child_process';
+import execSync from 'child_process';
 import path from 'path';
+import { __dirname } from '../index.js';
 
-// Set up __dirname and __filename for ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function getSecrets() {
   try {
@@ -16,6 +14,6 @@ async function getSecrets() {
     console.error('Error retrieving secrets from SOPS: ', err);
     throw err;
   }
-};
+}
 
-export default { getSecrets };
+export default getSecrets;

@@ -1,11 +1,8 @@
-const express = require('express');
-const path = require('path');
-const setupLogger = require('../config/logger');
-const router = express.Router();
+import express from 'express';
+import path from 'path';
+import { setupLogger, __dirname } from '../index.js';
 
-// Set up __dirname and __filename for ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const router = express.Router();
 
 async function setupRoutes() {
   const logger = await setupLogger();
@@ -71,6 +68,20 @@ async function setupRoutes() {
     logger.info('resources.html was accessed');
   });
 
+  router.get('/security-acknowledgements', (reg, res) => {
+    logger.info('GET request received at /security-acknowledgements');
+    res.sendFile(
+      path.join(__dirname, '../../public/security-acknowledgements.html'),
+    );
+    logger.info('security-acknowledgements.html was accessed');
+  });
+
+  router.get('/tos', (reg, res) => {
+    logger.info('GET request received at /security-policy');
+    res.sendFile(path.join(__dirname, '../../public/security-policy.html'));
+    logger.info('security-policy.html was accessed');
+  });
+
   router.get('/tos', (reg, res) => {
     logger.info('GET request received at /tos');
     res.sendFile(path.join(__dirname, '../../public/tos.html'));
@@ -105,4 +116,4 @@ setupRoutes().catch((err) => {
   console.error('Error setting up routes: ', err);
 });
 
-module.exports = router;
+export default router;

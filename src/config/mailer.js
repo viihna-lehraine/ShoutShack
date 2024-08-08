@@ -1,5 +1,5 @@
-import { getSecrets } from './sops';
 import nodemailer from 'nodemailer';
+import { getSecrets } from '../index.js';
 
 async function createTransporter() {
   const secrets = await getSecrets();
@@ -9,7 +9,7 @@ async function createTransporter() {
     port: secrets.EMAIL_PORT,
     secure: secrets.EMAIL_SECURE,
     auth: {
-      user: secrets.EMAIL_USER,
+      user: process.env.EMAIL_USER,
       pass: secrets.SMTP_TOKEN,
     },
   });
@@ -17,6 +17,16 @@ async function createTransporter() {
   return transporter;
 }
 
-const transporter = await createTransporter();
+let transporter;
 
-export default transporter;
+async function getTransporter() {
+  if (!transporter) {
+    transporter = await createTransporter();
+  }
+  return transporter;
+}
+
+export {
+  createTransporter,
+  getTransporter
+}

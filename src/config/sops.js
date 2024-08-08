@@ -1,11 +1,6 @@
-import { execSync } from 'child_process';
+import execSync from 'child_process';
 import path from 'path';
-import { getSecrets } from './secrets.js';
-import setupLogger from './logger';
-
-// Set up __dirname and __filename for ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { setupLogger, __dirname } from '../index.js';
 
 async function decryptFile(encryptedFilePath) {
   const logger = await setupLogger();
@@ -38,7 +33,5 @@ async function getSSLKeys() {
   }
 }
 
-module.exports = {
-  getSecrets,
-  getSSLKeys,
-};
+export default getSSLKeys;
+
