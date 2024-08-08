@@ -1,7 +1,7 @@
-const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, printf, colorize, errors, json } = format;
-const DailyRotateFile = require('winston-daily-rotate-file');
-const { getSecrets } = require('./secrets');
+import { createLogger, format, transports } from 'winston';
+import { combine, timestamp, printf, colorize, errors, json } from 'format';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import { getSecrets } from './secrets';
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
   return `${timestamp}, ${level}: ${stack || message}`;
@@ -36,4 +36,4 @@ async function setupLogger() {
   return logger;
 }
 
-module.exports = setupLogger;
+export default setupLogger;

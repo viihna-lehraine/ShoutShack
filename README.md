@@ -80,23 +80,29 @@ The project stack includes the following
 
 * Server initialization is defined in **[[server.js]](.src/config.server.js)**
 
-**DEV-NOTE** *finish writing*
-
 <br>
+
+**DEV-NOTE** *finish writing*
 
 ***
 
 ## 5, State of the Project
 
-**DEV-NOTE** *add this*
+<br> 
 
-<br>
+**DEV-NOTE** *add this*
 
 ## 6. To Do
 
-**DEV-NOTE** *add this*
+* More robust logging
+
+* Stable npm start
 
 <br>
+
+***
+
+**DEV-NOTE** *add to this*
 
 ***
 

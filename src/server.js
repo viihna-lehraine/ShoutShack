@@ -2,18 +2,20 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
+import express from 'express';
 import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
-import staticRoutes from './routes/staticRoutes';
 import https from 'https';
+import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import setupLogger from './config/logger';
 import configurePassport from './config/passport';
 import { getSecrets, getSSLKeys } from './config/sops';
+import staticRoutes from './routes/staticRoutes';
+import apiRoutes from './routes/apiRoutes';
 import initializeDatabase from './config/db';
-import express from 'express';
 
 // Set up __dirname and __filename for ES module
 const __filename = fileURLToPath(import.meta.url);
@@ -40,17 +42,17 @@ async function initializeServer() {
       helmet({
         contentSecurityPolicy: {
           directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            imgSrc: ["'self'", 'data:'],
+            defaultSrc: ['"self"'],
+            styleSrc: ['"self"'],
+            fontSrc: ['"self"'],
+            imgSrc: ['"self"', 'data:'],
             scriptSrc: [
-              "'self'",
-              "'unsafe-inline'",
+              '"self"',
+              '"unsafe-inline"',
               'https://api.haveibeenpwned.com',
             ],
             connectSrc: [
-              "'self'",
+              '"self"',
               'https://api.haveibeenpwned.com',
               'https://cdnjs.cloudflare.com',
             ],
@@ -78,6 +80,9 @@ async function initializeServer() {
 
     // Use static routes
     app.use('/', staticRoutes);
+
+    // Use API routes
+    app.use('/api', apiRoutes);
 
     // 404 error handling
     app.use((req, res, next) => {

@@ -1,16 +1,17 @@
-const express = require('express');
-const argon2 = require('argon2');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const axios = require('axios');
-const zxcvbn = require('zxcvbn');
-const User = require('../models/User');
-const transporter = require('../config/mailer');
-const confirmationEmailTemplate = require('../utils/emailTemplates/confirmationEmailTemplate');
-const email2FAUtil = require('../utils/email2FAUtil');
-const totpUtil = require('../utils/totpUtil');
-const { getSecrets } = require('../config/sops');
-const setupLogger = require('./logger');
+import express from 'express';
+import argon2 from 'argon2';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import axios from 'axios';
+import zxcvbn from 'zxcvbn';
+import User from '../models/User';
+import transporter from '../config/mailer';
+import confirmationEmailTemplate from '../utils/emailTemplates/confirmationEmailTemplate';
+import email2FAUtil from '../utils/email2FAUtil';
+import totpUtil from '../utils/totpUtil';
+import { getSecrets } from '../config/sops';
+import setupLogger from './logger';
+
 const router = express.Router();
 
 // Password strength checker

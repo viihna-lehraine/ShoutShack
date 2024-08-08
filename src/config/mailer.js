@@ -1,7 +1,7 @@
-const { getSecrets } = require('./sops');
-const nodemailer = require('nodemailer');
+import { getSecrets } from './sops';
+import nodemailer from 'nodemailer';
 
-(async () => {
+async function createTransporter() {
   const secrets = await getSecrets();
 
   const transporter = nodemailer.createTransport({
@@ -14,5 +14,9 @@ const nodemailer = require('nodemailer');
     },
   });
 
-  module.exports = { transporter };
-})();
+  return transporter;
+}
+
+const transporter = await createTransporter();
+
+export default transporter;

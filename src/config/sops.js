@@ -1,7 +1,11 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const { getSecrets } = require('./secrets.js');
-const setupLogger = require('./logger');
+import { execSync } from 'child_process';
+import path from 'path';
+import { getSecrets } from './secrets.js';
+import setupLogger from './logger';
+
+// Set up __dirname and __filename for ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function decryptFile(encryptedFilePath) {
   const logger = await setupLogger();

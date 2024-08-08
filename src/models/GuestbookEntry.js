@@ -1,7 +1,7 @@
-const { Sequelize, DataTypes, Model } = require('sequelize');
-const initializeDatabase = require('../config/db');
+import { Sequelize, DataTypes, Model } from 'sequelize';
+import initializeDatabase from '../config/db';
 
-class GuestbookEntry extends Model {}
+class GuestbookEntry extends Model {};
 
 async function initializeGuestbookEntryModel() {
   const sequelize = await initializeDatabase();
@@ -43,8 +43,13 @@ async function initializeGuestbookEntryModel() {
   );
 
   await GuestbookEntry.sync();
-}
+};
 
-initializeDatabase();
+// Initialize and export the GuestbookEntry model
+async function initializeAndExportGuestbookEntry() {
+  await initializeGuestbookEntryModel();
+  return GuestbookEntry;
+};
 
-module.exports = GuestbookEntry;
+const GuestbookEntryModel = await initializeAndExportGuestbookEntry();
+export default GuestbookEntryModel;
