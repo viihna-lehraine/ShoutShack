@@ -1,9 +1,8 @@
-const { Sequelize, DataTypes, Model } = require("sequelize");
-const initializeDatabase = require("../config/db");
-const { getSecrets } = require("../config/sops");
-const argon2 = require("argon2"); 
-const bcrypt = require("bcrypt");
-
+const { Sequelize, DataTypes, Model } = require('sequelize');
+const initializeDatabase = require('../config/db');
+const { getSecrets } = require('../config/sops');
+const argon2 = require('argon2');
+const bcrypt = require('bcrypt');
 
 (async () => {
   const secrets = await getSecrets();
@@ -17,81 +16,84 @@ const bcrypt = require("bcrypt");
   async function initializeUserModel() {
     const sequelize = await initializeDatabase();
 
-    User.init({
-      userid: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        allowNull: false,
-        unique: true
+    User.init(
+      {
+        userid: {
+          type: DataTypes.UUID,
+          defaultValue: DataTypes.UUIDV4,
+          primaryKey: true,
+          allowNull: false,
+          unique: true,
+        },
+        username: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        password: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        email: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        totpSecret: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          unique: true,
+        },
+        isAccountVerified: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+        },
+        resetPasswordToken: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        resetPasswordExpires: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        hibpCheckFailed: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        guestbookProfile: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
+        customStyles: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          defaultValue: Sequelize.NOW,
+        },
       },
-      username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+      {
+        sequelize,
+        modelName: 'User',
+        timestamps: false,
+        hooks: {
+          beforeCreate: async (user) => {
+            const saltRounds = 16;
+            const salt = await bcrypt.genSalt(saltRounds);
+            user.password = await argon2.hash(user.password + secrets.PEPPER, {
+              type: argon2.argon2id,
+              salt: Buffer.from(salt, 'hex'),
+              memoryCost: 19456, // 19 MiB memory
+              timeCost: 2, // 2 iterations
+              parallelism: 1,
+              salt,
+            });
+          },
+        },
       },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-      },
-      totpSecret: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
-      },
-      isAccountVerified: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-      },
-      resetPasswordToken: {
-        type: DataTypes.STRING,
-        allowNull: true
-      },
-      resetPasswordExpires: {
-        type: DataTypes.DATE,
-        allowNull: true
-      },
-      hibpCheckFailed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false
-      },
-      guestbookProfile: {
-        type: DataTypes.JSON,
-        allowNull: true
-      },
-      customStyles: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        defaultValue: Sequelize.NOW
-      }
-    }, {
-      sequelize,
-      modelName: "User",
-      timestamps: false,
-      hooks: {
-        beforeCreate: async (user) => {
-          const saltRounds = 16;
-          const salt = await bcrypt.genSalt(saltRounds);
-          user.password = await argon2.hash(user.password + secrets.PEPPER, {
-            type: argon2.argon2id,
-            salt: Buffer.from(salt, "hex"),
-            memoryCost: 19456, // 19 MiB memory
-            timeCost: 2, // 2 iterations
-            parallelism: 1,
-            salt,
-          });
-        }
-      }
-    });
+    );
 
     await User.sync();
   }
@@ -104,11 +106,13 @@ const bcrypt = require("bcrypt");
     const hasNumber = /\d/.test(password);
     const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-    return isValidLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial;
+    return (
+      isValidLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial
+    );
   };
 
   // Password comparison
-  User.prototype.comparePassword = async function(password) {
+  User.prototype.comparePassword = async function (password) {
     return await argon2.verify(this.password, password + secrets.PEPPER);
   };
 

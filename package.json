@@ -5,9 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node ./src/server.js",
+    "format": "prettier --write '**/*.js'",
+    "lint": "eslint .",
     "sass": "sass public/scss/main.scss public/css/main.css",
-    "sass:watch": "sass --watch public/scss:public/css",
-    "lint": "eslint ."
+    "sass:watch": "sass --watch public/scss:public/css"
   },
   "keywords": [],
   "author": "Viihna Lehraine",
@@ -42,6 +43,8 @@
     "@typescript-eslint/eslint-plugin": "^8.0.1",
     "@typescript-eslint/parser": "^8.0.1",
     "eslint": "^9.8.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
     "prettier": "^3.3.3",
     "sass": "^1.77.8"
   }

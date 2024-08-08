@@ -1,6 +1,5 @@
-const { getSecrets } = require("./sops");
-const nodemailer = require("nodemailer");
-
+const { getSecrets } = require('./sops');
+const nodemailer = require('nodemailer');
 
 (async () => {
   const secrets = await getSecrets();
@@ -11,8 +10,8 @@ const nodemailer = require("nodemailer");
     secure: secrets.EMAIL_SECURE,
     auth: {
       user: secrets.EMAIL_USER,
-      pass: secrets.SMTP_TOKEN
-    } 
+      pass: secrets.SMTP_TOKEN,
+    },
   });
 
   module.exports = { transporter };

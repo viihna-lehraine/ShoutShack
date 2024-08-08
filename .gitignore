@@ -1,12 +1,9 @@
 .dev/
 .keys/
 .scripts/
-logs
-*node_modules/
+logs/
+node_modules/
 
 *.env
 *.sops.yaml
 *secrets.json*
-
-jsconfig.json
-nodemon.json

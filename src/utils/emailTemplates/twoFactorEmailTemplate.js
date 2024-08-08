@@ -2,10 +2,10 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-
-
-module.exports = (username, twoFactorEmail => {
-  return `
+module.exports =
+  (username,
+  (twoFactorEmail) => {
+    return `
         <!DOCTYPE html>
         <html lang="en">
             <head>
@@ -77,4 +77,4 @@ module.exports = (username, twoFactorEmail => {
             </body>
         </html>
     `;
-});
+  });
