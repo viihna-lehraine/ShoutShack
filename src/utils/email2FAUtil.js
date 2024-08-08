@@ -4,11 +4,15 @@ import { getSecrets } from '../index.js';
 
 let secrets;
 
-(async() => {
+(async () => {
   secrets = await getSecrets();
 })();
 
-function generateEmail2FACode() {
+async function generateEmail2FACode() {
+  if (!secrets) {
+    secrets = await getSecrets();
+  }
+
   const email2FACode = bcrypt.genSalt(6); // generates a 6-character hex code
   const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
     expiresIn: '30m',
@@ -19,7 +23,11 @@ function generateEmail2FACode() {
   };
 }
 
-function verifyEmail2FACode() {
+async function verifyEmail2FACode() {
+  if (!secrets) {
+    secrets = await getSecrets();
+  }
+  
   try {
     const decodedEmail2FACode = jwt.verify(
       email2FAToken,

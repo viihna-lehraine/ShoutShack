@@ -45,7 +45,7 @@ async function initializeGuestbookEntryModel() {
   await GuestbookEntry.sync();
 }
 
-// Export a promise thast resolves to the GuestbookEntryModel
+// Export a promise that resolves to the GuestbookEntry model
 const GuestbookEntryModelPromise = (async () => {
   await initializeGuestbookEntryModel();
   return GuestbookEntry;

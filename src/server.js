@@ -6,13 +6,14 @@ import express from 'express';
 import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
+import { constants } from 'crypto';
 import https from 'https';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
-import { getSSLKeys, configurePassport, initializeDatabase, routes, setupLogger, __dirname, __filename } from './index.js';
+import { getSSLKeys, configurePassport, initializeDatabase, setupLogger, __dirname, __filename } from './index.js';
 
 const app = express();
 

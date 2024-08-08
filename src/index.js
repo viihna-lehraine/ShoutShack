@@ -9,7 +9,6 @@ import { generateEmail2FACode, verifyEmail2FACode } from './utils/email2FAUtil.j
 import { generateTOTPSecret, generateTOTPToken, verifyTOTPToken, generateQRCode } from './utils/totpUtil.js';
 
 import emailTemplates from './utils/emailTemplates/indexEmailTemplates.js';
-import modelPromises from './models/indexModels.js'
 
 loadEnv();
 
@@ -24,7 +23,6 @@ export { configurePassport,
     getSSLKeys,
     getTransporter,
     initializeDatabase,
-    modelPromises,
     setupLogger,
     verifyEmail2FACode,
     verifyTOTPToken,

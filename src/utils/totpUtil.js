@@ -11,26 +11,26 @@ function generateTOTPSecret() {
   };
 }
 
-function generateTOTPToken(totpSecret) {
+function generateTOTPToken(secret) {
   const totpToken = speakeasy.totp({
-    totpSecret: totpSecret,
+    secret: secret,
     encoding: 'base32',
   });
   return totpToken;
 }
 
-function verifyTOTPToken(totpSecret, totpToken) {
+function verifyTOTPToken(secret, token) {
   const isTOTPTokenValid = speakeasy.totp.verify({
-    totpSecret: totpSecret,
+    secret: secret,
     encoding: 'base32',
-    totpToken: totpToken,
+    token: token,
     window: 1, // gives leeway for clock drift
   });
   return isTOTPTokenValid;
 }
 
 async function generateQRCode(otpauth_url) {
-  return await  QRCode.toDataURL(otpauth_url);
+  return await QRCode.toDataURL(otpauth_url);
 }
 
 export {
@@ -38,4 +38,4 @@ export {
   generateTOTPToken,
   verifyTOTPToken,
   generateQRCode,
-};
+}
