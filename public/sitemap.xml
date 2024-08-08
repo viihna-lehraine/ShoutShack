@@ -4,73 +4,173 @@
 
     <url>
 
-        <loc>https://www.[WEBPAGE].html</loc>
+        <loc>https://www.[DOMAIN].com</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>monthly</changefreq>
+
+        <priority>1.0</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/about.html</loc>
+        <loc>https://www.[DOMAIN]/about.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.8</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/confirm.html</loc>
+        <loc>https://www.[DOMAIN]/confirm.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <priority>0.0</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/dashboard.html</loc>
+        <loc>https://www.[DOMAIN]/contact.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.5</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/faq.html</loc>
+        <loc>https://www.[DOMAIN]/dashboard.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>monthly</changefreq>
+
+        <priority>0.0</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/password-reset.html</loc>
+        <loc>https://www.[DOMAIN]/faq.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>monthly</changefreq>
+
+        <priority>0.8</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/register.html</loc>
+        <loc>https://www.[DOMAIN]/password-reset.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <priority>0.0</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/resources.html</loc>
+        <loc>https://www.[DOMAIN]/privacy-policy.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.7</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[WEBPAGE]/tos.html</loc>
+        <loc>https://www.[DOMAIN]/register.html</loc>
 
-        <lastmod>2024-08-03</lastmod>
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>monthly</changefreq>
+
+        <priority>1.0</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/resources.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>weekly</changefreq>
+
+        <priority>0.5</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/security-acknowledgements.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.5</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/security-policy.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.5</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/tos.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.65</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/dashboard/security.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <priority>0.0</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/dashboard/settings.html</loc>
+
+        <lastmod>2024-08-08</lastmod>
+
+        <priority>0.0</priority>
     
     </url>
 

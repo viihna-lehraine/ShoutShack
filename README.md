@@ -1,14 +1,13 @@
 # Guestbook Project
-***
 
 ## Content
-* ### [[Introduction]](#1-introduction)
-* ### [[Goals]](#2-goals)
-* ### [[Client Functions]](#3-client-functions)
-* ### [[Server Functions]](#4-goals)
-* ### [[State of the Project]](#5-state-of-the-project)
-* ### [[To Do]](#6-to-do)
-* ### [[Authors]](#7.-authors)
+* ### [Introduction](#1-introduction)
+* ### [Goals](#2-goals)
+* ### [Client Functions](#3-client-functions)
+* ### [Server Functions](#4-goals)
+* ### [State of the Project](#5-state-of-the-project)
+* ### [To Do](#6-to-do)
+* ### [Authors](#7.-authors)
 
 <br>
 

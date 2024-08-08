@@ -4,6 +4,6 @@
 logs/
 node_modules/
 
-*.env
+.env
 *.sops.yaml
 *secrets.json
