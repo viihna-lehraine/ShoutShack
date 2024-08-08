@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import { initializeDatabase } from '../index.js';
 import getSecrets from '../config/secrets.js';
 
-
 class User extends Model {
   async comparePassword(password) {
     const secrets = await getSecrets();

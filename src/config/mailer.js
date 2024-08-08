@@ -26,7 +26,4 @@ async function getTransporter() {
   return transporter;
 }
 
-export {
-  createTransporter,
-  getTransporter
-}
+export { createTransporter, getTransporter };

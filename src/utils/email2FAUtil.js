@@ -27,7 +27,7 @@ async function verifyEmail2FACode() {
   if (!secrets) {
     secrets = await getSecrets();
   }
-  
+
   try {
     const decodedEmail2FACode = jwt.verify(
       email2FAToken,
@@ -39,8 +39,4 @@ async function verifyEmail2FACode() {
   }
 }
 
-
-export {
-  generateEmail2FACode,
-  verifyEmail2FACode
-}
+export { generateEmail2FACode, verifyEmail2FACode };

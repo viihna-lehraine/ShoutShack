@@ -38,4 +38,4 @@ export {
   generateTOTPToken,
   verifyTOTPToken,
   generateQRCode,
-}
+};

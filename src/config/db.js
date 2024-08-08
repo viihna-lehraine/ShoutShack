@@ -7,7 +7,12 @@ async function initializeDatabase() {
   const secrets = await getSecrets();
   const logger = await setupLogger();
 
-  if (!secrets.DB_NAME || !secrets.DB_USER || !secrets.DB_PASSWORD || !secrets.DB_HOST) {
+  if (
+    !secrets.DB_NAME ||
+    !secrets.DB_USER ||
+    !secrets.DB_PASSWORD ||
+    !secrets.DB_HOST
+  ) {
     throw new Error('Missing database configuration in secrets.');
   }
 
@@ -29,7 +34,7 @@ async function initializeDatabase() {
     logger.error('Unable to connect to the database:', error);
   }
 
-  return sequelize
+  return sequelize;
 }
 
 export default initializeDatabase;

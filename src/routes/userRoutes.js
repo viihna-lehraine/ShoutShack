@@ -4,7 +4,17 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import zxcvbn from 'zxcvbn';
-import { emailTemplates, generateEmail2FACode, generateQRCode, generateTOTPSecret, getSecrets, getTransporter, setupLogger, verifyEmail2FACode, verifyTOTPToken } from '../index.js';
+import {
+  emailTemplates,
+  generateEmail2FACode,
+  generateQRCode,
+  generateTOTPSecret,
+  getSecrets,
+  getTransporter,
+  setupLogger,
+  verifyEmail2FACode,
+  verifyTOTPToken,
+} from '../index.js';
 import UserModelPromise from '../models/User.js';
 
 const { generateConfirmationEmailTemplate } = emailTemplates;
@@ -25,28 +35,46 @@ router.post('/register', async (req, res) => {
 
   if (password !== confirmPassword) {
     logger.info('Registration failure: passwords do not match');
-    return res.status(400).json({ password: 'Registration failure: passwords do not match' });
+    return res
+      .status(400)
+      .json({ password: 'Registration failure: passwords do not match' });
   }
 
   const User = await UserModelPromise;
   if (!User.validatePassword(password)) {
-    logger.info('Registration failure: passwords do not meet complexity requirements');
-    return res.status(400).json({ password: 'Registration failure: password does not meet complexity requirements' });
+    logger.info(
+      'Registration failure: passwords do not meet complexity requirements',
+    );
+    return res.status(400).json({
+      password:
+        'Registration failure: password does not meet complexity requirements',
+    });
   }
 
   if (!checkPasswordStrength(password)) {
     logger.info('Registration failure: password is too weak');
-    return res.status(400).json({ password: 'Registration failure: password is too weak' });
+    return res
+      .status(400)
+      .json({ password: 'Registration failure: password is too weak' });
   }
 
   let hibpCheckFailed = false;
 
   try {
-    const pwnedResponse = await axios.get(`https://api.pwnedpasswords.com/range/${password.substring(0, 5)}`);
-    const pwnedList = pwnedResponse.data.split('\n').map((p) => p.split(':')[0]);
+    const pwnedResponse = await axios.get(
+      `https://api.pwnedpasswords.com/range/${password.substring(0, 5)}`,
+    );
+    const pwnedList = pwnedResponse.data
+      .split('\n')
+      .map((p) => p.split(':')[0]);
     if (pwnedList.includes(password.substring(5).toUpperCase())) {
-      logger.warn('Registration warning: password has been exposed in a data breach');
-      return res.status(400).json({ password: 'Registration warning: password has been exposed in a data breach' });
+      logger.warn(
+        'Registration warning: password has been exposed in a data breach',
+      );
+      return res.status(400).json({
+        password:
+          'Registration warning: password has been exposed in a data breach',
+      });
     }
   } catch (error) {
     logger.error('Registration error: HIBP API check failed');
@@ -57,7 +85,9 @@ router.post('/register', async (req, res) => {
     const user = await User.findOne({ where: { email } });
     if (user) {
       logger.info('Registration failure: email already exists');
-      return res.status(400).json({ email: 'Registration failure: email already exists' });
+      return res
+        .status(400)
+        .json({ email: 'Registration failure: email already exists' });
     } else {
       const saltRounds = 16;
       const salt = await bcrypt.genSalt(saltRounds);
@@ -73,7 +103,11 @@ router.post('/register', async (req, res) => {
       });
 
       // Generate a confirmation token
-      const confirmationToken = jwt.sign({ id: newUser.id }, secrets.JWT_SECRET, { expiresIn: '1d' });
+      const confirmationToken = jwt.sign(
+        { id: newUser.id },
+        secrets.JWT_SECRET,
+        { expiresIn: '1d' },
+      );
       const confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
 
       // Send confirmation email
@@ -81,13 +115,19 @@ router.post('/register', async (req, res) => {
         from: process.env.EMAIL_USER,
         to: newUser.email,
         subject: 'Guestbook - Account Confirmation',
-        html: generateConfirmationEmailTemplate(newUser.username, confirmationUrl),
+        html: generateConfirmationEmailTemplate(
+          newUser.username,
+          confirmationUrl,
+        ),
       };
 
       await (await getTransporter()).sendMail(mailOptions);
 
       logger.info('User registration complete');
-      res.json({ message: 'Registration successful. Please check your email to confirm your account.' });
+      res.json({
+        message:
+          'Registration successful. Please check your email to confirm your account.',
+      });
     }
   } catch (err) {
     logger.error('User Registration: server error: ', err);
@@ -130,7 +170,10 @@ router.post('/login', async (req, res) => {
       logger.info('400 - User not found');
       return res.status(400).json({ email: 'User not found' });
     }
-    const isMatch = await argon2.verify(user.password, password + secrets.PEPPER);
+    const isMatch = await argon2.verify(
+      user.password,
+      password + secrets.PEPPER,
+    );
     if (isMatch) {
       const payload = { id: user.id, username: user.username };
       const token = jwt.sign(payload, secrets.JWT_SECRET, { expiresIn: '1h' });
@@ -226,7 +269,10 @@ router.post('/generate-2fa', async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 30 * 60000); // 30 min
     await user.save();
 
-    await (await getTransporter()).sendMail({ // send the 2FA code to user's email
+    await (
+      await getTransporter()
+    ).sendMail({
+      // send the 2FA code to user's email
       to: email,
       subject: 'Guestbook - Your Login Code',
       text: `Your 2FA code is ${token}`,
@@ -252,7 +298,10 @@ router.post('/verify-2fa', async (req, res) => {
       return res.status(404).json({ error: 'Verify 2FA: User not found' });
     }
 
-    const isEmail2FACodeValid = verifyEmail2FACode(user.resetPasswordToken, email2FACode);
+    const isEmail2FACodeValid = verifyEmail2FACode(
+      user.resetPasswordToken,
+      email2FACode,
+    );
     if (!isEmail2FACodeValid) {
       logger.error('Invalid or expired 2FA code');
       return res.status(400).json({ error: 'Invalid or expired 2FA code' });

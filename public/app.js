@@ -4,6 +4,4 @@
 
 // WILL SERVE AS FRONTEND ENTRYPOINT
 
-document.addEventListener('DOMContentLoaded', function(e) {
-    
-})
+document.addEventListener('DOMContentLoaded', function (e) {});

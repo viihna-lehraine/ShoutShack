@@ -1,8 +1,0 @@
-# Guestbook's security policy
-
-Contact: mailto:security@[DOMAIN].com
-Encryption: https://[DOMAIN].com/pgp-key.asc
-Acknowledgements: https://[DOMAIN].com/security-acknowledgements.html
-Policy: https://[DOMAIN].com/security-policy.html
-Preferred-Languages: en
-Expires: 2024-12-31T23:59:59.000Z

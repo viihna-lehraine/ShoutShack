@@ -13,7 +13,14 @@ import morgan from 'morgan';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
-import { getSSLKeys, configurePassport, initializeDatabase, setupLogger, __dirname, __filename } from './index.js';
+import {
+  getSSLKeys,
+  configurePassport,
+  initializeDatabase,
+  setupLogger,
+  __dirname,
+  __filename,
+} from './index.js';
 
 const app = express();
 

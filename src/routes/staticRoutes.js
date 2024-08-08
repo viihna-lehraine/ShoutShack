@@ -70,7 +70,9 @@ async function setupRoutes() {
 
   router.get('/security-acknowledgements', (req, res) => {
     logger.info('GET request received at /security-acknowledgements');
-    res.sendFile(path.join(__dirname, '../../public/security-acknowledgements.html'));
+    res.sendFile(
+      path.join(__dirname, '../../public/security-acknowledgements.html'),
+    );
     logger.info('security-acknowledgements.html was accessed');
   });
 
@@ -102,13 +104,17 @@ async function setupRoutes() {
   // Routes for /public/guestbook/
   router.get('/guestbook/guestbook-blank', (req, res) => {
     logger.info('GET request received at /guestbook/guestbook-blank');
-    res.sendFile(path.join(__dirname, '../../public/guestbook/guestbook-blank.html'));
+    res.sendFile(
+      path.join(__dirname, '../../public/guestbook/guestbook-blank.html'),
+    );
     logger.info('guestbook/guestbook-blank.html was accessed');
   });
 
   // 404 handler for unmatched routes
   router.use((req, res) => {
-    res.status(404).sendFile(path.join(__dirname, '../../public/not-found.html'));
+    res
+      .status(404)
+      .sendFile(path.join(__dirname, '../../public/not-found.html'));
     logger.info('404 - Not Found');
   });
 }
