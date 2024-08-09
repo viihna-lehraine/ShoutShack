@@ -2,7 +2,7 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-const getSecrets = require('../../../src/config/sops.js');
+const getSecrets = require('../../../backend/src/config/sops.js');
 const path = require('path');
 
 const secrets = getSecrets();

@@ -4,12 +4,12 @@
     "description": "A free and fully customizable guestbook with no ads or tracking",
     "icons": [
         {
-            "src": "./public/assets/favicons/favicon-android-chrome.png",
+            "src": "./public/assets/icons/icon-android-chrome.png",
             "sizes": "16x16",
             "type": "image/png"
         },
         {
-            "src": "./public/assets/favicons/favicon.svg",
+            "src": "./public/assets/icons/icons.svg",
             "sizes": "any",
             "type": "image/svg+xml"
         }
