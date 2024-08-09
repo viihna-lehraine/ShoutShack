@@ -6,6 +6,7 @@ node_modules/
 public/assets/
 
 eslint.config.js
+webpack.config.js
 
 *.css
 *.gpg

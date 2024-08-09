@@ -31,7 +31,32 @@ export default {
   },
   resolve: {
     extensions: ['.js'],
+    fallback: {
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      assert: 'assert',
+      http: 'stream-http',
+      https: 'https-browserify',
+      os: 'os-browserify/browser',
+      url: 'url',
+      zlib: 'browserify-zlib',
+      buffer: 'buffer',
+      util: 'util',
+      process: 'process/browser',
+      path: 'path-browserify',
+      fs: false,
+      child_process: false,
+      net: false,
+      tls: false,
+      dns: false,
+    },
   },
+  plugins: [
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+      process: 'process/browser',  
+    }),
+  ],
   devServer: {
     static: {
       directory: path.join(__dirname, 'public'),
