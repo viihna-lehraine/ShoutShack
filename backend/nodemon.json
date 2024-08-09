@@ -1,8 +1,8 @@
 {
   "watch": ["src"],
   "ext": "js,json",
-  "ignore": ["node_modules/*"],
-  "exec": "npm run lint-and-format",
+  "ignore": ["node_modules/*", "logs/*"],
+  "exec": "node src/server.js",
   "env": {
     "NODE_ENV": "development"
   }
