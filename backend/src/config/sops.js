@@ -18,8 +18,8 @@ async function getSSLKeys() {
   const logger = setupLogger();
 
   try {
-    const keyPath = path.join(__dirname, '../../.keys/ssl/app.key.gpg');
-    const certPath = path.join(__dirname, '../../.keys/ssl/app.crt.gpg');
+    const keyPath = path.join(__dirname, '../../keys/ssl/app.key.gpg');
+    const certPath = path.join(__dirname, '../../keys/ssl/app.crt.gpg');
     const decryptedKey = await decryptFile(keyPath);
     const decryptedCert = await decryptFile(certPath);
 

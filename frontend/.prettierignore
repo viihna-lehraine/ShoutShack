@@ -1,0 +1,16 @@
+keys/
+logs/
+node_modules/
+
+eslint.config.js
+webpack.config.js
+
+*.gpg
+*.json
+*.jpeg
+*.jpg
+*.md
+*.png
+*.scss
+*.svg
+*.txt

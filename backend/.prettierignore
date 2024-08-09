@@ -1,17 +1,14 @@
-.dev/
-.keys/
-.scripts/
+keys/
 logs/
 node_modules/
-public/assets/
 
 eslint.config.js
 webpack.config.js
 
-*.css
 *.gpg
-*.html
 *.json
+*.jpeg
+*.jpg
 *.md
 *.png
 *.scss

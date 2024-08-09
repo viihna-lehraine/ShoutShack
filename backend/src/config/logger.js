@@ -25,8 +25,8 @@ async function setupLogger() {
         format: combine(colorize(), logFormat),
       }),
       new DailyRotateFile({
-        filename: 'logs/error-%DATE%.log',
-        dirname: 'logs',
+        filename: './logs/server/error-%DATE%.log',
+        dirname: './logs/server',
         datePattern: 'YYYY-MM-DD',
         zippedArchive: true,
         maxSize: '20m',

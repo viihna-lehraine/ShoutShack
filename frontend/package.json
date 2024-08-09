@@ -1,0 +1,18 @@
+{
+  "name": "guestbook-frontend",
+  "version": "1.0.0",
+  "author": "Viihna Lehraine",
+  "description": "Free, customizable personal Guestbook",
+  "main": "public/app.js",
+  "type": "module",
+  "scripts": {
+    "build": "webpack serve --mode development",
+    "format": "prettier --write '**/*.js'",
+    "lint": "eslint .",
+    "sass": "sass public/scss/main.scss public/css/main.css",
+    "sass:watch": "sass --watch public/scss:public/css",
+    "start": "webpack serve --mode development"
+  },
+  "keywords": [],
+  "license": "ISC"
+}
