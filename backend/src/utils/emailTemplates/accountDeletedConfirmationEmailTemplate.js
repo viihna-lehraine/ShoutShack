@@ -3,7 +3,7 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 const generateAccountDeletedConfirmationEmailTemplate = (username) => {
-  return `
+	return `
         <!DOCTYPE html>
         <html lang="en">
             <head>

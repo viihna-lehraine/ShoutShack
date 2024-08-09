@@ -5,11 +5,11 @@ import generateAccountDeletionStartedEmailTemplate from './accountDeletionStarte
 import generateConfirmationEmailTemplate from './confirmationEmailTemplate.js';
 
 const emailTemplates = {
-  generate2FactorEmailTemplate,
-  generate2FAEnabledEmailTemplate,
-  generateAccountDeletedConfirmationEmailTemplate,
-  generateAccountDeletionStartedEmailTemplate,
-  generateConfirmationEmailTemplate,
+	generate2FactorEmailTemplate,
+	generate2FAEnabledEmailTemplate,
+	generateAccountDeletedConfirmationEmailTemplate,
+	generateAccountDeletionStartedEmailTemplate,
+	generateConfirmationEmailTemplate,
 };
 
 export default emailTemplates;

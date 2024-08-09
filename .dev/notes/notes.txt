@@ -17,6 +17,8 @@ GLOBAL
 
 * finish adding logging
 
+* add cron job to backup /backend/src/data/blacklist.json
+
 
 * dashboard.html
     * let users delete their accounts

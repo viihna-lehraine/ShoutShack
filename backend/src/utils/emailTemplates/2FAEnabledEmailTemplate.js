@@ -3,7 +3,7 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 const generate2FAEnabledEmailTemplate = (username) => {
-  return `
+	return `
         <!DOCTYPE html>
         <html lang="en">
             <head>

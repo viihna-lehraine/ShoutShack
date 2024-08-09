@@ -2,7 +2,7 @@
   "watch": ["src"],
   "ext": "js,json",
   "ignore": ["node_modules/*"],
-  "exec": "node src/server.js",
+  "exec": "npm run lint-and-format",
   "env": {
     "NODE_ENV": "development"
   }

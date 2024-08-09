@@ -5,16 +5,24 @@ import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
 import getSecrets from './config/secrets.js';
 import getSSLKeys from './config/sops.js';
-import { registrationValidationRules, validateEntry } from './middleware/validate.js';
 import {
-  generateEmail2FACode,
-  verifyEmail2FACode,
+	addToBlacklist,
+	ipBlacklistMiddleware,
+	removeFromBlacklist,
+} from './middleware/ipBlacklist.js';
+import {
+	registrationValidationRules,
+	validateEntry,
+} from './middleware/validate.js';
+import {
+	generateEmail2FACode,
+	verifyEmail2FACode,
 } from './utils/email2FAUtil.js';
 import {
-  generateTOTPSecret,
-  generateTOTPToken,
-  verifyTOTPToken,
-  generateQRCode,
+	generateTOTPSecret,
+	generateTOTPToken,
+	verifyTOTPToken,
+	generateQRCode,
 } from './utils/auth/totpUtil.js';
 
 import emailTemplates from './utils/emailTemplates/indexEmailTemplates.js';
@@ -22,22 +30,25 @@ import emailTemplates from './utils/emailTemplates/indexEmailTemplates.js';
 loadEnv();
 
 export {
-  configurePassport,
-  createTransporter,
-  emailTemplates,
-  generateEmail2FACode,
-  generateQRCode,
-  generateTOTPSecret,
-  generateTOTPToken,
-  getSecrets,
-  getSSLKeys,
-  getTransporter,
-  initializeDatabase,
-  registrationValidationRules,
-  setupLogger,
-  validateEntry,
-  verifyEmail2FACode,
-  verifyTOTPToken,
-  __dirname,
-  __filename,
+	addToBlacklist,
+	configurePassport,
+	createTransporter,
+	emailTemplates,
+	generateEmail2FACode,
+	generateQRCode,
+	generateTOTPSecret,
+	generateTOTPToken,
+	getSecrets,
+	getSSLKeys,
+	getTransporter,
+	ipBlacklistMiddleware,
+	initializeDatabase,
+	registrationValidationRules,
+	removeFromBlacklist,
+	setupLogger,
+	validateEntry,
+	verifyEmail2FACode,
+	verifyTOTPToken,
+	__dirname,
+	__filename,
 };

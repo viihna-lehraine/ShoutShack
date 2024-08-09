@@ -6,9 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function loadEnv() {
-  dotenv.config({ path: path.resolve(__dirname, '../../backend.env') });
+	dotenv.config({ path: path.resolve(__dirname, '../../backend.env') });
 
-  console.log('Environment variables loaded');
+	console.log('Environment variables loaded');
 }
 
 export { __filename, __dirname };

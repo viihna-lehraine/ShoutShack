@@ -3,9 +3,9 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 const generate2FactorEmailTemplate =
-  (username,
-  (twoFactorEmail) => {
-    return `
+	(username,
+	(twoFactorEmail) => {
+		return `
       <!DOCTYPE html>
       <html lang="en">
           <head>
@@ -77,6 +77,6 @@ const generate2FactorEmailTemplate =
           </body>
       </html>
   `;
-  });
+	});
 
 export default generate2FactorEmailTemplate;
