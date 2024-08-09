@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build: ./backend
+    container_name: guestbook-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_URL=${DB_URL}
+    env_file:
+      - ./backend.env
+    volumes: 
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - guestbook_network
+
+  db:
+    image: ${DB_IMAGE}
+    container_name: guestbook-db
+    restart: unless-stopped
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    ports: 
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - ${DB_VOLUME}:/var/lib/postgresql/data
+    networks:
+      - guestbook_network
+
+networks:
+  guestbook_network:
+    driver: bridge

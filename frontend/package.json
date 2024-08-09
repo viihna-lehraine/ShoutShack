@@ -14,5 +14,9 @@
     "start": "webpack serve --mode development"
   },
   "keywords": [],
-  "license": "ISC"
+  "license": "GNU GPLv3",
+  "dependencies": {
+    "express-validator": "^7.1.0",
+    "sass": "^1.77.8"
+  }
 }

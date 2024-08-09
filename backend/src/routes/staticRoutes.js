@@ -1,8 +1,19 @@
 import express from 'express';
+import { validationResult } from 'express-validator';
 import path from 'path';
-import { setupLogger, __dirname } from '../index.js';
+import {
+  registrationValidationRules, setupLogger,
+  __dirname
+} from '../index.js';
 
 const router = express.Router();
+
+router.post('/register', registrationValidationRules, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+})
 
 async function setupRoutes() {
   const logger = await setupLogger();

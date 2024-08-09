@@ -5,6 +5,7 @@ import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
 import getSecrets from './config/secrets.js';
 import getSSLKeys from './config/sops.js';
+import { registrationValidationRules, validateEntry } from './middleware/validate.js';
 import {
   generateEmail2FACode,
   verifyEmail2FACode,
@@ -14,7 +15,7 @@ import {
   generateTOTPToken,
   verifyTOTPToken,
   generateQRCode,
-} from './utils/totpUtil.js';
+} from './utils/auth/totpUtil.js';
 
 import emailTemplates from './utils/emailTemplates/indexEmailTemplates.js';
 
@@ -32,7 +33,9 @@ export {
   getSSLKeys,
   getTransporter,
   initializeDatabase,
+  registrationValidationRules,
   setupLogger,
+  validateEntry,
   verifyEmail2FACode,
   verifyTOTPToken,
   __dirname,

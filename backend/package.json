@@ -2,6 +2,7 @@
   "name": "guestbook-backend",
   "version": "1.0.0",
   "author": "Viihna Lehraine",
+  "description": "Free, customizable personal Guestbook",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -11,8 +12,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "description": "Free, customizable personal Guestbook",
-  "license": "ISC",
+  "license": "GNU GPLv3",
   "devDependencies": {
     "@babel/preset-env": "^7.25.3",
     "eslint": "^9.8.0",
@@ -39,6 +39,8 @@
     "chalk": "^4.1.2",
     "color-convert": "^2.0.1",
     "color-name": "^1.1.4",
+    "compressing": "^1.10.1",
+    "compression": "^1.7.4",
     "concat-map": "^0.0.1",
     "cross-spawn": "^7.0.3",
     "debug": "^4.3.6",
@@ -88,6 +90,7 @@
     "morgan": "^1.10.0",
     "ms": "^2.1.2",
     "natural-compare": "^1.4.0",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "optionator": "^0.9.4",
     "p-limit": "^3.1.0",
