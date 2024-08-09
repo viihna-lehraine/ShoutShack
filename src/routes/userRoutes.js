@@ -89,11 +89,8 @@ router.post('/register', async (req, res) => {
         .status(400)
         .json({ email: 'Registration failure: email already exists' });
     } else {
-      const saltRounds = 16;
-      const salt = await bcrypt.genSalt(saltRounds);
       const hashedPassword = await argon2.hash(password + secrets.PEPPER, {
         type: argon2.argon2id,
-        salt,
       });
       const newUser = await User.create({
         username,
@@ -189,7 +186,6 @@ router.post('/login', async (req, res) => {
 
 // Password Recovery (simplified)
 router.post('/recover-password', async (req, res) => {
-  const secrets = await getSecrets();
   const logger = await setupLogger();
   const { email } = req.body;
 
@@ -200,7 +196,7 @@ router.post('/recover-password', async (req, res) => {
       return res.status(404).json({ email: 'User not found' });
     }
     // Generate a token (customize this later)
-    const token = await bcrypt.genSalt(20);
+    const token = await bcrypt.genSalt(25);
     const passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
 
     // Store the token in the database (simplified for now)

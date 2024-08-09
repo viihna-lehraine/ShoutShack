@@ -80,15 +80,11 @@ async function initializeUserModel() {
       timestamps: false,
       hooks: {
         beforeCreate: async (user) => {
-          const saltRounds = 16;
-          const salt = await bcrypt.genSalt(saltRounds);
           user.password = await argon2.hash(user.password + secrets.PEPPER, {
             type: argon2.argon2id,
-            salt: Buffer.from(salt, 'hex'),
-            memoryCost: 19456, // 19 MiB memory
-            timeCost: 2, // 2 iterations
+            memoryCost: 48640, // 47.5 MiB memory
+            timeCost: 4, // 4 iterations
             parallelism: 1,
-            salt,
           });
         },
       },

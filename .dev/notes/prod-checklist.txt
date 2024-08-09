@@ -1,0 +1,9 @@
+1. new app AND pgsql SSL key sets
+
+2. new SMTP token
+
+3. new PEPPER
+
+4. new JWT_SECRET
+
+5. new email 2FA secret

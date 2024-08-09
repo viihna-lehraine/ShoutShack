@@ -7,7 +7,7 @@ import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
 import { constants } from 'crypto';
-import https from 'https';
+import http2 from 'http2';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import staticRoutes from './routes/staticRoutes.js';
@@ -139,10 +139,12 @@ async function initializeServer() {
       honorCipherOrder: true,
     };
 
-    // Create HTTPS server
-    https.createServer(options, app).listen(process.env.SERVER_PORT, () => {
-      logger.info(`Server running on port ${process.env.SERVER_PORT}`);
-    });
+    // Create HTTP2/HTTPS server
+    http2
+      .createSecureServer(options, app)
+      .listen(process.env.SERVER_PORT, () => {
+        logger.info(`Server running on port ${process.env.SERVER_PORT}`);
+      });
   } catch (err) {
     logger.error('Failed to start server: ', err);
   }

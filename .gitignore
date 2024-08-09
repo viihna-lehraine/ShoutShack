@@ -1,9 +1,9 @@
-.dev/
 .keys/
 .scripts/
 logs/
 node_modules/
+viihna/
 
 .env
-*.sops.yaml
-*secrets.json
+.sops.yaml
+secrets.json
