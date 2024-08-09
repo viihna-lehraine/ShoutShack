@@ -1,11 +1,14 @@
 .code-snippets/
 .logExports/
 .scripts/
+data/*
 logs/
 node_modules/
 viihna/
 
 .env
 .sops.yaml
+blacklist.json
 backend.env
 secrets.json
+vpnIpList.json

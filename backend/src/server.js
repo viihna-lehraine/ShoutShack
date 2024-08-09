@@ -9,10 +9,8 @@ import bodyParser from 'body-parser';
 import { constants } from 'crypto';
 import http2 from 'http2';
 import helmet from 'helmet';
-import helmetCsp from 'helmet-csp';
 import cookieParser from 'cookie-parser';
 import csrf from 'csrf';
-import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
@@ -22,6 +20,7 @@ import {
 	configurePassport,
 	initializeDatabase,
 	ipBlacklistMiddleware,
+    limiter,
 	setupLogger,
 	__dirname,
 	__filename,
@@ -30,14 +29,12 @@ import {
 const app = express();
 const csrfProtection = new csrf({ secretLength: 32 });
 
-// Rate limiter configuraton
-const limiter = rateLimit({
-	windowMs: 5 * 60 * 1000, // 5 minutes
-	max: 1000, // Limit each IP to 100 requests per windowMs
-	message: 'Too many requests from this IP address. Please try again later.',
-	standardHeaders: true, // Return rate limit info in the RateLimit-* headers
-	legacyHeaders: false, // Disable the 'X-RateLimit-*' headers
-});
+// Restrict which domains can access API
+const corsOptions = {
+    origin: 'https://[DOMAIN].com', // restrict domain access
+    methods: ['GET', 'POST'], // allow only certain HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // allow specific headers
+};
 
 async function initializeServer() {
 	const logger = await setupLogger();
@@ -60,24 +57,16 @@ async function initializeServer() {
 		// Parse URL-encoded content
 		app.use(express.urlencoded({ extended: true }));
 
-		// Helmet - Prevent DNS prefetching
-		app.use(helmet.dnsPrefetchControl({ allow: false }));
-
-		// Helmet - Set secure HTTP headers
+		// Helmet Initial Configuration
 		app.use(
 			helmet({
-				referrerPolicy: { policy: 'no-referrer' },
-				frameguard: { action: 'deny' },
-				dnsPrefetchControl: { allow: false },
-				expectedCt: {
-					enforce: true,
-					maxAge: 30,
-				},
-				hidePoweredBy: true,
+                frameguard: { action: 'deny' },
+                dnsPrefetchControl: { allow: false },
+                hidePoweredBy: true,
 				hsts: {
 					maxAge: 31536000, // 1 year
 					includeSubDomains: true,
-					preload: true,
+					preload: true, // enable HSTS preload list
 				},
 				ieNoOpen: true,
 				noSniff: true,
@@ -87,30 +76,59 @@ async function initializeServer() {
 
 		// Helmet CSP Configuration
 		app.use(
-			helmetCsp({
+			helmet.contentSecurityPolicy({
 				directives: {
 					defaultSrc: ["'self'"],
 					scriptSrc: [
 						"'self'",
-						"'unsafe-inline'",
+                        "'nonce-<nonce>",
 						'https://api.haveibeenpwned.com',
 					],
-					styleSrc: ["'self'", "'unsafe-inline'"],
+					styleSrc: [
+                        "'self'",
+                        `'nonce-${res.locals.cspNonce}'`
+                    ],
 					fontSrc: ["'self'"],
-					imgSrc: ["'self'", 'data:'],
+					imgSrc: [
+                        "'self'",
+                        'data:'
+                    ],
 					connectSrc: [
 						"'self'",
 						'https://api.haveibeenpwned.com',
 						'https://cdjns.cloudflare.com',
 					],
 					objectSrc: ["'none'"],
-					upgradeInsecureRequests: [],
+					upgradeInsecureRequests: [], // automatically upgrade HTTP to HTTPS
 					frameAncestors: ["'none'"],
 					reportUri: '/report-violation',
 				},
-				reportOnly: false, // set to true to test CSP without enforcement
-			})
+				reportOnly: false, // *DEV-NOTE* set to true to test CSP without enforcement
+			}),
 		);
+
+        // Helmet Certificate Transparency Enforcement
+        app.use(
+            helmet.expectCt({
+                enforce: true,
+                maxAge: 86400 // 1 day
+                // reportUri: <BLANK> 
+            }),
+        );
+
+        // Helmet Permissions Policy
+        app.use(
+            helmet.permissionsPolicy({
+                features: {
+                    fullscreen: ["'self'"], // allow fullscreen only on same origin
+                    geolocation: ["'none'"], // disallow geolocation
+                    microphone: ["'none'"], // disallow microphone access
+                    camera: ["'none'"], // disallow camera access
+                    payment: ["'none'"], // disallow payment requests
+                },
+            }),
+        );
+
 
 		// HTTP request logging
 		app.use(

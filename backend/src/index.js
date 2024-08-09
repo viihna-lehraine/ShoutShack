@@ -10,6 +10,7 @@ import {
 	ipBlacklistMiddleware,
 	removeFromBlacklist,
 } from './middleware/ipBlacklist.js';
+import { limiter } from './middleware/rateLimit.js';
 import {
 	registrationValidationRules,
 	validateEntry,
@@ -43,6 +44,7 @@ export {
 	getTransporter,
 	ipBlacklistMiddleware,
 	initializeDatabase,
+	limiter,
 	registrationValidationRules,
 	removeFromBlacklist,
 	setupLogger,
