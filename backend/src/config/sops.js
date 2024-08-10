@@ -12,7 +12,7 @@ async function decryptFile(encryptedFilePath) {
 		logger.error('Error decrypting file from SOPS: ', err);
 		throw err;
 	}
-}
+};
 
 async function getSSLKeys() {
 	const logger = setupLogger();
@@ -31,6 +31,6 @@ async function getSSLKeys() {
 		logger.error('Error retrieving SSL keys from SOPS: ', err);
 		throw err;
 	}
-}
+};
 
 export default getSSLKeys;

@@ -6,20 +6,22 @@ import express from 'express';
 import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
-import { constants } from 'crypto';
+import { constants, randomBytes } from 'crypto';
 import http2 from 'http2';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import csrf from 'csrf';
 import morgan from 'morgan';
+import permissionsPolicy from 'permissions-policy';
+import { initializeDatabase } from './index.js';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
 import {
-	getSSLKeys,
 	configurePassport,
-	initializeDatabase,
+	getSSLKeys,
 	ipBlacklistMiddleware,
+	loadBlacklist,
     limiter,
 	setupLogger,
 	__dirname,
@@ -29,22 +31,16 @@ import {
 const app = express();
 const csrfProtection = new csrf({ secretLength: 32 });
 
-// Restrict which domains can access API
-const corsOptions = {
-    origin: 'https://[DOMAIN].com', // restrict domain access
-    methods: ['GET', 'POST'], // allow only certain HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // allow specific headers
-};
-
 async function initializeServer() {
 	const logger = await setupLogger();
+	const sequelize = await initializeDatabase();
+	const sslKeys = await getSSLKeys();
+	await configurePassport(passport);
+	await loadBlacklist();
+
+	loadEnv();
 
 	try {
-		const sslKeys = await getSSLKeys();
-		const sequelize = await initializeDatabase();
-
-		await configurePassport(passport);
-
 		// Apply rate limiter to all requests
 		app.use(limiter);
 
@@ -56,6 +52,15 @@ async function initializeServer() {
 
 		// Parse URL-encoded content
 		app.use(express.urlencoded({ extended: true }));
+
+		// Load test routes conditionally
+		// await loadTestRoutes(app);
+
+		// Generate nonce for each request 
+		app.use((req, res, next) => {
+			res.locals.cspNonce = randomBytes(16).toString('hex');
+			next();
+		});
 
 		// Helmet Initial Configuration
 		app.use(
@@ -78,59 +83,56 @@ async function initializeServer() {
 		app.use(
 			helmet.contentSecurityPolicy({
 				directives: {
-					defaultSrc: ["'self'"],
+					defaultSrc: ['self'],
 					scriptSrc: [
-						"'self'",
-                        "'nonce-<nonce>",
+						'self',
+                        // `'nonce-${res.locals.cspNonce}'`,
 						'https://api.haveibeenpwned.com',
 					],
 					styleSrc: [
-                        "'self'",
-                        `'nonce-${res.locals.cspNonce}'`
+                        'self',
+                        // `'nonce-${res.locals.cspNonce}'`
                     ],
-					fontSrc: ["'self'"],
+					fontSrc: ['self'],
 					imgSrc: [
-                        "'self'",
+                        'self',
                         'data:'
                     ],
 					connectSrc: [
-						"'self'",
+						'self',
 						'https://api.haveibeenpwned.com',
 						'https://cdjns.cloudflare.com',
 					],
-					objectSrc: ["'none'"],
+					objectSrc: ['none'],
 					upgradeInsecureRequests: [], // automatically upgrade HTTP to HTTPS
-					frameAncestors: ["'none'"],
+					frameAncestors: ['none'],
 					reportUri: '/report-violation',
 				},
 				reportOnly: false, // *DEV-NOTE* set to true to test CSP without enforcement
 			}),
 		);
 
-        // Helmet Certificate Transparency Enforcement
-        app.use(
-            helmet.expectCt({
-                enforce: true,
-                maxAge: 86400 // 1 day
-                // reportUri: <BLANK> 
-            }),
-        );
+        // Enforce Certificate Transparency
+		app.use((req, res, next) => {
+			res.setHeader('Expect-CT', 'enforce, max-age=86400');
+			next();
+		});
 
-        // Helmet Permissions Policy
+        // Configure Permissions Policy
         app.use(
-            helmet.permissionsPolicy({
+            permissionsPolicy({
                 features: {
-                    fullscreen: ["'self'"], // allow fullscreen only on same origin
-                    geolocation: ["'none'"], // disallow geolocation
-                    microphone: ["'none'"], // disallow microphone access
-                    camera: ["'none'"], // disallow camera access
-                    payment: ["'none'"], // disallow payment requests
+                    fullscreen: ['self'], // allow fullscreen only on same origin
+                    geolocation: ['none'], // disallow geolocation
+                    microphone: ['none'], // disallow microphone access
+                    camera: ['none'], // disallow camera access
+                    payment: ['none'], // disallow payment requests
                 },
             }),
         );
 
 
-		// HTTP request logging
+		// HTTP Request Logging
 		app.use(
 			morgan('combined', {
 				stream: {
@@ -139,16 +141,16 @@ async function initializeServer() {
 			})
 		);
 
-		// Initialize passport
+		// Initialize Passport
 		app.use(passport.initialize());
 
-		// Add cookie parser
+		// Add Cookie Parser
 		app.use(cookieParser());
 
-		// Serve static files from the /public directory
+		// Serve Static Files from the /public Directory
 		app.use(express.static(path.join(__dirname, '../public')));
 
-		// Use static routes
+		// Use Static Routes
 		app.use('/', staticRoutes);
 
 		// Use API routes with CSRF protection
@@ -188,17 +190,15 @@ async function initializeServer() {
 		}
 
 		// Enforce HTTPS and TLS
-		if (process.env.NODE_ENV === 'production') {
-			logger.info('Enforcing HTTPS redirects');
-			app.use((req, res, next) => {
-				// redirect HTTP to HTTPS
-				if (req.header('x-forwarded-proto') !== 'https') {
-					res.redirect(`https://${req.header('host')}${req.url}`);
-				} else {
-					next();
-				}
-			});
-		}
+		logger.info('Enforcing HTTPS redirects');
+		app.use((req, res, next) => {
+			// redirect HTTP to HTTPS
+			if (req.header('x-forwarded-proto') !== 'https') {
+				res.redirect(`https://${req.header('host')}${req.url}`);
+			} else {
+				next();
+			}
+		});
 
 		// Start the server with HTTPS
 		const options = {
@@ -231,5 +231,6 @@ async function initializeServer() {
 	}
 }
 
-loadEnv();
 initializeServer();
+
+export default app;

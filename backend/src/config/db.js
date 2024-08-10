@@ -35,6 +35,6 @@ async function initializeDatabase() {
 	}
 
 	return sequelize;
-}
+};
 
 export default initializeDatabase;

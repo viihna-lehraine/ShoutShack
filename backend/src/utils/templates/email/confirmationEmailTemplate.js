@@ -1,14 +1,10 @@
-// Guestbook - version 0.0.0 (initial development)
-// Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
-// Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
-
-const generate2FAEnabledEmailTemplate = (username) => {
+const generateConfirmationEmailTemplate = (username, confirmationUrl) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <title>Guestbook - 2 Factor Authentication Enabled</title>
+                <title>Guestbook - Account Confirmation</title>
                 <style>
                     body {
                     margin: 0;
@@ -59,11 +55,19 @@ const generate2FAEnabledEmailTemplate = (username) => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Guestbook - 2 Factor Authentication Enabled</h1>
+                        <h1>Guestbook - Account Confirmation</h1>
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
-                        <p>Two-factor authentciation has been enabled for your <a href="URL">Guestbook</a> account. If you did not perform this action, your account may be compromised. In that event, please reach out to me directly at <a href="mailto:admin@viihnatech.com">viihna@viihnatech.com</a< and I will investigate this as soon as possible.</p>
+                        <p>Thank you for registering your account as guestbook.com! I'm so glad you've chosen to join our community.</p>
+                        <p>Please click the button or copy and paste the link below into your browser to confirm your account, and your account will be fully registered.</p>
+                        <a href="${confirmationUrl} class="button">Confirm Email</a>
+                        <p>${confirmationUrl}</p>
+                    </div>
+                    <div class="footer">
+                        <p>If you did not register for an account at guestbook.com, please ignore this email.</p>
+                        <p>If you experience any issues registering your account, please send an email to me at <a href="mailto:admin@viihnatech.com" and I'll respond to you as soon as possible.</p>
+                        <p>Have a great day! :)</p>
                     </div>
                 </div>
             </body>
@@ -71,4 +75,4 @@ const generate2FAEnabledEmailTemplate = (username) => {
     `;
 };
 
-export default generate2FAEnabledEmailTemplate;
+export default generateConfirmationEmailTemplate;

@@ -20,6 +20,9 @@ GLOBAL
 * add cron job to backup /backend/src/data/blacklist.json
 
 
+* server.js - corsOptions is unused
+
+
 * dashboard.html
     * let users delete their accounts
     * export account data

@@ -8,25 +8,30 @@ import getSSLKeys from './config/sops.js';
 import {
 	addToBlacklist,
 	ipBlacklistMiddleware,
+	loadBlacklist,
 	removeFromBlacklist,
 } from './middleware/ipBlacklist.js';
-import { limiter } from './middleware/rateLimit.js';
+import limiter from './middleware/rateLimit.js';
 import {
 	registrationValidationRules,
 	validateEntry,
 } from './middleware/validate.js';
+import { loadTestRoutes } from './utils/helpers.js';
 import {
 	generateEmail2FACode,
 	verifyEmail2FACode,
-} from './utils/email2FAUtil.js';
+} from './utils/auth/email2FAUtil.js';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
 	generateQRCode,
 } from './utils/auth/totpUtil.js';
-
-import emailTemplates from './utils/emailTemplates/indexEmailTemplates.js';
+import generate2FactorEmailTemplate from './utils/templates/email/2FactorEmailTemplate.js';
+import generate2FAEnabledEmailTemplate from './utils/templates/email/2FAEnabledEmailTemplate.js';
+import generateAccountDeletedConfirmationEmailTemplate from './utils/templates/email/accountDeletedConfirmationEmailTemplate.js';
+import generateAccountDeletionStartedEmailTemplate from './utils/templates/email/accountDeletionStartedEmailTemplate.js';
+import generateConfirmationEmailTemplate from './utils/templates/email/confirmationEmailTemplate.js';
 
 loadEnv();
 
@@ -34,7 +39,11 @@ export {
 	addToBlacklist,
 	configurePassport,
 	createTransporter,
-	emailTemplates,
+	generate2FactorEmailTemplate,
+	generate2FAEnabledEmailTemplate,
+	generateAccountDeletedConfirmationEmailTemplate,
+	generateAccountDeletionStartedEmailTemplate,
+	generateConfirmationEmailTemplate,
 	generateEmail2FACode,
 	generateQRCode,
 	generateTOTPSecret,
@@ -44,6 +53,8 @@ export {
 	getTransporter,
 	ipBlacklistMiddleware,
 	initializeDatabase,
+	loadBlacklist,
+	loadTestRoutes,
 	limiter,
 	registrationValidationRules,
 	removeFromBlacklist,

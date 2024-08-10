@@ -1,12 +1,17 @@
 import fs from 'fs';
 import path from 'path';
-import rangeCheck from 'range_check';
 import { __dirname } from '../index.js';
 
 let blacklist = [];
+let rangeCheck;
 
-const loadBlacklist = () => {
-	const filePath = path.join(__dirname, process.env.BLACKLIST_PATH);
+// Dynamically import rangeCheck as a CommonJS module
+(async () => {
+	rangeCheck = (await import('range_check')).default;
+})();
+
+export const loadBlacklist = async () => {
+	const filePath = path.join(__dirname, '../../data/blacklist.json');
 	if (fs.existsSync(filePath)) {
 		const data = fs.readFileSync(filePath);
 		blacklist = JSON.parse(data);
@@ -14,8 +19,8 @@ const loadBlacklist = () => {
 };
 
 const saveBlacklist = () => {
-	const filePath = path.join(__dirname, process.env.BLACKLIST_PATH);
-	fs.writeFileSync(filepath, JSON.stringify(blacklist, null, 2));
+	const filePath = path.join(__dirname, '../../data/blacklist.json');
+	fs.writeFileSync(filePath, JSON.stringify(blacklist, null, 2));
 };
 
 // Middleware to check if the requester's IP is blacklisted

@@ -6,7 +6,7 @@ import axios from 'axios';
 import zxcvbn from 'zxcvbn';
 import xss from 'xss';
 import {
-	emailTemplates,
+	generateConfirmationEmailTemplate,
 	generateEmail2FACode,
 	generateQRCode,
 	generateTOTPSecret,
@@ -17,8 +17,6 @@ import {
 	verifyTOTPToken,
 } from '../index.js';
 import UserModelPromise from '../models/User.js';
-
-const { generateConfirmationEmailTemplate } = emailTemplates;
 
 const router = express.Router();
 
