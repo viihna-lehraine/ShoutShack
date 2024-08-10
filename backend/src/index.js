@@ -4,6 +4,7 @@ import setupLogger from './config/logger.js';
 import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
 import getSecrets from './config/secrets.js';
+import setupSecurityHeaders from './config/securityHeaders.js';
 import getSSLKeys from './config/sops.js';
 import {
 	addToBlacklist,
@@ -59,6 +60,7 @@ export {
 	registrationValidationRules,
 	removeFromBlacklist,
 	setupLogger,
+	setupSecurityHeaders,
 	validateEntry,
 	verifyEmail2FACode,
 	verifyTOTPToken,

@@ -7,6 +7,7 @@ GLOBAL
 /src/server.js (helmet)
     * make sure I have a source for styles and fonts to load from
 
+* why is it using ipv6
 
 * more icon types
     * 32x32

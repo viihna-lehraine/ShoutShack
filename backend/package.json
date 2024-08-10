@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "start:dev": "nodemon src/server.js 2>&1 | tee logs/npm/npm-debug.log",
+    "start:dev": "nodemon src/server.js",
+    "start:dev:log": "nodemon src/server.js 2>&1 | tee logs/npm/npm-debug.log",
     "format": "prettier --write '**/*.js'",
     "lint": "eslint .",
     "lint-and-format": "npm run lint && npm run format",

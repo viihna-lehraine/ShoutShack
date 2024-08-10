@@ -8,22 +8,22 @@ import passport from 'passport';
 import bodyParser from 'body-parser';
 import { constants, randomBytes } from 'crypto';
 import http2 from 'http2';
-import helmet from 'helmet';
+import https from 'https';
 import cookieParser from 'cookie-parser';
 import csrf from 'csrf';
 import morgan from 'morgan';
-import permissionsPolicy from 'permissions-policy';
-import { initializeDatabase } from './index.js';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
 import {
 	configurePassport,
 	getSSLKeys,
+	initializeDatabase,
 	ipBlacklistMiddleware,
 	loadBlacklist,
     limiter,
 	setupLogger,
+	setupSecurityHeaders,
 	__dirname,
 	__filename,
 } from './index.js';
@@ -62,75 +62,8 @@ async function initializeServer() {
 			next();
 		});
 
-		// Helmet Initial Configuration
-		app.use(
-			helmet({
-                frameguard: { action: 'deny' },
-                dnsPrefetchControl: { allow: false },
-                hidePoweredBy: true,
-				hsts: {
-					maxAge: 31536000, // 1 year
-					includeSubDomains: true,
-					preload: true, // enable HSTS preload list
-				},
-				ieNoOpen: true,
-				noSniff: true,
-				xssFilter: true,
-			})
-		);
-
-		// Helmet CSP Configuration
-		app.use(
-			helmet.contentSecurityPolicy({
-				directives: {
-					defaultSrc: ['self'],
-					scriptSrc: [
-						'self',
-                        // `'nonce-${res.locals.cspNonce}'`,
-						'https://api.haveibeenpwned.com',
-					],
-					styleSrc: [
-                        'self',
-                        // `'nonce-${res.locals.cspNonce}'`
-                    ],
-					fontSrc: ['self'],
-					imgSrc: [
-                        'self',
-                        'data:'
-                    ],
-					connectSrc: [
-						'self',
-						'https://api.haveibeenpwned.com',
-						'https://cdjns.cloudflare.com',
-					],
-					objectSrc: ['none'],
-					upgradeInsecureRequests: [], // automatically upgrade HTTP to HTTPS
-					frameAncestors: ['none'],
-					reportUri: '/report-violation',
-				},
-				reportOnly: false, // *DEV-NOTE* set to true to test CSP without enforcement
-			}),
-		);
-
-        // Enforce Certificate Transparency
-		app.use((req, res, next) => {
-			res.setHeader('Expect-CT', 'enforce, max-age=86400');
-			next();
-		});
-
-        // Configure Permissions Policy
-        app.use(
-            permissionsPolicy({
-                features: {
-                    fullscreen: ['self'], // allow fullscreen only on same origin
-                    geolocation: ['none'], // disallow geolocation
-                    microphone: ['none'], // disallow microphone access
-                    camera: ['none'], // disallow camera access
-                    payment: ['none'], // disallow payment requests
-                },
-            }),
-        );
-
+		// Apply Security Headers
+		setupSecurityHeaders(app);
 
 		// HTTP Request Logging
 		app.use(
@@ -200,10 +133,22 @@ async function initializeServer() {
 			}
 		});
 
+		// *DEV-NOTE* debug
+		if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'testing') && sslKeys) {
+			logger.info('SSL Keys loaded: ', sslKeys.key, sslKeys.cert);
+		} else if (!sslKeys) {
+			logger.error('SSL Keys not found. Unable to initialize TLS ', err.stack);
+		} else if ((process.env.NODE_ENV === 'production') && sslKeys) {
+			logger.info('SSL Keys loaded');			
+		} else {
+			logger.error('SSL Keys - Unhandled exception ', err.stack);
+		}
+
 		// Start the server with HTTPS
 		const options = {
 			key: sslKeys.key,
 			cert: sslKeys.cert,
+			allowHTTP1: true,
 			secureOptions: constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
 			ciphers: [
 				'ECDHE-ECDSA-AES256-GCM-SHA384',
@@ -220,7 +165,7 @@ async function initializeServer() {
 			honorCipherOrder: true,
 		};
 
-		// Create HTTP2/HTTPS server
+		// Create Server
 		http2
 			.createSecureServer(options, app)
 			.listen(process.env.SERVER_PORT, () => {
