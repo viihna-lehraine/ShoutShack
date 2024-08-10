@@ -1,5 +1,6 @@
 import Sequelize from 'sequelize';
-import { getSecrets, setupLogger } from '../index.js';
+import setupLogger from './logger.js';
+import getSecrets from './secrets.js';
 
 let sequelize;
 
@@ -35,6 +36,6 @@ async function initializeDatabase() {
 	}
 
 	return sequelize;
-};
+}
 
 export default initializeDatabase;

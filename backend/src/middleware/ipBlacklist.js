@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { __dirname, setupLogger } from '../index.js';
+import { __dirname } from '../config/loadEnv.js';
+import setupLogger from '../config/logger.js';
 
 let blacklist = [];
 let rangeCheck;

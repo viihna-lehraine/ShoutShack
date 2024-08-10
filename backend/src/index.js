@@ -1,10 +1,9 @@
 import initializeDatabase from './config/db.js';
+import featureFlags from './config/featureFlags.js';
 import loadEnv, { __dirname, __filename } from './config/loadEnv.js';
-import setupLogger from './config/logger.js';
 import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
-import getSecrets from './config/secrets.js';
-import setupSecurityHeaders from './config/securityHeaders.js';
+import setupSecureHeaders from './config/secureHeaders.js';
 import getSSLKeys from './config/sops.js';
 import {
 	addToBlacklist,
@@ -34,13 +33,13 @@ import generate2FAEnabledEmailTemplate from './utils/templates/email/2FAEnabledE
 import generateAccountDeletedConfirmationEmailTemplate from './utils/templates/email/accountDeletedConfirmationEmailTemplate.js';
 import generateAccountDeletionStartedEmailTemplate from './utils/templates/email/accountDeletionStartedEmailTemplate.js';
 import generateConfirmationEmailTemplate from './utils/templates/email/confirmationEmailTemplate.js';
-
-loadEnv();
+import { parseBoolean } from './utils/parseBoolean.js';
 
 export {
 	addToBlacklist,
 	configurePassport,
 	createTransporter,
+	featureFlags,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
@@ -50,19 +49,19 @@ export {
 	generateQRCode,
 	generateTOTPSecret,
 	generateTOTPToken,
-	getSecrets,
 	getSSLKeys,
 	getTransporter,
 	ipBlacklistMiddleware,
 	initializeDatabase,
 	initializeIPBlacklist,
 	loadBlacklist,
+	loadEnv,
 	loadTestRoutes,
 	limiter,
+	parseBoolean,
 	registrationValidationRules,
 	removeFromBlacklist,
-	setupLogger,
-	setupSecurityHeaders,
+	setupSecureHeaders,
 	validateEntry,
 	verifyEmail2FACode,
 	verifyTOTPToken,

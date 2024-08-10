@@ -1,5 +1,5 @@
 const generate2FactorEmailTemplate = (username, emailVerificationCode) => {
-    return `
+	return `
       <!DOCTYPE html>
       <html lang="en">
           <head>
@@ -71,7 +71,6 @@ const generate2FactorEmailTemplate = (username, emailVerificationCode) => {
           </body>
       </html>
     `;
-  };
-  
-  export default generate2FactorEmailTemplate;
-  
+};
+
+export default generate2FactorEmailTemplate;

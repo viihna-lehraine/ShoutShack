@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { getSecrets } from '../../index.js';
+import getSecrets from '../../config/secrets.js';
 
 let secrets;
 

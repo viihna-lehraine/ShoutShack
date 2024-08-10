@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import compressing from 'compressing';
 import { exec } from 'child_process';
-import { setupLogger, __dirname } from '../index.js';
+import { __dirname } from '../index.js';
+import setupLogger from '../config/logger.js';
 
 const compressAndExportLogs = async (sourceDir, exportDir, logFileName) => {
 	const logger = await setupLogger();

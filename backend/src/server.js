@@ -15,15 +15,16 @@ import morgan from 'morgan';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
+import setupLogger from './config/logger.js';
 import {
 	configurePassport,
+	featureFlags,
 	getSSLKeys,
 	initializeDatabase,
 	initializeIPBlacklist,
 	ipBlacklistMiddleware,
-    limiter,
-	setupLogger,
-	setupSecurityHeaders,
+	limiter,
+	setupSecureHeaders,
 	__dirname,
 	__filename,
 } from './index.js';
@@ -31,16 +32,23 @@ import {
 const app = express();
 const csrfProtection = new csrf({ secretLength: 32 });
 
+loadEnv();
+
 async function initializeServer() {
 	const logger = await setupLogger();
 	const sequelize = await initializeDatabase();
 	const sslKeys = await getSSLKeys();
 	await configurePassport(passport);
-	await initializeIPBlacklist();
+
+	if (featureFlags.ipBlacklistFlag) {
+		await initializeIPBlacklist();
+	}
 
 	try {
 		// Apply global IP blacklist
-		app.use(ipBlacklistMiddleware);
+		if (featureFlags.ipBlacklistFlag) {
+			app.use(ipBlacklistMiddleware);
+		}
 
 		// Apply rate limiter to all requests
 		app.use(limiter);
@@ -52,16 +60,20 @@ async function initializeServer() {
 		app.use(express.urlencoded({ extended: true }));
 
 		// Load test routes conditionally
-		// await loadTestRoutes(app);
+		if (featureFlags.loadTestRoutesFlag) {
+			await loadTestRoutes(app);
+		}
 
-		// Generate nonce for each request 
+		// Generate nonce for each request
 		app.use((req, res, next) => {
 			res.locals.cspNonce = randomBytes(16).toString('hex');
 			next();
 		});
 
 		// Apply Security Headers
-		setupSecurityHeaders(app);
+		if (featureFlags.secureHeadersFlag) {
+			setupSecureHeaders(app);
+		}
 
 		// HTTP Request Logging
 		app.use(
@@ -82,21 +94,25 @@ async function initializeServer() {
 		app.use(express.static(path.join(__dirname, '../public')));
 
 		// Use Static Routes
-		app.use('/', staticRoutes);
+		if (featureFlags.loadStaticRoutesFlag) {
+			app.use('/', staticRoutes);
+		}
 
 		// Use API routes with CSRF protection
-		app.use(
-			'/api',
-			(req, res, next) => {
-				const token = req.body.csrfToken || req.headers['x-xsrf-token'];
-				if (csrfProtection.verify(req.csrfToken, token)) {
-					next();
-				} else {
-					res.status(403).send('Invalid CSRF token');
-				}
-			},
-			apiRoutes
-		);
+		if (featureFlags.apiRoutesCsrfFlag) {
+			app.use(
+				'/api',
+				(req, res, next) => {
+					const token = req.body.csrfToken || req.headers['x-xsrf-token'];
+					if (csrfProtection.verify(req.csrfToken, token)) {
+						next();
+					} else {
+						res.status(403).send('Invalid CSRF token');
+					}
+				},
+				apiRoutes
+			);
+		}
 
 		// 404 error handling
 		app.use((req, res, next) => {
@@ -107,42 +123,51 @@ async function initializeServer() {
 
 		// Error Handling Middleware
 		app.use((err, req, res, next) => {
-			 logger.error('Error occurred: ', err.stack || err.message || err);
-			 res.status(500).send(`Server error - something failed ${err.stack}`);
+			logger.error('Error occurred: ', err.stack || err.message || err);
+			res.status(500).send(`Server error - something failed ${err.stack}`);
 		});
 
 		// Test database connection and sync models
-		try {
-			await sequelize.sync();
-			logger.info('Database and tables created!');
-		} catch (err) {
-			logger.error('Database Connection Test and Sync: Server error: ', err);
-			throw err;
+		if (featureFlags.dbSyncFlag) {
+			try {
+				await sequelize.sync();
+				logger.info('Database and tables created!');
+			} catch (err) {
+				logger.error('Database Connection Test and Sync: Server error: ', err);
+				throw err;
+			}
 		}
 
-		// Enforce HTTPS and TLS
-		logger.info('Enforcing HTTPS redirects');
-		app.use((req, res, next) => {
-			// redirect HTTP to HTTPS
-			if (req.header('x-forwarded-proto') !== 'https') {
-				res.redirect(`https://${req.header('host')}${req.url}`);
-			} else {
-				next();
-			}
-		});
+		// Enforce HTTPS Redirects
+		if (featureFlags.httpsRedirectFlag) {
+			logger.info('Enforcing HTTPS redirects');
+			app.use((req, res, next) => {
+				// redirect HTTP to HTTPS
+				if (req.header('x-forwarded-proto') !== 'https') {
+					res.redirect(`https://${req.header('host')}${req.url}`);
+				} else {
+					next();
+				}
+			});
+		}
 
-		// *DEV-NOTE* debug
-		if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'testing') && sslKeys) {
+		// *DEV-NOTE* debugging
+		if (
+			(process.env.NODE_ENV === 'development' ||
+				process.env.NODE_ENV === 'testing') &&
+			sslKeys
+		) {
 			logger.info('SSL Keys loaded: ', sslKeys.key, sslKeys.cert);
 		} else if (!sslKeys) {
 			logger.error('SSL Keys not found. Unable to initialize TLS ', err.stack);
-		} else if ((process.env.NODE_ENV === 'production') && sslKeys) {
-			logger.info('SSL Keys loaded');			
+		} else if (process.env.NODE_ENV === 'production' && sslKeys) {
+			logger.info('SSL Keys loaded');
 		} else {
 			logger.error('SSL Keys - Unhandled exception ', err.stack);
 		}
 
 		// Start the server with HTTPS
+		// *DEV-NOTE* export this from elsewhere
 		const options = {
 			key: sslKeys.key,
 			cert: sslKeys.cert,
@@ -163,28 +188,39 @@ async function initializeServer() {
 			honorCipherOrder: true,
 		};
 
+		if (
+			(featureFlags.http1Flag && featureFlags.http2Flag) ||
+			(!featureFlags.http1Flag && !featureFlags.http2Flag)
+		) {
+			logger.error(
+				'HTTP1 / HTTP2 flags not correctly set. Please check backend .env file'
+			);
+			throw Error(
+				'HTTP1 / HTTP2 flags not correctly set. Please check backend .env file'
+			);
+		}
+
 		// Create HTTP2 Server
-		/*
-		http2
-			.createSecureServer(options, app)
-			.listen(process.env.SERVER_PORT, () => {
-				logger.info(`Server running on port ${process.env.SERVER_PORT}`);
-			});
-		*/
+		if (featureFlags.http2Flag) {
+			http2
+				.createSecureServer(options, app)
+				.listen(process.env.SERVER_PORT, () => {
+					logger.info(`Server running on port ${process.env.SERVER_PORT}`);
+				});
+		}
 
 		// Create HTTP1 Server
-		https
-			.createServer(options, app)
-			.listen(process.env.SERVER_PORT, () => {
+		if (featureFlags.http1Flag) {
+			https.createServer(options, app).listen(process.env.SERVER_PORT, () => {
 				logger.info(`Server running on port ${process.env.SERVER_PORT}`);
 			});
+		}
 	} catch (err) {
 		logger.error('Failed to start server: ', err);
 		process.exit(1); // exit process with failure
 	}
-};
+}
 
-loadEnv();
 initializeServer();
 
 export default app;

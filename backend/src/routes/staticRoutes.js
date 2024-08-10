@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
-import { setupLogger, __dirname } from '../index.js';
+import { __dirname } from '../index.js';
+import setupLogger from '../config/logger.js';
 
 const router = express.Router();
 

@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import argon2 from 'argon2';
-import { initializeDatabase } from '../index.js';
+import initializeDatabase from '../config/db.js';
 import getSecrets from '../config/secrets.js';
 
 class User extends Model {

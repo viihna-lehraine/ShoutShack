@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getSecrets } from '../index.js';
+import getSecrets from './secrets.js';
 
 async function createTransporter() {
 	const secrets = await getSecrets();

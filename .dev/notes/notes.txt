@@ -1,3 +1,5 @@
+ADD made --circular ./src TO TESTS
+
 GLOBAL
     * add and store userID for each user once account is successfully created
 

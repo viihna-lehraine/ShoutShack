@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { setupLogger, __dirname } from '../index.js';
+import { __dirname } from './loadEnv.js';
+import setupLogger from './logger.js';
 
 async function decryptFile(encryptedFilePath) {
 	const logger = await setupLogger();
@@ -12,7 +13,7 @@ async function decryptFile(encryptedFilePath) {
 		logger.error('Error decrypting file from SOPS: ', err);
 		throw err;
 	}
-};
+}
 
 async function getSSLKeys() {
 	const logger = await setupLogger();
@@ -25,7 +26,7 @@ async function getSSLKeys() {
 
 		// *DEV-NOTE* debugging
 		// logger.info(`Decrypted SSL Key: ${decryptedKey.slice(0, 100)}...`);
-    	// logger.info(`Decrypted SSL Cert: ${decryptedCert.slice(0, 100)}...`);
+		// logger.info(`Decrypted SSL Cert: ${decryptedCert.slice(0, 100)}...`);
 
 		return {
 			key: decryptedKey,
@@ -35,6 +36,6 @@ async function getSSLKeys() {
 		logger.error('Error retrieving SSL keys from SOPS: ', err);
 		throw err;
 	}
-};
+}
 
 export default getSSLKeys;

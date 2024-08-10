@@ -1,12 +1,12 @@
 .code-snippets/
-.logExports/
+.dev/viihna/
+.exports/
 .scripts/
 data/*
 logs/
 node_modules/
-viihna/
 
-.env
+*.env*
 .sops.yaml
 blacklist.json
 backend.env
