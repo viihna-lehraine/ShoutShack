@@ -1,5 +1,5 @@
 import initializeDatabase from './config/db.js';
-import featureFlags from './config/featureFlags.js';
+// import featureFlags from './config/featureFlags.js';
 import loadEnv, { __dirname, __filename } from './config/loadEnv.js';
 import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
@@ -39,7 +39,6 @@ export {
 	addToBlacklist,
 	configurePassport,
 	createTransporter,
-	featureFlags,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,

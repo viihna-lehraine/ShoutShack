@@ -1,12 +1,16 @@
 export const parseBoolean = (value) => {
-	if (value === 'true') {
+	if (typeof value === 'string') {
+		value = value.toLowerCase();
+	}
+
+	if (value === true || value === 'true') {
 		return true;
-	} else if (value === 'false') {
+	} else if (value === false || value === 'false') {
 		return false;
 	} else {
-		console.error(
-			'parseBoolean cannot parse a value other than "true" or "false". Could not convert string into boolean.'
+		console.warn(
+			`parseBoolean received an unexpected value: "${value}". Defaulting to false.`
 		);
-		throw new Error('Invalid string. Could not parse to boolean');
+		return false;
 	}
 };

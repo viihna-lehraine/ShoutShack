@@ -15,4 +15,4 @@ const featureFlags = {
 	secureHeadersFlag: parseBoolean(process.env.FEATURE_SECURE_HEADERS),
 };
 
-export default featureFlags;
+// export default featureFlags;
