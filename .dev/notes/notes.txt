@@ -23,7 +23,7 @@ GLOBAL
 * add cron job to backup /backend/src/data/blacklist.json
 
 
-* server.js - corsOptions is unused
+* server.js - ipBlacklist usage causes "cannot load range_check* error
 
 
 * dashboard.html

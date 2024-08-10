@@ -37,16 +37,17 @@ async function initializeServer() {
 	const logger = await setupLogger();
 	const sequelize = await initializeDatabase();
 	const sslKeys = await getSSLKeys();
+	const staticRootPath = process.env.STATIC_ROOT_PATH;
 	await configurePassport(passport);
 
 	// await initializeIPBlacklist();
 
 	try {
-		// Apply global IP blacklist
+		// Apply global IP blacklistr
 		// app.use(ipBlacklistMiddleware);
 
 		// Apply rate limiter to all requests
-		// app.use(limiter);
+		app.use(limiter);
 
 		// Parse JSON
 		app.use(bodyParser.json());
@@ -82,7 +83,7 @@ async function initializeServer() {
 		app.use(cookieParser());
 
 		// Serve Static Files from the /public Directory
-		app.use(express.static(path.join(__dirname, '../public')));
+		app.use(express.static(staticRootPath));
 
 		// Use Static Routes
 		app.use('/', staticRoutes);
