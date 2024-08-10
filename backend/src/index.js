@@ -8,6 +8,7 @@ import setupSecurityHeaders from './config/securityHeaders.js';
 import getSSLKeys from './config/sops.js';
 import {
 	addToBlacklist,
+	initializeIPBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
 	removeFromBlacklist,
@@ -54,6 +55,7 @@ export {
 	getTransporter,
 	ipBlacklistMiddleware,
 	initializeDatabase,
+	initializeIPBlacklist,
 	loadBlacklist,
 	loadTestRoutes,
 	limiter,

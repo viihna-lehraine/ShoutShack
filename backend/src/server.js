@@ -19,8 +19,8 @@ import {
 	configurePassport,
 	getSSLKeys,
 	initializeDatabase,
+	initializeIPBlacklist,
 	ipBlacklistMiddleware,
-	loadBlacklist,
     limiter,
 	setupLogger,
 	setupSecurityHeaders,
@@ -36,16 +36,14 @@ async function initializeServer() {
 	const sequelize = await initializeDatabase();
 	const sslKeys = await getSSLKeys();
 	await configurePassport(passport);
-	await loadBlacklist();
-
-	loadEnv();
+	await initializeIPBlacklist();
 
 	try {
-		// Apply rate limiter to all requests
-		app.use(limiter);
-
 		// Apply global IP blacklist
 		app.use(ipBlacklistMiddleware);
+
+		// Apply rate limiter to all requests
+		app.use(limiter);
 
 		// Parse JSON
 		app.use(bodyParser.json());
@@ -107,10 +105,10 @@ async function initializeServer() {
 				.sendFile(path.join(__dirname, '../public', 'not-found.html'));
 		});
 
-		// Middleware for error handling
+		// Error Handling Middleware
 		app.use((err, req, res, next) => {
-			logger.error('Error occurred: ', err.stack);
-			res.status(500).send('server.js - Server error - something failed');
+			 logger.error('Error occurred: ', err.stack || err.message || err);
+			 res.status(500).send(`Server error - something failed ${err.stack}`);
 		});
 
 		// Test database connection and sync models
@@ -165,17 +163,28 @@ async function initializeServer() {
 			honorCipherOrder: true,
 		};
 
-		// Create Server
+		// Create HTTP2 Server
+		/*
 		http2
 			.createSecureServer(options, app)
 			.listen(process.env.SERVER_PORT, () => {
 				logger.info(`Server running on port ${process.env.SERVER_PORT}`);
 			});
+		*/
+
+		// Create HTTP1 Server
+		https
+			.createServer(options, app)
+			.listen(process.env.SERVER_PORT, () => {
+				logger.info(`Server running on port ${process.env.SERVER_PORT}`);
+			});
 	} catch (err) {
 		logger.error('Failed to start server: ', err);
+		process.exit(1); // exit process with failure
 	}
-}
+};
 
+loadEnv();
 initializeServer();
 
 export default app;

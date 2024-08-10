@@ -15,13 +15,17 @@ async function decryptFile(encryptedFilePath) {
 };
 
 async function getSSLKeys() {
-	const logger = setupLogger();
+	const logger = await setupLogger();
 
 	try {
 		const keyPath = path.join(__dirname, '../../keys/ssl/app.key.gpg');
 		const certPath = path.join(__dirname, '../../keys/ssl/app.crt.gpg');
 		const decryptedKey = await decryptFile(keyPath);
 		const decryptedCert = await decryptFile(certPath);
+
+		// *DEV-NOTE* debugging
+		// logger.info(`Decrypted SSL Key: ${decryptedKey.slice(0, 100)}...`);
+    	// logger.info(`Decrypted SSL Cert: ${decryptedCert.slice(0, 100)}...`);
 
 		return {
 			key: decryptedKey,
