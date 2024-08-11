@@ -2,7 +2,7 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
-import { updatePasswordStrength, validatePasswordsMatch } from '../exports.js';
+import { updatePasswordStrength, validatePasswordsMatch } from '../index.js';
 
 document
   .getElementById('registration-form')

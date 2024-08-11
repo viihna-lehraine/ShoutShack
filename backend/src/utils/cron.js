@@ -50,9 +50,12 @@ const runCommandAndLog = (command, logFilePath) => {
 
 const exportLogs = async () => {
 	const logger = await setupLogger();
-	const serverLogDir = path.join(__dirname, '../../logs/server');
-	const npmLogDir = path.join(__dirname, '../../logs/npm');
-	const exportDir = path.join(__dirname, '../../../.exports/logs');
+	const serverLogDir = path.join(__dirname, process.env.SERVER_LOG_PATH);
+	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
+	const exportDir = path.join(
+		__dirname,
+		process.env.BACKEND_LOGGER_EXPORT_PATH
+	);
 
 	// Ensure the export directory exists
 	if (!fs.existsSync(exportDir)) {
@@ -85,7 +88,7 @@ const exportLogs = async () => {
 // Perform hourly npm audit and update
 const performNpmTasks = async () => {
 	const logger = await setupLogger();
-	const npmLogDir = path.join(__dirname, '../../logs/npm');
+	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
 	const timestamp = new Date().toISOString().replace(/:/g, '-');
 	const logFilePath = path.join(npmLogDir, `npm-audit-update-${timestamp}.log`);
 

@@ -8,109 +8,75 @@ async function setupRoutes() {
 	const logger = await setupLogger();
 	const staticRootPath = process.env.STATIC_ROOT_PATH;
 
-	// Define routes
+	// Define root file path for public/
 	router.get('/', (req, res) => {
 		logger.info('GET request received at /');
 		res.sendFile(path.join(staticRootPath, 'index.html'));
 		logger.info('index.html was accessed');
 	});
 
-	router.get('/about', (req, res) => {
-		logger.info('GET request received at /about');
-		res.sendFile(path.join(staticRootPath, 'about.html'));
-		logger.info('about.html was accessed');
+	// Serve root HTML files
+	router.get('/:page', (req, res) => {
+		const page = req.params.page;
+		res.sendFile(path.join(staticRootPath, `${page}.html`), (err) => {
+			if (err) {
+				res.status(404).send('Page not found');
+			}
+		});
 	});
 
-	router.get('/confirm', (req, res) => {
-		logger.info('GET request received at /confirm');
-		res.sendFile(path.join(staticRootPath, 'confirm.html'));
-		logger.info('confirm.html was accessed');
+	// Serve static directories
+	router.use('/css', express.static(path.join(staticRootPath, 'assets/css')));
+	router.use('/js', express.static(path.join(staticRootPath, 'assets/js')));
+	router.use('/images', express.static(path.join(staticRootPath, 'assets/images')));
+	router.use('/fonts', express.static(path.join(staticRootPath, 'assets/fonts')));
+	router.use('/icons', express.static(path.join(staticRootPath, 'assets/icons')));
+
+	// Serve nested HTML files
+	router.get('/*', (req, res) => {
+		res.sendFile(path.join(staticRootPath, req.path + '.html'), (err) => {
+			if (err) {
+				res.status(404).send('Page not found');
+			}
+		});
 	});
 
-	router.get('/contact', (req, res) => {
-		logger.info('GET request received at /contact');
-		res.sendFile(path.join(staticRootPath, 'contact.html'));
-		logger.info('contact.html was accessed');
+	// Serve specific static files
+	router.get('/app.js', (req, res) => {
+		logger.info('GET request received at /app.js');
+		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
+		logger.info('app.js was accessed');
 	});
 
-	router.get('/dashboard', (req, res) => {
-		logger.info('GET request received at /dashboard');
-		res.sendFile(path.join(staticRootPath, 'dashboard.html'));
-		logger.info('dashboard.html was accessed');
+	router.get('/secrets.json.gpg', (req, res) => {
+		logger.info('GET request received at /secrets.json.gpg');
+		res.sendFile(process.env.FRONTEND_SECRETS_PATH, (err) => {
+			if (err) {
+				logger.error('Failed to send secrets.json.gpg:', err);
+				res.status(404).send('File not found');
+			} else {
+				logger.info('secrets.json.gpg was accessed');
+			}
+		});
 	});
 
-	router.get('/faq', (req, res) => {
-		logger.info('GET request received at /faq');
-		res.sendFile(path.join(staticRootPath, 'faq.html'));
-		logger.info('faq.html was accessed');
+	router.get('/browser-config.xml', (req, res) => {
+		logger.info('GET request received at /browser-config.xml');
+		res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH);
+		logger.info('browser-config.xml was accessed');
 	});
 
-	router.get('/password-reset', (req, res) => {
-		logger.info('GET request received at /password-reset');
-		res.sendFile(path.join(staticRootPath, 'password-reset.html'));
-		logger.info('password-reset.html was accessed');
+	router.get('/humans.md', (req, res) => {
+		logger.info('GET request received at /humans.md');
+		res.sendFile(process.env.process.env.FRONTEND_HUMANS_MD_PATH);
+		logger.info('humans.md was accessed');
 	});
 
-	router.get('/privacy-policy', (req, res) => {
-		logger.info('GET request received at /privacy-policy');
-		res.sendFile(path.join(staticRootPath, 'privacy-policy.html'));
-		logger.info('privacy-policy.html was accessed');
-	});
-
-	router.get('/register', (req, res) => {
-		logger.info('GET request received at /register');
-		res.sendFile(path.join(staticRootPath, 'register.html'));
-		logger.info('register.html was accessed');
-	});
-
-	router.get('/resources', (req, res) => {
-		logger.info('GET request received at /resources');
-		res.sendFile(path.join(staticRootPath, 'resources.html'));
-		logger.info('resources.html was accessed');
-	});
-
-	router.get('/security-acknowledgements', (req, res) => {
-		logger.info('GET request received at /security-acknowledgements');
-		res.sendFile(path.join(staticRootPath, 'security-acknowledgements.html'));
-		logger.info('security-acknowledgements.html was accessed');
-	});
-
-	router.get('/security-policy', (req, res) => {
-		logger.info('GET request received at /security-policy');
-		res.sendFile(path.join(staticRootPath, 'security-policy.html'));
-		logger.info('security-policy.html was accessed');
-	});
-
-	router.get('/tos', (req, res) => {
-		logger.info('GET request received at /tos');
-		res.sendFile(path.join(staticRootPath, 'tos.html'));
-		logger.info('tos.html was accessed');
-	});
-
-	// Routes for /public/dashboard/
-	router.get('/dashboard/security', (req, res) => {
-		logger.info('GET request received at /dashboard/security');
-		res.sendFile(path.join(staticRootPath, 'dashboard/security.html'));
-		logger.info('dashboard/security.html was accessed');
-	});
-
-	router.get('/dashboard/settings', (req, res) => {
-		logger.info('GET request received at /dashboard/settings');
-		res.sendFile(path.join(staticRootPath, '/dashboard/settings.html'));
-		logger.info('dashboard/settings.html was accessed');
-	});
-
-	// Routes for /public/guestbook/
-	router.get('/guestbook/guestbook-blank', (req, res) => {
-		logger.info('GET request received at /guestbook/guestbook-blank');
-		res.sendFile(
-			path.join(
-				staticRootPath,
-				'../../frontend/public/guestbook/guestbook-blank.html'
-			)
-		);
-		logger.info('guestbook/guestbook-blank.html was accessed');
-	});
+	router.get('/robots.txt', (req, res) => {
+		logger.info('GET request received at /robots.txt');
+		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
+		logger.info('robots.txt was accessed');
+	});;
 
 	// 404 handler for unmatched routes
 	router.use((req, res) => {

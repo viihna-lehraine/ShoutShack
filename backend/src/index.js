@@ -3,7 +3,7 @@ import initializeDatabase from './config/db.js';
 import loadEnv, { __dirname, __filename } from './config/loadEnv.js';
 import { createTransporter, getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
-import setupSecureHeaders from './config/secureHeaders.js';
+import setupSecurityHeaders from './config/securityHeaders.js';
 import getSSLKeys from './config/sops.js';
 import {
 	addToBlacklist,
@@ -60,7 +60,7 @@ export {
 	parseBoolean,
 	registrationValidationRules,
 	removeFromBlacklist,
-	setupSecureHeaders,
+	setupSecurityHeaders,
 	validateEntry,
 	verifyEmail2FACode,
 	verifyTOTPToken,

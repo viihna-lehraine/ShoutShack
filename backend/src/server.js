@@ -23,7 +23,7 @@ import {
 	initializeIPBlacklist,
 	ipBlacklistMiddleware,
 	limiter,
-	setupSecureHeaders,
+	setupSecurityHeaders,
 	__dirname,
 	__filename,
 } from './index.js';
@@ -56,7 +56,7 @@ async function initializeServer() {
 		app.use(express.urlencoded({ extended: true }));
 
 		// Load test routes conditionally
-		//await loadTestRoutes(app);
+		// await loadTestRoutes(app);
 
 		// Generate nonce for each request
 		app.use((req, res, next) => {
@@ -65,7 +65,7 @@ async function initializeServer() {
 		});
 
 		// Apply Security Headers
-		setupSecureHeaders(app);
+		setupSecurityHeaders(app);
 
 		// HTTP Request Logging
 		app.use(
