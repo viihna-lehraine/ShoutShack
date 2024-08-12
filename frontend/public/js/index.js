@@ -1,13 +1,15 @@
+import { decryptSecrets } from './modules/config/sops.js';
 import {
-  sanitizeInput,
-  validatePassword,
-  validatePasswordsMatch,
-  updatePasswordStrength,
+	sanitizeInput,
+	validatePassword,
+	validatePasswordsMatch,
+	updatePasswordStrength,
 } from './utils/utils.js';
 
 export {
-  sanitizeInput,
-  validatePassword,
-  validatePasswordsMatch,
-  updatePasswordStrength,
+	decryptSecrets,
+	sanitizeInput,
+	validatePassword,
+	validatePasswordsMatch,
+	updatePasswordStrength,
 };

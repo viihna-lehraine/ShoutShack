@@ -9,10 +9,6 @@ h1 {
   font-size: 1.5em;
 }
 
-h2 {
-  font-size: 1.4em;
-}
-
 label {
   font-size: 0.8em;
 }
@@ -35,7 +31,6 @@ label {
 #main-title-box {
   top: 3vh;
   padding: 12px;
-  background-color: #FFFFFF;
 }
 
 :root {
@@ -43,20 +38,6 @@ label {
   --light-green: #1E8E43;
   --dark-blue: #1E1E3A;
   --black-green: #011206;
-}
-
-a {
-  font-weight: bold;
-}
-
-#index-content-box {
-  display: flex;
-  flex-direction: column;
-  width: 65vw;
-  padding: 15px;
-  margin-top: 6vh;
-  align-items: center;
-  background-color: #FFFFFF;
 }
 
 #primary-container-box {
@@ -94,6 +75,4 @@ a {
   width: 100%;
   padding: 15px 0 15px 0;
   font-size: 0.75em;
-}
-
-/*# sourceMappingURL=main.css.map */
+}/*# sourceMappingURL=main.css.map */

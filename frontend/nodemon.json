@@ -1,9 +1,9 @@
 {
-    "watch": ["public"],
-    "ext": "css,html,js,json",
-    "ignore": ["node_modules/*"],
-    "exec": "node src/server.js",
-    "env": {
-      "NODE_ENV": "development"
-    }
+  "watch": ["public"],
+  "ext": "html,css,js,json",
+  "exec": "webpack serve --config webpack.config.js",
+  "ignore": ["node_modules/*"],
+  "env": {
+    "NODE_ENV": "development"
   }
+}
