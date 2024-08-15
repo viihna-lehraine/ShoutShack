@@ -77,7 +77,7 @@ The project stack includes the following
 
 ## 4. Server Functions
 
-* Server initialization is defined in **[[server.js]](.src/config.server.js)**
+* Server initialization is defined in **[[server.js]](.backend/src/server.js)**
 
 <br>
 
@@ -94,6 +94,83 @@ Basic backend functionality has been configured. Currently working on frontend d
 ## 6. To Do
 
 * More robust logging (both front and backend)
+
+* new HTML pages (feedback.html, tour.html, support.html, help.html, and sitemap.html)
+
+* create FeedbackSurvey JS model
+
+* create DataOptIn JS model
+
+* update sitemap.xml
+
+* update frontend.md
+
+* update backend.md
+
+* fine tune all DB models. check for redundancies and ensure they contain all necessary data
+
+* make list of all sensitive user data (email address, 2FA credentials, etc) and make sure it is encrypted before transfer to database. encrypt this data with a robust mechanism, possibly involving keyfiles for MFA
+
+* ensure models can accept but IPV4 and IPV6 address formatsq
+
+* fine tune IP blacklist and VPN/proxy/TOR exit relay lists and the mechanism that will update them from
+external sources; create functions allowing admin CRUD operations on these lists
+
+* create automated, secure backup mechanism for contents of backend/data/
+
+* configure SOPS for decrypting and reading backend/data/ files
+
+* add and configure hcaptcha
+
+* ensure user routes are setup to handle all necessary operations for account registration
+
+* build user session functionality with JSON web tokens and test
+
+* simulate user registration
+
+* add subpages to dashboard.html
+    * NEW SET OF TEMPLATES FOR WHEN USERS FINALIZE SETTINGS UPDATES
+    * privacy
+        * individual user data opt ins
+            * several for user analytics
+            * maybe offer a bit more storage for people who opt in
+        * Y/N flag for indexing user guestbook page with search engines
+        * show/hide creation date (default NO)
+        * show/hide email (default NO)
+    * settings
+        * email frequency and opt ins/outs
+            * ON/OFF for new guestbook entry notification
+        * length of time for session to stay valid (including indefinite session with use of user-approved cookie generation)
+        * generate and use guestbook URL (no limits on frequency other than standard rate limiting)
+        * custom guestbook word filters
+        * blocklist CRUD operations
+        * automatic "THANK YOU" email ON/OFF for entries that leave an email address
+            * try to implement some kinda basic filtering
+        * ON/OFF for "review new entries before adding to guestbook"
+        * change guestbook status
+            * active
+            * read-only
+        * custom user status
+        * referral link
+            * offer some kinda special icon or badge for their referrals' accumulated time spent on site or some such metric
+	* security
+	    * update username (once per month)
+	    * update email
+	    * update password
+	    * enable/disable 2FA
+	        * email
+	        * TOTP
+	        * Yubico OTP
+	        * U2F/FIDO
+	        * Passkey
+	     * view backup codes (requires re-authenticating and will add an entry to the client-side security logs)
+	     * regenerate backup codes
+	     * preferred 2FA method
+	     * review current 2FA methods
+	     * security logs
+	        * successful logins and associated IPs/user agents
+	        * changes to security settings
+	        * failed login attempts
 
 <br>
 
