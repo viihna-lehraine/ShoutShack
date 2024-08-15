@@ -67,7 +67,7 @@ The project stack includes the following
 
 ## 3. Client Functions
 
-* Frontend is served from the **[[/public]](/public)** directory 
+* Frontend is served from the **[public/](./frontend/public/)** directory, while frontend's Node initializaton is rooted in **[frontend/](./frontend/)** 
 
 * The frontend is, at the moment, skeletal in design. I have done very little on that end, only creating the most rudimentary, non-working version of a registration and login page at this time. Current work is focused on creating a stable server that executes all its functions without performance or functionality-affecting bugs before pivoting to the frontend's implementation.
 
@@ -95,18 +95,6 @@ Basic backend functionality has been configured. Currently working on frontend d
 
 * More robust logging (both front and backend)
 
-* new HTML pages (feedback.html, tour.html, support.html, help.html, and sitemap.html)
-
-* create FeedbackSurvey JS model
-
-* create DataOptIn JS model
-
-* update sitemap.xml
-
-* update frontend.md
-
-* update backend.md
-
 * fine tune all DB models. check for redundancies and ensure they contain all necessary data
 
 * make list of all sensitive user data (email address, 2FA credentials, etc) and make sure it is encrypted before transfer to database. encrypt this data with a robust mechanism, possibly involving keyfiles for MFA
@@ -131,15 +119,23 @@ external sources; create functions allowing admin CRUD operations on these lists
 * add subpages to dashboard.html
     * NEW SET OF TEMPLATES FOR WHEN USERS FINALIZE SETTINGS UPDATES
     * privacy
+        * catch-all PRIVATE MODE which can be easily turned on or off
         * individual user data opt ins
             * several for user analytics
             * maybe offer a bit more storage for people who opt in
         * Y/N flag for indexing user guestbook page with search engines
         * show/hide creation date (default NO)
         * show/hide email (default NO)
+        * export data
+        * delete data
+            * allow different output formats, including encrypted
     * settings
+        * ON/OFF beta testing flag
         * email frequency and opt ins/outs
             * ON/OFF for new guestbook entry notification
+            * ON/OFF for feature announcements
+            * ON/OFF for bug fixes
+            * ON/OFF for general announcements
         * length of time for session to stay valid (including indefinite session with use of user-approved cookie generation)
         * generate and use guestbook URL (no limits on frequency other than standard rate limiting)
         * custom guestbook word filters

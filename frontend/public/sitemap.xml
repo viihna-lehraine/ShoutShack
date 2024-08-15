@@ -6,7 +6,7 @@
 
         <loc>https://www.[DOMAIN].com</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>monthly</changefreq>
 
@@ -18,7 +18,7 @@
 
         <loc>https://www.[DOMAIN]/about.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
@@ -30,7 +30,7 @@
 
         <loc>https://www.[DOMAIN]/confirm.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <priority>0.0</priority>
     
@@ -40,7 +40,19 @@
 
         <loc>https://www.[DOMAIN]/contact.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.6</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/cookie-policy.html</loc>
+
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
@@ -52,7 +64,7 @@
 
         <loc>https://www.[DOMAIN]/dashboard.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>monthly</changefreq>
 
@@ -64,11 +76,59 @@
 
         <loc>https://www.[DOMAIN]/faq.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>monthly</changefreq>
 
-        <priority>0.8</priority>
+        <priority>0.75</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/feature-request.html</loc>
+
+        <lastmod>2024-08-15</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.5</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/feedback.html</loc>
+
+        <lastmod>2024-08-15</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.5</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/help.html</loc>
+
+        <lastmod>2024-08-15</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>0.9</priority>
+    
+    </url>
+
+    <url>
+
+        <loc>https://www.[DOMAIN]/login.html</loc>
+
+        <lastmod>2024-08-15</lastmod>
+
+        <changefreq>yearly</changefreq>
+
+        <priority>1.0</priority>
     
     </url>
 
@@ -76,7 +136,7 @@
 
         <loc>https://www.[DOMAIN]/password-reset.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <priority>0.0</priority>
     
@@ -86,11 +146,11 @@
 
         <loc>https://www.[DOMAIN]/privacy-policy.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
-        <priority>0.7</priority>
+        <priority>0.5</priority>
     
     </url>
 
@@ -98,7 +158,7 @@
 
         <loc>https://www.[DOMAIN]/register.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>monthly</changefreq>
 
@@ -110,11 +170,11 @@
 
         <loc>https://www.[DOMAIN]/resources.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>weekly</changefreq>
 
-        <priority>0.5</priority>
+        <priority>0.69</priority>
     
     </url>
 
@@ -122,7 +182,7 @@
 
         <loc>https://www.[DOMAIN]/security-acknowledgements.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
@@ -134,7 +194,7 @@
 
         <loc>https://www.[DOMAIN]/security-policy.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
@@ -146,31 +206,23 @@
 
         <loc>https://www.[DOMAIN]/tos.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
         <changefreq>yearly</changefreq>
 
-        <priority>0.65</priority>
+        <priority>0.5</priority>
     
     </url>
 
     <url>
 
-        <loc>https://www.[DOMAIN]/dashboard/security.html</loc>
+        <loc>https://www.[DOMAIN]/tour.html</loc>
 
-        <lastmod>2024-08-08</lastmod>
+        <lastmod>2024-08-15</lastmod>
 
-        <priority>0.0</priority>
-    
-    </url>
+        <changefreq>yearly</changefreq>
 
-    <url>
-
-        <loc>https://www.[DOMAIN]/dashboard/settings.html</loc>
-
-        <lastmod>2024-08-08</lastmod>
-
-        <priority>0.0</priority>
+        <priority>0.9</priority>
     
     </url>
 

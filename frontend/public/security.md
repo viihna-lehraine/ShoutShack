@@ -3,7 +3,7 @@
 <br>
 
 ## Contact 
-* [viihna@ViihnaTech.com](mailto:security@[DOMAIN].com">viihna@ViihnaTGech.com)
+* [viihna@viihnatech.com](mailto:security@viihnatech.com">viihna@ViihnaTech.com)
 
 <br>
 
@@ -15,12 +15,12 @@
 <br>
 
 ## Acknowledgements
-* [Security Acknowledgements](https://[DOMAIN].com/security-acknowledgements.html)
+* [Security Acknowledgements](https://localhost:3000/security-acknowledgements.html)
 
 <br>
 
 ## Policy
-* [Security Policy](https://[DOMAIN].com/security-policy.html
+* [Security Policy](https://localhost:3000/security-policy.html)
 )
 
 <br>

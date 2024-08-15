@@ -1,9 +1,5 @@
 import argon2 from 'argon2';
-import {
-	DataTypes,
-	Model,
-	Sequelize,
-} from 'sequelize';
+import { DataTypes, Model, Sequelize } from 'sequelize';
 import initializeDatabase from '../config/db.js';
 import getSecrets from '../config/secrets.js';
 
@@ -161,6 +157,7 @@ async function initializeUserModel() {
 			created_at: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
+				allowNull: false,
 			},
 		},
 		{

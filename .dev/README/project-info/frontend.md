@@ -74,49 +74,73 @@ This file documents the structure and functionality of the Guestbook project's [
 
     * page with answers to predicted common questions and questions that prove to be common among users
 
-* 1-D. index.html
+* 1-D. feature-request.html
+
+    * form that allows users to request new features or changes to existing features
+
+* 1-E. feedback.html
+
+    * feedback form where users can send feedback and suggestions regarding their experience while using the website
+
+* 1-F. help.html
+
+    * wiki-like, searchable index with answers to common questions and more detailed information about site features and functionality
+
+* 1-G. index.html
 
     * currently serves as a sitemap linking to all web pages
 
-* 1-E. password-reset.html
+* 1-H. password-reset.html
 
     * page provides the functionality for and explains how to reset one's password (reachable while logged out)
  
-* 1-F. register.html
+* 1-I. register.html
 
     * contains the account registration form
 
-* 1-G. resources.html
+* 1-J. resources.html
 
     * describes several beginner-friendly resources for learning HTML and CSS, allowing the user to more fully utilize the customization option
 
-* 1-H. security-policy
+* 1-K. security-policy.html
 
     * informs users how their data is protected, what security practices the project follows, and how to responsibly report vulnerabilities
 
     * IMPORTANT - keep a usable changelog of significant updates or changes to this page.
 
-* 1-I. tos.html
+* 1-L. sitemap.html
+
+    * central index page listing all primary web pages across the site
+
+* 1-M. support.html
+
+    * a support request form that allows users to ask site staff for assistance
+
+* 1-N. tos.html
 
     * terms of service - details of agreement between Guestbook and its clients
 
-* 1-J app.js
+* 1-O. tour.html
+
+    * provides a quick tour of the site's main features, and shows the user where to look for help when needed while encouraging them to reach out to staff if their questions remain unanswered
+
+* 1-P. app.js
 
     * entry point for all frontend JavaScript
 
-* 1-K humans.md
+* 1-Q. humans.md
 
     * credits for the project's creators and maintainers
 
-* 1-L security.md
+* 1-R. security.md
 
     * contains a simplified outline for how to responsibly report a security vulnerability
 
-* 1-M robots.txt
+* 1-S. robots.txt
 
     * tells web crawlers what assets and pages to index and what not to index 
 
-* 1-N sitemap.xml
+* 1-T. sitemap.xml
 
     * helps web crawlers index pages and defined date of last modification and relative page priority for all web pages
 

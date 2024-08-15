@@ -477,9 +477,9 @@ The goal of this README file is to document the structure and functionality of t
 
 #### G. backend/src/conrollers/
 
-1. #### guestbookController.js
+1. #### modelController.js
 
-    * defines 4  API route handlers for managing guestbook entries in the backend Express.js application. Together, they perform CRUD operations
+    * defines 4 API route handlers for managing CRUD operations on any defined database model
 
 <br>
 
@@ -515,19 +515,86 @@ The goal of this README file is to document the structure and functionality of t
 
 #### I. backend/src/models/
 
-1. #### GuestbookEntry.js
+1. #### AuditLog.js
 
-    * defines a Sequelize model for guestbook entries
+    * using Sequelize, defines and initializes the 'AuditLog' model
+
+    * this model is used to track and store audit logs, which record user actions within the application as a whole
+
+
+2. #### DataShareOptons.js
+
+    * using Sequelize, defines and initializes the 'DataShareOptions' model
+
+    * stores user preferences regarding data sharing choices
+
+3. #### Device.js
+
+    * using Sequelize, defines and initializes the 'Device' model
+
+    * stores information about devices associated with users **_(when they have explicitly opted in)_**
+
+4. #### FailedLoginAttempts.js
+
+    * using Sequelize, defines and initializes the 'FailedLoginAttempts' model
+
+    * used to record and track unsuccessful login attempts
+
+5. #### FeatureRequest.js
+
+    * using Sequelize, defines and initializes the 'FeatureRequest' model
+
+    * used to manage and track user-submitted feature requests
+
+6. #### FeedbackSurvey.js
+
+    * using Sequelize, defines and initializes the 'FeedbackSurvey' model
+
+    * used to collect and store feedback collected from a user-completed survey (at frontend/public/feedback.html) 
+
+7. #### GuestbookEntry.js
+
+    * using Sequelize, defines and initializes the 'GuestbookEntry' model
 
     * this model represents the structure of the GuestbookEntry table in the database and handles interaction with the database in regards to data that uses or is meant for inclusion using this table
 
-2. #### User.js
+8. #### MultiFactorAuthSetup.js
 
-    * defines a Sequelize model for registered users' account data
+    * using Sequelize, defines and initializes the 'MultiFactorAuthSetup' model
+
+    * used to store and manage user MFA configurations
+
+9. #### RecoveryMethod.js
+
+    * using Sequelize, defines and initializes the 'RecoveryMethod' model
+
+    * used to manage and store information about various recovery methods available to users for account recovery purposes
+
+10. #### SecurityEvent.js
+
+    * using Sequelize, defines and initializes the 'SecurityEvent' model
+
+    * used to track and log various security-related events
+
+11. #### SupportRequest.js
+
+    * using Sequelize, defines and initializes the 'SupportRequest' model
+
+    * used to manage and track support requests submitted by users regarding issues within the application
+
+12. #### User.js
+
+    * using Sequelize, defines and initializes the 'User' model
 
     * this model represents the structure of the User table in the database and handles interaction with the database in regards to data that is meant for inclusion using this table
 
-    * handles user authentication, password management, and other account-specific data 
+    * handles user authentication, password management, and other account-specific data
+
+13. #### UserSession.js
+
+    * using Sequelize, defines and initializes the 'UserSession' model
+
+    * used to manage and track user sessions
 
 <br>
 
