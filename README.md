@@ -93,7 +93,7 @@ Basic backend functionality has been configured. Currently working on frontend d
 
 ## 6. To Do
 
-* More robust logging (both front and backend)
+* more logging
 
 * fine tune all DB models. check for redundancies and ensure they contain all necessary data
 
@@ -115,12 +115,6 @@ external sources; create functions allowing admin CRUD operations on these lists
 * build user session functionality with JSON web tokens and test
 
 * simulate user registration
-
-* get ipBlacklist working
-
-* get featureFlags working
-
-* test HTTP2
 
 * add subpages to dashboard.html
     * NEW SET OF TEMPLATES FOR WHEN USERS FINALIZE SETTINGS UPDATES

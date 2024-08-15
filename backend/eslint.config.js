@@ -26,7 +26,6 @@ export default [
 		},
 		rules: {
 			...tsPlugin.configs.recommended.rules,
-			// Remove the 'indent' rule here if you want Prettier to handle indentation exclusively
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
 		},
@@ -61,7 +60,6 @@ export default [
 			prettier: prettierPlugin,
 		},
 		rules: {
-			// Remove the 'indent' rule here if you want Prettier to handle indentation exclusively
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
 		},

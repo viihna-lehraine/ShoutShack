@@ -1,8 +1,10 @@
 import initializeDatabase from './config/db.js';
+import featureFlags from './config/featureFlags.js';
 import loadEnv, {
 	__dirname,
 	 __filename
 } from './config/loadEnv.js';
+import startServer from './config/http.js';
 import {
 	createTransporter,
 	getTransporter } from './config/mailer.js';
@@ -11,7 +13,7 @@ import setupSecurityHeaders from './config/securityHeaders.js';
 import sops from './config/sops.js';
 import {
 	addToBlacklist,
-	initializeIPBlacklist,
+	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
 	removeFromBlacklist,
@@ -21,7 +23,6 @@ import {
 	registrationValidationRules,
 	validateEntry,
 } from './middleware/validate.js';
-import { loadTestRoutes } from './utils/helpers.js';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
@@ -53,6 +54,7 @@ import generate2FAEnabledEmailTemplate from './utils/templates/email/2FAEnabledE
 import generateAccountDeletedConfirmationEmailTemplate from './utils/templates/email/accountDeletedConfirmationEmailTemplate.js';
 import generateAccountDeletionStartedEmailTemplate from './utils/templates/email/accountDeletionStartedEmailTemplate.js';
 import generateConfirmationEmailTemplate from './utils/templates/email/confirmationEmailTemplate.js';
+import loadTestRoutes from './utils/test/loadTestRoutes.js';
 import { parseBoolean } from './utils/parseBoolean.js';
 
 export {
@@ -60,6 +62,7 @@ export {
 	configurePassport,
 	createTransporter,
 	decryptDataFiles,
+	featureFlags,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
@@ -78,7 +81,7 @@ export {
 	getTransporter,
 	ipBlacklistMiddleware,
 	initializeDatabase,
-	initializeIPBlacklist,
+	initializeIpBlacklist,
 	loadBlacklist,
 	loadEnv,
 	loadTestRoutes,
@@ -88,6 +91,7 @@ export {
 	removeFromBlacklist,
 	saveBackupCodesToDatabase,
 	setupSecurityHeaders,
+	startServer,
 	validateEntry,
 	validateYubicoOTP,
 	verifyBackupCode,

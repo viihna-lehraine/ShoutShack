@@ -79,4 +79,4 @@ export const removeFromBlacklist = (ip) => {
 	saveBlacklist();
 };
 
-export const initializeIPBlacklist = initializeBlacklist;
+export const initializeIpBlacklist = initializeBlacklist;
