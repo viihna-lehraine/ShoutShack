@@ -28,9 +28,18 @@ async function setupRoutes() {
 	// Serve static directories
 	router.use('/css', express.static(path.join(staticRootPath, 'assets/css')));
 	router.use('/js', express.static(path.join(staticRootPath, 'assets/js')));
-	router.use('/images', express.static(path.join(staticRootPath, 'assets/images')));
-	router.use('/fonts', express.static(path.join(staticRootPath, 'assets/fonts')));
-	router.use('/icons', express.static(path.join(staticRootPath, 'assets/icons')));
+	router.use(
+		'/images',
+		express.static(path.join(staticRootPath, 'assets/images'))
+	);
+	router.use(
+		'/fonts',
+		express.static(path.join(staticRootPath, 'assets/fonts'))
+	);
+	router.use(
+		'/icons',
+		express.static(path.join(staticRootPath, 'assets/icons'))
+	);
 
 	// Serve nested HTML files
 	router.get('/*', (req, res) => {
@@ -76,7 +85,7 @@ async function setupRoutes() {
 		logger.info('GET request received at /robots.txt');
 		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
 		logger.info('robots.txt was accessed');
-	});;
+	});
 
 	// 404 handler for unmatched routes
 	router.use((req, res) => {

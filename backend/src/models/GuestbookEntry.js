@@ -1,4 +1,8 @@
-import { Sequelize, DataTypes, Model } from 'sequelize';
+import {
+	DataTypes,
+	Model,
+	Sequelize
+} from 'sequelize';
 import { initializeDatabase } from '../index.js';
 
 class GuestbookEntry extends Model {}

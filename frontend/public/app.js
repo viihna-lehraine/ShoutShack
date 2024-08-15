@@ -2,11 +2,15 @@
 // Licensed under GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
+// app.js - Frontend JS Entrypoint
+
 import { decryptSecrets } from './modules/config/sops.js';
-import { initializeDashboard } from './pages/dashboard.js';
-import { initializeLogin } from './pages/login.js';
-import { initializePasswordReset } from './pages/passwordReset.js';
-import { initializeRegister } from './pages/register.js';
+import {
+	initializeDashboard,
+	initializeLogin,
+	initializePasswordReset,
+	initializeRegister,
+} from './index.js';
 
 // Load secrets and configurations
 const secrets = decryptSecrets();
@@ -23,7 +27,7 @@ const currentPageId = document.body.id;
 
 // Initialize the app if an initializer exists for the current page
 if (pageInitializers[currentPageId]) {
-	pageInitializers[currentPageId](secrets);
+	pageInitializers[currentPageId](secrets) || pageInitializers[currentPageId]();
 } else {
 	console.warn(`No initializer found for page ${currentPageId}`);
 }

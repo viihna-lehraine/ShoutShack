@@ -1,7 +1,12 @@
 import initializeDatabase from './config/db.js';
 // import featureFlags from './config/featureFlags.js';
-import loadEnv, { __dirname, __filename } from './config/loadEnv.js';
-import { createTransporter, getTransporter } from './config/mailer.js';
+import loadEnv, {
+	__dirname,
+	 __filename
+} from './config/loadEnv.js';
+import {
+	createTransporter,
+	getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
 import setupSecurityHeaders from './config/securityHeaders.js';
 import getSSLKeys from './config/sops.js';
@@ -19,9 +24,31 @@ import {
 } from './middleware/validate.js';
 import { loadTestRoutes } from './utils/helpers.js';
 import {
+	generateBackupCodes,
+	getBackupCodesFromDatabase,
+	saveBackupCodesToDatabase,
+	verifyBackupCode,
+} from './utils/auth/backupCodeUtil.js';
+import {
 	generateEmail2FACode,
 	verifyEmail2FACode,
 } from './utils/auth/email2FAUtil.js';
+import {
+	generateU2fAuthenticationOptions,
+	generateU2fRegistrationOptions,
+	verifyU2fAuthentication,
+	verifyU2fRegistration,
+} from './utils/auth/fido2Util.js';
+import {
+	generatePasskeyAuthenticationOptions,
+	generatePasskeyRegistrationOptions,
+	verifyPasskeyAuthentication,
+	verifyPasskeyRegistration,
+} from './utils/auth/passkeyUtil.js';
+import {
+	generateYubicoOtpOptions,
+	validateYubicoOTP,
+} from './utils/auth/yubicoOtpUtil.js';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
@@ -43,11 +70,18 @@ export {
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
 	generateAccountDeletionStartedEmailTemplate,
+	generateBackupCodes,
 	generateConfirmationEmailTemplate,
 	generateEmail2FACode,
+	generatePasskeyAuthenticationOptions,
+	generatePasskeyRegistrationOptions,
+	generateU2fAuthenticationOptions,
+	generateU2fRegistrationOptions,
 	generateQRCode,
 	generateTOTPSecret,
 	generateTOTPToken,
+	generateYubicoOtpOptions,
+	getBackupCodesFromDatabase,
 	getSSLKeys,
 	getTransporter,
 	ipBlacklistMiddleware,
@@ -60,10 +94,17 @@ export {
 	parseBoolean,
 	registrationValidationRules,
 	removeFromBlacklist,
+	saveBackupCodesToDatabase,
 	setupSecurityHeaders,
 	validateEntry,
+	validateYubicoOTP,
+	verifyBackupCode,
 	verifyEmail2FACode,
+	verifyPasskeyAuthentication,
+	verifyPasskeyRegistration,
 	verifyTOTPToken,
+	verifyU2fAuthentication,
+	verifyU2fRegistration,
 	__dirname,
 	__filename,
 };

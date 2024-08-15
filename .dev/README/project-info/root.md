@@ -2,13 +2,9 @@
 
 ***
 
-## Introduction
-
 <br>
 
-This file documents the structure and functionality of files and directories located in the Guestbook project's directories* 
-
-* *(excluding public/ and src/)*
+This file documents the structure and functionality of files and directories located in the Guestboot project's root that are not a part of the Backend, Frontend, or Nginx directories 
 
 <br>
 
@@ -54,63 +50,81 @@ This file documents the structure and functionality of files and directories loc
 
 ***
 
-## 2. Files
+## 2. Files and Directories
 
 #### A. .dev/
-1. #### notes.txt
-    *
-2. #### third-party-scripts.txt
-    * 
 
-#### B. .scripts/
-1. #### .env
-    * 
+1. .dev/notes/
 
-#### C. .scripts/decrypt/
-1. #### decrypt_dir.sh
-    * 
-2. #### quick_decrypt_sops.sh
-    * 
-3. #### sops_decypt.sh
-    * 
+    * notes about changes made while developing the project, as well as topics and changes which need to be revisited at a later time
 
-#### D. .scripts/encrypt/
-1. #### encrypt_dir.sh
-    * 
-2. #### quick_encrypt_sops.sh
-    * 
-3. #### sops_encrypt.sh
-    * 
+2. .dev/old-files/
 
-#### E. .scripts/keygen/
-1. #### jwt_secret_gen.py
-    * 
-2. #### pepper_gen.py
-    * 
+    * old versions of files and configurations or pieces of them, kept for reference or in case a newer version causes issues
 
-#### F. logs/
-* 
+3. .dev/README/
 
-#### G. nodemon.json
-*  
+    * contains .md files explaining facets of the project for anyone that decides to contribute
 
-#### H. package-lock.json
-* 
+4. .dev/templates/
 
-#### I. package.json
-* 
+    * contains boilerplates for commonly reused/remade pages
 
-#### J. LICENSE.md 
-* 
+<br>
 
-#### K. exit.sh
-* 
+#### B. .editorconfig
 
-#### L. start.sh
-* 
+* basic configuration for the developer's IDE to ensure consistency across the project
 
-#### M. robots.txt
-* 
+
+#### B. .env
+
+*  contains environment varibles for use with Docker
+    * DB_IMAGE
+    * DB_DIALECT
+    * DB_PROTOCOL
+    * DB_USER
+    * DB_PASSWORD
+    * DB_NAME
+    * DB_URL
+    * DB_PORT
+    * DB_VOLUME
+
+#### C. .gitignore
+
+* tells Git which files to ignore when syncing repo
+
+#### D. jsconfig.json 
+
+* helps the IDE understand the project structure and tells it how to parse and lint JavaScript files
+
+#### E. manifest.json
+
+* aid for progressive web apps (PWAs) and serves as a configuration file that allows a web app to be installed on a user's device and appear like a native app. Defines how the app should behave when installed, including its appearance, icons, and startup behavior
+
+#### F. LICENSE.md
+
+* contents of the project's license, (GNU General Public License version 3)
+
+#### G. README.md
+
+* primary README file for the project as a whole
+
+#### H. docker-compose.dev.yaml
+
+* Primary development Docker compose file, which will build and containerize the frontend, backend, and Nginx server separately
+
+#### I. docker-compose.frontend.dev.yaml
+
+* For the development environment, builds and containerizes the project's frontend
+
+#### J. docker-compose.nginx.dev.yaml
+
+* For the development environment, builds and containerizes the project's Nginx reverse proxy server
+
+#### K. docker-compose.server.dev.yaml
+
+* For the development environment, builds and containerizes the project's backend server
 
 <br>
 

@@ -11,5 +11,6 @@ node_modules/
 .sops.yaml
 blacklist.json
 backend.env
+externalBlacklists.json
 secrets.json
 vpnIpList.json

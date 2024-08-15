@@ -1,11 +1,3 @@
-ADD made --circular ./src TO TESTS
-
-GLOBAL
-    * add and store userID for each user once account is successfully created
-
-/src/models/User.js
-    * does the 128-character password length include or exclude the salt?
-
 /src/server.js (helmet)
     * make sure I have a source for styles and fonts to load from
 
@@ -17,14 +9,21 @@ GLOBAL
 
 * let users decide whether to have search engines index their guestbook page or not
 
+* recovery methods!
 
 * finish adding logging
 
 * add cron job to backup /backend/src/data/blacklist.json
 
+* backend/data/*
+    * come up with a more secure way to perform CRUD operations on these files that makes sure there are  always multiple updated instances available
+    * keeping these here as raw JSON, exposed on the server, is not a good idea for testing or prod
+    * need to find a way to automatically update these files very often, including the json pointing to external sources
 
 * server.js - ipBlacklist usage causes "cannot load range_check* error
 
+* register.html
+    * confirm email as well
 
 * dashboard.html
     * let users delete their accounts
@@ -34,31 +33,16 @@ GLOBAL
 
 * user dashboard
     * security panel
+    * settings paenl
 
-* register.html
+* resources.html
     * recommend good password generators and a PW manager(?)
-
-* email 2FA secret
-
-* 2FA
-    * Yubico OTP
-    * U2F
-    * Passkeys
 
 
 * 3rd party scripts
     * check against the expected hashes of the JS files
 
 
-* src/routes/
-    * needs error handling middleware
-
-
 * should probably find a better home for __dirname and __filename than src/config/loadEnv.js
 
--------------------------------------------
-
-* IMPORTANT *
-1. is crypto() a good library to be using for secure operations?
-
-2. do I need to set up routes for other files that may need to be loaded from the root dir?
+------------------------------------------

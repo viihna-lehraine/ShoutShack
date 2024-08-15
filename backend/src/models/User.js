@@ -1,5 +1,9 @@
-import { Sequelize, DataTypes, Model } from 'sequelize';
 import argon2 from 'argon2';
+import {
+	DataTypes,
+	Model,
+	Sequelize,
+} from 'sequelize';
 import initializeDatabase from '../config/db.js';
 import getSecrets from '../config/secrets.js';
 
@@ -38,11 +42,6 @@ async function initializeUserModel() {
 				allowNull: false,
 				unique: true,
 			},
-			totpSecret: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				unique: true,
-			},
 			isAccountVerified: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
@@ -55,10 +54,101 @@ async function initializeUserModel() {
 				type: DataTypes.DATE,
 				allowNull: true,
 			},
+			has2FA: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			backupCodes: {
+				type: DataTypes.ARRAY,
+				allowNull: true,
+			},
+			isEmail2faEnabled: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			isTotpl2faEnabled: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			isYubicoOtp2faEnabled: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			isU2f2faEnabled: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			isPasskeyEnabled: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+				allowNull: false,
+			},
+			totpSecret: {
+				type: DataTypes.STRING,
+				allowNull: true,
+				unique: true,
+			},
+			yubicoOtpPublicId: {
+				type: DataTypes.STRING,
+				allowNull: true,
+				unique: true,
+			},
+			yubicoOtpSecretKey: {
+				type: DataTypes.STRING,
+				allowNull: true,
+				unique: true,
+			},
+			fido2CredentialId: {
+				type: DataTypes.STRING,
+				allowNull: true,
+				unique: true,
+			},
+			fido2PublicKey: {
+				type: DataTypes.TEXT,
+				allowNull: true,
+			},
+			fido2Counter: {
+				type: DataTypes.INTEGER,
+				allowNull: true,
+			},
+			fido2AttestationFormat: {
+				type: DataTypes.STRING,
+				allowNull: true,
+			},
+			passkeyCredentialId: {
+				type: DataTypes.STRING,
+				allowNull: true,
+				unique: true,
+			},
+			passkeyPublicKey: {
+				type: DataTypes.TEXT,
+				allowNull: true,
+			},
+			passkeyCounter: {
+				type: DataTypes.INTEGER,
+				allowNull: true,
+			},
+			passkeyAttestationFormat: {
+				type: DataTypes.STRING,
+				allowNull: true,
+			},
 			hibpCheckFailed: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
 				allowNull: false,
+			},
+			isGuestbookIndexed: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+			},
+			isUserOptedInForDataShare: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 			},
 			guestbookProfile: {
 				type: DataTypes.JSON,
