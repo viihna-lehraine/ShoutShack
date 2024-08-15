@@ -10,7 +10,7 @@ h1 {
 }
 
 h2 {
-    font-size: 1.4em;
+    font-size: 1.35em;
 }
 
 label {
@@ -35,5 +35,32 @@ label {
 #main-title-box {
     top: 3vh;
     padding: 12px;
-    background-color: #FFFFFF;
+    /* background-color: var(--near-white); */
+    background-color: #FDFDFD;
+}
+
+.main-box {
+    position: relative;
+    display: flex;
+    border: 1px solid black;
+    border-radius: 3px;
+}
+
+.main-box-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1vh;
+    padding: 5px 0;
+    background-color: var(--near-white);
+}
+
+#primary-container-box {
+    flex-direction: column;
+    top: 10vh;
+    padding: 10px;
+}
+
+#primary-container-box-header-row {
+    padding: 10px 0;
 }

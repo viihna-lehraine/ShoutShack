@@ -1,6 +1,7 @@
 .code-snippets/
 .dev/viihna/
 .exports/
+.logs/
 .scripts/
 data/*
 logs/

@@ -21,3 +21,12 @@ ENV NODE_ENV=DEVELOPMENT
 
 # Start the application
 CMD ["npm", "start"]
+
+# Docker Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s \
+    CMD curl -f https://localhost:3000/health || exit 1
+
+# Docker Metadata
+LABEL maintainer="Viihna Lehraine"
+LABEL version="1.0"
+LABEL description="NodeJS web server for Guestbook project"

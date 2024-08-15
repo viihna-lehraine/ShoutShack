@@ -25,7 +25,7 @@ Contributions are more than welcome! All that I ask is that you respect the goal
 
     * [.editorconfig](../../../.editorconfig)
 
-4. CSS should be compiled from the Sass files in public/scss/. Sass should watch the public/ directory*. 
+4. CSS should be compiled from the Sass files in frontend/public/scss/. Sass should watch the public/ directory*. 
     * *(see scripts in [package.json](../../../package.json))* 
 
 5. Please do not add new frameworks without consulting the team

@@ -1,11 +1,21 @@
+$near-white: #FDFDFD;
+$white-blue: #D4D1FA;
 $white-green: #F6FBE9;
+$light-blue: #7269D4;
 $light-green: #1E8E43;
 $dark-blue: #1E1E3A;
+$dark-green: #073A18;
+$black-blue: #050728;
 $black-green: #011206;
 
 :root {
+    --near-white: #($near-white);
+    --white-blue: #($white-blue);
     --white-green: #{$white-green};
+    --light-blue: #($light-blue);
     --light-green: #{$light-green};
     --dark-blue: #{$dark-blue};
+    --dark-green: #($dark-green);
+    --black-blue: #($black-blue);
     --black-green: #{$black-green};
 }

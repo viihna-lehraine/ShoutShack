@@ -1,1 +1,0 @@
-# Guestbook Pull Request Template

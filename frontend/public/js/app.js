@@ -3,7 +3,9 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 import { decryptSecrets } from './modules/config/sops.js';
+import { initializeDashboard } from './pages/dashboard.js';
 import { initializeLogin } from './pages/login.js';
+import { initializePasswordReset } from './pages/passwordReset.js';
 import { initializeRegister } from './pages/register.js';
 
 // Load secrets and configurations
@@ -11,7 +13,9 @@ const secrets = decryptSecrets();
 
 // Map page IDs to their corresponding initialization functions
 const pageInitializers = {
+	'dashboard-page': initializeDashboard,
 	'login-page': initializeLogin,
+	'password-reset': initializePasswordReset,
 	'register-page': initializeRegister,
 };
 

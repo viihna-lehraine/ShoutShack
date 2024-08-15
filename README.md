@@ -27,7 +27,7 @@ The project stack includes the following
     * HTML5
     * CSS3
     * JavaScript
-    * Sass 1.77.8 *(compiled with dart2js 3.4.4)*
+    * Sass 1.77.8
 
 * Server
     * Node.js 22.3.0
@@ -89,13 +89,11 @@ The project stack includes the following
 
 <br> 
 
-**DEV-NOTE** *add this*
+Basic backend functionality has been configured. Currently working on frontend design and page layout.
 
 ## 6. To Do
 
-* More robust logging
-
-* Stable npm start
+* More robust logging (both front and backend)
 
 <br>
 
