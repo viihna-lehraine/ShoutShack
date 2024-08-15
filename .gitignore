@@ -3,14 +3,15 @@
 .exports/
 .logs/
 .scripts/
-data/*
 logs/
 node_modules/
 
-*.env*
+backend/data/*.json
+
+*.crt
+*.csr
+*.key
+*.env
 .sops.yaml
-blacklist.json
 backend.env
-externalBlacklists.json
 secrets.json
-vpnIpList.json

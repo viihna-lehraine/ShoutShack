@@ -1,9 +1,11 @@
 import { Fido2Lib } from 'fido2-lib';
+import getSecrets from '../../config/secrets.js';
 
+const secrets = await getSecrets();
 let fido2;
 
 (async () => {
-	fido2 = Fido2Lib({
+	fido2 = new Fido2Lib({
 		timeout: 60000,
 		rpId: secrets.RP_ID,
 		rpName: secrets.RP_NAME,

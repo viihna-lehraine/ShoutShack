@@ -1,5 +1,7 @@
 import yub from 'yub';
+import getSecrets from '../../config/secrets.js';
 
+const secrets = await getSecrets();
 let yubClient;
 
 (async () => {

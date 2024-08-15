@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import setupLogger from '../../index.js';
-import { User } from '../../models/User.js';
+import setupLogger from '../../config/logger.js';
+import UserModelPromise from '../../models/User.js';
+
+const User = await UserModelPromise;
 
 // Generate Backup Coedes
 async function generateBackupCodes(userId) {

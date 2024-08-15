@@ -1,5 +1,4 @@
 import initializeDatabase from './config/db.js';
-// import featureFlags from './config/featureFlags.js';
 import loadEnv, {
 	__dirname,
 	 __filename
@@ -9,7 +8,7 @@ import {
 	getTransporter } from './config/mailer.js';
 import configurePassport from './config/passport.js';
 import setupSecurityHeaders from './config/securityHeaders.js';
-import getSSLKeys from './config/sops.js';
+import sops from './config/sops.js';
 import {
 	addToBlacklist,
 	initializeIPBlacklist,
@@ -33,12 +32,6 @@ import {
 	generateEmail2FACode,
 	verifyEmail2FACode,
 } from './utils/auth/email2FAUtil.js';
-import {
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
-	verifyU2fAuthentication,
-	verifyU2fRegistration,
-} from './utils/auth/fido2Util.js';
 import {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
@@ -66,6 +59,7 @@ export {
 	addToBlacklist,
 	configurePassport,
 	createTransporter,
+	decryptDataFiles,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
@@ -75,8 +69,6 @@ export {
 	generateEmail2FACode,
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
 	generateQRCode,
 	generateTOTPSecret,
 	generateTOTPToken,
@@ -103,8 +95,24 @@ export {
 	verifyPasskeyAuthentication,
 	verifyPasskeyRegistration,
 	verifyTOTPToken,
-	verifyU2fAuthentication,
-	verifyU2fRegistration,
 	__dirname,
 	__filename,
 };
+
+export async function loadU2fUtils() {
+	const {
+		generateU2fAuthenticationOptions,
+		generateU2fRegistrationOptions,
+		verifyU2fAuthentication,
+		verifyU2fRegistration,
+	} = await import('./utils/auth/fido2Util.js');
+
+	return {
+		generateU2fAuthenticationOptions,
+		generateU2fRegistrationOptions,
+		verifyU2fAuthentication,
+		verifyU2fRegistration,
+	};
+}
+
+const { decryptDataFiles, getSSLKeys } = sops;

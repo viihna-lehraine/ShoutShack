@@ -1,5 +1,7 @@
 import { Fido2Lib } from 'fido2-lib';
+import getSecrets from '../../config/secrets.js';
 
+const secrets = await getSecrets();
 let fido2;
 
 (async () => {
@@ -71,9 +73,19 @@ async function verifyU2fAuthentication(
 	return await fido2.assertionResult(assertion, assertionExpectations);
 }
 
-export {
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
-	verifyU2fAuthentication,
-	verifyU2fRegistration,
-};
+export async function loadU2fUtils() {
+    const {
+        generateU2fAuthenticationOptions,
+        generateU2fRegistrationOptions,
+        verifyU2fAuthentication,
+        verifyU2fRegistration,
+    } = await import('./utils/auth/fido2Util.js');
+
+    return {
+        generateU2fAuthenticationOptions,
+        generateU2fRegistrationOptions,
+        verifyU2fAuthentication,
+        verifyU2fRegistration,
+    };
+}
+

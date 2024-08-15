@@ -7,10 +7,38 @@ async function decryptFile(encryptedFilePath) {
 	const logger = await setupLogger();
 
 	try {
-		const decryptedFile = execSync(`sops -d ${encryptedFilePath}`).toString();
+		const decryptedFile = execSync(`sops -d --output-type json ${encryptedFilePath}`).toString();
 		return decryptedFile;
 	} catch (err) {
 		logger.error('Error decrypting file from SOPS: ', err);
+		throw err;
+	}
+}
+
+async function decryptDataFiles() {
+	const logger = await setupLogger();
+
+	try {
+		const filePaths = [
+			process.env.SERVER_DATA_FILE_PATH_1,
+			process.env.SERVER_DATA_FILE_PATH_2,
+			process.env.SERVER_DATA_FILE_PATH_3,
+			process.env.SERVER_DATA_FILE_PATH_4,
+		];
+
+		const decryptedFiles = {};
+
+		for (const [index, filePath] of filePaths.entries()) {
+			if (filePath) {
+				decryptedFiles[`files${index + 1}`] = execSync(`sops -d --output-type json ${filePath}`).toString();
+			} else {
+				logger.warn(`SERVER_DATA_FILE_PATH_${index + 1} is not defined`);
+			}
+		}
+
+		return decryptedFiles
+	} catch (err) {
+		logger.error('Error decrypting files from backend data folder: ', err);
 		throw err;
 	}
 }
@@ -24,10 +52,6 @@ async function getSSLKeys() {
 		const decryptedKey = await decryptFile(keyPath);
 		const decryptedCert = await decryptFile(certPath);
 
-		// *DEV-NOTE* debugging
-		// logger.info(`Decrypted SSL Key: ${decryptedKey.slice(0, 100)}...`);
-		// logger.info(`Decrypted SSL Cert: ${decryptedCert.slice(0, 100)}...`);
-
 		return {
 			key: decryptedKey,
 			cert: decryptedCert,
@@ -38,4 +62,4 @@ async function getSSLKeys() {
 	}
 }
 
-export default getSSLKeys;
+export default { decryptDataFiles, getSSLKeys };

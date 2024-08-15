@@ -225,6 +225,12 @@ The goal of this README file is to document the structure and functionality of t
 
             * value format = string (email)
 
+        * SERVER_DATA_FILE_PATH_[1, 2, 3, etc] *currently 1-4*
+
+            * *file path to various SOPS-encrypted data files, to be read via sops.js*
+
+            * value format = string (file path)
+
         * SERVER_LOG_PATH
 
             * *file path describing the location of the backend's main logfiles*

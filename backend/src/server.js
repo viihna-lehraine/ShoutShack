@@ -3,6 +3,8 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 import express from 'express';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import passport from 'passport';
 import bodyParser from 'body-parser';
@@ -16,9 +18,9 @@ import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
 import setupLogger from './config/logger.js';
+import sops from './config/sops.js';
 import {
 	configurePassport,
-	getSSLKeys,
 	initializeDatabase,
 	initializeIPBlacklist,
 	ipBlacklistMiddleware,
@@ -28,6 +30,8 @@ import {
 	__filename,
 } from './index.js';
 
+const { decryptDataFiles, getSSLKeys } = sops;
+
 const app = express();
 const csrfProtection = new csrf({ secretLength: 32 });
 
@@ -36,10 +40,13 @@ loadEnv();
 async function initializeServer() {
 	const logger = await setupLogger();
 	const sequelize = await initializeDatabase();
-	const sslKeys = await getSSLKeys();
+	const ipLists = await decryptDataFiles(); 
+	// const sslKeys = await getSSLKeys(); // use when key/crt files are encrypted by SOPS
 	const staticRootPath = process.env.STATIC_ROOT_PATH;
-	await configurePassport(passport);
+	const keyPath = process.env.SERVER_SSL_KEY_PATH;
+	const certPath = process.env.SERVER_SSL_CERT_PATH;
 
+	await configurePassport(passport);
 	// await initializeIPBlacklist();
 
 	try {
@@ -153,8 +160,10 @@ async function initializeServer() {
 		// Start the server with HTTPS
 		// *DEV-NOTE* export this from elsewhere
 		const options = {
-			key: sslKeys.key,
-			cert: sslKeys.cert,
+			// key: sslKeys.key, // use when key/crt files are in encrypted format
+			// cert: sslKeys.cert,
+			key: fs.readFileSync(keyPath),
+			cert: fs.readFileSync(certPath),
 			allowHTTP1: true,
 			secureOptions: constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
 			ciphers: [

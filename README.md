@@ -116,6 +116,12 @@ external sources; create functions allowing admin CRUD operations on these lists
 
 * simulate user registration
 
+* get ipBlacklist working
+
+* get featureFlags working
+
+* test HTTP2
+
 * add subpages to dashboard.html
     * NEW SET OF TEMPLATES FOR WHEN USERS FINALIZE SETTINGS UPDATES
     * privacy

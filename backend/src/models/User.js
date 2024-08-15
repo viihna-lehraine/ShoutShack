@@ -56,7 +56,7 @@ async function initializeUserModel() {
 				allowNull: false,
 			},
 			backupCodes: {
-				type: DataTypes.ARRAY,
+				type: DataTypes.ARRAY(DataTypes.STRING),
 				allowNull: true,
 			},
 			isEmail2faEnabled: {
