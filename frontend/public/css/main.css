@@ -2,6 +2,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: "Courier New", monospace, sans-serif;
   color: var(--black-green);
 }
 
@@ -40,6 +41,7 @@ label {
   top: 3vh;
   padding: 12px;
   background-color: var(--near-white);
+  font-family: Arial, sans-serif;
 }
 
 .main-box {
@@ -101,14 +103,14 @@ label {
 }
 
 :root {
-  --near-white: #($near-white);
-  --white-blue: #($white-blue);
+  --near-white: #FDFDFD;
+  --white-blue: #D4D1FA;
   --white-green: #F6FBE9;
-  --light-blue: #($light-blue);
+  --light-blue: #7269D4;
   --light-green: #1E8E43;
   --dark-blue: #1E1E3A;
-  --dark-green: #($dark-green);
-  --black-blue: #($black-blue);
+  --dark-green: #073A18;
+  --black-blue: #050728;
   --black-green: #011206;
 }
 
@@ -126,6 +128,67 @@ a {
   background-color: #F9F9F9;
 }
 
+.dashboard-primary-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 78vh;
+  width: 95vw;
+  margin-top: 7.5vh;
+  border: 2px solid var(--black-green);
+  border-radius: 5px;
+}
+
+.dashboard-menu-box {
+  display: flex;
+  height: 10vh;
+  width: 100%;
+  justify-content: space-evenly;
+  border-right: 1px solid var(--black-green);
+  background-color: #84D681;
+  border-bottom: 2px solid var(--black-green);
+}
+
+.dashboard-menu-element {
+  display: flex;
+  width: calc(21vw - 1px);
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  border-left: 1px solid var(--black-green);
+  border-right: 1px solid var(--black-green);
+}
+
+.dashboard-menu-button {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.01em;
+  padding: 25px 10px;
+  border-radius: 0;
+}
+
+.dashboard-content-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-start;
+  background-color: #DFEADE;
+  overflow: scroll;
+}
+
+.dashboard-profile-section-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--black-green);
+  background-color: var(--near-white);
+}
+
 #submit-button-row {
   padding: 5px;
   border-bottom: 1px solid black;
@@ -141,6 +204,14 @@ a {
 
 .main-content-row > p {
   padding: 5px 0 5px 0;
+}
+
+#sitemap-content-box {
+  display: flex;
+  flex-direction: column;
+  margin-top: 5vh;
+  padding: 15px;
+  background-color: #FDFDFD;
 }
 
 /*# sourceMappingURL=main.css.map */

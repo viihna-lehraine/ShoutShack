@@ -4,12 +4,15 @@ import loadEnv, {
 	__dirname,
 	 __filename
 } from './config/loadEnv.js';
-import startServer from './config/http.js';
+import startServer from './middleware/http.js';
 import {
 	createTransporter,
 	getTransporter } from './config/mailer.js';
+import multerConfiguredUpload from './config/multer.js';
 import configurePassport from './config/passport.js';
-import setupSecurityHeaders from './config/securityHeaders.js';
+import redisClient from './config/redis.js';
+import setupSecurityHeaders from './middleware/securityHeaders.js';
+import slowdownMiddleware from './middleware/slowdown.js';
 import sops from './config/sops.js';
 import {
 	addToBlacklist,
@@ -18,11 +21,11 @@ import {
 	loadBlacklist,
 	removeFromBlacklist,
 } from './middleware/ipBlacklist.js';
-import limiter from './middleware/rateLimit.js';
+import { rateLimitMiddleware} from './middleware/rateLimit.js';
 import {
 	registrationValidationRules,
 	validateEntry,
-} from './middleware/validate.js';
+} from './middleware/validator.js';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
@@ -33,6 +36,7 @@ import {
 	generateEmail2FACode,
 	verifyEmail2FACode,
 } from './utils/auth/email2FAUtil.js';
+import { verifyJwToken } from './utils/auth/jwtUtil.js';
 import {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
@@ -73,6 +77,7 @@ export {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	generateQRCode,
+	generateJWToken,
 	generateTOTPSecret,
 	generateTOTPToken,
 	generateYubicoOtpOptions,
@@ -85,12 +90,15 @@ export {
 	loadBlacklist,
 	loadEnv,
 	loadTestRoutes,
-	limiter,
+	multerConfiguredUpload,
 	parseBoolean,
+	rateLimitMiddleware,
+	redisClient,
 	registrationValidationRules,
 	removeFromBlacklist,
 	saveBackupCodesToDatabase,
 	setupSecurityHeaders,
+	slowdownMiddleware,
 	startServer,
 	validateEntry,
 	validateYubicoOTP,
@@ -99,9 +107,11 @@ export {
 	verifyPasskeyAuthentication,
 	verifyPasskeyRegistration,
 	verifyTOTPToken,
+	verifyJwToken,
 	__dirname,
 	__filename,
 };
+
 
 export async function loadU2fUtils() {
 	const {

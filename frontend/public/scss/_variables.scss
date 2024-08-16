@@ -9,13 +9,13 @@ $black-blue: #050728;
 $black-green: #011206;
 
 :root {
-    --near-white: #($near-white);
-    --white-blue: #($white-blue);
+    --near-white: #{$near-white};
+    --white-blue: #{$white-blue};
     --white-green: #{$white-green};
-    --light-blue: #($light-blue);
+    --light-blue: #{$light-blue};
     --light-green: #{$light-green};
     --dark-blue: #{$dark-blue};
-    --dark-green: #($dark-green);
-    --black-blue: #($black-blue);
+    --dark-green: #{$dark-green};
+    --black-blue: #{$black-blue};
     --black-green: #{$black-green};
 }

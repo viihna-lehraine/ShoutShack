@@ -1,6 +1,16 @@
 /src/server.js (helmet)
     * make sure I have a source for styles and fonts to load from
 
+* CONFIGURE REDIS
+
+* configure Sentry
+
+* configure hpp
+
+* configure slowdownMiddleware
+
+* configure session (express-session)
+
 * (for users that opt in) create anonymous mini surveys that trigger when a user has interacted with a feature or page of interest for some amount of time
 
 * hidePoweredBy is not being followed as intended

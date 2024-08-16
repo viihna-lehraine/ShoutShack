@@ -3,13 +3,19 @@
 // Author: Viihna Lehraine (viihna@viihnatech.com || viihna.78 (Signal) || Viihna-Lehraine (Github))
 
 import express from 'express';
+import 'express-async-errors';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import csrf from 'csrf';
+import hpp from 'hpp';
+import morgan from 'morgan';
 import path from 'path';
 import passport from 'passport';
-import bodyParser from 'body-parser';
 import { randomBytes } from 'crypto';
-import cookieParser from 'cookie-parser';
-import csrf from 'csrf';
-import morgan from 'morgan';
+import Sentry from '@sentry/node';
+import session from 'express-session';
+import connectRedis from 'connect-redis';
 import staticRoutes from './routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
@@ -21,8 +27,9 @@ import {
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadTestRoutes,
-	limiter,
+	rateLimitMiddleware,
 	setupSecurityHeaders,
+	slowdownMiddleware,
 	startServer,
 	__dirname,
 	__filename,
@@ -30,6 +37,7 @@ import {
 
 const app = express();
 const csrfProtection = new csrf({ secretLength: 32 });
+const RedisStore = connectRedis(session);
 
 const { decryptDataFiles, getSSLKeys } = sops;
 
@@ -47,14 +55,36 @@ async function initializeServer() {
 	await initializeIpBlacklist();
 
 	try {
-		// Load test routes
-		loadTestRoutes(app);
+		await getSecrets();
+		// Session management with Redis
+		/* app.use(
+			session({
+				store: new RedisStore({ client: redisClient }),
+				// secret: 'secrets.REDIS_KEY',
+				resave: false,
+				saveUninitialized: false,
+				cookie: { secure: true }, 
+			})
+		); */
 
-		// Apply global IP blacklistr
-		app.use(ipBlacklistMiddleware);
+		// Implement Caching
+		/*
+		app.get('/your-route', (req, res) => {
+			const cacheKey = 'your-cache-key';
 
-		// Apply rate limiter to all requests
-		app.use(limiter);
+	  		client.get(cacheKey, (err, data) => {
+	    		if (err) throw err;
+
+	    		if (data) {
+	      			return res.json(JSON.parse(data));
+	    		} else {
+	      		// Fetch data from the database
+	      		// Cache the data
+	      		client.setex(cacheKey, 3600, JSON.stringify(yourData));
+	      		return res.json(yourData);
+	    		}
+	  		});
+		}); */
 
 		// Parse JSON
 		app.use(bodyParser.json());
@@ -62,11 +92,45 @@ async function initializeServer() {
 		// Parse URL-encoded content
 		app.use(express.urlencoded({ extended: true }));
 
+		// Load test routes
+		loadTestRoutes(app);
+
+		// Configure express-session to use session data (necessary for slowdownMiddleware to work)
+		/* app.use(session({
+			secret: 'your_secret_key',
+			resave: false,
+			saveUninitialized: true,
+		})); */
+
+		// Apply Sentry middleware for request and error handling
+		app.use(Sentry.Handlers.requestHandler());
+		app.use(Sentry.Handlers.errorHandler());
+
+		// Apply global IP blacklistr
+		app.use(ipBlacklistMiddleware);
+
+		// Apply custom slowdown middleware
+		// app.use(slowdownMiddleware);
+
+		// Apply rate limiter middleware to all requests
+		app.use(rateLimitMiddleware);
+
 		// Generate nonce for each request
 		app.use((req, res, next) => {
 			res.locals.cspNonce = randomBytes(16).toString('hex');
 			next();
 		});
+
+		// Apply CORS middleware
+		app.use(cors({
+			// origin: 'https://guestbook.com',
+			methods: 'GET,POST,PUT,DELETE',
+			allowedHeaders: 'Content-Type,Authorization', // allow specific headers
+			credentials: true // allow cookies to be sent
+		}));
+
+		// Apply 'hpp' middleware to sanitize query parameters
+		app.use(hpp());
 
 		// Apply Security Headers
 		setupSecurityHeaders(app);

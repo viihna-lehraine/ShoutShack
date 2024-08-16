@@ -1,7 +1,15 @@
 import helmet from 'helmet';
 import permissionsPolicy from 'permissions-policy';
+// import crypto from 'crypto';
 
 export default function setupSecurityHeaders(app) {
+	// Nonce Generation
+	/*( app.use((req, res, next) => {
+		res.locals.nonce = crypto.randomBytes(16).toString('hex');
+		next;
+	})
+	*/
+
 	// Helmet Initial Configuration
 	app.use(
 		helmet({

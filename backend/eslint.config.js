@@ -2,6 +2,9 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import prettierPlugin from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
+import nodePlugin from 'eslint-plugin-node';
+import securityPlugin from 'eslint-plugin-security';
+import noSecretsPlugin from 'eslint-plugin-no-secrets';
 
 export default [
 	{
@@ -23,11 +26,17 @@ export default [
 		plugins: {
 			'@typescript-eslint': tsPlugin,
 			prettier: prettierPlugin,
+			node: nodePlugin,
+			security: securityPlugin,
+			'no-secrets': noSecretsPlugin,
 		},
 		rules: {
 			...tsPlugin.configs.recommended.rules,
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
+			'node/no-unsupported-features/es-syntax': 'off', 
+			'security/detect-object-injection': 'off',
+			'no-secrets/no-secrets': ['error', { tolerance: 5 }],
 		},
 		ignores: [
 			'keys/',
@@ -58,10 +67,16 @@ export default [
 		},
 		plugins: {
 			prettier: prettierPlugin,
+			node: nodePlugin,
+			security: securityPlugin,
+			'no-secrets': noSecretsPlugin,
 		},
 		rules: {
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
+			'node/no-unsupported-features/es-syntax': 'off',
+			'security/detect-object-injection': 'off',
+			'no-secrets/no-secrets': ['error', { tolerance: 5 }],
 		},
 		ignores: [
 			'keys/',

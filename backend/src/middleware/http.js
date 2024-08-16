@@ -2,7 +2,7 @@ import { constants } from 'crypto';
 import fs from 'fs';
 import http2 from 'http2';
 import https from 'https';
-import featureFlags from './featureFlags.js';
+import featureFlags from '../config/featureFlags.js';
 import setupLogger from './logger.js';
 import app from '../server.js';
 
