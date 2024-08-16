@@ -6,7 +6,7 @@ const router = express.Router();
 
 async function setupRoutes() {
 	const logger = await setupLogger();
-	const staticRootPath = process.env.STATIC_ROOT_PATH;
+	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
 
 	// Define root file path for public/
 	router.get('/', (req, res) => {
@@ -53,13 +53,13 @@ async function setupRoutes() {
 	// Serve specific static files
 	router.get('/app.js', (req, res) => {
 		logger.info('GET request received at /app.js');
-		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
+		res.sendFile(process.env.FRONTEND_APP_JS_PATH as string);
 		logger.info('app.js was accessed');
 	});
 
 	router.get('/secrets.json.gpg', (req, res) => {
 		logger.info('GET request received at /secrets.json.gpg');
-		res.sendFile(process.env.FRONTEND_SECRETS_PATH, (err) => {
+		res.sendFile(process.env.FRONTEND_SECRETS_PATH as string, (err) => {
 			if (err) {
 				logger.error('Failed to send secrets.json.gpg:', err);
 				res.status(404).send('File not found');
@@ -71,19 +71,19 @@ async function setupRoutes() {
 
 	router.get('/browser-config.xml', (req, res) => {
 		logger.info('GET request received at /browser-config.xml');
-		res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH);
+		res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH as string);
 		logger.info('browser-config.xml was accessed');
 	});
 
 	router.get('/humans.md', (req, res) => {
 		logger.info('GET request received at /humans.md');
-		res.sendFile(process.env.process.env.FRONTEND_HUMANS_MD_PATH);
+		res.sendFile(process.env.FRONTEND_HUMANS_MD_PATH as string);
 		logger.info('humans.md was accessed');
 	});
 
 	router.get('/robots.txt', (req, res) => {
 		logger.info('GET request received at /robots.txt');
-		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
+		res.sendFile(process.env.FRONTEND_ROBOTS_TXT_PATH as string);
 		logger.info('robots.txt was accessed');
 	});
 
@@ -94,9 +94,12 @@ async function setupRoutes() {
 	});
 }
 
-// Call setupRoutes to initialize routes
-setupRoutes().catch((err) => {
-	console.error('Error setting up routes: ', err);
-});
-
-export default router;
+// For setting up routes when initializing the application
+export default async function initializeRoutes(app) {
+	try {
+		await setupRoutes();
+		app.use('/', router);
+	} catch (err) {
+		console.error('Error setting up routes: ', err);
+	}
+}
