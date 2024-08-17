@@ -8,7 +8,7 @@ import startServer from './middleware/http.js';
 import {
 	createTransporter,
 	getTransporter } from './config/mailer.js';
-import multerConfiguredUpload from './config/multer.js';
+import multerConfiguredUpload from '../ts/config/multer.js';
 import configurePassport from './config/passport.js';
 import redisClient from './config/redis.js';
 import setupSecurityHeaders from './middleware/securityHeaders.js';
@@ -53,13 +53,13 @@ import {
 	verifyTOTPToken,
 	generateQRCode,
 } from './utils/auth/totpUtil.js';
-import generate2FactorEmailTemplate from './utils/templates/email/2FactorEmailTemplate.js';
-import generate2FAEnabledEmailTemplate from './utils/templates/email/2FAEnabledEmailTemplate.js';
-import generateAccountDeletedConfirmationEmailTemplate from './utils/templates/email/accountDeletedConfirmationEmailTemplate.js';
-import generateAccountDeletionStartedEmailTemplate from './utils/templates/email/accountDeletionStartedEmailTemplate.js';
-import generateConfirmationEmailTemplate from './utils/templates/email/confirmationEmailTemplate.js';
+import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate.js';
+import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate.js';
+import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate.js';
+import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate.js';
+import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate.js';
 import loadTestRoutes from './utils/test/loadTestRoutes.js';
-import { parseBoolean } from './utils/parseBoolean.js';
+import { parseBoolean } from '../ts/utils/parseBoolean.js';
 
 export {
 	addToBlacklist,

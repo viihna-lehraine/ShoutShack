@@ -8,15 +8,12 @@ import noSecretsPlugin from 'eslint-plugin-no-secrets';
 
 export default [
 	{
-		files: ['**/*.ts', '**/*.tsx'],
+		files: ['**/*.ts'],
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
 				ecmaVersion: 12,
 				sourceType: 'module',
-				ecmaFeatures: {
-					jsx: true,
-				},
 			},
 			globals: {
 				browser: true,
@@ -56,7 +53,7 @@ export default [
 		],
 	},
 	{
-		files: ['**/*.js', '**/*.jsx'],
+		files: ['**/*.js'],
 		languageOptions: {
 			ecmaVersion: 12,
 			sourceType: 'module',

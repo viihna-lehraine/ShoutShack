@@ -16,7 +16,7 @@ import {
 } from '../index.js';
 import setupLogger from '../config/logger.js';
 import getSecrets from '../config/secrets.js';
-import UserModelPromise from '../models/User.js';
+import UserModelPromise from '../../ts/models/User.js';
 
 const router = express.Router();
 

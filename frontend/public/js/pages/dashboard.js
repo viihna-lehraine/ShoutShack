@@ -1,5 +1,4 @@
 export function initializeDashboard() {
-	document.addEventListener('DOMContentLoaded', function () {
-			
-	});
+    document.addEventListener('DOMContentLoaded', function () {
+    });
 }

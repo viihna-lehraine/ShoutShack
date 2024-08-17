@@ -1,7 +1,7 @@
 import argon2 from 'argon2';
 import { DataTypes, Model, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import getSecrets from '../config/secrets.js';
+import initializeDatabase from '../../src/config/db.js';
+import getSecrets from '../../src/config/secrets.js';
 
 interface UserAttributes {
 	userid: string;

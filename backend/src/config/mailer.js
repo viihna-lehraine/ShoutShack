@@ -17,8 +17,6 @@ async function createTransporter() {
 	return transporter;
 }
 
-let transporter;
-
 async function getTransporter() {
 	if (!transporter) {
 		transporter = await createTransporter();

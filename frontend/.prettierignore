@@ -4,6 +4,7 @@ node_modules/
 
 eslint.config.js
 webpack.config.js
+tsconfig.js
 
 *.gpg
 *.json

@@ -1,5 +1,5 @@
-import Sequelize from 'sequelize';
-import setupLogger from './logger.js';
+import { Sequelize } from 'sequelize';
+import setupLogger from '../middleware/logger.js';
 import getSecrets from './secrets.js';
 
 let sequelize;
@@ -23,7 +23,7 @@ async function initializeDatabase() {
 		secrets.DB_PASSWORD,
 		{
 			host: secrets.DB_HOST,
-			dialect: 'postgres',
+			dialect: secrets.DB_DIALECT,
 			logging: (msg) => logger.info(msg),
 		}
 	);

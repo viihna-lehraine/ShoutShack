@@ -1,5 +1,5 @@
 import loadEnv from './loadEnv.js';
-import { parseBoolean } from '../utils/parseBoolean.js';
+import { parseBoolean } from '../../ts/utils/parseBoolean.js';
 
 loadEnv();
 

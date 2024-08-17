@@ -16,7 +16,7 @@ import { randomBytes } from 'crypto';
 import Sentry from '@sentry/node';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
-import staticRoutes from './routes/staticRoutes.js';
+import staticRoutes from '../ts/routes/staticRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
 import loadEnv from './config/loadEnv.js';
 import setupLogger from './config/logger.js';

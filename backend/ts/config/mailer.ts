@@ -1,5 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import getSecrets from './secrets.js';
+import getSecrets from './secrets';
 
 async function createTransporter(): Promise<Transporter> {
 	const secrets = await getSecrets();

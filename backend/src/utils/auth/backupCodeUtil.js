@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import setupLogger from '../../config/logger.js';
-import UserModelPromise from '../../models/User.js';
+import UserModelPromise from '../../../ts/models/User.js';
 
 const User = await UserModelPromise;
 

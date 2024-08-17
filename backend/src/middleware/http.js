@@ -4,7 +4,7 @@ import http2 from 'http2';
 import https from 'https';
 import featureFlags from '../config/featureFlags.js';
 import setupLogger from './logger.js';
-import app from '../server.js';
+import app from '../../ts/server.js';
 
 async function startHttp1Server() {
     const logger = await setupLogger();

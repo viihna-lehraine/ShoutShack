@@ -1,10 +1,10 @@
 import { Sequelize } from 'sequelize';
-import setupLogger from '../middleware/logger.js';
-import getSecrets from './secrets.js';
+import setupLogger from '../middleware/logger';
+import getSecrets from './secrets';
 
-let sequelize: Sequelize;
+let sequelize;
 
-async function initializeDatabase(): Promise<Sequelize> {
+async function initializeDatabase() {
 	const secrets = await getSecrets();
 	const logger = await setupLogger();
 
@@ -24,7 +24,7 @@ async function initializeDatabase(): Promise<Sequelize> {
 		{
 			host: secrets.DB_HOST,
 			dialect: secrets.DB_DIALECT,
-			logging: (msg: string) => logger.info(msg),
+			logging: (msg) => logger.info(msg),
 		}
 	);
 

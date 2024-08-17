@@ -22,6 +22,10 @@ label {
     font-size: 0.8em;
 }
 
+button {
+    cursor: pointer;
+}
+
 #container {
     position: absolute;
     display: flex;
@@ -48,11 +52,7 @@ label {
     position: relative;
     display: flex;
     border: 1px solid var(--black-green);
-    border-radius: 3px;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    -ms-border-radius: 3px;
-    -o-border-radius: 3px;    
+    border-radius: 3px;  
 }
 
 .main-box-row {

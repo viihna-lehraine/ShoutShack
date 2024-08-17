@@ -1,10 +1,10 @@
 import express from 'express';
 import path from 'path';
-import setupLogger from '../middleware/logger.js';
+import setupLogger from '../middleware/logger';
 
 const router = express.Router();
 
-async function setupRoutes() {
+async function setupRoutes(): Promise<void> {
 	const logger = await setupLogger();
 	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
 

@@ -2,7 +2,7 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
 import setupLogger from './logger.js';
 import getSecrets from './secrets.js';
-import UserModelPromise from '../models/User.js';
+import UserModelPromise from '../../ts/models/User.js';
 
 export default async function configurePassport(passport) {
 	const secrets = await getSecrets();
