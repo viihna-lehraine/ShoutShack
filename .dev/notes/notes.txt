@@ -1,6 +1,8 @@
 /src/server.js (helmet)
     * make sure I have a source for styles and fonts to load from
 
+* frontend: npm run compile fucks up the js directory structure
+
 * CONFIGURE REDIS
 
 * configure Sentry

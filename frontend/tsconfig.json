@@ -4,13 +4,23 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Node",
-    "outDir": "./public/js",
+    "outDir": "../js",
     "resolveJsonModule": true,
-    "rootDir": "./public/ts",
+    "rootDir": ".",
     "skipLibCheck": true,
-    "target": "ES2020",
-    "strict": true
+    "target": "ES6",
+    "strict": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./public/types"
+    ]
   },
-  "include": ["./public/ts/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "./**/*.ts",
+    "./public/assets/scripts/cdnImports.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "./public/assets/scripts/*.js",
+  ]
 }

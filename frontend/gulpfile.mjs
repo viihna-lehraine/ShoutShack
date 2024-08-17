@@ -1,7 +1,6 @@
 import gulp from 'gulp';
 import ts from 'gulp-typescript';
 import { sync as globSync } from 'glob';
-import path from 'path';
 
 // Load each tsconfig file
 const tsProjectApp = ts.createProject('config/ts/tsconfig.app.json');

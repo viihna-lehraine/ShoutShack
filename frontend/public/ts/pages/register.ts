@@ -1,6 +1,6 @@
 import { updatePasswordStrength, validatePasswordsMatch } from '../index.js';
 
-export function initializeRegister(): void {
+export function initializeRegisterPage(): void {
 	document
 		.getElementById('registration-form')!
 		.addEventListener('submit', function (e: Event): void {

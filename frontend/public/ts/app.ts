@@ -4,37 +4,28 @@
 
 // app.js - Frontend JS Entrypoint
 
-import { decryptSecrets } from './modules/config/sops';
 import {
-	initializeDashboard,
-	initializeLogin,
-	initializePasswordReset,
-	initializeRegister,
+	initializeDashboardPage,
+	initializeLoginPage,
+	initializePasswordResetPage,
+	initializeRegisterPage,
 } from './index';
 
-// Define the secrets interface
-interface Secrets {
-	SERVER_PORT: number;
-}
-
-// Load secrets and configurations
+// Begin loading configurations
 (async () => {
-	// Load secrets and configurations
-	const secrets: Secrets = await decryptSecrets();
-
 	// Map page IDs to their corresponding initialization functions
-	const pageInitializers: { [key: string]: (secrets?: Secrets) => void } = {
-		'dashboard-page': initializeDashboard,
-		'login-page': initializeLogin,
-		'password-reset': initializePasswordReset,
-		'register-page': initializeRegister,
+	const pageInitializers: { [key: string]: () => void } = {
+		'dashboard-page': initializeDashboardPage,
+		'login-page': initializeLoginPage,
+		'password-reset': initializePasswordResetPage,
+		'register-page': initializeRegisterPage,
 	};
 
 	const currentPageId: string = document.body.id;
 
 	// Initialize the app if an initializer exists for the current page
 	if (pageInitializers[currentPageId]) {
-		pageInitializers[currentPageId](secrets);
+		pageInitializers[currentPageId];
 	} else {
 		console.warn(`No initializer found for page ${currentPageId}`);
 	}

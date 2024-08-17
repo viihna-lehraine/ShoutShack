@@ -1,8 +1,0 @@
-{
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-      "outDir": "../../public/js/pages",
-      "rootDir": "../../public/ts/pages"
-    },
-    "include": ["../../public/ts/pages/**/*.ts"]
-  }

@@ -1,25 +1,36 @@
-import { sanitizeInput, validatePassword } from '../index';
+import { PORT, sanitizeInput, validatePassword } from '../index';
 
-interface Secrets {
-    SERVER_PORT: number;
+// Errpr jamd;omg function first
+function handleLoginResponseError(response: Response): void {
+    if (response.status === 400) {
+        alert('Invalid login credentials. Please check your username and password.');
+    } else if (response.status === 500) {
+        alert('Server error. Please try again later.');
+    } else {
+        alert('Unexpected error. Please try again.');
+    }
 }
 
-export function initializeLogin(secrets?: Secrets): void {
-    document
-        .getElementById('login-box-form')!
-        .addEventListener('submit', async (e) => {
-            e.preventDefault();
+export function initializeLoginPage(): void {
+    const formElement = document.getElementById('login-box-form');
 
-            // sanitize and validate input values
-            const username = sanitizeInput(
-                (document.getElementById('login-box-user-username-input') as HTMLInputElement).value
-            );
-            const email = sanitizeInput(
-                (document.getElementById('login-box-user-email-input') as HTMLInputElement).value
-            );
-            const password = sanitizeInput(
-                (document.getElementById('login-box-user-password-input') as HTMLInputElement).value
-            );
+    if (!formElement) {
+        console.error('Login form not found.');
+        return;
+    }
+
+    formElement.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        try {
+            // Sanitize and validate input values
+            const usernameInput = document.getElementById('login-box-user-username-input') as HTMLInputElement;
+            const emailInput = document.getElementById('login-box-user-email-input') as HTMLInputElement;
+            const passwordInput = document.getElementById('login-box-user-password-input') as HTMLInputElement;
+
+            const username = sanitizeInput(usernameInput?.value);
+            const email = sanitizeInput(emailInput?.value);
+            const password = sanitizeInput(passwordInput?.value);
 
             console.log('Sanitized username, email, and password user inputs');
 
@@ -30,47 +41,29 @@ export function initializeLogin(secrets?: Secrets): void {
                 return;
             }
 
-            if (!secrets) {
-                console.error('Secrets are not provided');
-                alert('Configuration error. Please try again later.');
+            // Make the login request
+            const response = await fetch(`https://localhost:${PORT}/index`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, email, password }),
+            });
+
+            if (!response.ok) {
+                handleLoginResponseError(response);
                 return;
             }
 
-            try {
-                const response = await fetch(
-                    `https://localhost:${secrets.SERVER_PORT}/index`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ username, email, password }),
-                    }
-                );
+            // Assumes JSON reponse
+            const data = await response.json();
 
-                if (!response.ok) {
-                    // handle different response status codes
-                    if (response.status === 400) {
-                        alert(
-                            'Invalid login credentials. Please check your username and password.'
-                        );
-                    } else if (response.status === 500) {
-                        alert('Server error. Please try again later.');
-                    } else {
-                        alert('Unexpected error. Please try again.');
-                    }
-                    return;
-                }
-
-                // Assuming the response is JSON
-                const data = await response.json();
-
-                // Handle successful response
-                console.log('Login successful:', data);
-                // *DEV-NOTE* add login success logic here
-            } catch (error) {
-                console.error('Error during login:', error);
-                alert('An error occurred. Please try again.');
-            }
-        });
+            // Handle successful response
+            console.log('Login successful:', data);
+            // *DEV-NOTE* Add login success logic here
+        } catch (error) {
+            console.error('Error during login:', error);
+            alert('An error occurred. Please try again.');
+        }
+    });
 }

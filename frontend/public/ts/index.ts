@@ -1,8 +1,8 @@
-import { initializeDashboard } from './pages/dashboard.js';
-import { initializeLogin } from './pages/login.js';
-import { initializePasswordReset } from './pages/passwordReset.js';
-import { initializeRegister } from './pages/register.js';
-import { decryptSecrets } from './modules/config/sops.js';
+import { globalConstants } from './modules/config/globalConstants';
+import { initializeDashboardPage } from './pages/dashboard.js';
+import { initializeLoginPage } from './pages/login.js';
+import { initializePasswordResetPage } from './pages/passwordReset.js';
+import { initializeRegisterPage } from './pages/register.js';
 import {
 	sanitizeInput,
 	validatePassword,
@@ -10,12 +10,14 @@ import {
 	updatePasswordStrength,
 } from './utils/utils.js';
 
+export const { 
+	PORT
+ } = globalConstants;
 export {
-	decryptSecrets,
-	initializeDashboard,
-	initializeLogin,
-	initializePasswordReset,
-	initializeRegister,
+	initializeDashboardPage,
+	initializeLoginPage,
+	initializePasswordResetPage,
+	initializeRegisterPage,
 	sanitizeInput,
 	validatePassword,
 	validatePasswordsMatch,

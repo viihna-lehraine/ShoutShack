@@ -1,4 +1,4 @@
-export function initializePasswordReset(): void {
+export function initializePasswordResetPage(): void {
 	document.addEventListener('DOMContentLoaded', function (): void {
 		document
 			.getElementById('password-reset-form')!
