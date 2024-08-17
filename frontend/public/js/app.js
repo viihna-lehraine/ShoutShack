@@ -10,16 +10,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-// app.js - Frontend JS Entrypoint
-import { initializeDashboardPage, initializeLoginPage, initializePasswordResetPage, initializeRegisterPage, } from './index.js';
+// app.js - Frontend JS Entry Point
+import { initializeAboutPage, initializeConfirmPage, initializeContactPage, initializeDashboardPage, initializeFaqPage, initializeFeatureRequestPage, initializeFeedbackPage, initializeHelpPage, initializeIndexPage, initializeLoginPage, initializeNotFoundPage, initializePasswordResetPage, initializePrivacyPolicyPage, initializeRegisterPage, initializeResourcesPage, initializeSecurityAcknowledgementsPage, initializeSitemapPage, initializeTosPage, initializeTourPage, } from './index.js';
 // Begin loading configurations
 (() => __awaiter(void 0, void 0, void 0, function* () {
     // Map page IDs to their corresponding initialization functions
     const pageInitializers = {
+        'about-page': initializeAboutPage,
+        'confirm-page': initializeConfirmPage,
+        'contact-page': initializeContactPage,
         'dashboard-page': initializeDashboardPage,
+        'faq-page': initializeFaqPage,
+        'feature-request-page': initializeFeatureRequestPage,
+        'feedback-page': initializeFeedbackPage,
+        'help-page': initializeHelpPage,
+        'index-page': initializeIndexPage,
         'login-page': initializeLoginPage,
+        'not-found-page': initializeNotFoundPage,
         'password-reset': initializePasswordResetPage,
+        'privacy-policy-page': initializePrivacyPolicyPage,
         'register-page': initializeRegisterPage,
+        'resources-page': initializeResourcesPage,
+        'security-acknowledgements-page': initializeSecurityAcknowledgementsPage,
+        'sitemap-page': initializeSitemapPage,
+        'tos-page': initializeTosPage,
+        'tour-page': initializeTourPage,
     };
     const currentPageId = document.body.id;
     // Initialize the app if an initializer exists for the current page

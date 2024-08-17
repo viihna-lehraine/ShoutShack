@@ -1,3 +1,5 @@
+// declare const zxcvbn: (password: string) => any;
+import zxcvbn from 'zxcvbn';
 function sanitizeInput(input) {
     input = input.trim();
     input = input.replace(/</g, '&lt;').replace(/>/g, '&gt;');

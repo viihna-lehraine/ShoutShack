@@ -3,11 +3,11 @@ import ts from 'gulp-typescript';
 import { sync as globSync } from 'glob';
 
 // Load each tsconfig file
-const tsProjectApp = ts.createProject('config/ts/tsconfig.app.json');
-const tsProjectPages = ts.createProject('config/ts/tsconfig.pages.json');
-const tsProjectModules = ts.createProject('config/ts/tsconfig.modules.json');
-const tsProjectUtils = ts.createProject('config/ts/tsconfig.utils.json');
-const tsProjectDom = ts.createProject('config/ts/tsconfig.dom.json');
+const tsProjectApp = ts.createProject('./ts/tsconfig.app.json');
+const tsProjectPages = ts.createProject('./ts/tsconfig.pages.json');
+const tsProjectModules = ts.createProject('./ts/tsconfig.modules.json');
+const tsProjectUtils = ts.createProject('./ts/tsconfig.utils.json');
+const tsProjectDom = ts.createProject('./ts/tsconfig.dom.json');
 
 // Helper function to check if there are files to compile
 const hasFilesToCompile = (tsProject) => {

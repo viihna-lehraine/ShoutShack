@@ -2,25 +2,23 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
+    "module": "ES6",
     "moduleResolution": "Node",
-    "outDir": "../js",
+    "outDir": "../../public/js",
     "resolveJsonModule": true,
-    "rootDir": ".",
+    "rootDir": "../../public/ts",
     "skipLibCheck": true,
     "target": "ES6",
     "strict": true,
     "typeRoots": [
-      "./node_modules/@types",
-      "./public/types"
+      "../../node_modules/@types",
+      "../../public/types"
     ]
   },
   "include": [
-    "./**/*.ts",
-    "./public/assets/scripts/cdnImports.js"
+    "../../public/ts/**/*.ts" 
   ],
   "exclude": [
-    "node_modules",
-    "./public/assets/scripts/*.js",
+    "../../node_modules",
   ]
 }

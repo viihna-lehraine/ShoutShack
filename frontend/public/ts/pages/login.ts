@@ -1,6 +1,6 @@
 import { PORT, sanitizeInput, validatePassword } from '../index';
 
-// Errpr jamd;omg function first
+// Sends a login request to the server
 function handleLoginResponseError(response: Response): void {
     if (response.status === 400) {
         alert('Invalid login credentials. Please check your username and password.');

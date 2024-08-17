@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { PORT, sanitizeInput, validatePassword } from '../index.js';
-// Errpr jamd;omg function first
+// Sends a login request to the server
 function handleLoginResponseError(response) {
     if (response.status === 400) {
         alert('Invalid login credentials. Please check your username and password.');
