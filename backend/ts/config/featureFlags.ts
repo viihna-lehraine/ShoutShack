@@ -24,7 +24,7 @@ const featureFlags: FeatureFlags = {
 	ipBlacklistFlag: parseBoolean(process.env.FEATURE_IP_BLACKLIST),
 	loadStaticRoutesFlag: parseBoolean(process.env.FEATURE_LOAD_STATIC_ROUTES),
 	loadTestRoutesFlag: parseBoolean(process.env.FEATURE_LOAD_TEST_ROUTES),
-	secureHeadersFlag: parseBoolean(process.env.FEATURE_SECURE_HEADERS),
+	secureHeadersFlag: parseBoolean(process.env.FEATURE_SECURE_HEADERS)
 };
 
 export default featureFlags;

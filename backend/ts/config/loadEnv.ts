@@ -1,12 +1,15 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { config } from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Declare process to capture cwd
+const __dirname = process.cwd();
 
-function loadEnv(): void {
-	const envPath = path.join(__dirname, '../../backend.dev.env');
+function loadEnv() {
+    const envPath = path.join(__dirname, 'backend.dev.env');
+    console.log(`Loading environment from: ${envPath}`);
+    
+    // Load environment variables from the specified file
+    config({ path: envPath });
 }
 
-export { __filename, __dirname };
 export default loadEnv;

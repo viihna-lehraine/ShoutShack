@@ -1,18 +1,10 @@
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import prettierPlugin from 'eslint-plugin-prettier';
-import prettierConfig from 'eslint-config-prettier';
-import nodePlugin from 'eslint-plugin-node';
-import securityPlugin from 'eslint-plugin-security';
-import noSecretsPlugin from 'eslint-plugin-no-secrets';
-
 export default [
 	{
 		files: ['**/*.ts'],
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
-				ecmaVersion: 12,
+				ecmaVersion: 2015,
 				sourceType: 'module',
 			},
 			globals: {
@@ -48,14 +40,13 @@ export default [
 			'Dockerfile',
 			'nodemon.json',
 			'eslint.config.js',
-			'src/config/secrets.json',
-			'src/config/secrets.json.gpg',
+			'src/config/*.*',
 		],
 	},
 	{
 		files: ['**/*.js'],
 		languageOptions: {
-			ecmaVersion: 12,
+			ecmaVersion: 2015,
 			sourceType: 'module',
 			globals: {
 				browser: true,

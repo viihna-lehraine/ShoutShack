@@ -12,6 +12,6 @@ backend/data/*.json
 *.csr
 *.key
 *.env
+*.pem
 .sops.yaml
-backend.env
 secrets.json

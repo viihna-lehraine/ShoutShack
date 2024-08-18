@@ -10,8 +10,8 @@ async function createTransporter(): Promise<Transporter> {
 		secure: secrets.EMAIL_SECURE,
 		auth: {
 			user: process.env.EMAIL_USER as string,
-			pass: secrets.SMTP_TOKEN,
-		},
+			pass: secrets.SMTP_TOKEN
+		}
 	});
 
 	return transporter;
