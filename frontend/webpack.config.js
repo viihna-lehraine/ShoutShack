@@ -5,9 +5,11 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
 export default {
   mode: 'development',
-  entry: './public/js/app.js', // Entry point for your application
+  entry: './public/js/app.js',
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
@@ -21,7 +23,10 @@ export default {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: ['@babel/preset-env'],
+            plugins: [
+              '@babel/plugin-transform-modules-commonjs'
+            ]
           }
         }
       },

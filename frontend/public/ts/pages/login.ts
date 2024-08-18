@@ -1,3 +1,4 @@
+import zxcvbn from 'zxcvbn';
 import { PORT, sanitizeInput, validatePassword } from '../index';
 
 // Sends a login request to the server

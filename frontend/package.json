@@ -20,6 +20,7 @@
   "keywords": [],
   "license": "GNU GPLv3",
   "dependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.24.8",
     "chokidar": "^3.6.0",
     "eslint": "^9.9.0",
     "express-validator": "^7.1.0",
