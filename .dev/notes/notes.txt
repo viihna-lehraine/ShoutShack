@@ -1,7 +1,8 @@
 /src/server.js (helmet)
     * make sure I have a source for styles and fonts to load from
 
-* frontend: npm run compile fucks up the js directory structure
+* dashboard.html
+    * button for currently-selected sub-page should stand out visually somehow
 
 * CONFIGURE REDIS
 

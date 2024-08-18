@@ -23,6 +23,8 @@ GLOBAL
 * src/routes/
     * needs error handling middleware
 
+* frontend: npm run compile fucks up the js directory structure
+
 ------------------------------------------
 
 * IMPORTANT *
