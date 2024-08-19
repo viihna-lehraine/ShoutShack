@@ -9,7 +9,7 @@ interface BackupCode {
 }
 
 // Generate Backup Coedes
-async function generateBackupCodes(userId: number): Promise<string[]> {
+async function generateBackupCodes(id: string): Promise<string[]> {
     const backupCodes: BackupCode[] = [];
     for (let i = 0; i < 16; i++) {
         const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
@@ -17,23 +17,23 @@ async function generateBackupCodes(userId: number): Promise<string[]> {
         backupCodes.push({ code: hashedCode, used: false });
     }
 
-    // store backupCodes in the database associated with the userId
-    await saveBackupCodesToDatabase(userId, backupCodes);
+    // store backupCodes in the database associated with the user's id
+    await saveBackupCodesToDatabase(id, backupCodes);
     
     // return only the plain codes as strings
     return backupCodes.map((backupCode) => backupCode.code);
 }
 
 // Verify a Backup Code
-async function verifyBackupCode(userId: number, inputCode: string): Promise<boolean> {
+async function verifyBackupCode(id: string, inputCode: string): Promise<boolean> {
     const User = await UserModelPromise; // await the User model when needed
-    const storedCodes = await getBackupCodesFromDatabase(userId);
+    const storedCodes = await getBackupCodesFromDatabase(id);
     if (storedCodes) {
         for (let i = 0; i < storedCodes.length; i++) {
             const match = await bcrypt.compare(inputCode, storedCodes[i].code);
             if (match && !storedCodes[i].used) {
                 storedCodes[i].used = true;
-                await updateBackupCodesInDatabase(userId, storedCodes); // mark the code as used
+                await updateBackupCodesInDatabase(id, storedCodes); // mark the code as used
                 return true; // successful verification
             }
         }
@@ -46,12 +46,12 @@ async function verifyBackupCode(userId: number, inputCode: string): Promise<bool
 }
 
 // Save backup codes to the database
-async function saveBackupCodesToDatabase(userId: number, backupCodes: BackupCode[]): Promise<void> {
+async function saveBackupCodesToDatabase(id: string, backupCodes: BackupCode[]): Promise<void> {
     const logger = await setupLogger();
     const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId); // find user by primary key
+        const user = await User.findByPk(id); // find user by primary key
         if (!user) throw new Error('User not found');
 
         // map the codes element of backupCodes to an array of strings
@@ -67,12 +67,12 @@ async function saveBackupCodesToDatabase(userId: number, backupCodes: BackupCode
 }
 
 // Get backup codes from the database
-async function getBackupCodesFromDatabase(userId: number): Promise<BackupCode[] | undefined> {
+async function getBackupCodesFromDatabase(id: string): Promise<BackupCode[] | undefined> {
     const logger = await setupLogger();
     const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId); // find user by primary key
+        const user = await User.findByPk(id); // find user by primary key
         if (!user) throw new Error('User not found');
 
         // assume user.backupCodes is a string[] or null, convert it to BackuopCode[] or undefined
@@ -91,12 +91,12 @@ async function getBackupCodesFromDatabase(userId: number): Promise<BackupCode[] 
 }
 
 // Update backup codes in the database
-async function updateBackupCodesInDatabase(userId: number, backupCodes: BackupCode[]): Promise<void> {
+async function updateBackupCodesInDatabase(id: string, backupCodes: BackupCode[]): Promise<void> {
     const logger = await setupLogger();
     const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId); // find user by primary key
+        const user = await User.findByPk(id); // find user by primary key
         if (!user) throw new Error('User not found');
 
         // map the codes element of backupCodes to an array of strings

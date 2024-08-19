@@ -1,10 +1,18 @@
+import express, { Application } from 'express';
 import { constants } from 'crypto';
 import fs from 'fs';
 import http2 from 'http2';
+import http2Express from 'http2-express-bridge';
 import https from 'https';
 import featureFlags from '../config/featureFlags.js';
 import setupLogger from './logger.js';
 import app from '../../ts/server.js';
+
+// Create HTTP/2 compatible Express app
+const http2App = http2Express(express() as any); // *DEV-NOTE* I could not fucking get the typing right here I don't know what else to do besides force TS to shut up about it *shrug*
+
+// Use the existing Express app as middleware for the HTTP/2 compatible app
+http2App.use(app);
 
 async function startHttp1Server() {
     const logger = await setupLogger();
@@ -31,9 +39,9 @@ async function startHttp1Server() {
         honorCipherOrder: true,
     };
 
-	https.createServer(options, app).listen(process.env.SERVER_PORT, () => {
-		logger.info(`Server running on port ${process.env.SERVER_PORT}`);
-	});
+    https.createServer(options, app).listen(process.env.SERVER_PORT, () => {
+        logger.info(`Server running on port ${process.env.SERVER_PORT}`);
+    });
 }
 
 async function startHttp2Server() {

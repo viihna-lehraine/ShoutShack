@@ -1,7 +1,9 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface UserSessionAttributes {
+	id: string;
 	sessionId: number;
 	userId: string;
 	ipAddress: string;
@@ -13,6 +15,7 @@ interface UserSessionAttributes {
 }
 
 class UserSession extends Model<InferAttributes<UserSession>, InferCreationAttributes<UserSession>> implements UserSessionAttributes {
+	id!: string;
 	sessionId!: number;
 	userId!: string;
 	ipAddress!: string;
@@ -28,6 +31,17 @@ async function initializeUserSessionModel(): Promise<typeof UserSession> {
 
 	UserSession.init(
 		{
+			id: {
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
+			},
 			sessionId: {
 				type: DataTypes.INTEGER,
 				primaryKey: true,

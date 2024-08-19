@@ -1,6 +1,7 @@
+import { NextFunction, Request, Response } from "express";
 import validator from 'validator';
 
-export const validateEntry = (req, res, next) => {
+export const validateEntry = (req: Request, res: Response, next: NextFunction) => {
 	const errors = [];
 
 	// Name validation
@@ -17,10 +18,10 @@ export const validateEntry = (req, res, next) => {
 		return res.status(400).json({ errors });
 	}
 
-	next();
+	return next;
 };
 
-export const registrationValidationRules = (req, res, next) => {
+export const registrationValidationRules = (req: Request, res: Response, next: NextFunction) => {
 	const errors = [];
 
 	// Username validation
@@ -86,7 +87,8 @@ export const registrationValidationRules = (req, res, next) => {
 	}
 
 	if (errors.length) {
-		return res.status(400).json({ errors });
+		res.status(400).json({ errors });
+		return;
 	}
 
 	next();

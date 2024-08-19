@@ -1,7 +1,9 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import { initializeDatabase } from '../index.js';
+import UserModelPromise from './User.js';
 
 interface DataShareOptionsAttributes {
+    id: string;
     trackingPixelOption: boolean;
     featureUsageOption: boolean;
     pageViewsOption: boolean;
@@ -14,6 +16,7 @@ interface DataShareOptionsAttributes {
 }
 
 class DataShareOptions extends Model<InferAttributes<DataShareOptions>, InferCreationAttributes<DataShareOptions>> implements DataShareOptionsAttributes {
+    id!: string;
     trackingPixelOption!: boolean;
     featureUsageOption!: boolean;
     pageViewsOption!: boolean;
@@ -30,6 +33,17 @@ async function initializeDataShareOptionsModel(): Promise<typeof DataShareOption
 
     DataShareOptions.init(
         {
+            id: {
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
+			},
             trackingPixelOption: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
@@ -79,7 +93,7 @@ async function initializeDataShareOptionsModel(): Promise<typeof DataShareOption
         {
             sequelize,
             modelName: 'DataShareOptions',
-            timestamps: false,
+            timestamps: true,
         }
     );
 

@@ -1,26 +1,27 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface FeatureRequestAttributes {
-	userId: string;
+	id: string;
 	email?: string | null;
-	requestNumber: number;
-	requestType: string;
-	requestContent: string;
-	agreedToFollowUpContact: boolean;
-	createdAt: Date;
-	closedAt?: Date | null;
+	featureRequestNumber: number;
+	featureRequestType: string;
+	featureRequestContent: string;
+	canFollowUpFeatureRequest: boolean;
+	featureRequestOpenDate: Date;
+	featureRequestCloseDate?: Date | null;
 }
 
 class FeatureRequest extends Model<InferAttributes<FeatureRequest>, InferCreationAttributes<FeatureRequest>> implements FeatureRequestAttributes {
-	userId!: string;
+	id!: string;
 	email!: string | null;
-	requestNumber!: number;
-	requestType!: string;
-	requestContent!: string;
-	agreedToFollowUpContact!: boolean;
-	createdAt!: CreationOptional<Date>;
-	closedAt!: Date | null;
+	featureRequestNumber!: number;
+	featureRequestType!: string;
+	featureRequestContent!: string;
+	canFollowUpFeatureRequest!: boolean;
+	featureRequestOpenDate!: CreationOptional<Date>;
+	featureRequestCloseDate!: Date | null;
 }
 
 async function initializeFeatureRequestModel(): Promise<typeof FeatureRequest> {
@@ -28,41 +29,49 @@ async function initializeFeatureRequestModel(): Promise<typeof FeatureRequest> {
 
 	FeatureRequest.init(
 		{
-			userId: {
+			id: {
 				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
 			},
 			email: {
 				type: DataTypes.STRING,
 				allowNull: true,
 				defaultValue: null,
 			},
-			requestNumber: {
+			featureRequestNumber: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
+				autoIncrement: true, 
+				allowNull: true,
 				unique: true,
 			},
-			requestType: {
+			featureRequestType: {
 				type: DataTypes.TEXT,
 				allowNull: false,
 				defaultValue: null,
 			},
-			requestContent: {
+			featureRequestContent: {
 				type: DataTypes.TEXT,
 				allowNull: false,
 				defaultValue: null,
 			},
-			agreedToFollowUpContact: {
+			canFollowUpFeatureRequest: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
 				defaultValue: false,
 			},
-			createdAt: {
+			featureRequestOpenDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
-			closedAt: {
+			featureRequestCloseDate: {
 				type: DataTypes.DATE,
 				allowNull: true,
 				defaultValue: null,

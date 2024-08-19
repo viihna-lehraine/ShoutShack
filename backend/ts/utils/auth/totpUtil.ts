@@ -1,7 +1,14 @@
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 
-function generateTOTPSecret() {
+interface TOTPSecret {
+	ascii: string | undefined;
+	hex: string | undefined;
+	base32: string | undefined;
+	otpauth_url: string | undefined;
+}
+
+function generateTOTPSecret(): TOTPSecret {
 	const totpSecret = speakeasy.generateSecret({ length: 20 });
 	return {
 		ascii: totpSecret.ascii,
@@ -11,7 +18,7 @@ function generateTOTPSecret() {
 	};
 }
 
-function generateTOTPToken(secret) {
+function generateTOTPToken(secret: string): string {
 	const totpToken = speakeasy.totp({
 		secret: secret,
 		encoding: 'base32',
@@ -19,7 +26,7 @@ function generateTOTPToken(secret) {
 	return totpToken;
 }
 
-function verifyTOTPToken(secret, token) {
+function verifyTOTPToken(secret: string, token: string): boolean {
 	const isTOTPTokenValid = speakeasy.totp.verify({
 		secret: secret,
 		encoding: 'base32',
@@ -29,7 +36,7 @@ function verifyTOTPToken(secret, token) {
 	return isTOTPTokenValid;
 }
 
-async function generateQRCode(otpauth_url) {
+async function generateQRCode(otpauth_url: string): Promise<string> {
 	return await QRCode.toDataURL(otpauth_url);
 }
 

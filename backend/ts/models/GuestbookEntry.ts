@@ -1,7 +1,9 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface GuestbookEntryAttributes {
+	id: string;
 	guestName?: string | null;
 	guestEmail?: string | null;
 	guestMessage: string;
@@ -10,6 +12,7 @@ interface GuestbookEntryAttributes {
 }
 
 class GuestbookEntry extends Model<InferAttributes<GuestbookEntry>, InferCreationAttributes<GuestbookEntry>> implements GuestbookEntryAttributes {
+	id!: string;
 	guestName!: string | null;
 	guestEmail!: string | null;
 	guestMessage!: string;
@@ -22,6 +25,17 @@ async function initializeGuestbookEntryModel(): Promise<typeof GuestbookEntry> {
 
 	GuestbookEntry.init(
 		{
+			id: {
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
+			},
 			guestName: {
 				type: DataTypes.STRING,
 				allowNull: true,

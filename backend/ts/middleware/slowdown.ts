@@ -1,4 +1,6 @@
-function slowdownMiddleware(req, res, next) {
+import { NextFunction, Request, Response } from "express";
+
+function slowdownMiddleware(req: Request, res: Response, next: NextFunction) {
     const requestTime = new Date().getTime();
     
     // Check if we already stored a request time for this IP
@@ -7,7 +9,7 @@ function slowdownMiddleware(req, res, next) {
         next();
     } else {
         const timeDiff = requestTime - req.session.lastRequestTime;
-        const slowdownThreshold = 100; // Adjust this value as needed (in ms)
+        const slowdownThreshold = 100; // *DEV-NOTE* Adjust this value as needed (in ms)
         
         if (timeDiff < slowdownThreshold) {
             const waitTime = slowdownThreshold - timeDiff;

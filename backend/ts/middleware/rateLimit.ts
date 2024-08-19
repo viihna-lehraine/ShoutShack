@@ -1,3 +1,4 @@
+import { NextFunction, Request, Response } from "express";
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 const rateLimiter = new RateLimiterMemory({
@@ -6,8 +7,10 @@ const rateLimiter = new RateLimiterMemory({
 	keyPrefix: 'rateLimiter', // useful for distinguishing rate limiters in logs or in distributed setups
   });
 
-export const rateLimitMiddleware = (req, res, next) => {
-	rateLimiter.consume(req.ip)
+export const rateLimitMiddleware = (req: Request, res: Response, next: NextFunction) => {
+	const ip = req.ip || 'unknown'; // provides fallback if req.ip is undefined
+
+	rateLimiter.consume(ip)
 		.then(() => {
 		next();
 		})

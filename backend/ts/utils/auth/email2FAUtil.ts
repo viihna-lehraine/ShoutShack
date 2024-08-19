@@ -1,17 +1,26 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import getSecrets from '../../config/secrets.js';
 
-let secrets;
+interface Secrets {
+	EMAIL_2FA_KEY: string;
+}
 
-(async () => {
-	secrets = await getSecrets();
-})();
+let secrets: Secrets | undefined;
 
-async function generateEmail2FACode() {
+async function getSecretsOrThrow(): Promise<Secrets> {
 	if (!secrets) {
 		secrets = await getSecrets();
+		if (!secrets) {
+			throw new Error('Secrets could not be loaded');
+		}
 	}
+
+	return secrets;
+}
+
+async function generateEmail2FACode() {
+	const secrets = await getSecretsOrThrow();
 
 	const email2FACode = bcrypt.genSalt(6); // generates a 6-character hex code
 	const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
@@ -23,16 +32,14 @@ async function generateEmail2FACode() {
 	};
 }
 
-async function verifyEmail2FACode() {
-	if (!secrets) {
-		secrets = await getSecrets();
-	}
+async function verifyEmail2FACode(token: string, email2FACode: string) {
+	const secrets = await getSecretsOrThrow();
 
 	try {
 		const decodedEmail2FACode = jwt.verify(
-			email2FAToken,
+			token,
 			secrets.EMAIL_2FA_KEY
-		);
+		) as JwtPayload;
 		return decodedEmail2FACode.code === email2FACode;
 	} catch (err) {
 		return false;

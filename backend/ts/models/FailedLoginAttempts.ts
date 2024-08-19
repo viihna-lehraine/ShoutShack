@@ -2,20 +2,20 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 import initializeDatabase from '../config/db.js';
 
 interface FailedLoginAttemptsAttributes {
+	id: string;
 	attemptId: string;
-	userId: string;
 	ipAddress: string;
 	userAgent: string;
-	attemptedAt: Date;
+	attemptDate: Date;
 	isLocked: boolean;
 }
 
 class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, InferCreationAttributes<FailedLoginAttempts>> implements FailedLoginAttemptsAttributes {
+	id!: string;
 	attemptId!: string;
-	userId!: string;
 	ipAddress!: string;
 	userAgent!: string;
-	attemptedAt!: CreationOptional<Date>;
+	attemptDate!: Date;
 	isLocked!: boolean;
 }
 
@@ -25,16 +25,18 @@ async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginA
 
 	FailedLoginAttempts.init(
 		{
-			attemptId: {
+			id: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
 				unique: true,
 			},
-			userId: {
-				type: DataTypes.UUID,
-				allowNull: false,
+			attemptId: {
+				type: DataTypes.INTEGER,
+				autoIncrement: true, 
+				allowNull: true,
+				unique: true,
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
@@ -44,7 +46,7 @@ async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginA
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
-			attemptedAt: {
+			attemptDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,
@@ -57,7 +59,7 @@ async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginA
 		{
 			sequelize,
 			modelName: 'FailedLoginAttempts',
-			timestamps: false,
+			timestamps: true,
 		}
 	);
 

@@ -1,26 +1,27 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface SecurityEventAttributes {
+	id: string;
 	eventId: string;
-	userId: string;
 	eventType: string;
 	eventDescription?: string | null;
 	ipAddress: string;
 	userAgent: string;
-	createdAt: Date;
-	updatedAt: Date;
+	securityEventDate: Date;
+	securityEventLastUpdated: Date;
 }
 
 class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferCreationAttributes<SecurityEvent>> implements SecurityEventAttributes {
+	id!: string;
 	eventId!: string;
-	userId!: string;
 	eventType!: string;
 	eventDescription!: string | null;
 	ipAddress!: string;
 	userAgent!: string;
-	createdAt!: CreationOptional<Date>;
-	updatedAt!: CreationOptional<Date>;
+	securityEventDate!: Date;
+	securityEventLastUpdated!: CreationOptional<Date>;
 }
 
 async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
@@ -28,16 +29,22 @@ async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
 
 	SecurityEvent.init(
 		{
-			eventId: {
+			id: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
 				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
 			},
-			userId: {
-				type: DataTypes.UUID,
-				allowNull: false,
+			eventId: {
+				type: DataTypes.INTEGER,
+				autoIncrement: true, 
+				allowNull: true,
+				unique: true,
 			},
 			eventType: {
 				type: DataTypes.STRING,
@@ -68,12 +75,12 @@ async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
-			createdAt: {
+			securityEventDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
-			updatedAt: {
+			securityEventLastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,

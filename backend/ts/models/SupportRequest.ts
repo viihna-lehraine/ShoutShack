@@ -1,26 +1,27 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface SupportRequestAttributes {
-	userId: string;
+	id: string;
 	email: string;
-	ticketNumber: number;
-	issueType: string;
-	issueContent: string;
-	createdAt: Date;
-	isTicketOpen: boolean;
-	closedAt?: Date | null;
+	supportTicketNumber: number;
+	supportType: string;
+	supportContent: string;
+	isSupportTicketOpen: boolean;
+	supportTicketOpenDate: Date;
+	supportTicketCloseDate?: Date | null;
 }
 
 class SupportRequest extends Model<InferAttributes<SupportRequest>, InferCreationAttributes<SupportRequest>> implements SupportRequestAttributes {
-	userId!: string;
+	id!: string;
 	email!: string;
-	ticketNumber!: number;
-	issueType!: string;
-	issueContent!: string;
-	createdAt!: CreationOptional<Date>;
-	isTicketOpen!: boolean;
-	closedAt!: Date | null;
+	supportTicketNumber!: number;
+	supportType!: string;
+	supportContent!: string;
+	isSupportTicketOpen!: boolean;
+	supportTicketOpenDate!: Date;
+	supportTicketCloseDate?: Date | null;
 }
 
 async function initializeSupportRequestModel(): Promise<typeof SupportRequest> {
@@ -28,38 +29,46 @@ async function initializeSupportRequestModel(): Promise<typeof SupportRequest> {
 
 	SupportRequest.init(
 		{
-			userId: {
+			id: {
 				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
 			},
 			email: {
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
-			ticketNumber: {
+			supportTicketNumber: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
+				autoIncrement: true, 
+				allowNull: true,
 				unique: true,
 			},
-			issueType: {
+			supportType: {
 				type: DataTypes.TEXT,
 				allowNull: false,
 			},
-			issueContent: {
+			supportContent: {
 				type: DataTypes.TEXT,
 				allowNull: false,
 			},
-			createdAt: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false,
-			},
-			isTicketOpen: {
+			isSupportTicketOpen: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: true,
 				allowNull: false,
 			},
-			closedAt: {
+			supportTicketOpenDate: {
+				type: DataTypes.DATE,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
+			},
+			supportTicketCloseDate: {
 				type: DataTypes.DATE,
 				allowNull: true,
 				defaultValue: null,

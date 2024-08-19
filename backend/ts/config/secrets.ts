@@ -7,7 +7,7 @@ function getDirectoryPath() {
 
 async function getSecrets() {
 	try {
-		const secretsPath = path.join(getDirectoryPath(), 'secrets.json.gpg');
+		const secretsPath = path.join(getDirectoryPath(), '../../config/secrets.json.gpg');
 		const decryptedSecrets = execSync(
 			`sops -d --output-type json ${secretsPath}`
 		).toString();

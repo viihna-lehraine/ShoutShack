@@ -1,8 +1,10 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface MultiFactorAuthSetupAttributes {
-	mfaId: string;
+	id: string;
+	mfaId: number;
 	userId: string;
 	method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
 	secret?: string | null;
@@ -14,7 +16,8 @@ interface MultiFactorAuthSetupAttributes {
 }
 
 class MultiFactorAuthSetup extends Model<InferAttributes<MultiFactorAuthSetup>, InferCreationAttributes<MultiFactorAuthSetup>> implements MultiFactorAuthSetupAttributes {
-	mfaId!: string;
+	id!: string;
+	mfaId!: number;
 	userId!: string;
 	method!: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
 	secret!: string | null;
@@ -30,10 +33,21 @@ async function initializeMultiFactorAuthSetupModel(): Promise<typeof MultiFactor
 
 	MultiFactorAuthSetup.init(
 		{
-			mfaId: {
+			id: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
+			},
+			mfaId: {
+				type: DataTypes.INTEGER,
+				primaryKey: true,
+				autoIncrement: true, 
 				allowNull: false,
 				unique: true,
 			},

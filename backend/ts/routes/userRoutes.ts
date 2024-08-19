@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import argon2 from 'argon2';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -14,20 +14,20 @@ import {
 	verifyEmail2FACode,
 	verifyTOTPToken,
 } from '../index.js';
-import setupLogger from '../config/logger.js';
-import getSecrets from '../config/secrets.js';
-import UserModelPromise from '../models/User.js';
+import setupLogger from '../middleware/logger';
+import getSecrets from '../config/secrets';
+import UserModelPromise from '../models/User';
 
 const router = express.Router();
 
 // Password strength checker
-const checkPasswordStrength = (password) => {
+const checkPasswordStrength = (password: string) => {
 	const { score } = zxcvbn(password);
 	return score >= 3;
 };
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', async (req: Request, res: Response) => {
 	const { username, email, password, confirmPassword } = req.body;
 	const secrets = await getSecrets();
 	const logger = await setupLogger();
@@ -70,7 +70,7 @@ router.post('/register', async (req, res) => {
 		);
 		const pwnedList = pwnedResponse.data
 			.split('\n')
-			.map((p) => p.split(':')[0]);
+			.map((p: any) => p.split(':')[0]); // *DEV-NOTE* figure out what type 'p' needs to be
 		if (pwnedList.includes(sanitizedPassword.substring(5).toUpperCase())) {
 			logger.warn(
 				'Registration warning: password has been exposed in a data breach'
@@ -103,8 +103,21 @@ router.post('/register', async (req, res) => {
 				username: sanitizedUsername,
 				email: sanitizedEmail,
 				password: hashedPassword,
-				hibpCheckFailed,
+				hibpCheckFailed: false,
+				isAccountVerified: false,
+				has2FA: false,
+				isEmail2faEnabled: false,
+				isTotpl2faEnabled: false,
+				isYubicoOtp2faEnabled: false,
+				isU2f2faEnabled: false,
+				isPasskeyEnabled: false,
+				isGuestbookIndexed: true,
+				isUserOptedInForDataShare: false,
+				created_at: new Date(),
 			});
+
+			// Argument of type '{ username: string; email: string; password: string; hibpCheckFailed: boolean; }' is not assignable to parameter of type 'Optional<InferCreationAttributes<User, { omit: never; }>, NullishPropertiesOf<InferCreationAttributes<User, { omit: never; }>>>'.
+  			// Type '{ username: string; email: string; password: string; hibpCheckFailed: boolean; }' is missing the following properties from type 'Omit<InferCreationAttributes<User, { omit: never; }>, NullishPropertiesOf<InferCreationAttributes<User, { omit: never; }>>>': userid, isAccountVerified, has2FA, isEmail2faEnabled, and 6 more.
 
 			// Generate a confirmation token
 			const confirmationToken = jwt.sign(
@@ -137,10 +150,12 @@ router.post('/register', async (req, res) => {
 		logger.error('User Registration: server error: ', err);
 		res.status(500).json({ error: 'User registration: server error' });
 	}
+
+	return;
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', async (req: Request, res: Response) => {
 	const secrets = await getSecrets();
 	const logger = await setupLogger();
 	const { email, password } = req.body;
@@ -161,7 +176,7 @@ router.post('/login', async (req, res) => {
 			sanitizedPassword + secrets.PEPPER
 		);
 		if (isMatch) {
-			const payload = { id: user.id, username: user.username };
+			const payload = { id: user.userid, username: user.username };
 			const token = jwt.sign(payload, secrets.JWT_SECRET, { expiresIn: '1h' });
 			res.json({ success: true, token: `Bearer ${token}` });
 		} else {
@@ -174,7 +189,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Password Recovery (simplified)
-router.post('/recover-password', async (req, res) => {
+router.post('/recover-password', async (req: Request, res: Response) => {
 	const logger = await setupLogger();
 	const { email } = req.body;
 
@@ -193,7 +208,7 @@ router.post('/recover-password', async (req, res) => {
 
 		// Store the token in the database (simplified for now)
 		user.resetPasswordToken = token;
-		user.resetPasswordExpires = Date.now() + 1800000; // 30 minutes
+		user.resetPasswordExpires = new Date(Date.now() + 1800000); // 30 min
 		await user.save();
 
 		// Send password reset email
@@ -206,7 +221,7 @@ router.post('/recover-password', async (req, res) => {
 });
 
 // Route for TOTP secret generation
-router.post('/generate-totp', async (req, res) => {
+router.post('/generate-totp', async (req: Request, res: Response) => {
 	const logger = await setupLogger();
 	const { username } = req.body;
 
@@ -224,7 +239,7 @@ router.post('/generate-totp', async (req, res) => {
 });
 
 // Route to verify TOTP tokens
-router.post('/verify-totp', async (req, res) => {
+router.post('/verify-totp', async (req: Request, res: Response) => {
 	const logger = await setupLogger();
 	const { username, token } = req.body;
 
@@ -246,7 +261,7 @@ router.post('/verify-totp', async (req, res) => {
 });
 
 // Route to generate and send 2FA codes by email
-router.post('/generate-2fa', async (req, res) => {
+router.post('/generate-2fa', async (req: Request, res: Response) => {
 	const logger = await setupLogger();
 	const { email } = req.body;
 
@@ -283,7 +298,7 @@ router.post('/generate-2fa', async (req, res) => {
 });
 
 // Route to verify email 2FA code
-router.post('/verify-2fa', async (req, res) => {
+router.post('/verify-2fa', async (req: Request, res: Response) => {
 	const logger = await setupLogger();
 	const { email, email2FACode } = req.body;
 

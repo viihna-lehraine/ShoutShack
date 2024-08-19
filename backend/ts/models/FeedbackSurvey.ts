@@ -1,8 +1,8 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import initializeDatabase from '../config/db';
 
 interface FeedbackSurveyAttributes {
-	userId: string;
+	surveyId: string;
 	questionGeneralApproval?: number | null;
 	questionServiceQuality?: number | null;
 	questionEaseOfUse?: number | null;
@@ -23,32 +23,32 @@ interface FeedbackSurveyAttributes {
 	questionFinalThoughts?: string | null;
 	hasOptedInForFollowUp?: boolean | null;
 	email?: string | null;
-	created_at: Date;
+	surveyDate: Date;
 }
 
 class FeedbackSurvey extends Model<InferAttributes<FeedbackSurvey>, InferCreationAttributes<FeedbackSurvey>> implements FeedbackSurveyAttributes {
-	userId!: string;
-	questionGeneralApproval!: number | null;
-	questionServiceQuality!: number | null;
-	questionEaseOfUse!: number | null;
-	questionUserSupport!: number | null;
-	questionHelpGuides!: number | null;
-	questionIsPremiumUser!: boolean | null;
-	questionPremiumValue!: number | null;
-	questionLikelihoodToRecommend!: number | null;
-	questionUsefulFeaturesAndAspects!: object | null;
-	questionFeaturesThatNeedImprovement!: object | null;
-	questionOpenEndedLikeTheMost!: string | null;
-	questionOpenEndedWhatCanWeImprove!: string | null;
-	questionDemoHeardAboutUs!: number | null;
-	questionDemoAgeGroup!: number | null;
-	questionDemoGender!: string | null;
-	questionDemoRegion!: string | null;
-	questionDemoLangPref!: string | null;
-	questionFinalThoughts!: string | null;
-	hasOptedInForFollowUp!: boolean | null;
-	email!: string | null;
-	created_at!: CreationOptional<Date>;
+	surveyId!: string;
+	questionGeneralApproval?: number | null;
+	questionServiceQuality?: number | null;
+	questionEaseOfUse?: number | null;
+	questionUserSupport?: number | null;
+	questionHelpGuides?: number | null;
+	questionIsPremiumUser?: boolean | null;
+	questionPremiumValue?: number | null;
+	questionLikelihoodToRecommend?: number | null;
+	questionUsefulFeaturesAndAspects?: object | null;
+	questionFeaturesThatNeedImprovement?: object | null;
+	questionOpenEndedLikeTheMost?: string | null;
+	questionOpenEndedWhatCanWeImprove?: string | null;
+	questionDemoHeardAboutUs?: number | null;
+	questionDemoAgeGroup?: number | null;
+	questionDemoGender?: string | null;
+	questionDemoRegion?: string | null;
+	questionDemoLangPref?: string | null;
+	questionFinalThoughts?: string | null;
+	hasOptedInForFollowUp?: boolean | null;
+	email?: string | null;
+	surveyDate!: Date;
 }
 
 async function initializeFeedbackSurveyModel(): Promise<typeof FeedbackSurvey> {
@@ -56,10 +56,9 @@ async function initializeFeedbackSurveyModel(): Promise<typeof FeedbackSurvey> {
 
 	FeedbackSurvey.init(
 		{
-			userId: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
+			surveyId: {
+				type: DataTypes.INTEGER,
+				autoIncrement: true, 
 				allowNull: false,
 				unique: true,
 			},
@@ -187,7 +186,7 @@ async function initializeFeedbackSurveyModel(): Promise<typeof FeedbackSurvey> {
 				allowNull: true,
 				defaultValue: '',
 			},
-			created_at: {
+			surveyDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,

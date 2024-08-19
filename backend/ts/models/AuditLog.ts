@@ -1,9 +1,10 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 
 interface AuditLogAttributes {
     auditId: string;
-    userId: string;
+    id: string;
     actionType: string;
     actionDescription?: string | null;
     affectedResource?: string | null;
@@ -11,13 +12,13 @@ interface AuditLogAttributes {
     newValue?: string | null;
     ipAddress: string;
     userAgent: string;
-    createdAt: Date;
-    updatedAt: Date;
+    auditLogDate: Date;
+    auditLogUpdateDate?: Date | null;
 }
 
 class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAttributes<AuditLog>> implements AuditLogAttributes {
     auditId!: string;
-    userId!: string;
+    id!: string;
     actionType!: string;
     actionDescription!: string | null;
     affectedResource!: string | null;
@@ -25,8 +26,8 @@ class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAttributes<
     newValue!: string | null;
     ipAddress!: string;
     userAgent!: string;
-    createdAt!: CreationOptional<Date>;
-    updatedAt!: CreationOptional<Date>;
+    auditLogDate!: Date;
+    auditLogUpdateDate?: Date | null;
 }
 
 // Initialize the AuditLog model
@@ -36,16 +37,22 @@ async function initializeAuditLogModel(): Promise<typeof AuditLog> {
     AuditLog.init(
         {
             auditId: {
-                type: DataTypes.UUID,
-                defaultValue: DataTypes.UUIDV4,
+                type: DataTypes.INTEGER,
                 primaryKey: true,
-                allowNull: false,
-                unique: true,
+				autoIncrement: true, 
+				allowNull: false,
+				unique: true,
             },
-            userId: {
-                type: DataTypes.UUID,
-                allowNull: false,
-            },
+            id: {
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: await UserModelPromise,
+					key: 'id',
+				}
+			},
             actionType: {
                 type: DataTypes.STRING,
                 allowNull: false,
@@ -79,15 +86,15 @@ async function initializeAuditLogModel(): Promise<typeof AuditLog> {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            createdAt: {
+            auditLogDate: {
                 type: DataTypes.DATE,
                 defaultValue: DataTypes.NOW,
                 allowNull: false,
             },
-            updatedAt: {
+            auditLogUpdateDate: {
                 type: DataTypes.DATE,
-                defaultValue: DataTypes.NOW,
-                allowNull: false,
+                defaultValue: false,
+                allowNull: true,
             },
         },
         {

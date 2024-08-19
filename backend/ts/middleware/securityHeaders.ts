@@ -1,16 +1,9 @@
+import { Application, NextFunction, Request, Response } from "express";
 import helmet from 'helmet';
 import permissionsPolicy from 'permissions-policy';
-// import crypto from 'crypto';
 
-export default function setupSecurityHeaders(app) {
-	// Nonce Generation
-	/*( app.use((req, res, next) => {
-		res.locals.nonce = crypto.randomBytes(16).toString('hex');
-		next;
-	})
-	*/
-
-	// Helmet Initial Configuration
+export default function setupSecurityHeaders(app: Application) {
+	// Initial Helmet Configuration
 	app.use(
 		helmet({
 			frameguard: { action: 'deny' },
@@ -34,29 +27,29 @@ export default function setupSecurityHeaders(app) {
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					'https://api.haveibeenpwned.com', // Allow external script
+					'https://api.haveibeenpwned.com', // allow external script from this domain
 				],
 				styleSrc: [
-					"'self'", // Allow styles from your own domain
-					"'unsafe-inline'", // Add this if you have inline styles
+					"'self'", // allow styles from own domain
+					"'unsafe-inline'", // *DEV-NOTE* only keep this if using inline styles 
 				],
 				fontSrc: ["'self'"],
-				imgSrc: ["'self'", 'data:'], // Allow images from your domain and data URIs
+				imgSrc: ["'self'", 'data:'], // allow images own domain and data URIs
 				connectSrc: [
 					"'self'",
 					'https://api.haveibeenpwned.com',
 					'https://cdnjs.cloudflare.com',
 				],
 				objectSrc: ["'none'"],
-				upgradeInsecureRequests: [], // Automatically upgrade HTTP to HTTPS
+				upgradeInsecureRequests: [], // automatically upgrade HTTP to HTTPS
 				frameAncestors: ["'none'"],
 			},
-			reportOnly: false, // Set to true to test CSP without enforcement
+			reportOnly: false, // set "true" to test CSP without enforcement
 		})
 	);
 
 	// Enforce Certificate Transparency
-	app.use((req, res, next) => {
+	app.use((req: Request, res: Response, next: NextFunction) => {
 		res.setHeader('Expect-CT', 'enforce, max-age=86400');
 		next();
 	});
@@ -65,11 +58,11 @@ export default function setupSecurityHeaders(app) {
 	app.use(
 		permissionsPolicy({
 			features: {
-				fullscreen: ['self'], // Remove quotes here
-				geolocation: ['none'], // Disallow geolocation
-				microphone: ['none'], // Disallow microphone access
-				camera: ['none'], // Disallow camera access
-				payment: ['none'], // Disallow payment requests
+				fullscreen: ['self'], // allow fullscreen
+				geolocation: ['none'], // disallow geolocation
+				microphone: ['none'], // disallow microphone access
+				camera: ['none'], // disallow camera access
+				payment: ['none'], // disallow payment requests
 			},
 		})
 	);
