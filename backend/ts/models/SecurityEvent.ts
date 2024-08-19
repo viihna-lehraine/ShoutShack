@@ -1,10 +1,29 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
-import initializeDatabase from '../index.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import initializeDatabase from '../config/db.js';
 
-class SecurityEvent extends Model {}
+interface SecurityEventAttributes {
+	eventId: string;
+	userId: string;
+	eventType: string;
+	eventDescription?: string | null;
+	ipAddress: string;
+	userAgent: string;
+	createdAt: Date;
+	updatedAt: Date;
+}
 
-// Initialize the SecurityEvent model
-async function initializeSecurityEventModel() {
+class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferCreationAttributes<SecurityEvent>> implements SecurityEventAttributes {
+	eventId!: string;
+	userId!: string;
+	eventType!: string;
+	eventDescription!: string | null;
+	ipAddress!: string;
+	userAgent!: string;
+	createdAt!: CreationOptional<Date>;
+	updatedAt!: CreationOptional<Date>;
+}
+
+async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
 	const sequelize = await initializeDatabase();
 
 	SecurityEvent.init(
@@ -51,11 +70,13 @@ async function initializeSecurityEventModel() {
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
 			},
 		},
 		{
@@ -64,11 +85,10 @@ async function initializeSecurityEventModel() {
 			timestamps: true,
 		}
 	);
+
+	await SecurityEvent.sync();
+	return SecurityEvent;
 }
 
-const SecurityEventModelPromise = (async () => {
-	await initializeSecurityEventModel();
-	return SecurityEvent;
-})();
-
+const SecurityEventModelPromise = initializeSecurityEventModel();
 export default SecurityEventModelPromise;

@@ -1,9 +1,23 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
-import { initializeDatabase } from '../index.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import initializeDatabase from '../config/db.js';
 
-class GuestbookEntry extends Model {}
+interface GuestbookEntryAttributes {
+	guestName?: string | null;
+	guestEmail?: string | null;
+	guestMessage: string;
+	guestMessageStyles?: object | null;
+	entryDate: Date;
+}
 
-async function initializeGuestbookEntryModel() {
+class GuestbookEntry extends Model<InferAttributes<GuestbookEntry>, InferCreationAttributes<GuestbookEntry>> implements GuestbookEntryAttributes {
+	guestName!: string | null;
+	guestEmail!: string | null;
+	guestMessage!: string;
+	guestMessageStyles!: object | null;
+	entryDate!: CreationOptional<Date>;
+}
+
+async function initializeGuestbookEntryModel(): Promise<typeof GuestbookEntry> {
 	const sequelize = await initializeDatabase();
 
 	GuestbookEntry.init(
@@ -30,7 +44,7 @@ async function initializeGuestbookEntryModel() {
 			},
 			entryDate: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 				unique: false,
 			},
@@ -43,12 +57,9 @@ async function initializeGuestbookEntryModel() {
 	);
 
 	await GuestbookEntry.sync();
+	return GuestbookEntry;
 }
 
-// Export a promise that resolves to the GuestbookEntry model
-const GuestbookEntryModelPromise = (async () => {
-	await initializeGuestbookEntryModel();
-	return GuestbookEntry;
-})();
-
+// Export the initialized model
+const GuestbookEntryModelPromise = initializeGuestbookEntryModel();
 export default GuestbookEntryModelPromise;

@@ -2,7 +2,6 @@ import initializeDatabase from './config/db';
 import featureFlags from './config/featureFlags';
 import loadEnv, {
 	__dirname,
-	 __filename
 } from './config/loadEnv.ts';
 import startServer from './middleware/http';
 import {
@@ -36,6 +35,12 @@ import {
 	generateEmail2FACode,
 	verifyEmail2FACode,
 } from './utils/auth/email2FAUtil';
+import {
+	generateU2fAuthenticationOptions,
+	generateU2fRegistrationOptions,
+	verifyU2fAuthentication,
+	verifyU2fRegistration
+} from './utils/auth/fido2Util';
 import { verifyJwToken } from './utils/auth/jwtUtil';
 import {
 	generatePasskeyAuthenticationOptions,
@@ -77,6 +82,8 @@ export {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	generateQRCode,
+	generateU2fAuthenticationOptions,
+	generateU2fRegistrationOptions,
 	generateTOTPSecret,
 	generateTOTPToken,
 	generateYubicoOtpOptions,
@@ -103,29 +110,13 @@ export {
 	validateYubicoOTP,
 	verifyBackupCode,
 	verifyEmail2FACode,
+	verifyJwToken,
 	verifyPasskeyAuthentication,
 	verifyPasskeyRegistration,
 	verifyTOTPToken,
-	verifyJwToken,
+	verifyU2fAuthentication,
+	verifyU2fRegistration,
 	__dirname,
-	__filename,
 };
-
-
-export async function loadU2fUtils() {
-	const {
-		generateU2fAuthenticationOptions,
-		generateU2fRegistrationOptions,
-		verifyU2fAuthentication,
-		verifyU2fRegistration,
-	} = await import('./utils/auth/fido2Util');
-
-	return {
-		generateU2fAuthenticationOptions,
-		generateU2fRegistrationOptions,
-		verifyU2fAuthentication,
-		verifyU2fRegistration,
-	};
-}
 
 const { decryptDataFiles, getSSLKeys } = sops;

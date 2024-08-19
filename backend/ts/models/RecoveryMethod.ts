@@ -1,9 +1,29 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
 
-class RecoveryMethod extends Model {}
+interface RecoveryMethodAttributes {
+	recoveryId: string;
+	userId: string;
+	methodType: 'email' | 'phone' | 'backupCodes';
+	contactDetail?: string | null;
+	backupCodes?: string[] | null;
+	isActive: boolean;
+	createdAt: Date;
+	updatedAt: Date;
+}
 
-async function initializeRecoveryMethodModel() {
+class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, InferCreationAttributes<RecoveryMethod>> implements RecoveryMethodAttributes {
+	recoveryId!: string;
+	userId!: string;
+	methodType!: 'email' | 'phone' | 'backupCodes';
+	contactDetail!: string | null;
+	backupCodes!: string[] | null;
+	isActive!: boolean;
+	createdAt!: CreationOptional<Date>;
+	updatedAt!: CreationOptional<Date>;
+}
+
+async function initializeRecoveryMethodModel(): Promise<typeof RecoveryMethod> {
 	const sequelize = await initializeDatabase();
 
 	RecoveryMethod.init(
@@ -20,8 +40,7 @@ async function initializeRecoveryMethodModel() {
 				allowNull: false,
 			},
 			methodType: {
-				type: DataTypes.ENUM,
-				values: ['email', 'phone', 'backupCodes'],
+				type: DataTypes.ENUM('email', 'phone', 'backupCodes'),
 				allowNull: false,
 			},
 			contactDetail: {
@@ -39,12 +58,12 @@ async function initializeRecoveryMethodModel() {
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 		},
@@ -54,11 +73,10 @@ async function initializeRecoveryMethodModel() {
 			timestamps: true,
 		}
 	);
+
+	await RecoveryMethod.sync();
+	return RecoveryMethod;
 }
 
-const RecoveryMethodModelPromise = (async () => {
-	await initializeRecoveryMethodModel();
-	return RecoveryMethod;
-})();
-
+const RecoveryMethodModelPromise = initializeRecoveryMethodModel();
 export default RecoveryMethodModelPromise;

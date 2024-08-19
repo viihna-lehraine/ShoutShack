@@ -4,7 +4,7 @@ import path from 'path';
 import compressing from 'compressing';
 import { exec } from 'child_process';
 import { __dirname } from '../index';
-import setupLogger from '../config/logger';
+import setupLogger from '../middleware/logger';
 
 const compressAndExportLogs = async (sourceDir: string, exportDir: string, logFileName: string) => {
 	const logger = await setupLogger();
@@ -18,8 +18,9 @@ const compressAndExportLogs = async (sourceDir: string, exportDir: string, logFi
 		logger.info(`${logFileName} successfully compressed`);
 		return outputFilePath;
 	} catch (err) {
-		logger.error(`Unable to compress ${logFileName}: ${err.message}`);
-		throw new err('Error compessing log files: ', err);
+		const error = err as Error;
+		logger.error(`Unable to compress ${logFileName}: ${error.message}`);
+		throw new Error(`Error compessing log files: ${error.message}`);
 	}
 };
 
@@ -81,7 +82,8 @@ const exportLogs = async () => {
 
 		logger.info('Logs have been successfully compresseed and exported.');
 	} catch (err) {
-		logger.error(`Error exporting logs: ${err.message}`);
+		const error = err as Error;
+		logger.error(`Error exporting logs: ${error.message}`);
 	}
 };
 
@@ -101,13 +103,14 @@ const performNpmTasks = async () => {
 		await runCommandAndLog('npm update --verbose', logFilePath);
 		logger.info('npm update completed successfully.');
 	} catch (err) {
-		logger.error(`Error during npm tasks: ${err.message}`);
+		const error = err as Error;
+		logger.error(`Error during npm tasks: ${error.message}`);
 	}
 };
 
 // Determine the cron schedule based on LOGGER environment
-const scheduleLogJobs = () => {
-	const logger = setupLogger();
+const scheduleLogJobs = async () => {
+	const logger = await setupLogger();
 
 	let schedule = '';
 

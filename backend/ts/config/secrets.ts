@@ -1,13 +1,13 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+function getDirectoryPath() {
+	return path.resolve(process.cwd(), path.dirname(''));
+}
 
 async function getSecrets() {
 	try {
-		const secretsPath = path.join(__dirname, 'secrets.json.gpg');
+		const secretsPath = path.join(getDirectoryPath(), 'secrets.json.gpg');
 		const decryptedSecrets = execSync(
 			`sops -d --output-type json ${secretsPath}`
 		).toString();

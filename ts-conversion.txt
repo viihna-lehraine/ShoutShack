@@ -1,0 +1,49 @@
+CONVERT     middleware/                 auth
+                                        authMiddleware
+                                        http
+                                        ipBlacklist
+                                        ratelimit
+                                        securityHeaders
+                                        sentry
+                                        slowdown
+                                        validator
+
+            routes/                     staticRoutes
+                                        userRoutes
+                                        validationRoutes
+
+            utils/auth/                 email2FAUtil
+                                        fido2Util
+                                        jwtUtil
+                                        passkeyUtil
+                                        totpUtil
+                                        yubicoOtpUtil
+
+
+            /                           server
+
+
+##############################################################################
+
+
+DONE        config/                     ALL
+
+            controllers/                ALL
+
+            middleware/                 logger
+                                        sentry
+
+            models/                     ALL
+
+            routes/                     apiRoutes
+                                        testRoutes
+
+            utils/                      ALL
+
+            utils/emailTemplates        ALL
+
+            util/test/                  ALL
+
+            util/auth/                  backupCodeUtil   
+
+            /                           index

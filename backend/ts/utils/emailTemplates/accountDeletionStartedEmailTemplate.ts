@@ -1,4 +1,4 @@
-const generateAccountDeletionStartedEmailTemplate = (username) => {
+const generateAccountDeletionStartedEmailTemplate = (username: string) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">
@@ -55,12 +55,16 @@ const generateAccountDeletionStartedEmailTemplate = (username) => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Guestbook -IMPORTANT! Account Deletion Process Started</h1>
+                        <h1>Guestbook - IMPORTANT! Account Deletion Process Started</h1>
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
+                        <p>We have received a request to delete your Guestbook account. This process will permanently remove your account and all associated data from our system.</p>
+                        <p>If you did not initiate this request, please contact us immediately to stop the deletion process. You can reach us at <a href="mailto:admin@viihnatech.com">admin@viihnatech.com</a>.</p>
+                        <p>Once the deletion process is complete, you will receive another email confirming that your account has been deleted.</p>
                     </div>
                     <div class="footer">
+                        <p>&copy; ${new Date().getFullYear()} Guestbook. All rights reserved.</p>
                     </div>
                 </div>
             </body>

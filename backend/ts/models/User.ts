@@ -1,7 +1,7 @@
 import argon2 from 'argon2';
-import { DataTypes, Model, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../../src/config/db.js';
-import getSecrets from '../../src/config/secrets.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import initializeDatabase from '../config/db.js';
+import getSecrets from '../config/secrets.js';
 
 interface UserAttributes {
 	userid: string;
@@ -90,7 +90,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> i
 }
 
 // Initialize the User model
-async function initializeUserModel(): Promise<void> {
+async function initializeUserModel(): Promise<typeof User> {
 	const secrets = await getSecrets();
 	const sequelize = await initializeDatabase();
 
@@ -257,12 +257,8 @@ async function initializeUserModel(): Promise<void> {
 	);
 
 	await User.sync();
+	return User;
 }
 
-// Export a promise that resolves to the User model
-const UserModelPromise = (async () => {
-	await initializeUserModel();
-	return User;
-})();
-
+const UserModelPromise = initializeUserModel();
 export default UserModelPromise;

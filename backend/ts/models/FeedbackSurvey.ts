@@ -1,9 +1,57 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
-import { initializeDatabase } from '../index.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import initializeDatabase from '../config/db.js';
 
-class FeedbackSurvey extends Model {}
+interface FeedbackSurveyAttributes {
+	userId: string;
+	questionGeneralApproval?: number | null;
+	questionServiceQuality?: number | null;
+	questionEaseOfUse?: number | null;
+	questionUserSupport?: number | null;
+	questionHelpGuides?: number | null;
+	questionIsPremiumUser?: boolean | null;
+	questionPremiumValue?: number | null;
+	questionLikelihoodToRecommend?: number | null;
+	questionUsefulFeaturesAndAspects?: object | null;
+	questionFeaturesThatNeedImprovement?: object | null;
+	questionOpenEndedLikeTheMost?: string | null;
+	questionOpenEndedWhatCanWeImprove?: string | null;
+	questionDemoHeardAboutUs?: number | null;
+	questionDemoAgeGroup?: number | null;
+	questionDemoGender?: string | null;
+	questionDemoRegion?: string | null;
+	questionDemoLangPref?: string | null;
+	questionFinalThoughts?: string | null;
+	hasOptedInForFollowUp?: boolean | null;
+	email?: string | null;
+	created_at: Date;
+}
 
-async function initializeFeedbackSurveyModel() {
+class FeedbackSurvey extends Model<InferAttributes<FeedbackSurvey>, InferCreationAttributes<FeedbackSurvey>> implements FeedbackSurveyAttributes {
+	userId!: string;
+	questionGeneralApproval!: number | null;
+	questionServiceQuality!: number | null;
+	questionEaseOfUse!: number | null;
+	questionUserSupport!: number | null;
+	questionHelpGuides!: number | null;
+	questionIsPremiumUser!: boolean | null;
+	questionPremiumValue!: number | null;
+	questionLikelihoodToRecommend!: number | null;
+	questionUsefulFeaturesAndAspects!: object | null;
+	questionFeaturesThatNeedImprovement!: object | null;
+	questionOpenEndedLikeTheMost!: string | null;
+	questionOpenEndedWhatCanWeImprove!: string | null;
+	questionDemoHeardAboutUs!: number | null;
+	questionDemoAgeGroup!: number | null;
+	questionDemoGender!: string | null;
+	questionDemoRegion!: string | null;
+	questionDemoLangPref!: string | null;
+	questionFinalThoughts!: string | null;
+	hasOptedInForFollowUp!: boolean | null;
+	email!: string | null;
+	created_at!: CreationOptional<Date>;
+}
+
+async function initializeFeedbackSurveyModel(): Promise<typeof FeedbackSurvey> {
 	const sequelize = await initializeDatabase();
 
 	FeedbackSurvey.init(
@@ -141,7 +189,7 @@ async function initializeFeedbackSurveyModel() {
 			},
 			created_at: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 		},
@@ -151,11 +199,11 @@ async function initializeFeedbackSurveyModel() {
 			timestamps: true,
 		}
 	);
+
+	await FeedbackSurvey.sync();
+	return FeedbackSurvey;
 }
 
-const FeedbackSurveyModelPromise = (async () => {
-	await initializeFeedbackSurveyModel();
-	return FeedbackSurvey;
-})();
-
+// Export the initialized model
+const FeedbackSurveyModelPromise = initializeFeedbackSurveyModel();
 export default FeedbackSurveyModelPromise;

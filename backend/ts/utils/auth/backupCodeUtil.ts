@@ -1,48 +1,64 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import setupLogger from '../../config/logger.js';
+import setupLogger from '../../middleware/logger.js';
 import UserModelPromise from '../../models/User.js';
 
-const User = await UserModelPromise;
+interface BackupCode {
+    code: string;
+    used: boolean;
+}
 
 // Generate Backup Coedes
-async function generateBackupCodes(userId) {
-    const backupCodes = [];
+async function generateBackupCodes(userId: number): Promise<string[]> {
+    const backupCodes: BackupCode[] = [];
     for (let i = 0; i < 16; i++) {
-        const code = crypto.randomBytes(4).toString(hex); // 8-character hexcode
+        const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
         const hashedCode = await bcrypt.hash(code, 10);
         backupCodes.push({ code: hashedCode, used: false });
     }
 
     // store backupCodes in the database associated with the userId
     await saveBackupCodesToDatabase(userId, backupCodes);
-    return backupCodes.map(code => code.code); // return the plain codes to the user
+    
+    // return only the plain codes as strings
+    return backupCodes.map((backupCode) => backupCode.code);
 }
 
 // Verify a Backup Code
-async function verifyBackupCode(userId, inputCode) {
+async function verifyBackupCode(userId: number, inputCode: string): Promise<boolean> {
+    const User = await UserModelPromise; // await the User model when needed
     const storedCodes = await getBackupCodesFromDatabase(userId);
-    for (let i = 0; i < storedCodes.length; i++) {
-        const match = await bcrypt.compare(inputCode, storedCodes[i].code);
-        if (match && !storedCodes[i].used) {
-            storedCodes[i].used = true;
-            await updateBackupCodesInDatabase(userId, storedCodes); // mark the code as used
-            return true; // successful verification
+    if (storedCodes) {
+        for (let i = 0; i < storedCodes.length; i++) {
+            const match = await bcrypt.compare(inputCode, storedCodes[i].code);
+            if (match && !storedCodes[i].used) {
+                storedCodes[i].used = true;
+                await updateBackupCodesInDatabase(userId, storedCodes); // mark the code as used
+                return true; // successful verification
+            }
         }
+    } else {
+        console.error('No backup codes found for user');
+        return false; // no backup codes found
     }
     
     return false; // verification failed
 }
 
 // Save backup codes to the database
-async function saveBackupCodesToDatabase(userId, backupCodes) {
+async function saveBackupCodesToDatabase(userId: number, backupCodes: BackupCode[]): Promise<void> {
     const logger = await setupLogger();
+    const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId); // may need to be adjusted based on the ORM
+        const user = await User.findByPk(userId); // find user by primary key
         if (!user) throw new Error('User not found');
 
-        user.backupCodes = backupCodes;
+        // map the codes element of backupCodes to an array of strings
+        const backupCodesAsStrings = backupCodes.map(codeObj => codeObj.code);
+
+        // assign the array of strings to user.backupCodes
+        user.backupCodes = backupCodesAsStrings;
         await user.save();
     } catch (err) {
         logger.error('Error saving backup codes to database: ', err);
@@ -51,14 +67,23 @@ async function saveBackupCodesToDatabase(userId, backupCodes) {
 }
 
 // Get backup codes from the database
-async function getBackupCodesFromDatabase(userId) {
-    const logger = await setupLogger(); 
+async function getBackupCodesFromDatabase(userId: number): Promise<BackupCode[] | undefined> {
+    const logger = await setupLogger();
+    const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId); // may need to be adjusted based on the ORM
+        const user = await User.findByPk(userId); // find user by primary key
         if (!user) throw new Error('User not found');
 
-        return user.backupCodes;
+        // assume user.backupCodes is a string[] or null, convert it to BackuopCode[] or undefined
+        const backupCodes = user.backupCodes as string[] | null;
+
+        if (backupCodes === null) {
+            return undefined; // *DEV-NOTE* probably need to configure this later
+        }
+
+        // convert string[] to BackupCode[]
+        return backupCodes.map(code => ({ code, used: false } as BackupCode))
     } catch (err) {
         logger.error('Error fetching backup codes from database: ', err);
         throw new Error('Failed to retrieve backup codes from database');
@@ -66,17 +91,22 @@ async function getBackupCodesFromDatabase(userId) {
 }
 
 // Update backup codes in the database
-async function updateBackupCodesInDatabase(userId, backupCodes) {
+async function updateBackupCodesInDatabase(userId: number, backupCodes: BackupCode[]): Promise<void> {
     const logger = await setupLogger();
+    const User = await UserModelPromise; // await the User model when needed
 
     try {
-        const user = await User.findByPk(userId, backupCodes); // may need to be adjusted based on the ORM
+        const user = await User.findByPk(userId); // find user by primary key
         if (!user) throw new Error('User not found');
 
-        user.backupCodes = backupCodes;
+        // map the codes element of backupCodes to an array of strings
+        const backupCodesAsStrings = backupCodes.map(codeObj => codeObj.code);
+
+        // assign the array of strings to user.backupCodes
+        user.backupCodes = backupCodesAsStrings;
         await user.save();
     } catch (err) {
-        logger.error('Error updating backupcodes in database: ', err);
+        logger.error('Error updating backup codes in database: ', err);
         throw new Error('Failed to update backup codes in database');
     }
 }

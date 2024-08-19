@@ -1,10 +1,31 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
 
-class MultiFactorAuthSetup extends Model {}
+interface MultiFactorAuthSetupAttributes {
+	mfaId: string;
+	userId: string;
+	method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
+	secret?: string | null;
+	publicKey?: string | null;
+	counter?: number | null;
+	isActive: boolean;
+	createdAt: Date;
+	updatedAt: Date;
+}
 
-// Initialize the MultiFactorAuthSetup model
-async function initializeMultiFactorAuthSetupModel() {
+class MultiFactorAuthSetup extends Model<InferAttributes<MultiFactorAuthSetup>, InferCreationAttributes<MultiFactorAuthSetup>> implements MultiFactorAuthSetupAttributes {
+	mfaId!: string;
+	userId!: string;
+	method!: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
+	secret!: string | null;
+	publicKey!: string | null;
+	counter!: number | null;
+	isActive!: boolean;
+	createdAt!: CreationOptional<Date>;
+	updatedAt!: CreationOptional<Date>;
+}
+
+async function initializeMultiFactorAuthSetupModel(): Promise<typeof MultiFactorAuthSetup> {
 	const sequelize = await initializeDatabase();
 
 	MultiFactorAuthSetup.init(
@@ -21,8 +42,7 @@ async function initializeMultiFactorAuthSetupModel() {
 				allowNull: false,
 			},
 			method: {
-				type: DataTypes.ENUM,
-				values: ['totp', 'email', 'yubico', 'fido2', 'passkey'],
+				type: DataTypes.ENUM('totp', 'email', 'yubico', 'fido2', 'passkey'),
 				allowNull: false,
 			},
 			secret: {
@@ -44,12 +64,12 @@ async function initializeMultiFactorAuthSetupModel() {
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 		},
@@ -59,11 +79,10 @@ async function initializeMultiFactorAuthSetupModel() {
 			timestamps: true,
 		}
 	);
+
+	await MultiFactorAuthSetup.sync();
+	return MultiFactorAuthSetup;
 }
 
-const MultiFactorAuthSetupModelPromise = (async () => {
-	await initializeMultiFactorAuthSetupModel();
-	return MultiFactorAuthSetup;
-})();
-
+const MultiFactorAuthSetupModelPromise = initializeMultiFactorAuthSetupModel();
 export default MultiFactorAuthSetupModelPromise;

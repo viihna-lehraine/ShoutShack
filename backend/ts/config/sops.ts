@@ -1,9 +1,9 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { __dirname } from './loadEnv.js';
-import setupLogger from './logger.js';
+import setupLogger from '../middleware/logger.js';
 
-async function decryptFile(encryptedFilePath) {
+async function decryptFile(encryptedFilePath: string) {
 	const logger = await setupLogger();
 
 	try {
@@ -26,7 +26,7 @@ async function decryptDataFiles() {
 			process.env.SERVER_DATA_FILE_PATH_4,
 		];
 
-		const decryptedFiles = {};
+		const decryptedFiles: { [key: string]: string }= {};
 
 		for (const [index, filePath] of filePaths.entries()) {
 			if (filePath) {

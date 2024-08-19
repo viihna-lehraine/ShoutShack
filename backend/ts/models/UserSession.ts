@@ -1,9 +1,29 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
-import initializeDatabase from '../index.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import initializeDatabase from '../config/db.js';
 
-class UserSession extends Model {}
+interface UserSessionAttributes {
+	sessionId: number;
+	userId: string;
+	ipAddress: string;
+	userAgent: string;
+	createdAt: Date;
+	updatedAt?: Date | null;
+	expiresAt: Date;
+	isActive: boolean;
+}
 
-async function initializeUserSessionModel() {
+class UserSession extends Model<InferAttributes<UserSession>, InferCreationAttributes<UserSession>> implements UserSessionAttributes {
+	sessionId!: number;
+	userId!: string;
+	ipAddress!: string;
+	userAgent!: string;
+	createdAt!: CreationOptional<Date>;
+	updatedAt!: Date | null;
+	expiresAt!: Date;
+	isActive!: boolean;
+}
+
+async function initializeUserSessionModel(): Promise<typeof UserSession> {
 	const sequelize = await initializeDatabase();
 
 	UserSession.init(
@@ -18,9 +38,7 @@ async function initializeUserSessionModel() {
 			userId: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
 				allowNull: false,
-				unique: true,
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
@@ -31,11 +49,13 @@ async function initializeUserSessionModel() {
 				allowNull: false,
 			},
 			createdAt: {
-				types: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				type: DataTypes.DATE,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
 			},
 			updatedAt: {
-				types: DataTypes.DATE,
+				type: DataTypes.DATE,
+				allowNull: true,
 				defaultValue: null,
 			},
 			expiresAt: {
@@ -54,7 +74,7 @@ async function initializeUserSessionModel() {
 			hooks: {
 				beforeCreate: (session) => {
 					session.expiresAt = new Date(
-						session.createdAt.getTime() + 60 * 60000
+						(session.createdAt as Date).getTime() + 60 * 60000
 					); // default expiration time is 60 minutes after session generation
 				},
 				beforeUpdate: (session) => {
@@ -63,11 +83,10 @@ async function initializeUserSessionModel() {
 			},
 		}
 	);
+
+	await UserSession.sync();
+	return UserSession;
 }
 
-const UserSessionModelPromise = (async () => {
-	await initializeUserSessionModel();
-	return UserSession;
-})();
-
+const UserSessionModelPromise = initializeUserSessionModel();
 export default UserSessionModelPromise;

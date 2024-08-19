@@ -1,4 +1,4 @@
-const generate2FactorEmailTemplate = (username, emailVerificationCode) => {
+const generate2FactorEmailTemplate = (username: string, emailVerificationCode: string): string => {
 	return `
       <!DOCTYPE html>
       <html lang="en">
@@ -62,11 +62,11 @@ const generate2FactorEmailTemplate = (username, emailVerificationCode) => {
                       <p>Here is the code you requested so that you may log into your account. Please know that this code will be valid for the next 30 minutes. If you are unable to login by then, please request a new code.</p>
                       <h2>${emailVerificationCode}</h2>
                   </div>
-                  <footer>
+                  <div class="footer"> <!-- Correctly closing the footer with div for consistency -->
                       <p>If you did not request this code, then someone else may have access to your password and is trying to access your account. If this is the case, please log in and change your password at your earliest convenience.</p>
                       <p>Please feel free to reach out to me by sending an email to <a href="mailto:admin@viihnatech.com">admin@viihnatech.com</a> and I'll respond to you as soon as possible.</p>
                       <p>Have a great day! :)</p>
-                  </footer>
+                  </div>
               </div>
           </body>
       </html>

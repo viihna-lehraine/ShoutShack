@@ -1,4 +1,4 @@
-const generate2FAEnabledEmailTemplate = (username) => {
+const generate2FAEnabledEmailTemplate = (username: string) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">
@@ -59,7 +59,7 @@ const generate2FAEnabledEmailTemplate = (username) => {
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
-                        <p>Two-factor authentciation has been enabled for your <a href="URL">Guestbook</a> account. If you did not perform this action, your account may be compromised. In that event, please reach out to me directly at <a href="mailto:admin@viihnatech.com">viihna@viihnatech.com</a< and I will investigate this as soon as possible.</p>
+                        <p>Two-factor authentication has been enabled for your <a href="URL">Guestbook</a> account. If you did not perform this action, your account may be compromised. In that event, please reach out to me directly at <a href="mailto:admin@viihnatech.com">viihna@viihnatech.com</a> and I will investigate this as soon as possible.</p>
                     </div>
                 </div>
             </body>

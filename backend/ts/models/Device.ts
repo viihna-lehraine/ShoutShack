@@ -1,10 +1,36 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
 
-class Device extends Model {}
+interface DeviceAttributes {
+	deviceId: string;
+	userId: string;
+	deviceName: string;
+	deviceType: string;
+	os: string;
+	browser?: string | null;
+	ipAddress: string;
+	lastUsedAt: Date;
+	isTrusted: boolean;
+	createdAt: Date;
+	updatedAt: Date;
+}
+
+class Device extends Model<InferAttributes<Device>, InferCreationAttributes<Device>> implements DeviceAttributes {
+	deviceId!: string;
+	userId!: string;
+	deviceName!: string;
+	deviceType!: string;
+	os!: string;
+	browser!: string | null;
+	ipAddress!: string;
+	lastUsedAt!: CreationOptional<Date>;
+	isTrusted!: boolean;
+	createdAt!: CreationOptional<Date>;
+	updatedAt!: CreationOptional<Date>;
+}
 
 // Initialize the Device model
-async function initializeDeviceModel() {
+async function initializeDeviceModel(): Promise<typeof Device> {
 	const sequelize = await initializeDatabase();
 
 	Device.init(
@@ -45,7 +71,7 @@ async function initializeDeviceModel() {
 			},
 			lastUsedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 			},
 			isTrusted: {
 				type: DataTypes.BOOLEAN,
@@ -53,11 +79,13 @@ async function initializeDeviceModel() {
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
+				allowNull: false,
 			},
 		},
 		{
@@ -66,11 +94,11 @@ async function initializeDeviceModel() {
 			timestamps: true,
 		}
 	);
+
+	await Device.sync();
+	return Device;
 }
 
-const DeviceModelPromise = (async () => {
-	await initializeDeviceModel();
-	return Device;
-})();
-
+// Export the initialized model
+const DeviceModelPromise = initializeDeviceModel();
 export default DeviceModelPromise;

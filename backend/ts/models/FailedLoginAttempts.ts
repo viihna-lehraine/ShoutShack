@@ -1,10 +1,26 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import initializeDatabase from '../config/db.js';
 
-class FailedLoginAttempts extends Model {}
+interface FailedLoginAttemptsAttributes {
+	attemptId: string;
+	userId: string;
+	ipAddress: string;
+	userAgent: string;
+	attemptedAt: Date;
+	isLocked: boolean;
+}
+
+class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, InferCreationAttributes<FailedLoginAttempts>> implements FailedLoginAttemptsAttributes {
+	attemptId!: string;
+	userId!: string;
+	ipAddress!: string;
+	userAgent!: string;
+	attemptedAt!: CreationOptional<Date>;
+	isLocked!: boolean;
+}
 
 // Initialize the FailedLoginAttempt model
-async function initializeFailedLoginAttemptsModel() {
+async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginAttempts> {
 	const sequelize = await initializeDatabase();
 
 	FailedLoginAttempts.init(
@@ -30,7 +46,7 @@ async function initializeFailedLoginAttemptsModel() {
 			},
 			attemptedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
 			},
 			isLocked: {
@@ -40,15 +56,15 @@ async function initializeFailedLoginAttemptsModel() {
 		},
 		{
 			sequelize,
-			modelName: 'FailedLoginAttempt',
+			modelName: 'FailedLoginAttempts',
 			timestamps: false,
 		}
 	);
+
+	await FailedLoginAttempts.sync();
+	return FailedLoginAttempts;
 }
 
-const FailedLoginAttemptsModelPromise = (async () => {
-	await initializeFailedLoginAttemptsModel();
-	return FailedLoginAttempts;
-})();
-
+// Export the initialized model
+const FailedLoginAttemptsModelPromise = initializeFailedLoginAttemptsModel();
 export default FailedLoginAttemptsModelPromise;

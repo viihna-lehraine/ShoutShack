@@ -1,4 +1,4 @@
-const generateConfirmationEmailTemplate = (username, confirmationUrl) => {
+const generateConfirmationEmailTemplate = (username: string, confirmationUrl: string) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">
@@ -7,10 +7,10 @@ const generateConfirmationEmailTemplate = (username, confirmationUrl) => {
                 <title>Guestbook - Account Confirmation</title>
                 <style>
                     body {
-                    margin: 0;
-                    padding: 0;
-                    background-color: #F4F4F4;
-                    font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #F4F4F4;
+                        font-family: Arial, sans-serif;
                     }
                     .container {
                         width: 100%;
@@ -59,14 +59,14 @@ const generateConfirmationEmailTemplate = (username, confirmationUrl) => {
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
-                        <p>Thank you for registering your account as guestbook.com! I'm so glad you've chosen to join our community.</p>
-                        <p>Please click the button or copy and paste the link below into your browser to confirm your account, and your account will be fully registered.</p>
-                        <a href="${confirmationUrl} class="button">Confirm Email</a>
+                        <p>Thank you for registering your account at guestbook.com! I'm so glad you've chosen to join our community.</p>
+                        <p>Please click the button below or copy and paste the link into your browser to confirm your account, and your account will be fully registered.</p>
+                        <a href="${confirmationUrl}" class="button">Confirm Email</a>
                         <p>${confirmationUrl}</p>
                     </div>
                     <div class="footer">
                         <p>If you did not register for an account at guestbook.com, please ignore this email.</p>
-                        <p>If you experience any issues registering your account, please send an email to me at <a href="mailto:admin@viihnatech.com" and I'll respond to you as soon as possible.</p>
+                        <p>If you experience any issues registering your account, please send an email to me at <a href="mailto:admin@viihnatech.com">admin@viihnatech.com</a> and I'll respond to you as soon as possible.</p>
                         <p>Have a great day! :)</p>
                     </div>
                 </div>

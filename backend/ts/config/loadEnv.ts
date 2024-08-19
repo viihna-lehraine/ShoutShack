@@ -8,8 +8,8 @@ function loadEnv() {
     const envPath = path.join(__dirname, 'backend.dev.env');
     console.log(`Loading environment from: ${envPath}`);
     
-    // Load environment variables from the specified file
     config({ path: envPath });
 }
 
+export { __dirname };
 export default loadEnv;

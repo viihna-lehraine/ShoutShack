@@ -1,7 +1,8 @@
+import express from 'express';
 import testRoutes from '../../routes/testRoutes.js';
-import setupLogger from '../../config/logger.js';
+import setupLogger from '../../middleware/logger.js';
 
-export function loadTestRoutes(app) {
+export function loadTestRoutes(app: express.Application): void {
     setupLogger().then((logger) => {
         if (process.env.FEATURE_LOAD_TEST_ROUTES) {
             app.use('/test', testRoutes);

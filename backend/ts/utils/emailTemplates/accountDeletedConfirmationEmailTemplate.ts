@@ -1,4 +1,4 @@
-const generateAccountDeletedConfirmationEmailTemplate = (username) => {
+const generateAccountDeletedConfirmationEmailTemplate = (username: string) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">
@@ -33,17 +33,6 @@ const generateAccountDeletedConfirmationEmailTemplate = (username) => {
                     .content p {
                         font-size: 16px;
                     }
-                    .button {
-                        display: block;
-                        width: 200px;
-                        padding: 10px;
-                        border-radius: 5px;
-                        margin: 20px auto;
-                        text-align: center;
-                        background-color: #007BFF;
-                        color: #FFFFFF;
-                        text-decoration: none;
-                    }
                     .footer {
                         text-align: center;
                         font-size: 12px;
@@ -59,8 +48,12 @@ const generateAccountDeletedConfirmationEmailTemplate = (username) => {
                     </div>
                     <div class="content">
                         <p>Hello, ${username},</p>
+                        <p>We wanted to let you know that your Guestbook account has been successfully deleted. All your data has been permanently removed from our systems.</p>
+                        <p>If you have any questions or believe this was a mistake, please do not hesitate to reach out to us at <a href="mailto:admin@viihnatech.com">admin@viihnatech.com</a>.</p>
+                        <p>Thank you for being a part of our community.</p>
                     </div>
                     <div class="footer">
+                        <p>&copy; ${new Date().getFullYear()} Guestbook. All rights reserved.</p>
                     </div>
                 </div>
             </body>

@@ -25,6 +25,8 @@
   "keywords": [],
   "license": "GNU GPLv3",
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/connect-redis": "^0.0.23",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
@@ -36,6 +38,8 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.15",
     "@types/passport": "^1.0.16",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/passport-local": "^1.0.38",
     "@typescript-eslint/eslint-plugin": "^8.1.0",
     "@typescript-eslint/parser": "^8.1.0",
     "babel-plugin-transform-import-meta": "^2.2.1",

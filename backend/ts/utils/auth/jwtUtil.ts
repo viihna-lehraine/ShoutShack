@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import getSecrets from '../../config/secrets.js';
-import { generateToken } from './jwtUtils.js';
 
 let secrets;
 
