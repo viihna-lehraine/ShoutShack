@@ -41,7 +41,7 @@ if (files.length === 0) {
 // Ensures all import statements have exactly 1 instance of the .js extension
 function addJsExtension(filePath) {
     console.log(`Processing file: ${filePath}`);
-    
+
     let fileContent = fs.readFileSync(filePath, 'utf8');
 
     // Update imports without extensions

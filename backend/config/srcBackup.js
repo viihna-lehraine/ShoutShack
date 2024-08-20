@@ -12,38 +12,85 @@ if (!fs.existsSync(backupsDir)) {
 	fs.mkdirSync(backupsDir, { recursive: true });
 }
 
+const maxTarballs = 10;
+
 const getBackupNumber = () => {
 	let files = fs.readdirSync(backupsDir);
 	let backupNumbers = files
-		.map(file => {
-			const match = file.match(/^src-backup-(\d+)\.tar\.gz$/);
+		.map((file) => {
+			const match = file.match(/^srcBackup(\d+)\.tar\.gz$/);
 			return match ? parseInt(match[1], 10) : null;
 		})
-		.filter(num => num !== null);
+		.filter((num) => num !== null);
 	return backupNumbers.length > 0 ? Math.max(...backupNumbers) + 1 : 1;
 };
 
 const createSrcBackup = () => {
 	let backupNumber = getBackupNumber();
-	let backupFileName = `src-backup-${backupNumber}.tar.gz`;
+	let backupFileName = `srcBackup${backupNumber}.tar.gz`;
 	let timestampFileName = `timestamp-${backupNumber}.txt`;
 	let timestamp = new Date().toISOString();
 
+	// Create timestamp file
 	fs.writeFileSync(
-		path.join(backupsDir, timestampFileName),
-		`Backup created on ${timestamp}\n`
+		path.join(srcDir, timestampFileName),
+		`backup created on ${timestamp}\n`
 	);
 
+	// Create tarball including the timestamp file
 	tar.c(
 		{
 			gzip: true,
 			file: path.join(backupsDir, backupFileName),
-			cwd: srcDir,
+			cwd: srcDir
 		},
-		['.']
+		['.', timestampFileName]
 	)
-		.then(() => console.log(`Backup ${backupFileName} created successfully.`))
-		.catch(err => console.error(`Error creating backup: ${err.message}`));
+		.then(() => {
+			console.log(`Backup ${backupFileName} created successfully.`);
+			// Clean up timestamp file after backup
+			fs.unlinkSync(path.join(srcDir, timestampFileName));
+		})
+		.catch((err) => console.error(`Error creating backup: ${err.message}`));
+};
+
+const bundleTarballs = () => {
+	let tarballs = fs
+		.readdirSync(backupsDir)
+		.filter(
+			(file) =>
+				file.endsWith('.tar.gz') && !file.startsWith('srcBackupBundle')
+		);
+
+	if (tarballs.length >= maxTarballs) {
+		const bundleNumber = getBackupNumber() - 1; // Ensure bundle number matches last backup
+		const bundleName = `srcBackupBundle${bundleNumber}.tar.gz`;
+		const bundlePath = path.join(backupsDir, bundleName);
+
+		const tarballPaths = tarballs
+			.slice(0, maxTarballs)
+			.map((tarball) => path.join(backupsDir, tarball));
+
+		tar.c(
+			{
+				gzip: true,
+				file: bundlePath,
+				cwd: backupsDir
+			},
+			tarballPaths.map((p) => path.basename(p))
+		)
+			.then(() => {
+				tarballPaths.forEach((tarball) => fs.unlinkSync(tarball));
+				console.log(`Bundled tarballs into: ${bundleName}`);
+			})
+			.catch((err) => {
+				console.error(`Error bundling tarballs: ${err.message}`);
+			});
+	} else {
+		console.log('Not enough tarballs to bundle.');
+	}
 };
 
 createSrcBackup();
+
+bundleTarballs();

@@ -26,16 +26,20 @@ The project stack includes the following
 * Frontend
     * HTML5
     * CSS3
+	* TypeScript
     * JavaScript
     * Sass 1.77.8
 
 * Server
     * Node.js 22.3.0
         * Express
+	* TypeScript
 
 * Database
     * PostgreSQL 16.3
         * Sequelize
+
+* Currently, TypeScript and JavaScript globally adhere to ES6 standards and use ES Modules syntax. I'll be exploring the idea of using a newer ES standard at a later time
 
 <br>
 
@@ -89,17 +93,24 @@ The project stack includes the following
 
 <br> 
 
-Basic backend functionality has been configured. Currently working on frontend design and page layout.
+08/20/2024 - Backend and frontend have been completely converted from JavaScript to TypeScript, excluding a small number of JS files used in processes not intended for use in a production environment
+
 
 ## 6. To Do
 
-* more logging
+* logging
+
+	* ensure logging is done in a thorough and descriptive manner across the backend
+
+	* fix log write and log export functions
+
+* write unit tests
 
 * fine tune all DB models. check for redundancies and ensure they contain all necessary data
 
 * make list of all sensitive user data (email address, 2FA credentials, etc) and make sure it is encrypted before transfer to database. encrypt this data with a robust mechanism, possibly involving keyfiles for MFA
 
-* ensure models can accept but IPV4 and IPV6 address formatsq
+* ensure models can accept but IPV4 and IPV6 address formats
 
 * fine tune IP blacklist and VPN/proxy/TOR exit relay lists and the mechanism that will update them from
 external sources; create functions allowing admin CRUD operations on these lists
@@ -110,7 +121,7 @@ external sources; create functions allowing admin CRUD operations on these lists
 
 * add and configure hcaptcha
 
-* ensure user routes are setup to handle all necessary operations for account registration
+* re-examine routes and ensure 
 
 * build user session functionality with JSON web tokens and test
 

@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import setupLogger from '../../middleware/logger';
+import setupLogger from '../../middleware/logger.js';
 import UserMfaModelPromise from 'ts/models/UserMfa';
 // Generate Backup Coedes
 function generateBackupCodes(id) {

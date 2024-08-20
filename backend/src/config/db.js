@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import { Sequelize } from 'sequelize';
-import setupLogger from '../middleware/logger';
-import getSecrets from './secrets';
+import setupLogger from '../middleware/logger.js';
+import getSecrets from './secrets.js';
 let sequelize;
 function initializeDatabase() {
 	return __awaiter(this, void 0, void 0, function* () {

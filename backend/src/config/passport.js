@@ -1,9 +1,9 @@
 import { __awaiter } from 'tslib';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
-import setupLogger from '../middleware/logger';
-import getSecrets from './secrets';
-import UserModelPromise from '../models/User';
+import setupLogger from '../middleware/logger.js';
+import getSecrets from './secrets.js';
+import UserModelPromise from '../models/User.js';
 export default function configurePassport(passport) {
 	return __awaiter(this, void 0, void 0, function* () {
 		const secrets = yield getSecrets();

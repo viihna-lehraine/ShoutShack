@@ -1,6 +1,6 @@
 import { __awaiter } from 'tslib';
 import nodemailer from 'nodemailer';
-import getSecrets from './secrets';
+import getSecrets from './secrets.js';
 function createTransporter() {
 	return __awaiter(this, void 0, void 0, function* () {
 		const secrets = yield getSecrets();

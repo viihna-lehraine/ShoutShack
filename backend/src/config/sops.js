@@ -1,8 +1,8 @@
 import { __awaiter } from 'tslib';
 import { execSync } from 'child_process';
 import path from 'path';
-import { __dirname } from './loadEnv';
-import setupLogger from '../middleware/logger';
+import { __dirname } from './loadEnv.js';
+import setupLogger from '../middleware/logger.js';
 function decryptFile(encryptedFilePath) {
 	return __awaiter(this, void 0, void 0, function* () {
 		const logger = yield setupLogger();

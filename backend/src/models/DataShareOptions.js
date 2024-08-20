@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import { DataTypes, Model } from 'sequelize';
-import { initializeDatabase } from '../index';
-import UserModelPromise from './User';
+import { initializeDatabase } from '../index.js';
+import UserModelPromise from './User.js';
 class DataShareOptions extends Model {
 	constructor() {
 		super(...arguments);

@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import { DataTypes, Model } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import initializeDatabase from '../config/db.js';
+import UserModelPromise from './User.js';
 class FeatureRequest extends Model {
 	constructor() {
 		super(...arguments);

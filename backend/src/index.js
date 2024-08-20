@@ -1,67 +1,67 @@
-import initializeDatabase from './config/db';
-import featureFlags from './config/featureFlags';
-import loadEnv, { __dirname } from './config/loadEnv';
-import startServer from './middleware/http';
-import { createTransporter, getTransporter } from './config/mailer';
-import multerConfiguredUpload from './config/multer';
-import configurePassport from './config/passport';
-import redisClient from './config/redis';
-import setupSecurityHeaders from './middleware/securityHeaders';
-import slowdownMiddleware from './middleware/slowdown';
-import { csrfMiddleware } from './middleware/csrf';
-import sops from './config/sops';
+import initializeDatabase from './config/db.js';
+import featureFlags from './config/featureFlags.js';
+import loadEnv, { __dirname } from './config/loadEnv.js';
+import startServer from './middleware/http.js';
+import { createTransporter, getTransporter } from './config/mailer.js';
+import multerConfiguredUpload from './config/multer.js';
+import configurePassport from './config/passport.js';
+import redisClient from './config/redis.js';
+import setupSecurityHeaders from './middleware/securityHeaders.js';
+import slowdownMiddleware from './middleware/slowdown.js';
+import { csrfMiddleware } from './middleware/csrf.js';
+import sops from './config/sops.js';
 import {
 	addToBlacklist,
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
 	removeFromBlacklist
-} from './middleware/ipBlacklist';
-import { rateLimitMiddleware } from './middleware/rateLimit';
+} from './middleware/ipBlacklist.js';
+import { rateLimitMiddleware } from './middleware/rateLimit.js';
 import {
 	registrationValidationRules,
 	validateEntry
-} from './middleware/validator';
+} from './middleware/validator.js';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
 	saveBackupCodesToDatabase,
 	verifyBackupCode
-} from './utils/auth/backupCodeUtil';
+} from './utils/auth/backupCodeUtil.js';
 import {
 	generateEmail2FACode,
 	verifyEmail2FACode
-} from './utils/auth/email2FAUtil';
+} from './utils/auth/email2FAUtil.js';
 import {
 	generateU2fAuthenticationOptions,
 	generateU2fRegistrationOptions,
 	verifyU2fAuthentication,
 	verifyU2fRegistration
-} from './utils/auth/fido2Util';
-import { verifyJwToken } from './utils/auth/jwtUtil';
+} from './utils/auth/fido2Util.js';
+import { verifyJwToken } from './utils/auth/jwtUtil.js';
 import {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	verifyPasskeyAuthentication,
 	verifyPasskeyRegistration
-} from './utils/auth/passkeyUtil';
+} from './utils/auth/passkeyUtil.js';
 import {
 	generateYubicoOtpOptions,
 	validateYubicoOTP
-} from './utils/auth/yubicoOtpUtil';
+} from './utils/auth/yubicoOtpUtil.js';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
 	generateQRCode
-} from './utils/auth/totpUtil';
-import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate';
-import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate';
-import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate';
-import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate';
-import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
-import loadTestRoutes from './utils/test/loadTestRoutes';
-import { parseBoolean } from './utils/parseBoolean';
+} from './utils/auth/totpUtil.js';
+import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate.js';
+import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate.js';
+import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate.js';
+import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate.js';
+import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate.js';
+import loadTestRoutes from './utils/test/loadTestRoutes.js';
+import { parseBoolean } from './utils/parseBoolean.js';
 export {
 	addToBlacklist,
 	configurePassport,

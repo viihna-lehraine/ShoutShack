@@ -2,8 +2,8 @@ import { __awaiter } from 'tslib';
 import argon2 from 'argon2';
 import { DataTypes, Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import initializeDatabase from '../config/db';
-import getSecrets from '../config/secrets';
+import initializeDatabase from '../config/db.js';
+import getSecrets from '../config/secrets.js';
 // Fields in the User model
 class User extends Model {
 	constructor() {

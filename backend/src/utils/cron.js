@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import compressing from 'compressing';
 import { exec } from 'child_process';
-import { __dirname } from '../index';
-import setupLogger from '../middleware/logger';
+import { __dirname } from '../index.js';
+import setupLogger from '../middleware/logger.js';
 const compressAndExportLogs = (sourceDir, exportDir, logFileName) =>
 	__awaiter(void 0, void 0, void 0, function* () {
 		const logger = yield setupLogger();

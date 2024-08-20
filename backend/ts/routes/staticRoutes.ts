@@ -4,9 +4,9 @@ import setupLogger from '../middleware/logger';
 
 const router = express.Router();
 
-async function setupRoutes(): Promise<void> {
-	const logger = await setupLogger();
-	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
+async function setupStaticRoutes(): Promise<void> {
+	let logger = await setupLogger();
+	let staticRootPath = process.env.STATIC_ROOT_PATH as string;
 
 	// Define root file path for public/
 	router.get('/', (req, res) => {
@@ -17,7 +17,7 @@ async function setupRoutes(): Promise<void> {
 
 	// Serve root HTML files
 	router.get('/:page', (req, res) => {
-		const page = req.params.page;
+		let page = req.params.page;
 		res.sendFile(path.join(staticRootPath, `${page}.html`), (err) => {
 			if (err) {
 				res.status(404).send('Page not found');
@@ -95,11 +95,11 @@ async function setupRoutes(): Promise<void> {
 }
 
 // For setting up routes when initializing the application
-export default async function initializeRoutes(
+export default async function initializeStaticRoutes(
 	app: express.Application
 ): Promise<void> {
 	try {
-		await setupRoutes();
+		await setupStaticRoutes();
 		app.use('/', router);
 	} catch (err) {
 		console.error('Error setting up routes: ', err);

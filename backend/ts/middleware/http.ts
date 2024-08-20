@@ -8,7 +8,7 @@ import setupLogger from './logger';
 import app from '../server';
 
 // Create HTTP/2 compatible Express app
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line
 const http2App = http2Express(app as any); // *DEV-NOTE* Fix any type if you can ever figure out a way. I had to give up because I was losing my mind trying to fix this one
 
 // Use the existing Express app as middleware for the HTTP/2 compatible app

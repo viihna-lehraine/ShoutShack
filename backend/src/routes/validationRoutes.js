@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import express from 'express';
 import { validationResult } from 'express-validator';
-import { registrationValidationRules } from '../middleware/validator';
+import { registrationValidationRules } from '../middleware/validator.js';
 const router = express.Router();
 router.post('/register', registrationValidationRules, (req, res, next) =>
 	__awaiter(void 0, void 0, void 0, function* () {

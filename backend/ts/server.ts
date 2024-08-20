@@ -16,7 +16,7 @@ import { randomBytes } from 'crypto';
 // import sentry from '@sentry/node';
 // import session from 'express-session';
 // import connectRedis from 'connect-redis';
-import staticRoutes from './routes/staticRoutes';
+import initializeStaticRoutes from './routes/staticRoutes';
 import apiRoutes from './routes/apiRoutes';
 import loadEnv from './config/loadEnv';
 import setupLogger from './middleware/logger';
@@ -156,7 +156,7 @@ async function initializeServer() {
 		app.use(express.static(staticRootPath));
 
 		// Use Static Routes
-		app.use('/', staticRoutes);
+		app.use('/', initializeStaticRoutes);
 
 		// Use API Eoutes
 		app.use('/api', apiRoutes);

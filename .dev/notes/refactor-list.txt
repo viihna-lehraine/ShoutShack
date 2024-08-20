@@ -1,1 +1,1 @@
-src/routes/userRoutes.js
+src/routes/userRoutes

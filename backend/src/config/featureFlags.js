@@ -1,5 +1,5 @@
-import loadEnv from './loadEnv';
-import { parseBoolean } from '../utils/parseBoolean';
+import loadEnv from './loadEnv.js';
+import { parseBoolean } from '../utils/parseBoolean.js';
 loadEnv();
 const featureFlags = {
 	apiRoutesCsrfFlag: parseBoolean(process.env.FEATURE_API_ROUTES_CSRF),

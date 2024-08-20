@@ -1,5 +1,5 @@
 import { __awaiter } from 'tslib';
-import { verifyJwToken } from '../utils/auth/jwtUtil';
+import { verifyJwToken } from '../utils/auth/jwtUtil.js';
 export const authenticateJwT = (req, res, next) =>
 	__awaiter(void 0, void 0, void 0, function* () {
 		var _a;

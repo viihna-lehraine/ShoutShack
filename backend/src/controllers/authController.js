@@ -1,6 +1,6 @@
 import { __awaiter } from 'tslib';
-import { generateToken } from '../utils/auth/jwtUtil';
-import UserModelPromise from '../models/User';
+import { generateToken } from '../utils/auth/jwtUtil.js';
+import UserModelPromise from '../models/User.js';
 export const login = (req, res) =>
 	__awaiter(void 0, void 0, void 0, function* () {
 		try {
