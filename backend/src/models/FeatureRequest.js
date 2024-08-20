@@ -10,47 +10,47 @@ async function initializeFeatureRequestModel() {
 		{
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			email: {
 				type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: null,
+				allowNull: true,
+				defaultValue: null
 			},
-            requestNumber: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                unique: true,
-            },
-            requestType: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-                defaultValue: null,
-            },
-            requestContent: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-                defaultValue: null,
-            },
-            agreedToFollowUpContact: {
-                type: DataTypes.BOOLEAN,
-                allowNull: false,
-                defaultValue: false,
-            },
+			requestNumber: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				unique: true
+			},
+			requestType: {
+				type: DataTypes.TEXT,
+				allowNull: false,
+				defaultValue: null
+			},
+			requestContent: {
+				type: DataTypes.TEXT,
+				allowNull: false,
+				defaultValue: null
+			},
+			agreedToFollowUpContact: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false
+			},
 			createdAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
-            },
-            closedAt: {
-                type: DataTypes.DATE,
-                defaultValue: null,
-            },
+				allowNull: false
+			},
+			closedAt: {
+				type: DataTypes.DATE,
+				defaultValue: null
+			}
 		},
 		{
 			sequelize,
 			modelName: 'FeatureRequest',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

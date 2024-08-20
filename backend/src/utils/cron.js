@@ -90,7 +90,10 @@ const performNpmTasks = async () => {
 	const logger = await setupLogger();
 	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
 	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const logFilePath = path.join(npmLogDir, `npm-audit-update-${timestamp}.log`);
+	const logFilePath = path.join(
+		npmLogDir,
+		`npm-audit-update-${timestamp}.log`
+	);
 
 	try {
 		logger.info('Starting npm audit...');
@@ -138,7 +141,9 @@ const scheduleLogJobs = () => {
 			break;
 		default:
 			schedule: '0 0 * * *';
-			logger.warn('LOGGER variable not set. Defaulting to nightly log export');
+			logger.warn(
+				'LOGGER variable not set. Defaulting to nightly log export'
+			);
 	}
 
 	cron.schedule(schedule, exportLogs);

@@ -1,6 +1,12 @@
-import { DataTypes, InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	InferAttributes,
+	InferCreationAttributes,
+	Model,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface SecurityEventAttributes {
 	id: string;
@@ -13,7 +19,13 @@ interface SecurityEventAttributes {
 	securityEventLastUpdated: Date;
 }
 
-class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferCreationAttributes<SecurityEvent>> implements SecurityEventAttributes {
+class SecurityEvent
+	extends Model<
+		InferAttributes<SecurityEvent>,
+		InferCreationAttributes<SecurityEvent>
+	>
+	implements SecurityEventAttributes
+{
 	id!: string;
 	eventId!: string;
 	eventType!: string;
@@ -37,14 +49,14 @@ async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			eventId: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			eventType: {
 				type: DataTypes.STRING,
@@ -58,38 +70,38 @@ async function initializeSecurityEventModel(): Promise<typeof SecurityEvent> {
 							'2fa-enabled',
 							'2fa-disabled',
 							'account-lock',
-							'other',
-						],
-					],
-				},
+							'other'
+						]
+					]
+				}
 			},
 			eventDescription: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			securityEventDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			securityEventLastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
-			},
+				allowNull: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'SecurityEvent',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

@@ -10,7 +10,7 @@ const storage = multer.diskStorage({
 	filename: (req, file, cb) => {
 		const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 		cb(null, `${uniqueSuffix}-${file.originalname}`);
-	},
+	}
 });
 
 // File filter definition with type declarations
@@ -48,7 +48,7 @@ const fileFilter = (
 		'video/mp4',
 		'video/mpeg',
 		'video/quicktime',
-		'video/x-msvideo',
+		'video/x-msvideo'
 	];
 
 	const allowedExtensions = [
@@ -77,7 +77,7 @@ const fileFilter = (
 		'.txt',
 		'.mpeg',
 		'.mov',
-		'.crt',
+		'.crt'
 	];
 
 	const ext = path.extname(file.originalname).toLowerCase();
@@ -93,14 +93,14 @@ const fileFilter = (
 
 // Set limits for the uploaded filesconst multerLimits = {
 const multerLimits = {
-	fileSize: 1024 * 1024 * 5,
+	fileSize: 1024 * 1024 * 5
 }; // Limit files to 5MB
 
 // Create the multer instance with the storage, fileFilter, and limits
 const multerConfiguredUpload = multer({
 	storage: storage,
 	fileFilter: fileFilter,
-	limits: multerLimits,
+	limits: multerLimits
 });
 
 export default multerConfiguredUpload;

@@ -7,14 +7,14 @@ function generateTOTPSecret() {
 		ascii: totpSecret.ascii,
 		hex: totpSecret.hex,
 		base32: totpSecret.base32,
-		otpauth_url: totpSecret.otpauth_url,
+		otpauth_url: totpSecret.otpauth_url
 	};
 }
 
 function generateTOTPToken(secret) {
 	const totpToken = speakeasy.totp({
 		secret: secret,
-		encoding: 'base32',
+		encoding: 'base32'
 	});
 	return totpToken;
 }
@@ -24,7 +24,7 @@ function verifyTOTPToken(secret, token) {
 		secret: secret,
 		encoding: 'base32',
 		token: token,
-		window: 1, // gives leeway for clock drift
+		window: 1 // gives leeway for clock drift
 	});
 	return isTOTPTokenValid;
 }
@@ -37,5 +37,5 @@ export {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
-	generateQRCode,
+	generateQRCode
 };

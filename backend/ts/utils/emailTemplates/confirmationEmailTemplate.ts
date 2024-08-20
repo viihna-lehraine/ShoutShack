@@ -1,4 +1,7 @@
-const generateConfirmationEmailTemplate = (username: string, confirmationUrl: string) => {
+const generateConfirmationEmailTemplate = (
+	username: string,
+	confirmationUrl: string
+) => {
 	return `
         <!DOCTYPE html>
         <html lang="en">

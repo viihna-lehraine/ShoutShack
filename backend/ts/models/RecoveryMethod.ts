@@ -1,17 +1,28 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface RecoveryMethodAttributes {
 	id: string;
-	isRecoveryActive: boolean
+	isRecoveryActive: boolean;
 	recoveryId: string;
 	recoveryMethod: 'email' | 'backupCodes';
 	backupCodes?: string[] | null;
 	recoveryLastUpdated: Date;
 }
 
-class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, InferCreationAttributes<RecoveryMethod>> implements RecoveryMethodAttributes {
+class RecoveryMethod
+	extends Model<
+		InferAttributes<RecoveryMethod>,
+		InferCreationAttributes<RecoveryMethod>
+	>
+	implements RecoveryMethodAttributes
+{
 	id!: string;
 	isRecoveryActive!: boolean;
 	recoveryId!: string;
@@ -33,39 +44,39 @@ async function initializeRecoveryMethodModel(): Promise<typeof RecoveryMethod> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			isRecoveryActive: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			recoveryId: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			recoveryMethod: {
 				type: DataTypes.ENUM('email', 'backupCodes'),
-				allowNull: true,
+				allowNull: true
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
-				allowNull: true,
+				allowNull: true
 			},
 			recoveryLastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: true,
-			},
+				allowNull: true
+			}
 		},
 		{
 			sequelize,
 			modelName: 'RecoveryMethod',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

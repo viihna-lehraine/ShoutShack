@@ -2,7 +2,7 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
+	Model
 } from 'sequelize';
 import initializeDatabase from '../config/db';
 import UserModelPromise from './User';
@@ -31,7 +31,10 @@ interface UserMfaAttributes {
 }
 
 // Fields in the UserMfa Model
-class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttributes<UserMfa>> implements UserMfaAttributes {
+class UserMfa
+	extends Model<InferAttributes<UserMfa>, InferCreationAttributes<UserMfa>>
+	implements UserMfaAttributes
+{
 	id!: string;
 	userid!: string;
 	isMfaEnabled!: boolean;
@@ -67,7 +70,7 @@ async function initializeUserMfaModel(): Promise<typeof UserMfa> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			userid: {
@@ -76,8 +79,8 @@ async function initializeUserMfaModel(): Promise<typeof UserMfa> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'userid',
-				},
+					key: 'userid'
+				}
 			},
 			isMfaEnabled: {
 				type: DataTypes.BOOLEAN,
@@ -85,105 +88,105 @@ async function initializeUserMfaModel(): Promise<typeof UserMfa> {
 				allowNull: false,
 				references: {
 					model: await UserModelPromise,
-					key: 'isMfaEnabled',
+					key: 'isMfaEnabled'
 				}
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			isEmail2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isTotpl2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isYubicoOtp2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isU2f2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isPasskeyEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			totpSecret: {
 				type: DataTypes.STRING,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			yubicoOtpPublicId: {
 				type: DataTypes.STRING,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			yubicoOtpSecretKey: {
 				type: DataTypes.STRING,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			fido2CredentialId: {
 				type: DataTypes.STRING,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			fido2PublicKey: {
 				type: DataTypes.TEXT,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			fido2Counter: {
 				type: DataTypes.INTEGER,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			fido2AttestationFormat: {
 				type: DataTypes.STRING,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			passkeyCredentialId: {
 				type: DataTypes.STRING,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			passkeyPublicKey: {
 				type: DataTypes.TEXT,
 				defaultValue: null,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			passkeyCounter: {
 				type: DataTypes.INTEGER,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			passkeyAttestationFormat: {
 				type: DataTypes.STRING,
 				defaultValue: null,
-				allowNull: true,
-			},
+				allowNull: true
+			}
 		},
 		{
 			sequelize,
 			modelName: 'UserMfa',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

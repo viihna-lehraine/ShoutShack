@@ -24,7 +24,7 @@ async function initializeDatabase() {
 		{
 			host: secrets.DB_HOST,
 			dialect: secrets.DB_DIALECT,
-			logging: (msg) => logger.info(msg),
+			logging: (msg) => logger.info(msg)
 		}
 	);
 

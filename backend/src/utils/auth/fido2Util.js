@@ -14,7 +14,8 @@ let fido2;
 		cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS, // supported algorithms
 		authenticatorRequireResidentKey:
 			secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
-		authenticatorUserVerification: secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION,
+		authenticatorUserVerification:
+			secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
 	});
 })();
 
@@ -23,8 +24,8 @@ async function generateU2fRegistrationOptions(user) {
 		user: {
 			id: Buffer.from(user.id, 'utf8').toString('base64'), // user ID from database (base64 encoded)
 			name: user.email,
-			displayName: user.username,
-		},
+			displayName: user.username
+		}
 	});
 	return u2fRegistrationOptions;
 }
@@ -33,7 +34,7 @@ async function verifyU2fRegistration(attestation, expectedChallenge) {
 	const u2fAttestationExpectations = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
-		factor: 'either',
+		factor: 'either'
 	};
 
 	return await fiodo2.attestationResult(
@@ -45,12 +46,12 @@ async function verifyU2fRegistration(attestation, expectedChallenge) {
 async function generateU2fAuthenticationOptions(user) {
 	const userCredentials = user.credentials.map((credential) => ({
 		type: 'public-key',
-		id: credential.credentialId,
+		id: credential.credentialId
 	}));
 
 	return await fido2.assertionOptions({
 		allowCredentials: userCredentials,
-		userVerification: 'preferred',
+		userVerification: 'preferred'
 	});
 }
 
@@ -67,25 +68,24 @@ async function verifyU2fAuthentication(
 		factor: 'either',
 		publicKey: publicKey,
 		prevCounter: previousCounter,
-		userHandle: userId,
+		userHandle: userId
 	};
 
 	return await fido2.assertionResult(assertion, assertionExpectations);
 }
 
 export async function loadU2fUtils() {
-    const {
-        generateU2fAuthenticationOptions,
-        generateU2fRegistrationOptions,
-        verifyU2fAuthentication,
-        verifyU2fRegistration,
-    } = await import('./utils/auth/fido2Util.js');
+	const {
+		generateU2fAuthenticationOptions,
+		generateU2fRegistrationOptions,
+		verifyU2fAuthentication,
+		verifyU2fRegistration
+	} = await import('./utils/auth/fido2Util.js');
 
-    return {
-        generateU2fAuthenticationOptions,
-        generateU2fRegistrationOptions,
-        verifyU2fAuthentication,
-        verifyU2fRegistration,
-    };
+	return {
+		generateU2fAuthenticationOptions,
+		generateU2fRegistrationOptions,
+		verifyU2fAuthentication,
+		verifyU2fRegistration
+	};
 }
-

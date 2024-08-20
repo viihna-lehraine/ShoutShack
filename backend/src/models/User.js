@@ -22,143 +22,143 @@ async function initializeUserModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			username: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			password: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			email: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			isAccountVerified: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			resetPasswordToken: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			resetPasswordExpires: {
 				type: DataTypes.DATE,
-				allowNull: true,
+				allowNull: true
 			},
 			has2FA: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
-				allowNull: true,
+				allowNull: true
 			},
 			isEmail2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isTotpl2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isYubicoOtp2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isU2f2faEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isPasskeyEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			totpSecret: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			yubicoOtpPublicId: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			yubicoOtpSecretKey: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			fido2CredentialId: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			fido2PublicKey: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			fido2Counter: {
 				type: DataTypes.INTEGER,
-				allowNull: true,
+				allowNull: true
 			},
 			fido2AttestationFormat: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			passkeyCredentialId: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			passkeyPublicKey: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			passkeyCounter: {
 				type: DataTypes.INTEGER,
-				allowNull: true,
+				allowNull: true
 			},
 			passkeyAttestationFormat: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			hibpCheckFailed: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			isGuestbookIndexed: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			isUserOptedInForDataShare: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			guestbookProfile: {
 				type: DataTypes.JSON,
-				allowNull: true,
+				allowNull: true
 			},
 			customStyles: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			created_at: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
-			},
+				allowNull: false
+			}
 		},
 		{
 			sequelize,
@@ -166,14 +166,17 @@ async function initializeUserModel() {
 			timestamps: false,
 			hooks: {
 				beforeCreate: async (user) => {
-					user.password = await argon2.hash(user.password + secrets.PEPPER, {
-						type: argon2.argon2id,
-						memoryCost: 48640, // 47.5 MiB memory
-						timeCost: 4, // 4 iterations
-						parallelism: 1,
-					});
-				},
-			},
+					user.password = await argon2.hash(
+						user.password + secrets.PEPPER,
+						{
+							type: argon2.argon2id,
+							memoryCost: 48640, // 47.5 MiB memory
+							timeCost: 4, // 4 iterations
+							parallelism: 1
+						}
+					);
+				}
+			}
 		}
 	);
 

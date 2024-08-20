@@ -1,4 +1,7 @@
-const generate2FactorEmailTemplate = (username: string, emailVerificationCode: string): string => {
+const generate2FactorEmailTemplate = (
+	username: string,
+	emailVerificationCode: string
+): string => {
 	return `
       <!DOCTYPE html>
       <html lang="en">

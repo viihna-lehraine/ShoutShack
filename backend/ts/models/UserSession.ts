@@ -1,6 +1,12 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface UserSessionAttributes {
 	id: string;
@@ -14,7 +20,13 @@ interface UserSessionAttributes {
 	isActive: boolean;
 }
 
-class UserSession extends Model<InferAttributes<UserSession>, InferCreationAttributes<UserSession>> implements UserSessionAttributes {
+class UserSession
+	extends Model<
+		InferAttributes<UserSession>,
+		InferCreationAttributes<UserSession>
+	>
+	implements UserSessionAttributes
+{
 	id!: string;
 	sessionId!: number;
 	userId!: string;
@@ -39,7 +51,7 @@ async function initializeUserSessionModel(): Promise<typeof UserSession> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			sessionId: {
@@ -47,39 +59,39 @@ async function initializeUserSessionModel(): Promise<typeof UserSession> {
 				primaryKey: true,
 				autoIncrement: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
-				allowNull: false,
+				allowNull: false
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
 				allowNull: true,
-				defaultValue: null,
+				defaultValue: null
 			},
 			expiresAt: {
 				type: DataTypes.DATE,
-				allowNull: false,
+				allowNull: false
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: true,
-			},
+				defaultValue: true
+			}
 		},
 		{
 			sequelize,
@@ -93,8 +105,8 @@ async function initializeUserSessionModel(): Promise<typeof UserSession> {
 				},
 				beforeUpdate: (session) => {
 					session.updatedAt = new Date(); // Update the updatedAt field on every update
-				},
-			},
+				}
+			}
 		}
 	);
 

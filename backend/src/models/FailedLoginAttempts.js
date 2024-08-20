@@ -14,34 +14,34 @@ async function initializeFailedLoginAttemptsModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			attemptedAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			isLocked: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
-			},
+				defaultValue: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'FailedLoginAttempt',
-			timestamps: false,
+			timestamps: false
 		}
 	);
 }

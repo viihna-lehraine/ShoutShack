@@ -14,58 +14,66 @@ async function initializeAuditLogModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			actionType: {
 				type: DataTypes.STRING,
 				allowNull: false,
 				validate: {
 					isIn: [
-						['create', 'update', 'delete', 'read', 'login', 'logout', 'other'],
-					],
-				},
+						[
+							'create',
+							'update',
+							'delete',
+							'read',
+							'login',
+							'logout',
+							'other'
+						]
+					]
+				}
 			},
 			actionDescription: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			affectedResource: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			previousValue: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			newValue: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: Sequelize.NOW
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
-			},
+				defaultValue: Sequelize.NOW
+			}
 		},
 		{
 			sequelize,
 			modelName: 'AuditLog',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

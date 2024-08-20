@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import zxcvbn from 'zxcvbn';
+import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
 import {
 	generateConfirmationEmailTemplate,
@@ -12,30 +13,30 @@ import {
 	generateTOTPSecret,
 	getTransporter,
 	verifyEmail2FACode,
-	verifyTOTPToken,
+	verifyTOTPToken
 } from '../index.js';
 import setupLogger from '../middleware/logger';
 import getSecrets from '../config/secrets';
 import UserModelPromise from '../models/User';
 
-const router = express.Router();
+let router = express.Router();
 
 // Password strength checker
-const checkPasswordStrength = (password: string) => {
-	const { score } = zxcvbn(password);
+let checkPasswordStrength = (password: string) => {
+	let { score } = zxcvbn(password);
 	return score >= 3;
 };
 
 // Register
 router.post('/register', async (req: Request, res: Response) => {
-	const { username, email, password, confirmPassword } = req.body;
-	const secrets = await getSecrets();
-	const logger = await setupLogger();
+	let { username, email, password, confirmPassword } = req.body;
+	let secrets = await getSecrets();
+	let logger = await setupLogger();
 
 	// Sanitize inputs
-	const sanitizedUsername = xss(username);
-	const sanitizedEmail = xss(email);
-	const sanitizedPassword = xss(password);
+	let sanitizedUsername = xss(username);
+	let sanitizedEmail = xss(email);
+	let sanitizedPassword = xss(password);
 
 	if (sanitizedPassword !== confirmPassword) {
 		logger.info('Registration failure: passwords do not match');
@@ -44,14 +45,14 @@ router.post('/register', async (req: Request, res: Response) => {
 			.json({ password: 'Registration failure: passwords do not match' });
 	}
 
-	const User = await UserModelPromise;
+	let User = await UserModelPromise;
 	if (!User.validatePassword(sanitizedPassword)) {
 		logger.info(
 			'Registration failure: passwords do not meet complexity requirements'
 		);
 		return res.status(400).json({
 			password:
-				'Registration failure: password does not meet complexity requirements',
+				'Registration failure: password does not meet complexity requirements'
 		});
 	}
 
@@ -62,80 +63,72 @@ router.post('/register', async (req: Request, res: Response) => {
 			.json({ password: 'Registration failure: password is too weak' });
 	}
 
-	let hibpCheckFailed = false;
+	let didHibpCheckFail = false; // *DEV-NOTE* need to figure out what, if anything, to do with this variable
 
 	try {
-		const pwnedResponse = await axios.get(
+		let pwnedResponse = await axios.get(
 			`https://api.pwnedpasswords.com/range/${sanitizedPassword.substring(0, 5)}`
 		);
-		const pwnedList = pwnedResponse.data
+		let pwnedList = pwnedResponse.data
 			.split('\n')
-			.map((p: any) => p.split(':')[0]); // *DEV-NOTE* figure out what type 'p' needs to be
+			.map((p: string) => p.split(':')[0]);
 		if (pwnedList.includes(sanitizedPassword.substring(5).toUpperCase())) {
 			logger.warn(
 				'Registration warning: password has been exposed in a data breach'
 			);
 			return res.status(400).json({
 				password:
-					'Registration warning: password has been exposed in a data breach',
+					'Registration warning: password has been exposed in a data breach'
 			});
 		}
 	} catch (error) {
 		logger.error('Registration error: HIBP API check failed');
-		hibpCheckFailed = true;
+		didHibpCheckFail = true;
 	}
 
 	try {
-		const user = await User.findOne({ where: { email: sanitizedEmail } });
+		let user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (user) {
 			logger.info('Registration failure: email already exists');
 			return res
 				.status(400)
 				.json({ email: 'Registration failure: email already exists' });
 		} else {
-			const hashedPassword = await argon2.hash(
+			let hashedPassword = await argon2.hash(
 				sanitizedPassword + secrets.PEPPER,
 				{
-					type: argon2.argon2id,
+					type: argon2.argon2id
 				}
 			);
-			const newUser = await User.create({
+			let newUser = await User.create({
+				id: uuidv4(),
 				username: sanitizedUsername,
-				email: sanitizedEmail,
 				password: hashedPassword,
-				hibpCheckFailed: false,
+				email: sanitizedEmail,
 				isAccountVerified: false,
-				has2FA: false,
-				isEmail2faEnabled: false,
-				isTotpl2faEnabled: false,
-				isYubicoOtp2faEnabled: false,
-				isU2f2faEnabled: false,
-				isPasskeyEnabled: false,
-				isGuestbookIndexed: true,
-				isUserOptedInForDataShare: false,
-				created_at: new Date(),
+				resetPasswordToken: null,
+				resetPasswordExpires: null,
+				isMfaEnabled: false,
+				creationDate: new Date()
 			});
 
-			// Argument of type '{ username: string; email: string; password: string; hibpCheckFailed: boolean; }' is not assignable to parameter of type 'Optional<InferCreationAttributes<User, { omit: never; }>, NullishPropertiesOf<InferCreationAttributes<User, { omit: never; }>>>'.
-  			// Type '{ username: string; email: string; password: string; hibpCheckFailed: boolean; }' is missing the following properties from type 'Omit<InferCreationAttributes<User, { omit: never; }>, NullishPropertiesOf<InferCreationAttributes<User, { omit: never; }>>>': userid, isAccountVerified, has2FA, isEmail2faEnabled, and 6 more.
-
 			// Generate a confirmation token
-			const confirmationToken = jwt.sign(
+			let confirmationToken = jwt.sign(
 				{ id: newUser.id },
 				secrets.JWT_SECRET,
 				{ expiresIn: '1d' }
 			);
-			const confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
+			let confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
 
 			// Send confirmation email
-			const mailOptions = {
+			let mailOptions = {
 				from: process.env.EMAIL_USER,
 				to: newUser.email,
 				subject: 'Guestbook - Account Confirmation',
 				html: generateConfirmationEmailTemplate(
 					newUser.username,
 					confirmationUrl
-				),
+				)
 			};
 
 			await (await getTransporter()).sendMail(mailOptions);
@@ -143,7 +136,7 @@ router.post('/register', async (req: Request, res: Response) => {
 			logger.info('User registration complete');
 			res.json({
 				message:
-					'Registration successful. Please check your email to confirm your account.',
+					'Registration successful. Please check your email to confirm your account.'
 			});
 		}
 	} catch (err) {
@@ -156,28 +149,30 @@ router.post('/register', async (req: Request, res: Response) => {
 
 // Login
 router.post('/login', async (req: Request, res: Response) => {
-	const secrets = await getSecrets();
-	const logger = await setupLogger();
-	const { email, password } = req.body;
+	let secrets = await getSecrets();
+	let logger = await setupLogger();
+	let { email, password } = req.body;
 
 	// sanitize inputs
-	const sanitizedEmail = xss(email);
-	const sanitizedPassword = xss(password);
+	let sanitizedEmail = xss(email);
+	let sanitizedPassword = xss(password);
 
 	try {
-		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { email: sanitizedEmail } });
+		let User = await UserModelPromise;
+		let user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			logger.info('400 - User not found');
 			return res.status(400).json({ email: 'User not found' });
 		}
-		const isMatch = await argon2.verify(
+		let isMatch = await argon2.verify(
 			user.password,
 			sanitizedPassword + secrets.PEPPER
 		);
 		if (isMatch) {
-			const payload = { id: user.userid, username: user.username };
-			const token = jwt.sign(payload, secrets.JWT_SECRET, { expiresIn: '1h' });
+			let payload = { id: user.userid, username: user.username };
+			let token = jwt.sign(payload, secrets.JWT_SECRET, {
+				expiresIn: '1h'
+			});
 			res.json({ success: true, token: `Bearer ${token}` });
 		} else {
 			return res.status(400).json({ password: 'Incorrect password' });
@@ -186,25 +181,27 @@ router.post('/login', async (req: Request, res: Response) => {
 		logger.error('Login - server error');
 		res.status(500).json({ error: 'Login - Server error' });
 	}
+
+	return;
 });
 
 // Password Recovery (simplified)
 router.post('/recover-password', async (req: Request, res: Response) => {
-	const logger = await setupLogger();
-	const { email } = req.body;
+	let logger = await setupLogger();
+	let { email } = req.body;
 
 	// sanitize inputs
-	const sanitizedEmail = xss(email);
+	let sanitizedEmail = xss(email);
 
 	try {
-		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { email: sanitizedEmail } });
+		let User = await UserModelPromise;
+		let user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			return res.status(404).json({ email: 'User not found' });
 		}
 		// Generate a token (customize this later)
-		const token = await bcrypt.genSalt(25);
-		const passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
+		let token = await bcrypt.genSalt(25);
+		let passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
 
 		// Store the token in the database (simplified for now)
 		user.resetPasswordToken = token;
@@ -218,20 +215,25 @@ router.post('/recover-password', async (req: Request, res: Response) => {
 		logger.error('Password Recovery - Server error: ', err);
 		res.status(500).json({ error: 'Password Recovery - Server error' });
 	}
+
+	return;
 });
 
 // Route for TOTP secret generation
 router.post('/generate-totp', async (req: Request, res: Response) => {
-	const logger = await setupLogger();
-	const { username } = req.body;
+	let logger = await setupLogger();
+	let { username } = req.body; // *DEV-NOTE* does this even need to be here?
 
 	// sanitize username input
-	const sanitizedUsername = xss(username);
+	let sanitizedUsername = xss(username); // *DEV-NOTE* or this?
+
+	// *DEV-NOTE* here, we could store the secret in the session or send it to the client
+	// depending on the use case; food for thought
 
 	try {
-		const { secret, otpauth_url } = generateTOTPSecret(sanitizedUsername);
-		const qrCodeUrl = await generateQRCode(otpauth_url);
-		res.json({ secret, qrCodeUrl });
+		let { base32, otpauth_url } = generateTOTPSecret();
+		let qrCodeUrl = await generateQRCode(otpauth_url);
+		res.json({ secret: base32, qrCodeUrl });
 	} catch (err) {
 		logger.error('Error generating TOTP secret: ', err);
 		res.status(500).json({ error: 'Internal server error' });
@@ -240,86 +242,99 @@ router.post('/generate-totp', async (req: Request, res: Response) => {
 
 // Route to verify TOTP tokens
 router.post('/verify-totp', async (req: Request, res: Response) => {
-	const logger = await setupLogger();
-	const { username, token } = req.body;
+	let logger = await setupLogger();
+	let { username, token, secret } = req.body;
 
 	// sanitize username input
-	const sanitizedUsername = xss(username);
+	let sanitizedUsername = xss(username); // *DEV-NOTE* again, do I need the username here or not?
 
 	try {
-		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { username: sanitizedUsername } });
-		if (!user) {
-			return res.status(404).json({ error: 'User not found' });
-		}
-		const isTOTPTokenValid = verifyTOTPToken(user.totpSecret, token);
+		let isTOTPTokenValid = verifyTOTPToken(secret, token);
 		res.json({ isTOTPTokenValid });
 	} catch (err) {
 		logger.error('Error verifying TOTP token: ', err);
 		res.status(500).json({ error: 'Internal server error' });
 	}
+
+	return;
 });
 
 // Route to generate and send 2FA codes by email
 router.post('/generate-2fa', async (req: Request, res: Response) => {
-	const logger = await setupLogger();
-	const { email } = req.body;
+	let logger = await setupLogger();
+	let { email } = req.body;
 
 	// sanitize email input
-	const sanitizedEmail = xss(email);
+	let sanitizedEmail = xss(email);
 
 	try {
-		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { email: sanitizedEmail } });
+		let User = await UserModelPromise;
+		let user = await User.findOne({ where: { email: sanitizedEmail } });
+
 		if (!user) {
-			return res.status(404).json({ error: 'Generate 2FA: user not found' });
+			return res
+				.status(404)
+				.json({ error: 'Generate 2FA: user not found' });
 		}
 
-		const { token } = generateEmail2FACode();
+		// generate 2FA token
+		let { email2FAToken } = await generateEmail2FACode();
 
-		user.resetPasswordToken = token;
+		// save the 2FA token and expiration time in the user's record
+		user.resetPasswordToken = email2FAToken;
 		user.resetPasswordExpires = new Date(Date.now() + 30 * 60000); // 30 min
-		await user.save();
+		await user.save(); // save the user data with the new 2FA token and expiration time
 
+		// send the 2FA code to user's email
 		await (
 			await getTransporter()
 		).sendMail({
 			// send the 2FA code to user's email
 			to: sanitizedEmail,
 			subject: 'Guestbook - Your Login Code',
-			text: `Your 2FA code is ${token}`,
+			text: `Your 2FA code is ${email2FAToken}`
 		});
 
+		// respond with success message
 		res.json({ message: '2FA code sent to email' });
 	} catch (err) {
+		// log the error and respond with a 500 status message
 		logger.error('Error generating 2FA code: ', err);
 		res.status(500).json({ error: 'Generate 2FA: internal server error' });
 	}
+
+	return;
 });
 
 // Route to verify email 2FA code
 router.post('/verify-2fa', async (req: Request, res: Response) => {
-	const logger = await setupLogger();
-	const { email, email2FACode } = req.body;
+	let logger = await setupLogger();
+	let { email, email2FACode } = req.body;
 
 	// sanitize inputs
-	const sanitizedEmail = xss(email);
+	let sanitizedEmail = xss(email);
 
 	try {
-		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { email: sanitizedEmail } });
+		let User = await UserModelPromise;
+		let user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			logger.error('Verify 2FA: user not found');
-			return res.status(404).json({ error: 'Verify 2FA: User not found' });
+			return res
+				.status(404)
+				.json({ error: 'Verify 2FA: User not found' });
 		}
 
-		const isEmail2FACodeValid = verifyEmail2FACode(
-			user.resetPasswordToken,
+		let resetPasswordToken = user.resetPasswordToken || '';
+
+		let isEmail2FACodeValid = verifyEmail2FACode(
+			resetPasswordToken,
 			email2FACode
 		);
 		if (!isEmail2FACodeValid) {
 			logger.error('Invalid or expired 2FA code');
-			return res.status(400).json({ error: 'Invalid or expired 2FA code' });
+			return res
+				.status(400)
+				.json({ error: 'Invalid or expired 2FA code' });
 		}
 
 		res.json({ message: '2FA code verified successfully' });
@@ -327,6 +342,8 @@ router.post('/verify-2fa', async (req: Request, res: Response) => {
 		logger.error('Error verifying 2FA code:', err);
 		res.status(500).json({ error: 'Internal server error' });
 	}
+
+	return;
 });
 
 export default router;

@@ -1,39 +1,36 @@
 import initializeDatabase from './config/db';
 import featureFlags from './config/featureFlags';
-import loadEnv, {
-	__dirname,
-} from './config/loadEnv.ts';
+import loadEnv, { __dirname } from './config/loadEnv';
 import startServer from './middleware/http';
-import {
-	createTransporter,
-	getTransporter } from './config/mailer';
+import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';
 import redisClient from './config/redis';
 import setupSecurityHeaders from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
+import { csrfMiddleware } from './middleware/csrf';
 import sops from './config/sops';
 import {
 	addToBlacklist,
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
-	removeFromBlacklist,
+	removeFromBlacklist
 } from './middleware/ipBlacklist';
-import { rateLimitMiddleware} from './middleware/rateLimit';
+import { rateLimitMiddleware } from './middleware/rateLimit';
 import {
 	registrationValidationRules,
-	validateEntry,
+	validateEntry
 } from './middleware/validator';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
 	saveBackupCodesToDatabase,
-	verifyBackupCode,
+	verifyBackupCode
 } from './utils/auth/backupCodeUtil';
 import {
 	generateEmail2FACode,
-	verifyEmail2FACode,
+	verifyEmail2FACode
 } from './utils/auth/email2FAUtil';
 import {
 	generateU2fAuthenticationOptions,
@@ -46,17 +43,17 @@ import {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration,
+	verifyPasskeyRegistration
 } from './utils/auth/passkeyUtil';
 import {
 	generateYubicoOtpOptions,
-	validateYubicoOTP,
+	validateYubicoOTP
 } from './utils/auth/yubicoOtpUtil';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
-	generateQRCode,
+	generateQRCode
 } from './utils/auth/totpUtil';
 import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate';
 import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate';
@@ -70,6 +67,7 @@ export {
 	addToBlacklist,
 	configurePassport,
 	createTransporter,
+	csrfMiddleware,
 	decryptDataFiles,
 	featureFlags,
 	generate2FactorEmailTemplate,
@@ -116,7 +114,7 @@ export {
 	verifyTOTPToken,
 	verifyU2fAuthentication,
 	verifyU2fRegistration,
-	__dirname,
+	__dirname
 };
 
 const { decryptDataFiles, getSSLKeys } = sops;

@@ -10,44 +10,44 @@ async function initializeSupportRequestModel() {
 		{
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			email: {
 				type: DataTypes.STRING,
-                allowNull: false,
+				allowNull: false
 			},
-            ticketNumber: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-                unique: true,
-            },
-            issueType: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-            },
-            issueContent: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-            },
+			ticketNumber: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				unique: true
+			},
+			issueType: {
+				type: DataTypes.TEXT,
+				allowNull: false
+			},
+			issueContent: {
+				type: DataTypes.TEXT,
+				allowNull: false
+			},
 			createdAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
+				allowNull: false
 			},
-            isTicketOpen: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: true,
-                allowNull: false,
-            },
-            closedAt: {
-                type: DataTypes.DATE,
-                defaultValue: null,
-            },
+			isTicketOpen: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: true,
+				allowNull: false
+			},
+			closedAt: {
+				type: DataTypes.DATE,
+				defaultValue: null
+			}
 		},
 		{
 			sequelize,
 			modelName: 'SupportRequest',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

@@ -1,6 +1,12 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface GuestbookEntryAttributes {
 	id: string;
@@ -11,7 +17,13 @@ interface GuestbookEntryAttributes {
 	entryDate: Date;
 }
 
-class GuestbookEntry extends Model<InferAttributes<GuestbookEntry>, InferCreationAttributes<GuestbookEntry>> implements GuestbookEntryAttributes {
+class GuestbookEntry
+	extends Model<
+		InferAttributes<GuestbookEntry>,
+		InferCreationAttributes<GuestbookEntry>
+	>
+	implements GuestbookEntryAttributes
+{
 	id!: string;
 	guestName!: string | null;
 	guestEmail!: string | null;
@@ -33,40 +45,40 @@ async function initializeGuestbookEntryModel(): Promise<typeof GuestbookEntry> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			guestName: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			guestEmail: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			guestMessage: {
 				type: DataTypes.TEXT,
 				allowNull: false,
-				unique: false,
+				unique: false
 			},
 			guestMessageStyles: {
 				type: DataTypes.JSON,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			entryDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
 				allowNull: false,
-				unique: false,
-			},
+				unique: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'GuestbookEntry',
-			timestamps: false,
+			timestamps: false
 		}
 	);
 

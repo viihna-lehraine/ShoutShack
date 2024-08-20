@@ -8,7 +8,6 @@ import 'express-async-errors';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import csrf from 'csrf';
 import hpp from 'hpp';
 import morgan from 'morgan';
 import path from 'path';
@@ -17,41 +16,38 @@ import { randomBytes } from 'crypto';
 // import sentry from '@sentry/node';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
-import staticRoutes from '../ts/routes/staticRoutes';
+import staticRoutes from './routes/staticRoutes';
 import apiRoutes from './routes/apiRoutes';
-import loadEnv from './config/loadEnv.js';
+import loadEnv from './config/loadEnv';
 import setupLogger from './middleware/logger';
 import getSecrets from './config/secrets';
 import sops from './config/sops';
 import {
 	configurePassport,
+	csrfMiddleware,
 	initializeDatabase,
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadTestRoutes,
 	rateLimitMiddleware,
 	setupSecurityHeaders,
-	slowdownMiddleware,
-	startServer,
-	__dirname,
-	__filename,
-} from './index.js';
+	startServer
+} from './index';
 
-const app = express();
-const csrfProtection = new csrf({ secretLength: 32 });
-const RedisStore = connectRedis(session);
+let app = express();
+let RedisStore = connectRedis(session);
 
-const { decryptDataFiles, getSSLKeys } = sops;
+let { decryptDataFiles } = sops;
 
 loadEnv();
 
 async function initializeServer() {
-	const logger = await setupLogger();
-	const sequelize = await initializeDatabase();
-	const ipLists = await decryptDataFiles(); 
-	const staticRootPath = process.env.STATIC_ROOT_PATH!;
-	const keyPath = process.env.SERVER_SSL_KEY_PATH!;
-	const certPath = process.env.SERVER_SSL_CERT_PATH!;
+	let logger = await setupLogger();
+	let sequelize = await initializeDatabase();
+	let ipLists = await decryptDataFiles();
+	let staticRootPath = process.env.STATIC_ROOT_PATH!;
+	let keyPath = process.env.SERVER_SSL_KEY_PATH!;
+	let certPath = process.env.SERVER_SSL_CERT_PATH!;
 
 	await configurePassport(passport);
 	await initializeIpBlacklist();
@@ -68,6 +64,9 @@ async function initializeServer() {
 				cookie: { secure: true }, 
 			})
 		); */
+
+		// Apply CSRF Middleware (no sessions)
+		app.use(csrfMiddleware);
 
 		// Implement Caching
 		/*
@@ -124,12 +123,14 @@ async function initializeServer() {
 		});
 
 		// Apply CORS middleware
-		app.use(cors({
-			// origin: 'https://guestbook.com',
-			methods: 'GET,POST,PUT,DELETE',
-			allowedHeaders: 'Content-Type,Authorization', // allow specific headers
-			credentials: true // allow cookies to be sent
-		}));
+		app.use(
+			cors({
+				// origin: 'https://guestbook.com',
+				methods: 'GET,POST,PUT,DELETE',
+				allowedHeaders: 'Content-Type,Authorization', // allow specific headers
+				credentials: true // allow cookies to be sent
+			})
+		);
 
 		// Apply 'hpp' middleware to sanitize query parameters
 		app.use(hpp());
@@ -141,8 +142,8 @@ async function initializeServer() {
 		app.use(
 			morgan('combined', {
 				stream: {
-					write: (message) => logger.info(message.trim()),
-				},
+					write: (message) => logger.info(message.trim())
+				}
 			})
 		);
 
@@ -158,39 +159,38 @@ async function initializeServer() {
 		// Use Static Routes
 		app.use('/', staticRoutes);
 
-		// Use API routes with CSRF protection
-		app.use(
-			'/api',
-			(req: Request, res: Response, next: NextFunction) => {
-				const token = req.body.csrfToken || req.headers['x-xsrf-token'];
-				if (csrfProtection.verify(req.csrfToken, token)) {
-					next();
-				} else {
-					res.status(403).send('Invalid CSRF token');
-				}
-			},
-			apiRoutes
-		);
+		// Use API Eoutes
+		app.use('/api', apiRoutes);
 
 		// 404 error handling
 		app.use((req: Request, res: Response, next: NextFunction) => {
-			res
-				.status(404)
-				.sendFile(path.join(__dirname, '../public', 'not-found.html'));
+			res.status(404).sendFile(
+				path.join(__dirname, '../public', 'not-found.html')
+			);
 		});
 
 		// Error Handling Middleware
-		app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-			logger.error('Error occurred: ', err.stack || err.message || err);
-			res.status(500).send(`Server error - something failed ${err.stack}`);
-		});
+		app.use(
+			(err: Error, req: Request, res: Response, next: NextFunction) => {
+				logger.error(
+					'Error occurred: ',
+					err.stack || err.message || err
+				);
+				res.status(500).send(
+					`Server error - something failed ${err.stack}`
+				);
+			}
+		);
 
 		// Test database connection and sync models
 		try {
 			await sequelize.sync();
 			logger.info('Database and tables created!');
 		} catch (err) {
-			logger.error('Database Connection Test and Sync: Server error: ', err);
+			logger.error(
+				'Database Connection Test and Sync: Server error: ',
+				err
+			);
 			throw err;
 		}
 
@@ -207,7 +207,6 @@ async function initializeServer() {
 
 		// Start the server with either HTTP1.1 or HTTP2, dependent on feature flags
 		await startServer();
-
 	} catch (err) {
 		logger.error('Failed to start server: ', err);
 		process.exit(1); // exit process with failure
@@ -217,3 +216,5 @@ async function initializeServer() {
 initializeServer();
 
 export default app;
+
+// *DEV-NOTE* need to implement session management

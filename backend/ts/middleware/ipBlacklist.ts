@@ -3,8 +3,8 @@ import { Logger } from 'winston';
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { __dirname } from '../config/loadEnv.js';
-import setupLogger from '../middleware/logger.js';
+import { __dirname } from '../config/loadEnv';
+import setupLogger from '../middleware/logger';
 
 type RangeCheckType = {
 	inRange: (ip: string, range: string) => boolean;
@@ -64,7 +64,11 @@ const saveBlacklist = async (): Promise<void> => {
 };
 
 // Middleware to check if the requester's IP is blacklisted
-export const ipBlacklistMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const ipBlacklistMiddleware = (
+	req: Request,
+	res: Response,
+	next: NextFunction
+) => {
 	if (!rangeCheck) {
 		console.error('rangeCheck module is not loaded');
 		return res.status(500).json({ error: 'Server error' });

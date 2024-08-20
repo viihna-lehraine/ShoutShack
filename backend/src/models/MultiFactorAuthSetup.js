@@ -14,49 +14,49 @@ async function initializeMultiFactorAuthSetupModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			method: {
 				type: DataTypes.ENUM,
 				values: ['totp', 'email', 'yubico', 'fido2', 'passkey'],
-				allowNull: false,
+				allowNull: false
 			},
 			secret: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			publicKey: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			counter: {
 				type: DataTypes.INTEGER,
-				allowNull: true,
+				allowNull: true
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: true,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
-			},
+				allowNull: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'MultiFactorAuthSetup',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

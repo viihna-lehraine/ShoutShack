@@ -15,11 +15,11 @@ async function generateEmail2FACode() {
 
 	const email2FACode = bcrypt.genSalt(6); // generates a 6-character hex code
 	const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
-		expiresIn: '30m',
+		expiresIn: '30m'
 	});
 	return {
 		email2FACode,
-		email2FAToken,
+		email2FAToken
 	};
 }
 

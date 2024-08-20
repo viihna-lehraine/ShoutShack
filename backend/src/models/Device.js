@@ -14,56 +14,56 @@ async function initializeDeviceModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			deviceName: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			deviceType: {
 				type: DataTypes.STRING,
 				allowNull: false,
 				validate: {
-					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']],
-				},
+					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
+				}
 			},
 			os: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			browser: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			lastUsedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: Sequelize.NOW
 			},
 			isTrusted: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: Sequelize.NOW
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
-			},
+				defaultValue: Sequelize.NOW
+			}
 		},
 		{
 			sequelize,
 			modelName: 'Device',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

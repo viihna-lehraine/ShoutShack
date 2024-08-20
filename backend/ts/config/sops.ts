@@ -1,13 +1,15 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { __dirname } from './loadEnv.js';
-import setupLogger from '../middleware/logger.js';
+import { __dirname } from './loadEnv';
+import setupLogger from '../middleware/logger';
 
 async function decryptFile(encryptedFilePath: string) {
 	const logger = await setupLogger();
 
 	try {
-		const decryptedFile = execSync(`sops -d --output-type json ${encryptedFilePath}`).toString();
+		const decryptedFile = execSync(
+			`sops -d --output-type json ${encryptedFilePath}`
+		).toString();
 		return decryptedFile;
 	} catch (err) {
 		logger.error('Error decrypting file from SOPS: ', err);
@@ -23,20 +25,24 @@ async function decryptDataFiles() {
 			process.env.SERVER_DATA_FILE_PATH_1,
 			process.env.SERVER_DATA_FILE_PATH_2,
 			process.env.SERVER_DATA_FILE_PATH_3,
-			process.env.SERVER_DATA_FILE_PATH_4,
+			process.env.SERVER_DATA_FILE_PATH_4
 		];
 
-		const decryptedFiles: { [key: string]: string }= {};
+		const decryptedFiles: { [key: string]: string } = {};
 
 		for (const [index, filePath] of filePaths.entries()) {
 			if (filePath) {
-				decryptedFiles[`files${index + 1}`] = execSync(`sops -d --output-type json ${filePath}`).toString();
+				decryptedFiles[`files${index + 1}`] = execSync(
+					`sops -d --output-type json ${filePath}`
+				).toString();
 			} else {
-				logger.warn(`SERVER_DATA_FILE_PATH_${index + 1} is not defined`);
+				logger.warn(
+					`SERVER_DATA_FILE_PATH_${index + 1} is not defined`
+				);
 			}
 		}
 
-		return decryptedFiles
+		return decryptedFiles;
 	} catch (err) {
 		logger.error('Error decrypting files from backend data folder: ', err);
 		throw err;
@@ -54,7 +60,7 @@ async function getSSLKeys() {
 
 		return {
 			key: decryptedKey,
-			cert: decryptedCert,
+			cert: decryptedCert
 		};
 	} catch (err) {
 		logger.error('Error retrieving SSL keys from SOPS: ', err);

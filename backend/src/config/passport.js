@@ -50,7 +50,10 @@ export default async function configurePassport(passport) {
 
 				const isMatch = await user.comparePassword(password);
 				if (isMatch) {
-					logger.info('Local authentication successful for user: ', username);
+					logger.info(
+						'Local authentication successful for user: ',
+						username
+					);
 					return done(null, user);
 				} else {
 					logger.warn(

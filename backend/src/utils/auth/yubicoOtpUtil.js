@@ -30,7 +30,7 @@ function generateYubicoOtpOptions() {
 	return {
 		clientId: secrets.YUBICO_CLIENT_ID,
 		apiKey: secrets.YUBICO_SECRET_KEY,
-		apiUrl: secrets.YUBICO_API_URL,
+		apiUrl: secrets.YUBICO_API_URL
 	};
 }
 

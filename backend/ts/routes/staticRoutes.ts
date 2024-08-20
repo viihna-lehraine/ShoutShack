@@ -95,7 +95,9 @@ async function setupRoutes(): Promise<void> {
 }
 
 // For setting up routes when initializing the application
-export default async function initializeRoutes(app) {
+export default async function initializeRoutes(
+	app: express.Application
+): Promise<void> {
 	try {
 		await setupRoutes();
 		app.use('/', router);

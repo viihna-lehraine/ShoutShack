@@ -14,11 +14,11 @@ async function initializeSecurityEventModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			eventType: {
 				type: DataTypes.STRING,
@@ -32,36 +32,36 @@ async function initializeSecurityEventModel() {
 							'2fa-enabled',
 							'2fa-disabled',
 							'account-lock',
-							'other',
-						],
-					],
-				},
+							'other'
+						]
+					]
+				}
 			},
 			eventDescription: {
 				type: DataTypes.TEXT,
-				allowNull: true,
+				allowNull: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: Sequelize.NOW
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
-			},
+				defaultValue: Sequelize.NOW
+			}
 		},
 		{
 			sequelize,
 			modelName: 'SecurityEvent',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

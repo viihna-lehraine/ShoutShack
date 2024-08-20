@@ -8,7 +8,10 @@ interface Secrets {
 }
 
 interface YubClient {
-	verify(otp: string, callback: (err: Error | null, data: YubResponse) => void): void;
+	verify(
+		otp: string,
+		callback: (err: Error | null, data: YubResponse) => void
+	): void;
 }
 
 interface YubResponse {
@@ -22,7 +25,10 @@ let yubClient: YubClient | undefined;
 async function initializeYubicoOtpUtil(): Promise<void> {
 	if (!secrets || !yubClient) {
 		secrets = await getSecrets();
-		yubClient = yub.init(secrets!.YUBICO_CLIENT_ID.toString(), secrets!.YUBICO_SECRET_KEY) as YubClient;
+		yubClient = yub.init(
+			secrets!.YUBICO_CLIENT_ID.toString(),
+			secrets!.YUBICO_SECRET_KEY
+		) as YubClient;
 	}
 }
 
@@ -56,7 +62,7 @@ function generateYubicoOtpOptions() {
 	return {
 		clientId: secrets.YUBICO_CLIENT_ID,
 		apiKey: secrets.YUBICO_SECRET_KEY,
-		apiUrl: secrets.YUBICO_API_URL,
+		apiUrl: secrets.YUBICO_API_URL
 	};
 }
 

@@ -19,11 +19,11 @@ export default function setupSecurityHeaders(app) {
 			hsts: {
 				maxAge: 31536000, // 1 year
 				includeSubDomains: true,
-				preload: true, // enable HSTS preload list
+				preload: true // enable HSTS preload list
 			},
 			ieNoOpen: true,
 			noSniff: true,
-			xssFilter: true,
+			xssFilter: true
 		})
 	);
 
@@ -34,24 +34,24 @@ export default function setupSecurityHeaders(app) {
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					'https://api.haveibeenpwned.com', // Allow external script
+					'https://api.haveibeenpwned.com' // Allow external script
 				],
 				styleSrc: [
 					"'self'", // Allow styles from your own domain
-					"'unsafe-inline'", // Add this if you have inline styles
+					"'unsafe-inline'" // Add this if you have inline styles
 				],
 				fontSrc: ["'self'"],
 				imgSrc: ["'self'", 'data:'], // Allow images from your domain and data URIs
 				connectSrc: [
 					"'self'",
 					'https://api.haveibeenpwned.com',
-					'https://cdnjs.cloudflare.com',
+					'https://cdnjs.cloudflare.com'
 				],
 				objectSrc: ["'none'"],
 				upgradeInsecureRequests: [], // Automatically upgrade HTTP to HTTPS
-				frameAncestors: ["'none'"],
+				frameAncestors: ["'none'"]
 			},
-			reportOnly: false, // Set to true to test CSP without enforcement
+			reportOnly: false // Set to true to test CSP without enforcement
 		})
 	);
 
@@ -69,8 +69,8 @@ export default function setupSecurityHeaders(app) {
 				geolocation: ['none'], // Disallow geolocation
 				microphone: ['none'], // Disallow microphone access
 				camera: ['none'], // Disallow camera access
-				payment: ['none'], // Disallow payment requests
-			},
+				payment: ['none'] // Disallow payment requests
+			}
 		})
 	);
 }

@@ -3,11 +3,11 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
+	Model
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import initializeDatabase from '../config/db.js';
-import getSecrets from '../config/secrets.js';
+import initializeDatabase from '../config/db';
+import getSecrets from '../config/secrets';
 
 interface UserAttributes {
 	id: string;
@@ -23,7 +23,10 @@ interface UserAttributes {
 }
 
 // Fields in the User model
-class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> implements UserAttributes {
+class User
+	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
+	implements UserAttributes
+{
 	id!: string;
 	userid?: number;
 	username!: string;
@@ -49,14 +52,26 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> i
 		const hasNumber = /\d/.test(password);
 		const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-		return isValidLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial;
+		return (
+			isValidLength &&
+			hasUpperCase &&
+			hasLowerCase &&
+			hasNumber &&
+			hasSpecial
+		);
 	}
 
 	// Static method to create a new user
-    static async createUser(username: string, password: string, email: string): Promise<User> {
+	static async createUser(
+		username: string,
+		password: string,
+		email: string
+	): Promise<User> {
 		const isValidPassword = User.validatePassword(password);
 		if (!isValidPassword) {
-			throw new Error('Password does not meet the security requirements.');
+			throw new Error(
+				'Password does not meet the security requirements.'
+			);
 		}
 
 		const newUser = await User.create({
@@ -68,7 +83,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> i
 			resetPasswordToken: null,
 			resetPasswordExpires: null,
 			isMfaEnabled: false,
-			creationDate: new Date(),
+			creationDate: new Date()
 		});
 
 		return newUser;
@@ -87,52 +102,52 @@ async function initializeUserModel(): Promise<typeof User> {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userid: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			username: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			password: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			email: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			isAccountVerified: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			resetPasswordToken: {
 				type: DataTypes.STRING,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			resetPasswordExpires: {
 				type: DataTypes.DATE,
 				defaultValue: null,
-				allowNull: true,
+				allowNull: true
 			},
 			isMfaEnabled: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: false,
-				allowNull: false,
+				allowNull: false
 			},
 			creationDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
-			},
+				allowNull: false
+			}
 		},
 		{
 			sequelize,
@@ -140,14 +155,17 @@ async function initializeUserModel(): Promise<typeof User> {
 			timestamps: false,
 			hooks: {
 				beforeCreate: async (user: User) => {
-					user.password = await argon2.hash(user.password + secrets.PEPPER, {
-						type: argon2.argon2id,
-						memoryCost: 48640, // 47.5 MiB memory
-						timeCost: 4, // 4 iterations
-						parallelism: 1,
-					});
-				},
-			},
+					user.password = await argon2.hash(
+						user.password + secrets.PEPPER,
+						{
+							type: argon2.argon2id,
+							memoryCost: 48640, // 47.5 MiB memory
+							timeCost: 4, // 4 iterations
+							parallelism: 1
+						}
+					);
+				}
+			}
 		}
 	);
 

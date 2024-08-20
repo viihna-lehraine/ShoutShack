@@ -1,3 +1,11 @@
+import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import prettierPlugin from 'eslint-plugin-prettier';
+import nodePlugin from 'eslint-plugin-node';
+import securityPlugin from 'eslint-plugin-security';
+import noSecretsPlugin from 'eslint-plugin-no-secrets';
+import prettierConfig from 'eslint-config-prettier';
+
 export default [
 	{
 		files: ['**/*.ts'],

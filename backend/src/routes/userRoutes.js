@@ -12,7 +12,7 @@ import {
 	generateTOTPSecret,
 	getTransporter,
 	verifyEmail2FACode,
-	verifyTOTPToken,
+	verifyTOTPToken
 } from '../index.js';
 import setupLogger from '../config/logger.js';
 import getSecrets from '../config/secrets.js';
@@ -51,7 +51,7 @@ router.post('/register', async (req, res) => {
 		);
 		return res.status(400).json({
 			password:
-				'Registration failure: password does not meet complexity requirements',
+				'Registration failure: password does not meet complexity requirements'
 		});
 	}
 
@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
 			);
 			return res.status(400).json({
 				password:
-					'Registration warning: password has been exposed in a data breach',
+					'Registration warning: password has been exposed in a data breach'
 			});
 		}
 	} catch (error) {
@@ -96,14 +96,14 @@ router.post('/register', async (req, res) => {
 			const hashedPassword = await argon2.hash(
 				sanitizedPassword + secrets.PEPPER,
 				{
-					type: argon2.argon2id,
+					type: argon2.argon2id
 				}
 			);
 			const newUser = await User.create({
 				username: sanitizedUsername,
 				email: sanitizedEmail,
 				password: hashedPassword,
-				hibpCheckFailed,
+				hibpCheckFailed
 			});
 
 			// Generate a confirmation token
@@ -122,7 +122,7 @@ router.post('/register', async (req, res) => {
 				html: generateConfirmationEmailTemplate(
 					newUser.username,
 					confirmationUrl
-				),
+				)
 			};
 
 			await (await getTransporter()).sendMail(mailOptions);
@@ -130,7 +130,7 @@ router.post('/register', async (req, res) => {
 			logger.info('User registration complete');
 			res.json({
 				message:
-					'Registration successful. Please check your email to confirm your account.',
+					'Registration successful. Please check your email to confirm your account.'
 			});
 		}
 	} catch (err) {
@@ -162,7 +162,9 @@ router.post('/login', async (req, res) => {
 		);
 		if (isMatch) {
 			const payload = { id: user.id, username: user.username };
-			const token = jwt.sign(payload, secrets.JWT_SECRET, { expiresIn: '1h' });
+			const token = jwt.sign(payload, secrets.JWT_SECRET, {
+				expiresIn: '1h'
+			});
 			res.json({ success: true, token: `Bearer ${token}` });
 		} else {
 			return res.status(400).json({ password: 'Incorrect password' });
@@ -233,7 +235,9 @@ router.post('/verify-totp', async (req, res) => {
 
 	try {
 		const User = await UserModelPromise;
-		const user = await User.findOne({ where: { username: sanitizedUsername } });
+		const user = await User.findOne({
+			where: { username: sanitizedUsername }
+		});
 		if (!user) {
 			return res.status(404).json({ error: 'User not found' });
 		}
@@ -257,7 +261,9 @@ router.post('/generate-2fa', async (req, res) => {
 		const User = await UserModelPromise;
 		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
-			return res.status(404).json({ error: 'Generate 2FA: user not found' });
+			return res
+				.status(404)
+				.json({ error: 'Generate 2FA: user not found' });
 		}
 
 		const { token } = generateEmail2FACode();
@@ -272,7 +278,7 @@ router.post('/generate-2fa', async (req, res) => {
 			// send the 2FA code to user's email
 			to: sanitizedEmail,
 			subject: 'Guestbook - Your Login Code',
-			text: `Your 2FA code is ${token}`,
+			text: `Your 2FA code is ${token}`
 		});
 
 		res.json({ message: '2FA code sent to email' });
@@ -295,7 +301,9 @@ router.post('/verify-2fa', async (req, res) => {
 		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			logger.error('Verify 2FA: user not found');
-			return res.status(404).json({ error: 'Verify 2FA: User not found' });
+			return res
+				.status(404)
+				.json({ error: 'Verify 2FA: User not found' });
 		}
 
 		const isEmail2FACodeValid = verifyEmail2FACode(
@@ -304,7 +312,9 @@ router.post('/verify-2fa', async (req, res) => {
 		);
 		if (!isEmail2FACodeValid) {
 			logger.error('Invalid or expired 2FA code');
-			return res.status(400).json({ error: 'Invalid or expired 2FA code' });
+			return res
+				.status(400)
+				.json({ error: 'Invalid or expired 2FA code' });
 		}
 
 		res.json({ message: '2FA code verified successfully' });

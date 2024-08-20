@@ -1,13 +1,8 @@
 import initializeDatabase from './config/db.js';
 import featureFlags from './config/featureFlags.js';
-import loadEnv, {
-	__dirname,
-	 __filename
-} from './config/loadEnv.js';
+import loadEnv, { __dirname, __filename } from './config/loadEnv.js';
 import startServer from './middleware/http.js';
-import {
-	createTransporter,
-	getTransporter } from './config/mailer.js';
+import { createTransporter, getTransporter } from './config/mailer.js';
 import multerConfiguredUpload from '../ts/config/multer.js';
 import configurePassport from './config/passport.js';
 import redisClient from './config/redis.js';
@@ -19,39 +14,39 @@ import {
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
-	removeFromBlacklist,
+	removeFromBlacklist
 } from './middleware/ipBlacklist.js';
-import { rateLimitMiddleware} from './middleware/rateLimit.js';
+import { rateLimitMiddleware } from './middleware/rateLimit.js';
 import {
 	registrationValidationRules,
-	validateEntry,
+	validateEntry
 } from './middleware/validator.js';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
 	saveBackupCodesToDatabase,
-	verifyBackupCode,
+	verifyBackupCode
 } from './utils/auth/backupCodeUtil.js';
 import {
 	generateEmail2FACode,
-	verifyEmail2FACode,
+	verifyEmail2FACode
 } from './utils/auth/email2FAUtil.js';
 import { verifyJwToken } from './utils/auth/jwtUtil.js';
 import {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration,
+	verifyPasskeyRegistration
 } from './utils/auth/passkeyUtil.js';
 import {
 	generateYubicoOtpOptions,
-	validateYubicoOTP,
+	validateYubicoOTP
 } from './utils/auth/yubicoOtpUtil.js';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
-	generateQRCode,
+	generateQRCode
 } from './utils/auth/totpUtil.js';
 import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate.js';
 import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate.js';
@@ -109,23 +104,22 @@ export {
 	verifyTOTPToken,
 	verifyJwToken,
 	__dirname,
-	__filename,
+	__filename
 };
-
 
 export async function loadU2fUtils() {
 	const {
 		generateU2fAuthenticationOptions,
 		generateU2fRegistrationOptions,
 		verifyU2fAuthentication,
-		verifyU2fRegistration,
+		verifyU2fRegistration
 	} = await import('./utils/auth/fido2Util.js');
 
 	return {
 		generateU2fAuthenticationOptions,
 		generateU2fRegistrationOptions,
 		verifyU2fAuthentication,
-		verifyU2fRegistration,
+		verifyU2fRegistration
 	};
 }
 

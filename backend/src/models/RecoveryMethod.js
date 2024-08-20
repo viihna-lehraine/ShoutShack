@@ -13,45 +13,45 @@ async function initializeRecoveryMethodModel() {
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
-				allowNull: false,
+				allowNull: false
 			},
 			methodType: {
 				type: DataTypes.ENUM,
 				values: ['email', 'phone', 'backupCodes'],
-				allowNull: false,
+				allowNull: false
 			},
 			contactDetail: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
-				allowNull: true,
+				allowNull: true
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: true,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: false,
-			},
+				allowNull: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'RecoveryMethod',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 }

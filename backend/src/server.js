@@ -32,7 +32,7 @@ import {
 	slowdownMiddleware,
 	startServer,
 	__dirname,
-	__filename,
+	__filename
 } from './index.js';
 
 const app = express();
@@ -46,7 +46,7 @@ loadEnv();
 async function initializeServer() {
 	const logger = await setupLogger();
 	const sequelize = await initializeDatabase();
-	const ipLists = await decryptDataFiles(); 
+	const ipLists = await decryptDataFiles();
 	const staticRootPath = process.env.STATIC_ROOT_PATH;
 	const keyPath = process.env.SERVER_SSL_KEY_PATH;
 	const certPath = process.env.SERVER_SSL_CERT_PATH;
@@ -122,12 +122,14 @@ async function initializeServer() {
 		});
 
 		// Apply CORS middleware
-		app.use(cors({
-			// origin: 'https://guestbook.com',
-			methods: 'GET,POST,PUT,DELETE',
-			allowedHeaders: 'Content-Type,Authorization', // allow specific headers
-			credentials: true // allow cookies to be sent
-		}));
+		app.use(
+			cors({
+				// origin: 'https://guestbook.com',
+				methods: 'GET,POST,PUT,DELETE',
+				allowedHeaders: 'Content-Type,Authorization', // allow specific headers
+				credentials: true // allow cookies to be sent
+			})
+		);
 
 		// Apply 'hpp' middleware to sanitize query parameters
 		app.use(hpp());
@@ -139,8 +141,8 @@ async function initializeServer() {
 		app.use(
 			morgan('combined', {
 				stream: {
-					write: (message) => logger.info(message.trim()),
-				},
+					write: (message) => logger.info(message.trim())
+				}
 			})
 		);
 
@@ -172,15 +174,17 @@ async function initializeServer() {
 
 		// 404 error handling
 		app.use((req, res, next) => {
-			res
-				.status(404)
-				.sendFile(path.join(__dirname, '../public', 'not-found.html'));
+			res.status(404).sendFile(
+				path.join(__dirname, '../public', 'not-found.html')
+			);
 		});
 
 		// Error Handling Middleware
 		app.use((err, req, res, next) => {
 			logger.error('Error occurred: ', err.stack || err.message || err);
-			res.status(500).send(`Server error - something failed ${err.stack}`);
+			res.status(500).send(
+				`Server error - something failed ${err.stack}`
+			);
 		});
 
 		// Test database connection and sync models
@@ -188,7 +192,10 @@ async function initializeServer() {
 			await sequelize.sync();
 			logger.info('Database and tables created!');
 		} catch (err) {
-			logger.error('Database Connection Test and Sync: Server error: ', err);
+			logger.error(
+				'Database Connection Test and Sync: Server error: ',
+				err
+			);
 			throw err;
 		}
 
@@ -205,7 +212,6 @@ async function initializeServer() {
 
 		// Start the server with either HTTP1.1 or HTTP2, dependent on feature flags
 		await startServer();
-
 	} catch (err) {
 		logger.error('Failed to start server: ', err);
 		process.exit(1); // exit process with failure

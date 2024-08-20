@@ -1,4 +1,4 @@
-import { Application, NextFunction, Request, Response } from "express";
+import { Application, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import permissionsPolicy from 'permissions-policy';
 
@@ -12,11 +12,11 @@ export default function setupSecurityHeaders(app: Application) {
 			hsts: {
 				maxAge: 31536000, // 1 year
 				includeSubDomains: true,
-				preload: true, // enable HSTS preload list
+				preload: true // enable HSTS preload list
 			},
 			ieNoOpen: true,
 			noSniff: true,
-			xssFilter: true,
+			xssFilter: true
 		})
 	);
 
@@ -27,24 +27,24 @@ export default function setupSecurityHeaders(app: Application) {
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					'https://api.haveibeenpwned.com', // allow external script from this domain
+					'https://api.haveibeenpwned.com' // allow external script from this domain
 				],
 				styleSrc: [
 					"'self'", // allow styles from own domain
-					"'unsafe-inline'", // *DEV-NOTE* only keep this if using inline styles 
+					"'unsafe-inline'" // *DEV-NOTE* only keep this if using inline styles
 				],
 				fontSrc: ["'self'"],
 				imgSrc: ["'self'", 'data:'], // allow images own domain and data URIs
 				connectSrc: [
 					"'self'",
 					'https://api.haveibeenpwned.com',
-					'https://cdnjs.cloudflare.com',
+					'https://cdnjs.cloudflare.com'
 				],
 				objectSrc: ["'none'"],
 				upgradeInsecureRequests: [], // automatically upgrade HTTP to HTTPS
-				frameAncestors: ["'none'"],
+				frameAncestors: ["'none'"]
 			},
-			reportOnly: false, // set "true" to test CSP without enforcement
+			reportOnly: false // set "true" to test CSP without enforcement
 		})
 	);
 
@@ -62,8 +62,8 @@ export default function setupSecurityHeaders(app: Application) {
 				geolocation: ['none'], // disallow geolocation
 				microphone: ['none'], // disallow microphone access
 				camera: ['none'], // disallow camera access
-				payment: ['none'], // disallow payment requests
-			},
+				payment: ['none'] // disallow payment requests
+			}
 		})
 	);
 }

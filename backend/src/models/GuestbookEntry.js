@@ -11,34 +11,34 @@ async function initializeGuestbookEntryModel() {
 			guestName: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			guestEmail: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			guestMessage: {
 				type: DataTypes.TEXT,
 				allowNull: false,
-				unique: false,
+				unique: false
 			},
 			guestMessageStyles: {
 				type: DataTypes.JSON,
 				allowNull: true,
-				unique: false,
+				unique: false
 			},
 			entryDate: {
 				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
 				allowNull: false,
-				unique: false,
-			},
+				unique: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'GuestbookEntry',
-			timestamps: false,
+			timestamps: false
 		}
 	);
 

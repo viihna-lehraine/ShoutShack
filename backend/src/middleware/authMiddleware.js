@@ -1,18 +1,18 @@
-import { verifyJwToken } from "../utils/auth/jwtUtil";
+import { verifyJwToken } from '../utils/auth/jwtUtil';
 
 export const authenticateJwT = async (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+	const token = req.headers.authorization?.split(' ')[1];
 
-    if (!token) {
-        return res.sendStatus(403);
-    }
+	if (!token) {
+		return res.sendStatus(403);
+	}
 
-    const user = await verifyToken(token);
+	const user = await verifyToken(token);
 
-    if (!user) {
-        return res.sendStatus(403);
-    }
+	if (!user) {
+		return res.sendStatus(403);
+	}
 
-    req.user = user;
-    next();
+	req.user = user;
+	next();
 };

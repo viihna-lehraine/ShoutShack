@@ -1,6 +1,12 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface DeviceAttributes {
 	deviceId: number;
@@ -16,7 +22,10 @@ interface DeviceAttributes {
 	lastUpdated: Date;
 }
 
-class Device extends Model<InferAttributes<Device>, InferCreationAttributes<Device>> implements DeviceAttributes {
+class Device
+	extends Model<InferAttributes<Device>, InferCreationAttributes<Device>>
+	implements DeviceAttributes
+{
 	deviceId!: number;
 	id!: string;
 	deviceName!: string;
@@ -39,9 +48,9 @@ async function initializeDeviceModel(): Promise<typeof Device> {
 			deviceId: {
 				type: DataTypes.INTEGER,
 				primaryKey: true,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			id: {
 				type: DataTypes.UUID,
@@ -51,56 +60,56 @@ async function initializeDeviceModel(): Promise<typeof Device> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			deviceName: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			deviceType: {
 				type: DataTypes.STRING,
 				allowNull: true,
 				validate: {
-					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']],
-				},
+					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
+				}
 			},
 			os: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			browser: {
 				type: DataTypes.STRING,
-				allowNull: true,
+				allowNull: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			lastUsed: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: true,
+				allowNull: true
 			},
 			isTrusted: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
+				defaultValue: false
 			},
 			creationDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			lastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: true,
-			},
+				allowNull: true
+			}
 		},
 		{
 			sequelize,
 			modelName: 'Device',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

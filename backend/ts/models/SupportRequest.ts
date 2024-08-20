@@ -1,6 +1,11 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface SupportRequestAttributes {
 	id: string;
@@ -13,7 +18,13 @@ interface SupportRequestAttributes {
 	supportTicketCloseDate?: Date | null;
 }
 
-class SupportRequest extends Model<InferAttributes<SupportRequest>, InferCreationAttributes<SupportRequest>> implements SupportRequestAttributes {
+class SupportRequest
+	extends Model<
+		InferAttributes<SupportRequest>,
+		InferCreationAttributes<SupportRequest>
+	>
+	implements SupportRequestAttributes
+{
 	id!: string;
 	email!: string;
 	supportTicketNumber!: number;
@@ -37,47 +48,47 @@ async function initializeSupportRequestModel(): Promise<typeof SupportRequest> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			email: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			supportTicketNumber: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			supportType: {
 				type: DataTypes.TEXT,
-				allowNull: false,
+				allowNull: false
 			},
 			supportContent: {
 				type: DataTypes.TEXT,
-				allowNull: false,
+				allowNull: false
 			},
 			isSupportTicketOpen: {
 				type: DataTypes.BOOLEAN,
 				defaultValue: true,
-				allowNull: false,
+				allowNull: false
 			},
 			supportTicketOpenDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			supportTicketCloseDate: {
 				type: DataTypes.DATE,
 				allowNull: true,
-				defaultValue: null,
-			},
+				defaultValue: null
+			}
 		},
 		{
 			sequelize,
 			modelName: 'SupportRequest',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

@@ -15,7 +15,8 @@ let fido2;
 		cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS,
 		authenticatorRequireResidentKey:
 			secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
-		authenticatorUserVerification: secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION,
+		authenticatorUserVerification:
+			secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
 	});
 })();
 
@@ -24,14 +25,14 @@ async function generatePasskeyRegistrationOptions(user) {
 		user: {
 			id: Buffer.from(user.id, 'utf8').toString('base64'),
 			name: user.email,
-			displayName: user.username,
+			displayName: user.username
 		},
 		authenticatorSelection: {
 			authenticatorAttachment: 'platform',
 			residentKey: 'required',
-			userVerification: 'required',
+			userVerification: 'required'
 		},
-		attestation: 'direct',
+		attestation: 'direct'
 	});
 
 	return passkeyRegistrationOptions;
@@ -42,7 +43,7 @@ async function verifyPasskeyRegistration(attestation, expectedChallenge) {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either',
-		rpId: secrets.RP_ID,
+		rpId: secrets.RP_ID
 	};
 
 	return await fido2.attestationResult(attestation, attestationExpectations);
@@ -51,13 +52,13 @@ async function verifyPasskeyRegistration(attestation, expectedChallenge) {
 async function generatePasskeyAuthenticationOptions(user) {
 	const userCredentials = user.credentials.map((credential) => ({
 		type: 'public-key',
-		id: credential.credentialId,
+		id: credential.credentialId
 	}));
 
 	return await fido2.assertionOptions({
 		allowCredentials: userCredentials,
 		userVerification: 'required',
-		timeout: 60000,
+		timeout: 60000
 	});
 }
 
@@ -74,7 +75,7 @@ async function verifyPasskeyAuthentication(
 		factor: 'either',
 		publicKey: publicKey,
 		prevCounter: previousCounter,
-		userHandle: userId,
+		userHandle: userId
 	};
 
 	return await fido2.assertionResult(assertion, assertionExpectations);
@@ -84,5 +85,5 @@ export {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration,
+	verifyPasskeyRegistration
 };

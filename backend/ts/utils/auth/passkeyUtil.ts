@@ -1,4 +1,11 @@
-import { AssertionResult, AttestationResult, ExpectedAssertionResult, ExpectedAttestationResult, Fido2Lib, PublicKeyCredentialCreationOptions } from 'fido2-lib';
+import {
+	AssertionResult,
+	AttestationResult,
+	ExpectedAssertionResult,
+	ExpectedAttestationResult,
+	Fido2Lib,
+	PublicKeyCredentialCreationOptions
+} from 'fido2-lib';
 import getSecrets from '../../config/secrets.js';
 
 interface User {
@@ -6,7 +13,7 @@ interface User {
 	email: string;
 	username: string;
 	credential: {
-		credentialId: string
+		credentialId: string;
 	}[];
 }
 
@@ -18,7 +25,10 @@ interface Secrets {
 	FIDO_CHALLENGE_SIZE: number;
 	FIDO_CRYPTO_PARAMETERS: number[];
 	FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY: boolean;
-	FIDO_AUTHENTICATOR_USER_VERIFICATION: 'required' | 'preferred' | 'discouraged';
+	FIDO_AUTHENTICATOR_USER_VERIFICATION:
+		| 'required'
+		| 'preferred'
+		| 'discouraged';
 }
 
 type AuthenticatorTransport = 'usb' | 'nfc' | 'ble' | 'internal';
@@ -42,95 +52,101 @@ let fido2: Fido2Lib;
 		cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS,
 		authenticatorRequireResidentKey:
 			secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
-		authenticatorUserVerification: secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION,
+		authenticatorUserVerification:
+			secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
 	});
 })();
 
-async function generatePasskeyRegistrationOptions(user: User): Promise<PublicKeyCredentialCreationOptions> {
-    const passkeyRegistrationOptions = await fido2.attestationOptions();
+async function generatePasskeyRegistrationOptions(
+	user: User
+): Promise<PublicKeyCredentialCreationOptions> {
+	const passkeyRegistrationOptions = await fido2.attestationOptions();
 
-    // constructing PublicKeyCredentialCreationOptions
-    const credentialCreationOptions: PublicKeyCredentialCreationOptions = {
-        ...passkeyRegistrationOptions,
-        user: {
-            id: Buffer.from(user.id, 'utf8'),
-            name: user.email,
-            displayName: user.username,
-        },
-        authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            requireResidentKey: true,
-            userVerification: 'required',
-        }
-    };
+	// constructing PublicKeyCredentialCreationOptions
+	const credentialCreationOptions: PublicKeyCredentialCreationOptions = {
+		...passkeyRegistrationOptions,
+		user: {
+			id: Buffer.from(user.id, 'utf8'),
+			name: user.email,
+			displayName: user.username
+		},
+		authenticatorSelection: {
+			authenticatorAttachment: 'platform',
+			requireResidentKey: true,
+			userVerification: 'required'
+		}
+	};
 
-    return credentialCreationOptions;
+	return credentialCreationOptions;
 }
 
-async function verifyPasskeyRegistration(attestation: AttestationResult, expectedChallenge: string) {
-    let secrets: Secrets = await getSecrets();
+async function verifyPasskeyRegistration(
+	attestation: AttestationResult,
+	expectedChallenge: string
+) {
+	let secrets: Secrets = await getSecrets();
 
-    if (!secrets) {
-        throw new Error('Secrets could not be loaded');
-    }
+	if (!secrets) {
+		throw new Error('Secrets could not be loaded');
+	}
 
-    const attestationExpectations: ExpectedAttestationResult = {
-        challenge: expectedChallenge,
-        origin: secrets.RP_ORIGIN,
-        factor: 'either', // 'factor` type should match as defined in the library
-        rpId: secrets.RP_ID,
-    };
+	const attestationExpectations: ExpectedAttestationResult = {
+		challenge: expectedChallenge,
+		origin: secrets.RP_ORIGIN,
+		factor: 'either', // 'factor` type should match as defined in the library
+		rpId: secrets.RP_ID
+	};
 
-    return await fido2.attestationResult(attestation, attestationExpectations);
+	return await fido2.attestationResult(attestation, attestationExpectations);
 }
 
-async function generatePasskeyAuthenticationOptions(user: User): Promise<PublicKeyCredentialRequestOptions> {
-    const userCredentials = user.credential.map(cred => ({
-        type: 'public-key' as const,  // ensures 'public-key' is strictly typed
-        id: Buffer.from(cred.credentialId, 'base64'),
-        transports: ['usb', 'nfc', 'ble'] as AuthenticatorTransport[],  // *DEV-NOTE* these are just example transports!
-    }));
+async function generatePasskeyAuthenticationOptions(
+	user: User
+): Promise<PublicKeyCredentialRequestOptions> {
+	const userCredentials = user.credential.map((cred) => ({
+		type: 'public-key' as const, // ensures 'public-key' is strictly typed
+		id: Buffer.from(cred.credentialId, 'base64'),
+		transports: ['usb', 'nfc', 'ble'] as AuthenticatorTransport[] // *DEV-NOTE* these are just example transports!
+	}));
 
-    const assertionOptions: PublicKeyCredentialRequestOptions = {
-        ...await fido2.assertionOptions(),
-        allowCredentials: userCredentials,
-        userVerification: 'required',
-        timeout: 60000,
-    };
+	const assertionOptions: PublicKeyCredentialRequestOptions = {
+		...(await fido2.assertionOptions()),
+		allowCredentials: userCredentials,
+		userVerification: 'required',
+		timeout: 60000
+	};
 
-    return assertionOptions;
+	return assertionOptions;
 }
 
 async function verifyPasskeyAuthentication(
-    assertion: AssertionResult,
-    expectedChallenge: string,
-    publicKey: string,
-    previousCounter: number,
-    id: string,
+	assertion: AssertionResult,
+	expectedChallenge: string,
+	publicKey: string,
+	previousCounter: number,
+	id: string
 ) {
+	let secrets: Secrets = await getSecrets();
 
-    let secrets: Secrets = await getSecrets();
+	if (!secrets) {
+		throw new Error('Secrets could not be loaded');
+	}
 
-    if (!secrets) {
-        throw new Error('Secrets could not be loaded');
-    }
+	const assertionExpectations: ExpectedAssertionResult = {
+		challenge: expectedChallenge,
+		origin: secrets.RP_ORIGIN,
+		factor: 'either',
+		publicKey: publicKey,
+		prevCounter: previousCounter,
+		userHandle: id
+	};
 
-    const assertionExpectations: ExpectedAssertionResult = {
-        challenge: expectedChallenge,
-        origin: secrets.RP_ORIGIN,
-        factor: 'either',
-        publicKey: publicKey,
-        prevCounter: previousCounter,
-        userHandle: id,
-    };
-
-    return await fido2.assertionResult(assertion, assertionExpectations);
+	return await fido2.assertionResult(assertion, assertionExpectations);
 }
-
 
 export {
 	generatePasskeyAuthenticationOptions,
 	generatePasskeyRegistrationOptions,
 	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration,
+	verifyPasskeyRegistration
 };

@@ -1,5 +1,11 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
 
 interface FailedLoginAttemptsAttributes {
 	id: string;
@@ -10,7 +16,13 @@ interface FailedLoginAttemptsAttributes {
 	isLocked: boolean;
 }
 
-class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, InferCreationAttributes<FailedLoginAttempts>> implements FailedLoginAttemptsAttributes {
+class FailedLoginAttempts
+	extends Model<
+		InferAttributes<FailedLoginAttempts>,
+		InferCreationAttributes<FailedLoginAttempts>
+	>
+	implements FailedLoginAttemptsAttributes
+{
 	id!: string;
 	attemptId!: string;
 	ipAddress!: string;
@@ -20,7 +32,9 @@ class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, In
 }
 
 // Initialize the FailedLoginAttempt model
-async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginAttempts> {
+async function initializeFailedLoginAttemptsModel(): Promise<
+	typeof FailedLoginAttempts
+> {
 	const sequelize = await initializeDatabase();
 
 	FailedLoginAttempts.init(
@@ -30,36 +44,36 @@ async function initializeFailedLoginAttemptsModel(): Promise<typeof FailedLoginA
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			attemptId: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			attemptDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			isLocked: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: false,
-			},
+				defaultValue: false
+			}
 		},
 		{
 			sequelize,
 			modelName: 'FailedLoginAttempts',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

@@ -6,7 +6,11 @@ import { exec } from 'child_process';
 import { __dirname } from '../index';
 import setupLogger from '../middleware/logger';
 
-const compressAndExportLogs = async (sourceDir: string, exportDir: string, logFileName: string) => {
+const compressAndExportLogs = async (
+	sourceDir: string,
+	exportDir: string,
+	logFileName: string
+) => {
 	const logger = await setupLogger();
 	const timestamp = new Date().toISOString().replace(/:/g, '-');
 	const outputFileName = `${logFileName.replace('.log', '')}-${timestamp}.gz`;
@@ -24,7 +28,10 @@ const compressAndExportLogs = async (sourceDir: string, exportDir: string, logFi
 	}
 };
 
-const runCommandAndLog = (command: string, logFilePath: string): Promise<void> => {
+const runCommandAndLog = (
+	command: string,
+	logFilePath: string
+): Promise<void> => {
 	return new Promise((resolve, reject) => {
 		const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
 		const process = exec(
@@ -92,7 +99,10 @@ const performNpmTasks = async () => {
 	const logger = await setupLogger();
 	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH!);
 	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const logFilePath = path.join(npmLogDir, `npm-audit-update-${timestamp}.log`);
+	const logFilePath = path.join(
+		npmLogDir,
+		`npm-audit-update-${timestamp}.log`
+	);
 
 	try {
 		logger.info('Starting npm audit...');
@@ -141,7 +151,9 @@ const scheduleLogJobs = async () => {
 			break;
 		default:
 			schedule: '0 0 * * *';
-			logger.warn('LOGGER variable not set. Defaulting to nightly log export');
+			logger.warn(
+				'LOGGER variable not set. Defaulting to nightly log export'
+			);
 	}
 
 	cron.schedule(schedule, exportLogs);

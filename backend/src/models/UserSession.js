@@ -13,39 +13,39 @@ async function initializeUserSessionModel() {
 				primaryKey: true,
 				autoIncrement: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			userId: {
 				type: DataTypes.UUID,
 				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
-				unique: true,
+				unique: true
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: false
 			},
 			createdAt: {
 				types: DataTypes.DATE,
-				defaultValue: Sequelize.NOW,
+				defaultValue: Sequelize.NOW
 			},
 			updatedAt: {
 				types: DataTypes.DATE,
-				defaultValue: null,
+				defaultValue: null
 			},
 			expiresAt: {
 				type: DataTypes.DATE,
-				allowNull: false,
+				allowNull: false
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
-				defaultValue: true,
-			},
+				defaultValue: true
+			}
 		},
 		{
 			sequelize,
@@ -59,8 +59,8 @@ async function initializeUserSessionModel() {
 				},
 				beforeUpdate: (session) => {
 					session.updatedAt = new Date(); // Update the updatedAt field on every update
-				},
-			},
+				}
+			}
 		}
 	);
 }

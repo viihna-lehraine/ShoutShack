@@ -22,7 +22,7 @@ async function setupLogger() {
 		defaultMeta: { service: 'guestbook-service' },
 		transports: [
 			new transports.Console({
-				format: combine(colorize(), logFormat),
+				format: combine(colorize(), logFormat)
 			}),
 			new DailyRotateFile({
 				filename: './logs/server/error-%DATE%.log',
@@ -31,9 +31,9 @@ async function setupLogger() {
 				zippedArchive: true,
 				maxSize: '20m',
 				maxFiles: '14d',
-				format: logFormat,
-			}),
-		],
+				format: logFormat
+			})
+		]
 	});
 
 	return logger;

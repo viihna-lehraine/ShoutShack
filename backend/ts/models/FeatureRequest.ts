@@ -1,6 +1,12 @@
-import { DataTypes, InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import {
+	DataTypes,
+	InferAttributes,
+	InferCreationAttributes,
+	Model,
+	CreationOptional
+} from 'sequelize';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 
 interface FeatureRequestAttributes {
 	id: string;
@@ -13,7 +19,13 @@ interface FeatureRequestAttributes {
 	featureRequestCloseDate?: Date | null;
 }
 
-class FeatureRequest extends Model<InferAttributes<FeatureRequest>, InferCreationAttributes<FeatureRequest>> implements FeatureRequestAttributes {
+class FeatureRequest
+	extends Model<
+		InferAttributes<FeatureRequest>,
+		InferCreationAttributes<FeatureRequest>
+	>
+	implements FeatureRequestAttributes
+{
 	id!: string;
 	email!: string | null;
 	featureRequestNumber!: number;
@@ -37,50 +49,50 @@ async function initializeFeatureRequestModel(): Promise<typeof FeatureRequest> {
 				unique: true,
 				references: {
 					model: await UserModelPromise,
-					key: 'id',
+					key: 'id'
 				}
 			},
 			email: {
 				type: DataTypes.STRING,
 				allowNull: true,
-				defaultValue: null,
+				defaultValue: null
 			},
 			featureRequestNumber: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true, 
+				autoIncrement: true,
 				allowNull: true,
-				unique: true,
+				unique: true
 			},
 			featureRequestType: {
 				type: DataTypes.TEXT,
 				allowNull: false,
-				defaultValue: null,
+				defaultValue: null
 			},
 			featureRequestContent: {
 				type: DataTypes.TEXT,
 				allowNull: false,
-				defaultValue: null,
+				defaultValue: null
 			},
 			canFollowUpFeatureRequest: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
+				defaultValue: false
 			},
 			featureRequestOpenDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false,
+				allowNull: false
 			},
 			featureRequestCloseDate: {
 				type: DataTypes.DATE,
 				allowNull: true,
-				defaultValue: null,
-			},
+				defaultValue: null
+			}
 		},
 		{
 			sequelize,
 			modelName: 'FeatureRequest',
-			timestamps: true,
+			timestamps: true
 		}
 	);
 

@@ -1,6 +1,6 @@
 import pkg from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import loadEnv from '../config/loadEnv.ts';
+import loadEnv from '../config/loadEnv';
 
 const { createLogger, format, transports } = pkg;
 const { combine, timestamp, printf, colorize, errors, json } = format;
@@ -22,7 +22,7 @@ async function setupLogger() {
 		defaultMeta: { service: 'guestbook-service' },
 		transports: [
 			new transports.Console({
-				format: combine(colorize(), logFormat),
+				format: combine(colorize(), logFormat)
 			}),
 			new DailyRotateFile({
 				filename: './logs/server/error-%DATE%.log',
@@ -31,9 +31,9 @@ async function setupLogger() {
 				zippedArchive: true,
 				maxSize: '20m',
 				maxFiles: '14d',
-				format: logFormat,
-			}),
-		],
+				format: logFormat
+			})
+		]
 	});
 
 	return logger;

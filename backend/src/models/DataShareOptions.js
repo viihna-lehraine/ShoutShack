@@ -11,53 +11,53 @@ async function initializeDataShareOptionsModel() {
 			trackingPixelOption: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
+				defaultValue: false
 			},
 			featureUsageOption: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
+				defaultValue: false
 			},
-            pageViewsOption: {
-                type: DataTypes.BOOLEAN,
+			pageViewsOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
-            interactionDataOption: {
-                type: DataTypes.BOOLEAN,
+				defaultValue: false
+			},
+			interactionDataOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
-            deviceTypeOption: {
-                type: DataTypes.BOOLEAN,
+				defaultValue: false
+			},
+			deviceTypeOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
-            browserInfoOption: {
-                type: DataTypes.BOOLEAN,
+				defaultValue: false
+			},
+			browserInfoOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
-            operatingSystemOption: {
-                type: DataTypes.BOOLEAN,
+				defaultValue: false
+			},
+			operatingSystemOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
-            randomAnonSurveyOption: {
-                type: DataTypes.BOOLEAN,
+				defaultValue: false
+			},
+			randomAnonSurveyOption: {
+				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false,
-            },
+				defaultValue: false
+			},
 			lastUpdated: {
-                type: DataTypes.DATE,
+				type: DataTypes.DATE,
 				defaultValue: Sequelize.NOW,
-				allowNull: true,
-            }
+				allowNull: true
+			}
 		},
 		{
 			sequelize,
 			modelName: 'DataShareOptions',
-			timestamps: false,
+			timestamps: false
 		}
 	);
 }

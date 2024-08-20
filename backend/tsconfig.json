@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": true,
@@ -8,6 +7,7 @@
     "baseUrl": ".",
     "composite": true,
     "declaration": true,
+    "declarationDir": "./types/generated",
     "declarationMap": true,
     "disableSolutionSearching": false,
     "disableReferencedProjectLoad": true,
@@ -23,7 +23,7 @@
     "moduleDetection": "auto",
     "moduleResolution": "node",
     "newLine": "lf",
-    "noEmit": true,
+    "noEmit": false,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
@@ -34,11 +34,10 @@
     "noResolve": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "paths":{
-      "@types/*": [
-        "./types/*"
-        ]
-      },
+    "outDir": "./src",
+    "paths": {
+      "@types/*": ["./types/*"]
+    },
     "preserveSymlinks": true,
     "removeComments": false,
     "resolveJsonModule": true,
@@ -49,11 +48,17 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "target": "ES6",
-    "types": [
-      "node"],
+    "types": ["node"],
     "useDefineForClassFields": true,
     "useUnknownInCatchVariables": true
   },
-  "include":["./src/**/*", "./ts/**/*", "./types/**/*"],
-  "exclude": ["./config", "./data", "./keys", "./logs", "./node_modules"]
+  "include": ["./ts/**/*"],
+  "exclude": [
+    "./config",
+    "./data",
+    "./keys",
+    "./logs",
+    "./node_modules",
+    "./types/generated"
+  ]
 }
