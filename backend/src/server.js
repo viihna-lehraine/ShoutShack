@@ -15,12 +15,12 @@ import { randomBytes } from 'crypto';
 // import sentry from '@sentry/node';
 // import session from 'express-session';
 // import connectRedis from 'connect-redis';
-import staticRoutes from './routes/staticRoutes.js';
-import apiRoutes from './routes/apiRoutes.js';
-import loadEnv from './config/loadEnv.js';
-import setupLogger from './middleware/logger.js';
-import getSecrets from './config/secrets.js';
-// import sops from './config/sops.js';
+import staticRoutes from './routes/staticRoutes';
+import apiRoutes from './routes/apiRoutes';
+import loadEnv from './config/loadEnv';
+import setupLogger from './middleware/logger';
+import getSecrets from './config/secrets';
+// import sops from './config/sops';
 import {
 	configurePassport,
 	csrfMiddleware,
@@ -31,7 +31,7 @@ import {
 	rateLimitMiddleware,
 	setupSecurityHeaders,
 	startServer
-} from './index.js';
+} from './index';
 import '../types/custom/express-async-errors';
 let app = express();
 // let RedisStore = connectRedis(session);

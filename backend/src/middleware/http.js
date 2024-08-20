@@ -4,9 +4,9 @@ import fs from 'fs';
 import http2 from 'http2';
 import http2Express from 'http2-express-bridge';
 import https from 'https';
-import featureFlags from '../config/featureFlags.js';
-import setupLogger from './logger.js';
-import app from '../server.js';
+import featureFlags from '../config/featureFlags';
+import setupLogger from './logger';
+import app from '../server';
 // Create HTTP/2 compatible Express app
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const http2App = http2Express(app); // *DEV-NOTE* Fix any type if you can ever figure out a way. I had to give up because I was losing my mind trying to fix this one

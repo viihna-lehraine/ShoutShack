@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import { DataTypes, Model } from 'sequelize';
-import initializeDatabase from '../config/db.js';
-import UserModelPromise from './User.js';
+import initializeDatabase from '../config/db';
+import UserModelPromise from './User';
 // Fields in the UserMfa Model
 class UserMfa extends Model {
 	constructor() {

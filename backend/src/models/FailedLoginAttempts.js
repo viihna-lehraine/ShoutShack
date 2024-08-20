@@ -1,6 +1,6 @@
 import { __awaiter } from 'tslib';
 import { DataTypes, Model } from 'sequelize';
-import initializeDatabase from '../config/db.js';
+import initializeDatabase from '../config/db';
 class FailedLoginAttempts extends Model {
 	constructor() {
 		super(...arguments);

@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import express from 'express';
 import path from 'path';
-import setupLogger from '../middleware/logger.js';
+import setupLogger from '../middleware/logger';
 const router = express.Router();
 function setupRoutes() {
 	return __awaiter(this, void 0, void 0, function* () {

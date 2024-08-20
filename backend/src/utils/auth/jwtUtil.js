@@ -1,6 +1,6 @@
 import { __awaiter } from 'tslib';
 import jwt from 'jsonwebtoken';
-import getSecrets from '../../config/secrets.js';
+import getSecrets from '../../config/secrets';
 let secrets;
 const loadSecrets = () =>
 	__awaiter(void 0, void 0, void 0, function* () {

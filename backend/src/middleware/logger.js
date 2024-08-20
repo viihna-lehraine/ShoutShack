@@ -1,7 +1,7 @@
 import { __awaiter } from 'tslib';
 import pkg from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import loadEnv from '../config/loadEnv.js';
+import loadEnv from '../config/loadEnv';
 const { createLogger, format, transports } = pkg;
 const { combine, timestamp, printf, colorize, errors, json } = format;
 const logFormat = printf(({ level, message, timestamp, stack }) => {

@@ -1,4 +1,0 @@
-fixing User model and splitting 2FA into its own separate model
-
-creating id alongside userid. userid will become the simple, client-facing, id format
-        id will be the backend, technical identifier

@@ -16,9 +16,9 @@ import {
 	verifyEmail2FACode,
 	verifyTOTPToken
 } from '../index.js';
-import setupLogger from '../middleware/logger.js';
-import getSecrets from '../config/secrets.js';
-import UserModelPromise from '../models/User.js';
+import setupLogger from '../middleware/logger';
+import getSecrets from '../config/secrets';
+import UserModelPromise from '../models/User';
 let router = express.Router();
 // Password strength checker
 let checkPasswordStrength = (password) => {
