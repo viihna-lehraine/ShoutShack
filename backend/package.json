@@ -7,8 +7,8 @@
   "type": "module",
   "scripts": {
     "backup:src": "node ./config/srcBackup.js",
+		"build": "npm run build:part && npm run clean:src:ts && npm run removeTypeImports",
     "build:part": "npm run lint:ts && npm run format:ts && npm run backup:src && npm run clean:src && npm run tsc && npm run postCompile && npm run lint:js && npm run format:js",
-    "build": "npm run build:part && npm run clean:src:ts",
     "circular": "madge --circlular ./src",
     "clean:src": "find ./src -type f -name '*.js' -delete && rm -f tsconfig.tsbuildinfo",
     "clean:src:ts": "rm -rf src/ts",
@@ -20,6 +20,7 @@
     "lint:ts": "eslint --fix 'ts/**/*.ts'",
     "lint-and-format": "npm run lint && npm run format",
     "postCompile": "node ./config/postCompile.mjs",
+		"removeTypeImports": "node ./config/removeTypeImports.js",
     "start": "node src/server.js",
     "start:dev": "nodemon src/server.js",
     "start:dev:log": "nodemon src/server.js 2>&1 | tee logs/npm/npm-debug.log",
