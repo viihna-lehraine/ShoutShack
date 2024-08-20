@@ -1,71 +1,77 @@
+import { __awaiter } from 'tslib';
 import { execSync } from 'child_process';
 import path from 'path';
 import { __dirname } from './loadEnv.js';
-import setupLogger from './logger.js';
-
-async function decryptFile(encryptedFilePath) {
-	const logger = await setupLogger();
-
-	try {
-		const decryptedFile = execSync(
-			`sops -d --output-type json ${encryptedFilePath}`
-		).toString();
-		return decryptedFile;
-	} catch (err) {
-		logger.error('Error decrypting file from SOPS: ', err);
-		throw err;
-	}
-}
-
-async function decryptDataFiles() {
-	const logger = await setupLogger();
-
-	try {
-		const filePaths = [
-			process.env.SERVER_DATA_FILE_PATH_1,
-			process.env.SERVER_DATA_FILE_PATH_2,
-			process.env.SERVER_DATA_FILE_PATH_3,
-			process.env.SERVER_DATA_FILE_PATH_4
-		];
-
-		const decryptedFiles = {};
-
-		for (const [index, filePath] of filePaths.entries()) {
-			if (filePath) {
-				decryptedFiles[`files${index + 1}`] = execSync(
-					`sops -d --output-type json ${filePath}`
-				).toString();
-			} else {
-				logger.warn(
-					`SERVER_DATA_FILE_PATH_${index + 1} is not defined`
-				);
-			}
+import setupLogger from '../middleware/logger.js';
+function decryptFile(encryptedFilePath) {
+	return __awaiter(this, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		try {
+			const decryptedFile = execSync(
+				`sops -d --output-type json ${encryptedFilePath}`
+			).toString();
+			return decryptedFile;
+		} catch (err) {
+			logger.error('Error decrypting file from SOPS: ', err);
+			throw err;
 		}
-
-		return decryptedFiles;
-	} catch (err) {
-		logger.error('Error decrypting files from backend data folder: ', err);
-		throw err;
-	}
+	});
 }
-
-async function getSSLKeys() {
-	const logger = await setupLogger();
-
-	try {
-		const keyPath = path.join(__dirname, '../../keys/ssl/app.key.gpg');
-		const certPath = path.join(__dirname, '../../keys/ssl/app.crt.gpg');
-		const decryptedKey = await decryptFile(keyPath);
-		const decryptedCert = await decryptFile(certPath);
-
-		return {
-			key: decryptedKey,
-			cert: decryptedCert
-		};
-	} catch (err) {
-		logger.error('Error retrieving SSL keys from SOPS: ', err);
-		throw err;
-	}
+function decryptDataFiles() {
+	return __awaiter(this, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		try {
+			const filePaths = [
+				process.env.SERVER_DATA_FILE_PATH_1,
+				process.env.SERVER_DATA_FILE_PATH_2,
+				process.env.SERVER_DATA_FILE_PATH_3,
+				process.env.SERVER_DATA_FILE_PATH_4
+			];
+			const decryptedFiles = {};
+			for (const [index, filePath] of filePaths.entries()) {
+				if (filePath) {
+					decryptedFiles[`files${index + 1}`] = execSync(
+						`sops -d --output-type json ${filePath}`
+					).toString();
+				} else {
+					logger.warn(
+						`SERVER_DATA_FILE_PATH_${index + 1} is not defined`
+					);
+				}
+			}
+			return decryptedFiles;
+		} catch (err) {
+			logger.error(
+				'Error decrypting files from backend data folder: ',
+				err
+			);
+			throw err;
+		}
+	});
 }
-
+function getSSLKeys() {
+	return __awaiter(this, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		try {
+			const keyPath = path.join(
+				__dirname,
+				'../../keys/ssl/app.pem.key.gpg'
+			);
+			const certPath = path.join(
+				__dirname,
+				'../../keys/ssl/app.cert.pem.gpg'
+			);
+			const decryptedKey = yield decryptFile(keyPath);
+			const decryptedCert = yield decryptFile(certPath);
+			return {
+				key: decryptedKey,
+				cert: decryptedCert
+			};
+		} catch (err) {
+			logger.error('Error retrieving SSL keys from SOPS: ', err);
+			throw err;
+		}
+	});
+}
 export default { decryptDataFiles, getSSLKeys };
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic29wcy5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3RzL2NvbmZpZy9zb3BzLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSxPQUFPLEVBQUUsUUFBUSxFQUFFLE1BQU0sZUFBZSxDQUFDO0FBQ3pDLE9BQU8sSUFBSSxNQUFNLE1BQU0sQ0FBQztBQUN4QixPQUFPLEVBQUUsU0FBUyxFQUFFLE1BQU0sV0FBVyxDQUFDO0FBQ3RDLE9BQU8sV0FBVyxNQUFNLHNCQUFzQixDQUFDO0FBRS9DLFNBQWUsV0FBVyxDQUFDLGlCQUF5Qjs7UUFDbkQsTUFBTSxNQUFNLEdBQUcsTUFBTSxXQUFXLEVBQUUsQ0FBQztRQUVuQyxJQUFJLENBQUM7WUFDSixNQUFNLGFBQWEsR0FBRyxRQUFRLENBQzdCLDhCQUE4QixpQkFBaUIsRUFBRSxDQUNqRCxDQUFDLFFBQVEsRUFBRSxDQUFDO1lBQ2IsT0FBTyxhQUFhLENBQUM7UUFDdEIsQ0FBQztRQUFDLE9BQU8sR0FBRyxFQUFFLENBQUM7WUFDZCxNQUFNLENBQUMsS0FBSyxDQUFDLG1DQUFtQyxFQUFFLEdBQUcsQ0FBQyxDQUFDO1lBQ3ZELE1BQU0sR0FBRyxDQUFDO1FBQ1gsQ0FBQztJQUNGLENBQUM7Q0FBQTtBQUVELFNBQWUsZ0JBQWdCOztRQUM5QixNQUFNLE1BQU0sR0FBRyxNQUFNLFdBQVcsRUFBRSxDQUFDO1FBRW5DLElBQUksQ0FBQztZQUNKLE1BQU0sU0FBUyxHQUFHO2dCQUNqQixPQUFPLENBQUMsR0FBRyxDQUFDLHVCQUF1QjtnQkFDbkMsT0FBTyxDQUFDLEdBQUcsQ0FBQyx1QkFBdUI7Z0JBQ25DLE9BQU8sQ0FBQyxHQUFHLENBQUMsdUJBQXVCO2dCQUNuQyxPQUFPLENBQUMsR0FBRyxDQUFDLHVCQUF1QjthQUNuQyxDQUFDO1lBRUYsTUFBTSxjQUFjLEdBQThCLEVBQUUsQ0FBQztZQUVyRCxLQUFLLE1BQU0sQ0FBQyxLQUFLLEVBQUUsUUFBUSxDQUFDLElBQUksU0FBUyxDQUFDLE9BQU8sRUFBRSxFQUFFLENBQUM7Z0JBQ3JELElBQUksUUFBUSxFQUFFLENBQUM7b0JBQ2QsY0FBYyxDQUFDLFFBQVEsS0FBSyxHQUFHLENBQUMsRUFBRSxDQUFDLEdBQUcsUUFBUSxDQUM3Qyw4QkFBOEIsUUFBUSxFQUFFLENBQ3hDLENBQUMsUUFBUSxFQUFFLENBQUM7Z0JBQ2QsQ0FBQztxQkFBTSxDQUFDO29CQUNQLE1BQU0sQ0FBQyxJQUFJLENBQ1YseUJBQXlCLEtBQUssR0FBRyxDQUFDLGlCQUFpQixDQUNuRCxDQUFDO2dCQUNILENBQUM7WUFDRixDQUFDO1lBRUQsT0FBTyxjQUFjLENBQUM7UUFDdkIsQ0FBQztRQUFDLE9BQU8sR0FBRyxFQUFFLENBQUM7WUFDZCxNQUFNLENBQUMsS0FBSyxDQUFDLG1EQUFtRCxFQUFFLEdBQUcsQ0FBQyxDQUFDO1lBQ3ZFLE1BQU0sR0FBRyxDQUFDO1FBQ1gsQ0FBQztJQUNGLENBQUM7Q0FBQTtBQUVELFNBQWUsVUFBVTs7UUFDeEIsTUFBTSxNQUFNLEdBQUcsTUFBTSxXQUFXLEVBQUUsQ0FBQztRQUVuQyxJQUFJLENBQUM7WUFDSixNQUFNLE9BQU8sR0FBRyxJQUFJLENBQUMsSUFBSSxDQUFDLFNBQVMsRUFBRSxnQ0FBZ0MsQ0FBQyxDQUFDO1lBQ3ZFLE1BQU0sUUFBUSxHQUFHLElBQUksQ0FBQyxJQUFJLENBQ3pCLFNBQVMsRUFDVCxpQ0FBaUMsQ0FDakMsQ0FBQztZQUNGLE1BQU0sWUFBWSxHQUFHLE1BQU0sV0FBVyxDQUFDLE9BQU8sQ0FBQyxDQUFDO1lBQ2hELE1BQU0sYUFBYSxHQUFHLE1BQU0sV0FBVyxDQUFDLFFBQVEsQ0FBQyxDQUFDO1lBRWxELE9BQU87Z0JBQ04sR0FBRyxFQUFFLFlBQVk7Z0JBQ2pCLElBQUksRUFBRSxhQUFhO2FBQ25CLENBQUM7UUFDSCxDQUFDO1FBQUMsT0FBTyxHQUFHLEVBQUUsQ0FBQztZQUNkLE1BQU0sQ0FBQyxLQUFLLENBQUMsdUNBQXVDLEVBQUUsR0FBRyxDQUFDLENBQUM7WUFDM0QsTUFBTSxHQUFHLENBQUM7UUFDWCxDQUFDO0lBQ0YsQ0FBQztDQUFBO0FBRUQsZUFBZSxFQUFFLGdCQUFnQixFQUFFLFVBQVUsRUFBRSxDQUFDIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgZXhlY1N5bmMgfSBmcm9tICdjaGlsZF9wcm9jZXNzJztcbmltcG9ydCBwYXRoIGZyb20gJ3BhdGgnO1xuaW1wb3J0IHsgX19kaXJuYW1lIH0gZnJvbSAnLi9sb2FkRW52JztcbmltcG9ydCBzZXR1cExvZ2dlciBmcm9tICcuLi9taWRkbGV3YXJlL2xvZ2dlcic7XG5cbmFzeW5jIGZ1bmN0aW9uIGRlY3J5cHRGaWxlKGVuY3J5cHRlZEZpbGVQYXRoOiBzdHJpbmcpIHtcblx0Y29uc3QgbG9nZ2VyID0gYXdhaXQgc2V0dXBMb2dnZXIoKTtcblxuXHR0cnkge1xuXHRcdGNvbnN0IGRlY3J5cHRlZEZpbGUgPSBleGVjU3luYyhcblx0XHRcdGBzb3BzIC1kIC0tb3V0cHV0LXR5cGUganNvbiAke2VuY3J5cHRlZEZpbGVQYXRofWBcblx0XHQpLnRvU3RyaW5nKCk7XG5cdFx0cmV0dXJuIGRlY3J5cHRlZEZpbGU7XG5cdH0gY2F0Y2ggKGVycikge1xuXHRcdGxvZ2dlci5lcnJvcignRXJyb3IgZGVjcnlwdGluZyBmaWxlIGZyb20gU09QUzogJywgZXJyKTtcblx0XHR0aHJvdyBlcnI7XG5cdH1cbn1cblxuYXN5bmMgZnVuY3Rpb24gZGVjcnlwdERhdGFGaWxlcygpIHtcblx0Y29uc3QgbG9nZ2VyID0gYXdhaXQgc2V0dXBMb2dnZXIoKTtcblxuXHR0cnkge1xuXHRcdGNvbnN0IGZpbGVQYXRocyA9IFtcblx0XHRcdHByb2Nlc3MuZW52LlNFUlZFUl9EQVRBX0ZJTEVfUEFUSF8xLFxuXHRcdFx0cHJvY2Vzcy5lbnYuU0VSVkVSX0RBVEFfRklMRV9QQVRIXzIsXG5cdFx0XHRwcm9jZXNzLmVudi5TRVJWRVJfREFUQV9GSUxFX1BBVEhfMyxcblx0XHRcdHByb2Nlc3MuZW52LlNFUlZFUl9EQVRBX0ZJTEVfUEFUSF80XG5cdFx0XTtcblxuXHRcdGNvbnN0IGRlY3J5cHRlZEZpbGVzOiB7IFtrZXk6IHN0cmluZ106IHN0cmluZyB9ID0ge307XG5cblx0XHRmb3IgKGNvbnN0IFtpbmRleCwgZmlsZVBhdGhdIG9mIGZpbGVQYXRocy5lbnRyaWVzKCkpIHtcblx0XHRcdGlmIChmaWxlUGF0aCkge1xuXHRcdFx0XHRkZWNyeXB0ZWRGaWxlc1tgZmlsZXMke2luZGV4ICsgMX1gXSA9IGV4ZWNTeW5jKFxuXHRcdFx0XHRcdGBzb3BzIC1kIC0tb3V0cHV0LXR5cGUganNvbiAke2ZpbGVQYXRofWBcblx0XHRcdFx0KS50b1N0cmluZygpO1xuXHRcdFx0fSBlbHNlIHtcblx0XHRcdFx0bG9nZ2VyLndhcm4oXG5cdFx0XHRcdFx0YFNFUlZFUl9EQVRBX0ZJTEVfUEFUSF8ke2luZGV4ICsgMX0gaXMgbm90IGRlZmluZWRgXG5cdFx0XHRcdCk7XG5cdFx0XHR9XG5cdFx0fVxuXG5cdFx0cmV0dXJuIGRlY3J5cHRlZEZpbGVzO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRsb2dnZXIuZXJyb3IoJ0Vycm9yIGRlY3J5cHRpbmcgZmlsZXMgZnJvbSBiYWNrZW5kIGRhdGEgZm9sZGVyOiAnLCBlcnIpO1xuXHRcdHRocm93IGVycjtcblx0fVxufVxuXG5hc3luYyBmdW5jdGlvbiBnZXRTU0xLZXlzKCkge1xuXHRjb25zdCBsb2dnZXIgPSBhd2FpdCBzZXR1cExvZ2dlcigpO1xuXG5cdHRyeSB7XG5cdFx0Y29uc3Qga2V5UGF0aCA9IHBhdGguam9pbihfX2Rpcm5hbWUsICcuLi8uLi9rZXlzL3NzbC9hcHAucGVtLmtleS5ncGcnKTtcblx0XHRjb25zdCBjZXJ0UGF0aCA9IHBhdGguam9pbihcblx0XHRcdF9fZGlybmFtZSxcblx0XHRcdCcuLi8uLi9rZXlzL3NzbC9hcHAuY2VydC5wZW0uZ3BnJ1xuXHRcdCk7XG5cdFx0Y29uc3QgZGVjcnlwdGVkS2V5ID0gYXdhaXQgZGVjcnlwdEZpbGUoa2V5UGF0aCk7XG5cdFx0Y29uc3QgZGVjcnlwdGVkQ2VydCA9IGF3YWl0IGRlY3J5cHRGaWxlKGNlcnRQYXRoKTtcblxuXHRcdHJldHVybiB7XG5cdFx0XHRrZXk6IGRlY3J5cHRlZEtleSxcblx0XHRcdGNlcnQ6IGRlY3J5cHRlZENlcnRcblx0XHR9O1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRsb2dnZXIuZXJyb3IoJ0Vycm9yIHJldHJpZXZpbmcgU1NMIGtleXMgZnJvbSBTT1BTOiAnLCBlcnIpO1xuXHRcdHRocm93IGVycjtcblx0fVxufVxuXG5leHBvcnQgZGVmYXVsdCB7IGRlY3J5cHREYXRhRmlsZXMsIGdldFNTTEtleXMgfTtcbiJdfQ==

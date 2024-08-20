@@ -39,6 +39,7 @@ export const verifyJwToken = async (token: string) => {
 		}
 		return jwt.verify(token, secrets.JWT_SECRET);
 	} catch (err) {
+		console.log(err);
 		return null;
 	}
 };

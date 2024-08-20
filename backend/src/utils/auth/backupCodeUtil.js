@@ -1,89 +1,114 @@
+import { __awaiter } from 'tslib';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import setupLogger from '../../config/logger.js';
-import UserModelPromise from '../../../ts/models/User.js';
-
-const User = await UserModelPromise;
-
+import setupLogger from '../../middleware/logger.js';
+import UserMfaModelPromise from 'ts/models/UserMfa';
 // Generate Backup Coedes
-async function generateBackupCodes(userId) {
-	const backupCodes = [];
-	for (let i = 0; i < 16; i++) {
-		const code = crypto.randomBytes(4).toString(hex); // 8-character hexcode
-		const hashedCode = await bcrypt.hash(code, 10);
-		backupCodes.push({ code: hashedCode, used: false });
-	}
-
-	// store backupCodes in the database associated with the userId
-	await saveBackupCodesToDatabase(userId, backupCodes);
-	return backupCodes.map((code) => code.code); // return the plain codes to the user
-}
-
-// Verify a Backup Code
-async function verifyBackupCode(userId, inputCode) {
-	const storedCodes = await getBackupCodesFromDatabase(userId);
-	for (let i = 0; i < storedCodes.length; i++) {
-		const match = await bcrypt.compare(inputCode, storedCodes[i].code);
-		if (match && !storedCodes[i].used) {
-			storedCodes[i].used = true;
-			await updateBackupCodesInDatabase(userId, storedCodes); // mark the code as used
-			return true; // successful verification
+function generateBackupCodes(id) {
+	return __awaiter(this, void 0, void 0, function* () {
+		let backupCodes = [];
+		for (let i = 0; i < 16; i++) {
+			const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
+			const hashedCode = yield bcrypt.hash(code, 10);
+			backupCodes.push({ code: hashedCode, used: false });
 		}
-	}
-
-	return false; // verification failed
+		// store backupCodes in the database associated with the user's id
+		yield saveBackupCodesToDatabase(id, backupCodes);
+		// return only the plain codes as strings
+		return backupCodes.map((backupCode) => backupCode.code);
+	});
 }
-
+// Verify a Backup Code
+function verifyBackupCode(id, inputCode) {
+	return __awaiter(this, void 0, void 0, function* () {
+		yield UserMfaModelPromise; // await the UserMfa model when needed
+		let storedCodes = yield getBackupCodesFromDatabase(id);
+		if (storedCodes) {
+			for (let i = 0; i < storedCodes.length; i++) {
+				const match = yield bcrypt.compare(
+					inputCode,
+					storedCodes[i].code
+				);
+				if (match && !storedCodes[i].used) {
+					storedCodes[i].used = true;
+					yield updateBackupCodesInDatabase(id, storedCodes); // mark the code as used
+					return true; // successful verification
+				}
+			}
+		} else {
+			console.error('No backup codes found for user');
+			return false; // no backup codes found
+		}
+		return false; // verification failed
+	});
+}
 // Save backup codes to the database
-async function saveBackupCodesToDatabase(userId, backupCodes) {
-	const logger = await setupLogger();
-
-	try {
-		const user = await User.findByPk(userId); // may need to be adjusted based on the ORM
-		if (!user) throw new Error('User not found');
-
-		user.backupCodes = backupCodes;
-		await user.save();
-	} catch (err) {
-		logger.error('Error saving backup codes to database: ', err);
-		throw new Error('Failed to save backup codes to database');
-	}
+function saveBackupCodesToDatabase(id, backupCodes) {
+	return __awaiter(this, void 0, void 0, function* () {
+		let logger = yield setupLogger();
+		let UserfMfa = yield UserMfaModelPromise; // await the UserMfa model when needed
+		try {
+			const user = yield UserfMfa.findByPk(id); // find user by primary key
+			if (!user) throw new Error('User not found');
+			// map the codes element of backupCodes to an array of strings
+			const backupCodesAsStrings = backupCodes.map(
+				(codeObj) => codeObj.code
+			);
+			// assign the array of strings to user.backupCodes
+			user.backupCodes = backupCodesAsStrings;
+			yield user.save();
+		} catch (err) {
+			logger.error('Error saving backup codes to database: ', err);
+			throw new Error('Failed to save backup codes to database');
+		}
+	});
 }
-
 // Get backup codes from the database
-async function getBackupCodesFromDatabase(userId) {
-	const logger = await setupLogger();
-
-	try {
-		const user = await User.findByPk(userId); // may need to be adjusted based on the ORM
-		if (!user) throw new Error('User not found');
-
-		return user.backupCodes;
-	} catch (err) {
-		logger.error('Error fetching backup codes from database: ', err);
-		throw new Error('Failed to retrieve backup codes from database');
-	}
+function getBackupCodesFromDatabase(id) {
+	return __awaiter(this, void 0, void 0, function* () {
+		let logger = yield setupLogger();
+		let UserMfa = yield UserMfaModelPromise; // await the User model when needed
+		try {
+			const user = yield UserMfa.findByPk(id); // find user by primary key
+			if (!user) throw new Error('User not found');
+			// assume user.backupCodes is a string[] or null, convert it to BackuopCode[] or undefined
+			const backupCodes = user.backupCodes;
+			if (backupCodes === null) {
+				return undefined; // *DEV-NOTE* probably need to configure this later
+			}
+			// convert string[] to BackupCode[]
+			return backupCodes.map((code) => ({ code, used: false }));
+		} catch (err) {
+			logger.error('Error fetching backup codes from database: ', err);
+			throw new Error('Failed to retrieve backup codes from database');
+		}
+	});
 }
-
 // Update backup codes in the database
-async function updateBackupCodesInDatabase(userId, backupCodes) {
-	const logger = await setupLogger();
-
-	try {
-		const user = await User.findByPk(userId, backupCodes); // may need to be adjusted based on the ORM
-		if (!user) throw new Error('User not found');
-
-		user.backupCodes = backupCodes;
-		await user.save();
-	} catch (err) {
-		logger.error('Error updating backupcodes in database: ', err);
-		throw new Error('Failed to update backup codes in database');
-	}
+function updateBackupCodesInDatabase(id, backupCodes) {
+	return __awaiter(this, void 0, void 0, function* () {
+		let logger = yield setupLogger();
+		let UserMfa = yield UserMfaModelPromise; // await the UserMfa model when needed
+		try {
+			const user = yield UserMfa.findByPk(id); // find user by primary key
+			if (!user) throw new Error('User not found');
+			// map the codes element of backupCodes to an array of strings
+			let backupCodesAsStrings = backupCodes.map(
+				(codeObj) => codeObj.code
+			);
+			// assign the array of strings to user.backupCodes
+			user.backupCodes = backupCodesAsStrings;
+			yield user.save();
+		} catch (err) {
+			logger.error('Error updating backup codes in database: ', err);
+			throw new Error('Failed to update backup codes in database');
+		}
+	});
 }
-
 export {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
 	saveBackupCodesToDatabase,
 	verifyBackupCode
 };
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYmFja3VwQ29kZVV0aWwuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi90cy91dGlscy9hdXRoL2JhY2t1cENvZGVVdGlsLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSxPQUFPLE1BQU0sTUFBTSxRQUFRLENBQUM7QUFDNUIsT0FBTyxNQUFNLE1BQU0sUUFBUSxDQUFDO0FBQzVCLE9BQU8sV0FBVyxNQUFNLHlCQUF5QixDQUFDO0FBQ2xELE9BQU8sbUJBQW1CLE1BQU0sbUJBQW1CLENBQUM7QUFPcEQseUJBQXlCO0FBQ3pCLFNBQWUsbUJBQW1CLENBQUMsRUFBVTs7UUFDNUMsSUFBSSxXQUFXLEdBQWlCLEVBQUUsQ0FBQztRQUNuQyxLQUFLLElBQUksQ0FBQyxHQUFHLENBQUMsRUFBRSxDQUFDLEdBQUcsRUFBRSxFQUFFLENBQUMsRUFBRSxFQUFFLENBQUM7WUFDN0IsTUFBTSxJQUFJLEdBQUcsTUFBTSxDQUFDLFdBQVcsQ0FBQyxDQUFDLENBQUMsQ0FBQyxRQUFRLENBQUMsS0FBSyxDQUFDLENBQUMsQ0FBQyx1QkFBdUI7WUFDM0UsTUFBTSxVQUFVLEdBQUcsTUFBTSxNQUFNLENBQUMsSUFBSSxDQUFDLElBQUksRUFBRSxFQUFFLENBQUMsQ0FBQztZQUMvQyxXQUFXLENBQUMsSUFBSSxDQUFDLEVBQUUsSUFBSSxFQUFFLFVBQVUsRUFBRSxJQUFJLEVBQUUsS0FBSyxFQUFFLENBQUMsQ0FBQztRQUNyRCxDQUFDO1FBRUQsa0VBQWtFO1FBQ2xFLE1BQU0seUJBQXlCLENBQUMsRUFBRSxFQUFFLFdBQVcsQ0FBQyxDQUFDO1FBRWpELHlDQUF5QztRQUN6QyxPQUFPLFdBQVcsQ0FBQyxHQUFHLENBQUMsQ0FBQyxVQUFVLEVBQUUsRUFBRSxDQUFDLFVBQVUsQ0FBQyxJQUFJLENBQUMsQ0FBQztJQUN6RCxDQUFDO0NBQUE7QUFFRCx1QkFBdUI7QUFDdkIsU0FBZSxnQkFBZ0IsQ0FDOUIsRUFBVSxFQUNWLFNBQWlCOztRQUVqQixN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MEJBQTBCLEVBQzFCLHlCQUF5QixFQUN6QixnQkFBZ0IsRUFDaEIsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBiY3J5cHQgZnJvbSAnYmNyeXB0JztcbmltcG9ydCBjcnlwdG8gZnJvbSAnY3J5cHRvJztcbmltcG9ydCBzZXR1cExvZ2dlciBmcm9tICcuLi8uLi9taWRkbGV3YXJlL2xvZ2dlcic7XG5pbXBvcnQgVXNlck1mYU1vZGVsUHJvbWlzZSBmcm9tICd0cy9tb2RlbHMvVXNlck1mYSc7XG5cbmludGVyZmFjZSBCYWNrdXBDb2RlIHtcblx0Y29kZTogc3RyaW5nO1xuXHR1c2VkOiBib29sZWFuO1xufVxuXG4vLyBHZW5lcmF0ZSBCYWNrdXAgQ29lZGVzXG5hc3luYyBmdW5jdGlvbiBnZW5lcmF0ZUJhY2t1cENvZGVzKGlkOiBzdHJpbmcpOiBQcm9taXNlPHN0cmluZ1tdPiB7XG5cdGxldCBiYWNrdXBDb2RlczogQmFja3VwQ29kZVtdID0gW107XG5cdGZvciAobGV0IGkgPSAwOyBpIDwgMTY7IGkrKykge1xuXHRcdGNvbnN0IGNvZGUgPSBjcnlwdG8ucmFuZG9tQnl0ZXMoNCkudG9TdHJpbmcoJ2hleCcpOyAvLyA4LWNoYXJhY3RlciBoZXggY29kZVxuXHRcdGNvbnN0IGhhc2hlZENvZGUgPSBhd2FpdCBiY3J5cHQuaGFzaChjb2RlLCAxMCk7XG5cdFx0YmFja3VwQ29kZXMucHVzaCh7IGNvZGU6IGhhc2hlZENvZGUsIHVzZWQ6IGZhbHNlIH0pO1xuXHR9XG5cblx0Ly8gc3RvcmUgYmFja3VwQ29kZXMgaW4gdGhlIGRhdGFiYXNlIGFzc29jaWF0ZWQgd2l0aCB0aGUgdXNlcidzIGlkXG5cdGF3YWl0IHNhdmVCYWNrdXBDb2Rlc1RvRGF0YWJhc2UoaWQsIGJhY2t1cENvZGVzKTtcblxuXHQvLyByZXR1cm4gb25seSB0aGUgcGxhaW4gY29kZXMgYXMgc3RyaW5nc1xuXHRyZXR1cm4gYmFja3VwQ29kZXMubWFwKChiYWNrdXBDb2RlKSA9PiBiYWNrdXBDb2RlLmNvZGUpO1xufVxuXG4vLyBWZXJpZnkgYSBCYWNrdXAgQ29kZVxuYXN5bmMgZnVuY3Rpb24gdmVyaWZ5QmFja3VwQ29kZShcblx0aWQ6IHN0cmluZyxcblx0aW5wdXRDb2RlOiBzdHJpbmdcbik6IFByb21pc2U8Ym9vbGVhbj4ge1xuXHRhd2FpdCBVc2VyTWZhTW9kZWxQcm9taXNlOyAvLyBhd2FpdCB0aGUgVXNlck1mYSBtb2RlbCB3aGVuIG5lZWRlZFxuXHRsZXQgc3RvcmVkQ29kZXMgPSBhd2FpdCBnZXRCYWNrdXBDb2Rlc0Zyb21EYXRhYmFzZShpZCk7XG5cblx0aWYgKHN0b3JlZENvZGVzKSB7XG5cdFx0Zm9yIChsZXQgaSA9IDA7IGkgPCBzdG9yZWRDb2Rlcy5sZW5ndGg7IGkrKykge1xuXHRcdFx0Y29uc3QgbWF0Y2ggPSBhd2FpdCBiY3J5cHQuY29tcGFyZShpbnB1dENvZGUsIHN0b3JlZENvZGVzW2ldLmNvZGUpO1xuXHRcdFx0aWYgKG1hdGNoICYmICFzdG9yZWRDb2Rlc1tpXS51c2VkKSB7XG5cdFx0XHRcdHN0b3JlZENvZGVzW2ldLnVzZWQgPSB0cnVlO1xuXHRcdFx0XHRhd2FpdCB1cGRhdGVCYWNrdXBDb2Rlc0luRGF0YWJhc2UoaWQsIHN0b3JlZENvZGVzKTsgLy8gbWFyayB0aGUgY29kZSBhcyB1c2VkXG5cdFx0XHRcdHJldHVybiB0cnVlOyAvLyBzdWNjZXNzZnVsIHZlcmlmaWNhdGlvblxuXHRcdFx0fVxuXHRcdH1cblx0fSBlbHNlIHtcblx0XHRjb25zb2xlLmVycm9yKCdObyBiYWNrdXAgY29kZXMgZm91bmQgZm9yIHVzZXInKTtcblx0XHRyZXR1cm4gZmFsc2U7IC8vIG5vIGJhY2t1cCBjb2RlcyBmb3VuZFxuXHR9XG5cblx0cmV0dXJuIGZhbHNlOyAvLyB2ZXJpZmljYXRpb24gZmFpbGVkXG59XG5cbi8vIFNhdmUgYmFja3VwIGNvZGVzIHRvIHRoZSBkYXRhYmFzZVxuYXN5bmMgZnVuY3Rpb24gc2F2ZUJhY2t1cENvZGVzVG9EYXRhYmFzZShcblx0aWQ6IHN0cmluZyxcblx0YmFja3VwQ29kZXM6IEJhY2t1cENvZGVbXVxuKTogUHJvbWlzZTx2b2lkPiB7XG5cdGxldCBsb2dnZXIgPSBhd2FpdCBzZXR1cExvZ2dlcigpO1xuXHRsZXQgVXNlcmZNZmEgPSBhd2FpdCBVc2VyTWZhTW9kZWxQcm9taXNlOyAvLyBhd2FpdCB0aGUgVXNlck1mYSBtb2RlbCB3aGVuIG5lZWRlZFxuXG5cdHRyeSB7XG5cdFx0Y29uc3QgdXNlciA9IGF3YWl0IFVzZXJmTWZhLmZpbmRCeVBrKGlkKTsgLy8gZmluZCB1c2VyIGJ5IHByaW1hcnkga2V5XG5cdFx0aWYgKCF1c2VyKSB0aHJvdyBuZXcgRXJyb3IoJ1VzZXIgbm90IGZvdW5kJyk7XG5cblx0XHQvLyBtYXAgdGhlIGNvZGVzIGVsZW1lbnQgb2YgYmFja3VwQ29kZXMgdG8gYW4gYXJyYXkgb2Ygc3RyaW5nc1xuXHRcdGNvbnN0IGJhY2t1cENvZGVzQXNTdHJpbmdzID0gYmFja3VwQ29kZXMubWFwKChjb2RlT2JqKSA9PiBjb2RlT2JqLmNvZGUpO1xuXG5cdFx0Ly8gYXNzaWduIHRoZSBhcnJheSBvZiBzdHJpbmdzIHRvIHVzZXIuYmFja3VwQ29kZXNcblx0XHR1c2VyLmJhY2t1cENvZGVzID0gYmFja3VwQ29kZXNBc1N0cmluZ3M7XG5cdFx0YXdhaXQgdXNlci5zYXZlKCk7XG5cdH0gY2F0Y2ggKGVycikge1xuXHRcdGxvZ2dlci5lcnJvcignRXJyb3Igc2F2aW5nIGJhY2t1cCBjb2RlcyB0byBkYXRhYmFzZTogJywgZXJyKTtcblx0XHR0aHJvdyBuZXcgRXJyb3IoJ0ZhaWxlZCB0byBzYXZlIGJhY2t1cCBjb2RlcyB0byBkYXRhYmFzZScpO1xuXHR9XG59XG5cbi8vIEdldCBiYWNrdXAgY29kZXMgZnJvbSB0aGUgZGF0YWJhc2VcbmFzeW5jIGZ1bmN0aW9uIGdldEJhY2t1cENvZGVzRnJvbURhdGFiYXNlKFxuXHRpZDogc3RyaW5nXG4pOiBQcm9taXNlPEJhY2t1cENvZGVbXSB8IHVuZGVmaW5lZD4ge1xuXHRsZXQgbG9nZ2VyID0gYXdhaXQgc2V0dXBMb2dnZXIoKTtcblx0bGV0IFVzZXJNZmEgPSBhd2FpdCBVc2VyTWZhTW9kZWxQcm9taXNlOyAvLyBhd2FpdCB0aGUgVXNlciBtb2RlbCB3aGVuIG5lZWRlZFxuXG5cdHRyeSB7XG5cdFx0Y29uc3QgdXNlciA9IGF3YWl0IFVzZXJNZmEuZmluZEJ5UGsoaWQpOyAvLyBmaW5kIHVzZXIgYnkgcHJpbWFyeSBrZXlcblx0XHRpZiAoIXVzZXIpIHRocm93IG5ldyBFcnJvcignVXNlciBub3QgZm91bmQnKTtcblxuXHRcdC8vIGFzc3VtZSB1c2VyLmJhY2t1cENvZGVzIGlzIGEgc3RyaW5nW10gb3IgbnVsbCwgY29udmVydCBpdCB0byBCYWNrdW9wQ29kZVtdIG9yIHVuZGVmaW5lZFxuXHRcdGNvbnN0IGJhY2t1cENvZGVzID0gdXNlci5iYWNrdXBDb2RlcyBhcyBzdHJpbmdbXSB8IG51bGw7XG5cblx0XHRpZiAoYmFja3VwQ29kZXMgPT09IG51bGwpIHtcblx0XHRcdHJldHVybiB1bmRlZmluZWQ7IC8vICpERVYtTk9URSogcHJvYmFibHkgbmVlZCB0byBjb25maWd1cmUgdGhpcyBsYXRlclxuXHRcdH1cblxuXHRcdC8vIGNvbnZlcnQgc3RyaW5nW10gdG8gQmFja3VwQ29kZVtdXG5cdFx0cmV0dXJuIGJhY2t1cENvZGVzLm1hcCgoY29kZSkgPT4gKHsgY29kZSwgdXNlZDogZmFsc2UgfSkgYXMgQmFja3VwQ29kZSk7XG5cdH0gY2F0Y2ggKGVycikge1xuXHRcdGxvZ2dlci5lcnJvcignRXJyb3IgZmV0Y2hpbmcgYmFja3VwIGNvZGVzIGZyb20gZGF0YWJhc2U6ICcsIGVycik7XG5cdFx0dGhyb3cgbmV3IEVycm9yKCdGYWlsZWQgdG8gcmV0cmlldmUgYmFja3VwIGNvZGVzIGZyb20gZGF0YWJhc2UnKTtcblx0fVxufVxuXG4vLyBVcGRhdGUgYmFja3VwIGNvZGVzIGluIHRoZSBkYXRhYmFzZVxuYXN5bmMgZnVuY3Rpb24gdXBkYXRlQmFja3VwQ29kZXNJbkRhdGFiYXNlKFxuXHRpZDogc3RyaW5nLFxuXHRiYWNrdXBDb2RlczogQmFja3VwQ29kZVtdXG4pOiBQcm9taXNlPHZvaWQ+IHtcblx0bGV0IGxvZ2dlciA9IGF3YWl0IHNldHVwTG9nZ2VyKCk7XG5cdGxldCBVc2VyTWZhID0gYXdhaXQgVXNlck1mYU1vZGVsUHJvbWlzZTsgLy8gYXdhaXQgdGhlIFVzZXJNZmEgbW9kZWwgd2hlbiBuZWVkZWRcblxuXHR0cnkge1xuXHRcdGNvbnN0IHVzZXIgPSBhd2FpdCBVc2VyTWZhLmZpbmRCeVBrKGlkKTsgLy8gZmluZCB1c2VyIGJ5IHByaW1hcnkga2V5XG5cdFx0aWYgKCF1c2VyKSB0aHJvdyBuZXcgRXJyb3IoJ1VzZXIgbm90IGZvdW5kJyk7XG5cblx0XHQvLyBtYXAgdGhlIGNvZGVzIGVsZW1lbnQgb2YgYmFja3VwQ29kZXMgdG8gYW4gYXJyYXkgb2Ygc3RyaW5nc1xuXHRcdGxldCBiYWNrdXBDb2Rlc0FzU3RyaW5ncyA9IGJhY2t1cENvZGVzLm1hcCgoY29kZU9iaikgPT4gY29kZU9iai5jb2RlKTtcblxuXHRcdC8vIGFzc2lnbiB0aGUgYXJyYXkgb2Ygc3RyaW5ncyB0byB1c2VyLmJhY2t1cENvZGVzXG5cdFx0dXNlci5iYWNrdXBDb2RlcyA9IGJhY2t1cENvZGVzQXNTdHJpbmdzO1xuXHRcdGF3YWl0IHVzZXIuc2F2ZSgpO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRsb2dnZXIuZXJyb3IoJ0Vycm9yIHVwZGF0aW5nIGJhY2t1cCBjb2RlcyBpbiBkYXRhYmFzZTogJywgZXJyKTtcblx0XHR0aHJvdyBuZXcgRXJyb3IoJ0ZhaWxlZCB0byB1cGRhdGUgYmFja3VwIGNvZGVzIGluIGRhdGFiYXNlJyk7XG5cdH1cbn1cblxuZXhwb3J0IHtcblx0Z2VuZXJhdGVCYWNrdXBDb2Rlcyxcblx0Z2V0QmFja3VwQ29kZXNGcm9tRGF0YWJhc2UsXG5cdHNhdmVCYWNrdXBDb2Rlc1RvRGF0YWJhc2UsXG5cdHZlcmlmeUJhY2t1cENvZGVcbn07XG4iXX0=

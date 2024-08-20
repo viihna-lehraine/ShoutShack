@@ -1,12 +1,12 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+import { config } from 'dotenv';
+// Declare process to capture cwd
+const __dirname = process.cwd();
 function loadEnv() {
-	const envPath = path.join(__dirname, '../../backend.dev.env');
+	const envPath = path.join(__dirname, 'backend.dev.env');
+	console.log(`Loading environment from: ${envPath}`);
+	config({ path: envPath });
 }
-
-export { __filename, __dirname };
+export { __dirname };
 export default loadEnv;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibG9hZEVudi5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3RzL2NvbmZpZy9sb2FkRW52LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLE9BQU8sSUFBSSxNQUFNLE1BQU0sQ0FBQztBQUN4QixPQUFPLEVBQUUsTUFBTSxFQUFFLE1BQU0sUUFBUSxDQUFDO0FBRWhDLGlDQUFpQztBQUNqQyxNQUFNLFNBQVMsR0FBRyxPQUFPLENBQUMsR0FBRyxFQUFFLENBQUM7QUFFaEMsU0FBUyxPQUFPO0lBQ2YsTUFBTSxPQUFPLEdBQUcsSUFBSSxDQUFDLElBQUksQ0FBQyxTQUFTLEVBQUUsaUJBQWlCLENBQUMsQ0FBQztJQUN4RCxPQUFPLENBQUMsR0FBRyxDQUFDLDZCQUE2QixPQUFPLEVBQUUsQ0FBQyxDQUFDO0lBRXBELE1BQU0sQ0FBQyxFQUFFLElBQUksRUFBRSxPQUFPLEVBQUUsQ0FBQyxDQUFDO0FBQzNCLENBQUM7QUFFRCxPQUFPLEVBQUUsU0FBUyxFQUFFLENBQUM7QUFDckIsZUFBZSxPQUFPLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgcGF0aCBmcm9tICdwYXRoJztcbmltcG9ydCB7IGNvbmZpZyB9IGZyb20gJ2RvdGVudic7XG5cbi8vIERlY2xhcmUgcHJvY2VzcyB0byBjYXB0dXJlIGN3ZFxuY29uc3QgX19kaXJuYW1lID0gcHJvY2Vzcy5jd2QoKTtcblxuZnVuY3Rpb24gbG9hZEVudigpIHtcblx0Y29uc3QgZW52UGF0aCA9IHBhdGguam9pbihfX2Rpcm5hbWUsICdiYWNrZW5kLmRldi5lbnYnKTtcblx0Y29uc29sZS5sb2coYExvYWRpbmcgZW52aXJvbm1lbnQgZnJvbTogJHtlbnZQYXRofWApO1xuXG5cdGNvbmZpZyh7IHBhdGg6IGVudlBhdGggfSk7XG59XG5cbmV4cG9ydCB7IF9fZGlybmFtZSB9O1xuZXhwb3J0IGRlZmF1bHQgbG9hZEVudjtcbiJdfQ==

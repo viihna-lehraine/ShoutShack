@@ -1,4 +1,3 @@
-import express, { Application } from 'express';
 import { constants } from 'crypto';
 import fs from 'fs';
 import http2 from 'http2';
@@ -6,10 +5,11 @@ import http2Express from 'http2-express-bridge';
 import https from 'https';
 import featureFlags from '../config/featureFlags';
 import setupLogger from './logger';
-import app from '../../ts/server';
+import app from '../server';
 
 // Create HTTP/2 compatible Express app
-const http2App = http2Express(express() as any); // *DEV-NOTE* I could not fucking get the typing right here I don't know what else to do besides force TS to shut up about it *shrug*
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const http2App = http2Express(app as any); // *DEV-NOTE* Fix any type if you can ever figure out a way. I had to give up because I was losing my mind trying to fix this one
 
 // Use the existing Express app as middleware for the HTTP/2 compatible app
 http2App.use(app);

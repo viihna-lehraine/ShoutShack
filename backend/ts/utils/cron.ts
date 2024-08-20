@@ -150,7 +150,7 @@ const scheduleLogJobs = async () => {
 			schedule = '0 0 * * 0';
 			break;
 		default:
-			schedule: '0 0 * * *';
+			schedule = '0 0 * * *';
 			logger.warn(
 				'LOGGER variable not set. Defaulting to nightly log export'
 			);

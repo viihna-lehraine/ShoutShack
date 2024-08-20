@@ -44,6 +44,7 @@ async function verifyEmail2FACode(token: string, email2FACode: string) {
 		// ensue the decoded 2FA code matches the one provided
 		return decodedEmail2FACode.code === email2FACode;
 	} catch (err) {
+		console.error(err);
 		return false;
 	}
 }

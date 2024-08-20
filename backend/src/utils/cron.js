@@ -1,28 +1,28 @@
+import { __awaiter } from 'tslib';
 import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
 import compressing from 'compressing';
 import { exec } from 'child_process';
 import { __dirname } from '../index.js';
-import setupLogger from '../config/logger.js';
-
-const compressAndExportLogs = async (sourceDir, exportDir, logFileName) => {
-	const logger = await setupLogger();
-	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const outputFileName = `${logFileName.replace('.log', '')}-${timestamp}.gz`;
-	const outputFilePath = path.join(exportDir, outputFileName);
-	const sourceFilePath = path.join(sourceDir, logFileName);
-
-	try {
-		await compressing.gzip.compressFile(sourceFilePath, outputFilePath);
-		logger.info(`${logFileName} successfully compressed`);
-		return outputFilePath;
-	} catch (err) {
-		logger.error(`Unable to compress ${logFileName}: ${err.message}`);
-		throw new Error('Error compessing log files: ', err);
-	}
-};
-
+import setupLogger from '../middleware/logger.js';
+const compressAndExportLogs = (sourceDir, exportDir, logFileName) =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		const timestamp = new Date().toISOString().replace(/:/g, '-');
+		const outputFileName = `${logFileName.replace('.log', '')}-${timestamp}.gz`;
+		const outputFilePath = path.join(exportDir, outputFileName);
+		const sourceFilePath = path.join(sourceDir, logFileName);
+		try {
+			yield compressing.gzip.compressFile(sourceFilePath, outputFilePath);
+			logger.info(`${logFileName} successfully compressed`);
+			return outputFilePath;
+		} catch (err) {
+			const error = err;
+			logger.error(`Unable to compress ${logFileName}: ${error.message}`);
+			throw new Error(`Error compessing log files: ${error.message}`);
+		}
+	});
 const runCommandAndLog = (command, logFilePath) => {
 	return new Promise((resolve, reject) => {
 		const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
@@ -42,112 +42,106 @@ const runCommandAndLog = (command, logFilePath) => {
 				resolve();
 			}
 		);
-
 		process.stdout.pipe(logStream);
 		process.stderr.pipe(logStream);
 	});
 };
-
-const exportLogs = async () => {
-	const logger = await setupLogger();
-	const serverLogDir = path.join(__dirname, process.env.SERVER_LOG_PATH);
-	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
-	const exportDir = path.join(
-		__dirname,
-		process.env.BACKEND_LOGGER_EXPORT_PATH
-	);
-
-	// Ensure the export directory exists
-	if (!fs.existsSync(exportDir)) {
-		fs.mkdirSync(exportDir, { recursive: true });
-	}
-
-	try {
-		// compress and export server logs
-		const serverLogFiles = fs
-			.readdirSync(serverLogDir)
-			.filter((file) => file.endsWith('.log'));
-		for (const logFile of serverLogFiles) {
-			await compressAndExportLogs(serverLogDir, exportDir, logFile);
+const exportLogs = () =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		const serverLogDir = path.join(__dirname, process.env.SERVER_LOG_PATH);
+		const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
+		const exportDir = path.join(
+			__dirname,
+			process.env.BACKEND_LOGGER_EXPORT_PATH
+		);
+		// Ensure the export directory exists
+		if (!fs.existsSync(exportDir)) {
+			fs.mkdirSync(exportDir, { recursive: true });
 		}
-
-		// Compress and export npm logs
-		const npmLogFiles = fs
-			.readdirSync(npmLogDir)
-			.filter((file) => file.endsWith('.logs'));
-		for (const logFile of npmLogFiles) {
-			await compressAndExportLogs(npmLogDir, exportDir, logFile);
-		}
-
-		logger.info('Logs have been successfully compresseed and exported.');
-	} catch (err) {
-		logger.error(`Error exporting logs: ${err.message}`);
-	}
-};
-
-// Perform hourly npm audit and update
-const performNpmTasks = async () => {
-	const logger = await setupLogger();
-	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
-	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const logFilePath = path.join(
-		npmLogDir,
-		`npm-audit-update-${timestamp}.log`
-	);
-
-	try {
-		logger.info('Starting npm audit...');
-		await runCommandAndLog('npm audit --verbose', logFilePath);
-		logger.info('npm audit completed successfully.');
-
-		logger.info('Starting npm update...');
-		await runCommandAndLog('npm update --verbose', logFilePath);
-		logger.info('npm update completed successfully.');
-	} catch (err) {
-		logger.error(`Error during npm tasks: ${err.message}`);
-	}
-};
-
-// Determine the cron schedule based on LOGGER environment
-const scheduleLogJobs = () => {
-	const logger = setupLogger();
-
-	let schedule = '';
-
-	switch (process.env.LOGGER) {
-		case '0':
-			break;
-		case '1':
-			schedule = '*/2 * * * *';
-			exportLogs();
-			break;
-		case '2':
-			schedule = '0 */2 * * *';
-			break;
-		case '3':
-			schedule = '0 */6 * * *';
-			break;
-		case '4':
-			schedule = '0 */12 * * *';
-			break;
-		case '5':
-			schedule = '0 0 * * *';
-			break;
-		case '6':
-			schedule = '0 0 */2 * *';
-			break;
-		case '7':
-			schedule = '0 0 * * 0';
-			break;
-		default:
-			schedule: '0 0 * * *';
-			logger.warn(
-				'LOGGER variable not set. Defaulting to nightly log export'
+		try {
+			// compress and export server logs
+			const serverLogFiles = fs
+				.readdirSync(serverLogDir)
+				.filter((file) => file.endsWith('.log'));
+			for (const logFile of serverLogFiles) {
+				yield compressAndExportLogs(serverLogDir, exportDir, logFile);
+			}
+			// Compress and export npm logs
+			const npmLogFiles = fs
+				.readdirSync(npmLogDir)
+				.filter((file) => file.endsWith('.logs'));
+			for (const logFile of npmLogFiles) {
+				yield compressAndExportLogs(npmLogDir, exportDir, logFile);
+			}
+			logger.info(
+				'Logs have been successfully compresseed and exported.'
 			);
-	}
-
-	cron.schedule(schedule, exportLogs);
-	cron.schedule('0 * * * *', performNpmTasks);
-};
-
+		} catch (err) {
+			const error = err;
+			logger.error(`Error exporting logs: ${error.message}`);
+		}
+	});
+// Perform hourly npm audit and update
+const performNpmTasks = () =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH);
+		const timestamp = new Date().toISOString().replace(/:/g, '-');
+		const logFilePath = path.join(
+			npmLogDir,
+			`npm-audit-update-${timestamp}.log`
+		);
+		try {
+			logger.info('Starting npm audit...');
+			yield runCommandAndLog('npm audit --verbose', logFilePath);
+			logger.info('npm audit completed successfully.');
+			logger.info('Starting npm update...');
+			yield runCommandAndLog('npm update --verbose', logFilePath);
+			logger.info('npm update completed successfully.');
+		} catch (err) {
+			const error = err;
+			logger.error(`Error during npm tasks: ${error.message}`);
+		}
+	});
+// Determine the cron schedule based on LOGGER environment
+const scheduleLogJobs = () =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		let schedule = '';
+		switch (process.env.LOGGER) {
+			case '0':
+				break;
+			case '1':
+				schedule = '*/2 * * * *';
+				exportLogs();
+				break;
+			case '2':
+				schedule = '0 */2 * * *';
+				break;
+			case '3':
+				schedule = '0 */6 * * *';
+				break;
+			case '4':
+				schedule = '0 */12 * * *';
+				break;
+			case '5':
+				schedule = '0 0 * * *';
+				break;
+			case '6':
+				schedule = '0 0 */2 * *';
+				break;
+			case '7':
+				schedule = '0 0 * * 0';
+				break;
+			default:
+				schedule = '0 0 * * *';
+				logger.warn(
+					'LOGGER variable not set. Defaulting to nightly log export'
+				);
+		}
+		cron.schedule(schedule, exportLogs);
+		cron.schedule('0 * * * *', performNpmTasks);
+	});
 scheduleLogJobs();
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY3Jvbi5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3RzL3V0aWxzL2Nyb24udHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQUFBLE9BQU8sSUFBSSxNQUFNLFdBQVcsQ0FBQztBQUM3QixPQUFPLEVBQUUsTUFBTSxJQUFJLENBQUM7QUFDcEIsT0FBTyxJQUFJLE1BQU0sTUFBTSxDQUFDO0FBQ3hCLE9BQU8sV0FBVyxNQUFNLGFBQWEsQ0FBQztBQUN0QyxPQUFPLEVBQUUsSUFBSSxFQUFFLE1BQU0sZUFBZSxDQUFDO0FBQ3JDLE9BQU8sRUFBRSxTQUFTLEVBQUUsTUFBTSxVQUFVLENBQUM7QUFDckMsT0FBTyxXQUFXLE1BQU0sc0JBQXNCLENBQUM7QUFFL0MsTUFBTSxxQkFBcUIsR0FBRyxDQUM3QixTQUFpQixFQUNqQixTQUFpQixFQUNqQixXQUFtQixFQUNsQixFQUFFO0lBQ0gsTUFBTSxNQUFNLEdBQUcsTUFBTSxXQUFXLEVBQUUsQ0FBQztJQUNuQyxNQUFNLFNBQVMsR0FBRyxJQUFJLElBQUksRUFBRSxDQUFDLFdBQVcsRUFBRSxDQUFDLE9BQU8sQ0FBQyxJQUFJLEVBQUUsR0FBRyxDQUFDLENBQUM7SUFDOUQsTUFBTSxjQUFjLEdBQUcsR0FBRyxXQUFXLENBQUMsT0FBTyxDQUFDLE1BQU0sRUFBRSxFQUFFLENBQUMsSUFBSSxTQUFTLEtBQUssQ0FBQztJQUM1RSxNQUFNLGNBQWMsR0FBRyxJQUFJLENBQUMsSUFBSSxDQUFDLFNBQVMsRUFBRSxjQUFjLENBQUMsQ0FBQztJQUM1RCxNQUFNLGNBQWMsR0FBRyxJQUFJLENBQUMsSUFBSSxDQUFDLFNBQVMsRUFBRSxXQUFXLENBQUMsQ0FBQztJQUV6RCxJQUFJLENBQUM7UUFDSixNQUFNLFdBQVcsQ0FBQyxJQUFJLENBQUMsWUFBWSxDQUFDLGNBQWMsRUFBRSxjQUFjLENBQUMsQ0FBQztRQUNwRSxNQUFNLENBQUMsSUFBSSxDQUFDLEdBQUcsV0FBVywwQkFBMEIsQ0FBQyxDQUFDO1FB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QUN2QixNQUFNO1FBQ1A7WUFDQyxRQUFRLEdBQUcsV0FBVyxDQUFDO1lBQ3ZCLE1BQU0sQ0FBQyxJQUFJLENBQ1YsMkRBQTJELENBQzNELENBQUM7SUFDSixDQUFDO0lBRUQsSUFBSSxDQUFDLFFBQVEsQ0FBQyxRQUFRLEVBQUUsVUFBVSxDQUFDLENBQUM7SUFDcEMsSUFBSSxDQUFDLFFBQVEsQ0FBQyxXQUFXLEVBQUUsZUFBZSxDQUFDLENBQUM7QUFDN0MsQ0FBQyxDQUFBLENBQUM7QUFFRixlQUFlLEVBQUUsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBjcm9uIGZyb20gJ25vZGUtY3Jvbic7XG5pbXBvcnQgZnMgZnJvbSAnZnMnO1xuaW1wb3J0IHBhdGggZnJvbSAncGF0aCc7XG5pbXBvcnQgY29tcHJlc3NpbmcgZnJvbSAnY29tcHJlc3NpbmcnO1xuaW1wb3J0IHsgZXhlYyB9IGZyb20gJ2NoaWxkX3Byb2Nlc3MnO1xuaW1wb3J0IHsgX19kaXJuYW1lIH0gZnJvbSAnLi4vaW5kZXgnO1xuaW1wb3J0IHNldHVwTG9nZ2VyIGZyb20gJy4uL21pZGRsZXdhcmUvbG9nZ2VyJztcblxuY29uc3QgY29tcHJlc3NBbmRFeHBvcnRMb2dzID0gYXN5bmMgKFxuXHRzb3VyY2VEaXI6IHN0cmluZyxcblx0ZXhwb3J0RGlyOiBzdHJpbmcsXG5cdGxvZ0ZpbGVOYW1lOiBzdHJpbmdcbikgPT4ge1xuXHRjb25zdCBsb2dnZXIgPSBhd2FpdCBzZXR1cExvZ2dlcigpO1xuXHRjb25zdCB0aW1lc3RhbXAgPSBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkucmVwbGFjZSgvOi9nLCAnLScpO1xuXHRjb25zdCBvdXRwdXRGaWxlTmFtZSA9IGAke2xvZ0ZpbGVOYW1lLnJlcGxhY2UoJy5sb2cnLCAnJyl9LSR7dGltZXN0YW1wfS5nemA7XG5cdGNvbnN0IG91dHB1dEZpbGVQYXRoID0gcGF0aC5qb2luKGV4cG9ydERpciwgb3V0cHV0RmlsZU5hbWUpO1xuXHRjb25zdCBzb3VyY2VGaWxlUGF0aCA9IHBhdGguam9pbihzb3VyY2VEaXIsIGxvZ0ZpbGVOYW1lKTtcblxuXHR0cnkge1xuXHRcdGF3YWl0IGNvbXByZXNzaW5nLmd6aXAuY29tcHJlc3NGaWxlKHNvdXJjZUZpbGVQYXRoLCBvdXRwdXRGaWxlUGF0aCk7XG5cdFx0bG9nZ2VyLmluZm8oYCR7bG9nRmlsZU5hbWV9IHN1Y2Nlc3NmdWxseSBjb21wcmVzc2VkYCk7XG5cdFx0cmV0dXJuIG91dHB1dEZpbGVQYXRoO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRjb25zdCBlcnJvciA9IGVyciBhcyBFcnJvcjtcblx0XHRsb2dnZXIuZXJyb3IoYFVuYWJsZSB0byBjb21wcmVzcyAke2xvZ0ZpbGVOYW1lfTogJHtlcnJvci5tZXNzYWdlfWApO1xuXHRcdHRocm93IG5ldyBFcnJvcihgRXJyb3IgY29tcGVzc2luZyBsb2cgZmlsZXM6ICR7ZXJyb3IubWVzc2FnZX1gKTtcblx0fVxufTtcblxuY29uc3QgcnVuQ29tbWFuZEFuZExvZyA9IChcblx0Y29tbWFuZDogc3RyaW5nLFxuXHRsb2dGaWxlUGF0aDogc3RyaW5nXG4pOiBQcm9taXNlPHZvaWQ+ID0+IHtcblx0cmV0dXJuIG5ldyBQcm9taXNlKChyZXNvbHZlLCByZWplY3QpID0+IHtcblx0XHRjb25zdCBsb2dTdHJlYW0gPSBmcy5jcmVhdGVXcml0ZVN0cmVhbShsb2dGaWxlUGF0aCwgeyBmbGFnczogJ2EnIH0pO1xuXHRcdGNvbnN0IHByb2Nlc3MgPSBleGVjKFxuXHRcdFx0Y29tbWFuZCxcblx0XHRcdHsgbWF4QnVmZmVyOiAxMDI0ICogNTAwIH0sXG5cdFx0XHQoZXJyb3IsIHN0ZG91dCwgc3RkZXJyKSA9PiB7XG5cdFx0XHRcdGlmIChlcnJvcikge1xuXHRcdFx0XHRcdGxvZ1N0cmVhbS53cml0ZShgRVJST1I6ICR7ZXJyb3IubWVzc2FnZX1cXG5gKTtcblx0XHRcdFx0XHRyZXR1cm4gcmVqZWN0KGVycm9yKTtcblx0XHRcdFx0fVxuXHRcdFx0XHRpZiAoc3RkZXJyKSB7XG5cdFx0XHRcdFx0bG9nU3RyZWFtLndyaXRlKGBTVERFUlI6ICR7c3RkZXJyfVxcbmApO1xuXHRcdFx0XHR9XG5cdFx0XHRcdGxvZ1N0cmVhbS53cml0ZShzdGRvdXQpO1xuXHRcdFx0XHRsb2dTdHJlYW0uZW5kKCk7XG5cdFx0XHRcdHJlc29sdmUoKTtcblx0XHRcdH1cblx0XHQpO1xuXG5cdFx0cHJvY2Vzcy5zdGRvdXQhLnBpcGUobG9nU3RyZWFtKTtcblx0XHRwcm9jZXNzLnN0ZGVyciEucGlwZShsb2dTdHJlYW0pO1xuXHR9KTtcbn07XG5cbmNvbnN0IGV4cG9ydExvZ3MgPSBhc3luYyAoKSA9PiB7XG5cdGNvbnN0IGxvZ2dlciA9IGF3YWl0IHNldHVwTG9nZ2VyKCk7XG5cdGNvbnN0IHNlcnZlckxvZ0RpciA9IHBhdGguam9pbihfX2Rpcm5hbWUsIHByb2Nlc3MuZW52LlNFUlZFUl9MT0dfUEFUSCEpO1xuXHRjb25zdCBucG1Mb2dEaXIgPSBwYXRoLmpvaW4oX19kaXJuYW1lLCBwcm9jZXNzLmVudi5TRVJWRVJfTlBNX0xPR19QQVRIISk7XG5cdGNvbnN0IGV4cG9ydERpciA9IHBhdGguam9pbihcblx0XHRfX2Rpcm5hbWUsXG5cdFx0cHJvY2Vzcy5lbnYuQkFDS0VORF9MT0dHRVJfRVhQT1JUX1BBVEghXG5cdCk7XG5cblx0Ly8gRW5zdXJlIHRoZSBleHBvcnQgZGlyZWN0b3J5IGV4aXN0c1xuXHRpZiAoIWZzLmV4aXN0c1N5bmMoZXhwb3J0RGlyKSkge1xuXHRcdGZzLm1rZGlyU3luYyhleHBvcnREaXIsIHsgcmVjdXJzaXZlOiB0cnVlIH0pO1xuXHR9XG5cblx0dHJ5IHtcblx0XHQvLyBjb21wcmVzcyBhbmQgZXhwb3J0IHNlcnZlciBsb2dzXG5cdFx0Y29uc3Qgc2VydmVyTG9nRmlsZXMgPSBmc1xuXHRcdFx0LnJlYWRkaXJTeW5jKHNlcnZlckxvZ0Rpcilcblx0XHRcdC5maWx0ZXIoKGZpbGUpID0+IGZpbGUuZW5kc1dpdGgoJy5sb2cnKSk7XG5cdFx0Zm9yIChjb25zdCBsb2dGaWxlIG9mIHNlcnZlckxvZ0ZpbGVzKSB7XG5cdFx0XHRhd2FpdCBjb21wcmVzc0FuZEV4cG9ydExvZ3Moc2VydmVyTG9nRGlyLCBleHBvcnREaXIsIGxvZ0ZpbGUpO1xuXHRcdH1cblxuXHRcdC8vIENvbXByZXNzIGFuZCBleHBvcnQgbnBtIGxvZ3Ncblx0XHRjb25zdCBucG1Mb2dGaWxlcyA9IGZzXG5cdFx0XHQucmVhZGRpclN5bmMobnBtTG9nRGlyKVxuXHRcdFx0LmZpbHRlcigoZmlsZSkgPT4gZmlsZS5lbmRzV2l0aCgnLmxvZ3MnKSk7XG5cdFx0Zm9yIChjb25zdCBsb2dGaWxlIG9mIG5wbUxvZ0ZpbGVzKSB7XG5cdFx0XHRhd2FpdCBjb21wcmVzc0FuZEV4cG9ydExvZ3MobnBtTG9nRGlyLCBleHBvcnREaXIsIGxvZ0ZpbGUpO1xuXHRcdH1cblxuXHRcdGxvZ2dlci5pbmZvKCdMb2dzIGhhdmUgYmVlbiBzdWNjZXNzZnVsbHkgY29tcHJlc3NlZWQgYW5kIGV4cG9ydGVkLicpO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRjb25zdCBlcnJvciA9IGVyciBhcyBFcnJvcjtcblx0XHRsb2dnZXIuZXJyb3IoYEVycm9yIGV4cG9ydGluZyBsb2dzOiAke2Vycm9yLm1lc3NhZ2V9YCk7XG5cdH1cbn07XG5cbi8vIFBlcmZvcm0gaG91cmx5IG5wbSBhdWRpdCBhbmQgdXBkYXRlXG5jb25zdCBwZXJmb3JtTnBtVGFza3MgPSBhc3luYyAoKSA9PiB7XG5cdGNvbnN0IGxvZ2dlciA9IGF3YWl0IHNldHVwTG9nZ2VyKCk7XG5cdGNvbnN0IG5wbUxvZ0RpciA9IHBhdGguam9pbihfX2Rpcm5hbWUsIHByb2Nlc3MuZW52LlNFUlZFUl9OUE1fTE9HX1BBVEghKTtcblx0Y29uc3QgdGltZXN0YW1wID0gbmV3IERhdGUoKS50b0lTT1N0cmluZygpLnJlcGxhY2UoLzovZywgJy0nKTtcblx0Y29uc3QgbG9nRmlsZVBhdGggPSBwYXRoLmpvaW4oXG5cdFx0bnBtTG9nRGlyLFxuXHRcdGBucG0tYXVkaXQtdXBkYXRlLSR7dGltZXN0YW1wfS5sb2dgXG5cdCk7XG5cblx0dHJ5IHtcblx0XHRsb2dnZXIuaW5mbygnU3RhcnRpbmcgbnBtIGF1ZGl0Li4uJyk7XG5cdFx0YXdhaXQgcnVuQ29tbWFuZEFuZExvZygnbnBtIGF1ZGl0IC0tdmVyYm9zZScsIGxvZ0ZpbGVQYXRoKTtcblx0XHRsb2dnZXIuaW5mbygnbnBtIGF1ZGl0IGNvbXBsZXRlZCBzdWNjZXNzZnVsbHkuJyk7XG5cblx0XHRsb2dnZXIuaW5mbygnU3RhcnRpbmcgbnBtIHVwZGF0ZS4uLicpO1xuXHRcdGF3YWl0IHJ1bkNvbW1hbmRBbmRMb2coJ25wbSB1cGRhdGUgLS12ZXJib3NlJywgbG9nRmlsZVBhdGgpO1xuXHRcdGxvZ2dlci5pbmZvKCducG0gdXBkYXRlIGNvbXBsZXRlZCBzdWNjZXNzZnVsbHkuJyk7XG5cdH0gY2F0Y2ggKGVycikge1xuXHRcdGNvbnN0IGVycm9yID0gZXJyIGFzIEVycm9yO1xuXHRcdGxvZ2dlci5lcnJvcihgRXJyb3IgZHVyaW5nIG5wbSB0YXNrczogJHtlcnJvci5tZXNzYWdlfWApO1xuXHR9XG59O1xuXG4vLyBEZXRlcm1pbmUgdGhlIGNyb24gc2NoZWR1bGUgYmFzZWQgb24gTE9HR0VSIGVudmlyb25tZW50XG5jb25zdCBzY2hlZHVsZUxvZ0pvYnMgPSBhc3luYyAoKSA9PiB7XG5cdGNvbnN0IGxvZ2dlciA9IGF3YWl0IHNldHVwTG9nZ2VyKCk7XG5cblx0bGV0IHNjaGVkdWxlID0gJyc7XG5cblx0c3dpdGNoIChwcm9jZXNzLmVudi5MT0dHRVIpIHtcblx0XHRjYXNlICcwJzpcblx0XHRcdGJyZWFrO1xuXHRcdGNhc2UgJzEnOlxuXHRcdFx0c2NoZWR1bGUgPSAnKi8yICogKiAqIConO1xuXHRcdFx0ZXhwb3J0TG9ncygpO1xuXHRcdFx0YnJlYWs7XG5cdFx0Y2FzZSAnMic6XG5cdFx0XHRzY2hlZHVsZSA9ICcwICovMiAqICogKic7XG5cdFx0XHRicmVhaztcblx0XHRjYXNlICczJzpcblx0XHRcdHNjaGVkdWxlID0gJzAgKi82ICogKiAqJztcblx0XHRcdGJyZWFrO1xuXHRcdGNhc2UgJzQnOlxuXHRcdFx0c2NoZWR1bGUgPSAnMCAqLzEyICogKiAqJztcblx0XHRcdGJyZWFrO1xuXHRcdGNhc2UgJzUnOlxuXHRcdFx0c2NoZWR1bGUgPSAnMCAwICogKiAqJztcblx0XHRcdGJyZWFrO1xuXHRcdGNhc2UgJzYnOlxuXHRcdFx0c2NoZWR1bGUgPSAnMCAwICovMiAqIConO1xuXHRcdFx0YnJlYWs7XG5cdFx0Y2FzZSAnNyc6XG5cdFx0XHRzY2hlZHVsZSA9ICcwIDAgKiAqIDAnO1xuXHRcdFx0YnJlYWs7XG5cdFx0ZGVmYXVsdDpcblx0XHRcdHNjaGVkdWxlID0gJzAgMCAqICogKic7XG5cdFx0XHRsb2dnZXIud2Fybihcblx0XHRcdFx0J0xPR0dFUiB2YXJpYWJsZSBub3Qgc2V0LiBEZWZhdWx0aW5nIHRvIG5pZ2h0bHkgbG9nIGV4cG9ydCdcblx0XHRcdCk7XG5cdH1cblxuXHRjcm9uLnNjaGVkdWxlKHNjaGVkdWxlLCBleHBvcnRMb2dzKTtcblx0Y3Jvbi5zY2hlZHVsZSgnMCAqICogKiAqJywgcGVyZm9ybU5wbVRhc2tzKTtcbn07XG5cbnNjaGVkdWxlTG9nSm9icygpO1xuIl19

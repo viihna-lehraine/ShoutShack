@@ -1,32 +1,38 @@
+import { __awaiter } from 'tslib';
 import jwt from 'jsonwebtoken';
 import getSecrets from '../../config/secrets.js';
-import { generateToken } from './jwtUtils.js';
-
 let secrets;
-
-const loadSecrets = async () => {
-	if (!secrets) {
-		secrets = await getSecrets();
-	}
-	return secrets;
-};
-
-export const generateToken = async (user) => {
-	const secrets = await loadSecrets();
-	return jwt.sign(
-		{ id: user.id, username: user.username },
-		secrets.JWT_SECRET,
-		{ expiresIn: '1h' }
-	);
-};
-
-export const verifyJwToken = async (token) => {
-	try {
-		const secrets = await loadSecrets();
-		return jwt.verify(token, secrets.JWT_SECRET);
-	} catch (err) {
-		return null;
-	}
-};
-
+const loadSecrets = () =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		if (!secrets) {
+			secrets = yield getSecrets();
+		}
+		return secrets;
+	});
+export const generateToken = (user) =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		const secrets = yield loadSecrets();
+		if (!secrets) {
+			throw new Error('Secrets could not be loaded');
+		}
+		return jwt.sign(
+			{ id: user.id, username: user.username },
+			secrets.JWT_SECRET,
+			{ expiresIn: '1h' }
+		);
+	});
+export const verifyJwToken = (token) =>
+	__awaiter(void 0, void 0, void 0, function* () {
+		try {
+			const secrets = yield loadSecrets();
+			if (!secrets) {
+				throw new Error('Secrets could not be loaded');
+			}
+			return jwt.verify(token, secrets.JWT_SECRET);
+		} catch (err) {
+			console.log(err);
+			return null;
+		}
+	});
 export default verifyJwToken;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiand0VXRpbC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3RzL3V0aWxzL2F1dGgvand0VXRpbC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQUEsT0FBTyxHQUFHLE1BQU0sY0FBYyxDQUFDO0FBQy9CLE9BQU8sVUFBVSxNQUFNLHNCQUFzQixDQUFDO0FBVzlDLElBQUksT0FBNEIsQ0FBQztBQUVqQyxNQUFNLFdBQVcsR0FBRyxHQUFTLEVBQUU7SUFDOUIsSUFBSSxDQUFDLE9BQU8sRUFBRSxDQUFDO1FBQ2QsT0FBTyxHQUFHLE1BQU0sVUFBVSxFQUFFLENBQUM7SUFDOUIsQ0FBQztJQUNELE9BQU8sT0FBTyxDQUFDO0FBQ2hCLENBQUMsQ0FBQSxDQUFDO0FBRUYsTUFBTSxDQUFDLE1BQU0sYUFBYSxHQUFHLENBQU8sSUFBVSxFQUFFLEVBQUU7SUFDakQsTUFBTSxPQUFPLEdBQUcsTUFBTSxXQUFXLEVBQUUsQ0FBQztJQUNwQyxJQUFJLENBQUMsT0FBTyxFQUFFLENBQUM7UUFDZCxNQUFNLElBQUksS0FBSyxDQUFDLDZCQUE2QixDQUFDLENBQUM7SUFDaEQsQ0FBQztJQUNELE9BQU8sR0FBRyxDQUFDLElBQUksQ0FDZCxFQUFFLEVBQUUsRUFBRSxJQUFJLENBQUMsRUFBRSxFQUFFLFFBQVEsRUFBRSxJQUFJLENBQUMsUUFBUSxFQUFFLEVBQ3hDLE9BQU8sQ0FBQyxVQUFVLEVBQ2xCLEVBQUUsU0FBUyxFQUFFLElBQUksRUFBRSxDQUNuQixDQUFDO0FBQ0gsQ0FBQyxDQUFBLENBQUM7QUFFRixNQUFNLENBQUMsTUFBTSxhQUFhLEdBQUcsQ0FBTyxLQUFhLEVBQUUsRUFBRTtJQUNwRCxJQUFJLENBQUM7UUFDSixNQUFNLE9BQU8sR0FBRyxNQUFNLFdBQVcsRUFBRSxDQUFDO1FBQ3BDLElBQUksQ0FBQyxPQUFPLEVBQUUsQ0FBQztZQUNkLE1BQU0sSUFBSSxLQUFLLENBQUMsNkJBQTZCLENBQUMsQ0FBQztRQUNoRCxDQUFDO1FBQ0QsT0FBTyxHQUFHLENBQUMsTUFBTSxDQUFDLEtBQUssRUFBRSxPQUFPLENBQUMsVUFBVSxDQUFDLENBQUM7SUFDOUMsQ0FBQztJQUFDLE9BQU8sR0FBRyxFQUFFLENBQUM7UUFDZCxPQUFPLENBQUMsR0FBRyxDQUFDLEdBQUcsQ0FBQyxDQUFDO1FBQ2pCLE9BQU8sSUFBSSxDQUFDO0lBQ2IsQ0FBQztBQUNGLENBQUMsQ0FBQSxDQUFDO0FBRUYsZUFBZSxhQUFhLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgand0IGZyb20gJ2pzb253ZWJ0b2tlbic7XG5pbXBvcnQgZ2V0U2VjcmV0cyBmcm9tICcuLi8uLi9jb25maWcvc2VjcmV0cyc7XG5cbmludGVyZmFjZSBTZWNyZXRzIHtcblx0SldUX1NFQ1JFVDogc3RyaW5nO1xufVxuXG5pbnRlcmZhY2UgVXNlciB7XG5cdGlkOiBzdHJpbmc7XG5cdHVzZXJuYW1lOiBzdHJpbmc7XG59XG5cbmxldCBzZWNyZXRzOiBTZWNyZXRzIHwgdW5kZWZpbmVkO1xuXG5jb25zdCBsb2FkU2VjcmV0cyA9IGFzeW5jICgpID0+IHtcblx0aWYgKCFzZWNyZXRzKSB7XG5cdFx0c2VjcmV0cyA9IGF3YWl0IGdldFNlY3JldHMoKTtcblx0fVxuXHRyZXR1cm4gc2VjcmV0cztcbn07XG5cbmV4cG9ydCBjb25zdCBnZW5lcmF0ZVRva2VuID0gYXN5bmMgKHVzZXI6IFVzZXIpID0+IHtcblx0Y29uc3Qgc2VjcmV0cyA9IGF3YWl0IGxvYWRTZWNyZXRzKCk7XG5cdGlmICghc2VjcmV0cykge1xuXHRcdHRocm93IG5ldyBFcnJvcignU2VjcmV0cyBjb3VsZCBub3QgYmUgbG9hZGVkJyk7XG5cdH1cblx0cmV0dXJuIGp3dC5zaWduKFxuXHRcdHsgaWQ6IHVzZXIuaWQsIHVzZXJuYW1lOiB1c2VyLnVzZXJuYW1lIH0sXG5cdFx0c2VjcmV0cy5KV1RfU0VDUkVULFxuXHRcdHsgZXhwaXJlc0luOiAnMWgnIH1cblx0KTtcbn07XG5cbmV4cG9ydCBjb25zdCB2ZXJpZnlKd1Rva2VuID0gYXN5bmMgKHRva2VuOiBzdHJpbmcpID0+IHtcblx0dHJ5IHtcblx0XHRjb25zdCBzZWNyZXRzID0gYXdhaXQgbG9hZFNlY3JldHMoKTtcblx0XHRpZiAoIXNlY3JldHMpIHtcblx0XHRcdHRocm93IG5ldyBFcnJvcignU2VjcmV0cyBjb3VsZCBub3QgYmUgbG9hZGVkJyk7XG5cdFx0fVxuXHRcdHJldHVybiBqd3QudmVyaWZ5KHRva2VuLCBzZWNyZXRzLkpXVF9TRUNSRVQpO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRjb25zb2xlLmxvZyhlcnIpO1xuXHRcdHJldHVybiBudWxsO1xuXHR9XG59O1xuXG5leHBvcnQgZGVmYXVsdCB2ZXJpZnlKd1Rva2VuO1xuIl19

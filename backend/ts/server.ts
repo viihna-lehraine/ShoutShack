@@ -14,14 +14,14 @@ import path from 'path';
 import passport from 'passport';
 import { randomBytes } from 'crypto';
 // import sentry from '@sentry/node';
-import session from 'express-session';
-import connectRedis from 'connect-redis';
+// import session from 'express-session';
+// import connectRedis from 'connect-redis';
 import staticRoutes from './routes/staticRoutes';
 import apiRoutes from './routes/apiRoutes';
 import loadEnv from './config/loadEnv';
 import setupLogger from './middleware/logger';
 import getSecrets from './config/secrets';
-import sops from './config/sops';
+// import sops from './config/sops';
 import {
 	configurePassport,
 	csrfMiddleware,
@@ -33,21 +33,20 @@ import {
 	setupSecurityHeaders,
 	startServer
 } from './index';
+import '../types/custom/express-async-errors';
 
 let app = express();
-let RedisStore = connectRedis(session);
+// let RedisStore = connectRedis(session);
 
-let { decryptDataFiles } = sops;
+// let { decryptDataFiles } = sops;
 
 loadEnv();
 
 async function initializeServer() {
 	let logger = await setupLogger();
 	let sequelize = await initializeDatabase();
-	let ipLists = await decryptDataFiles();
+	// let ipLists = await decryptDataFiles();
 	let staticRootPath = process.env.STATIC_ROOT_PATH!;
-	let keyPath = process.env.SERVER_SSL_KEY_PATH!;
-	let certPath = process.env.SERVER_SSL_CERT_PATH!;
 
 	await configurePassport(passport);
 	await initializeIpBlacklist();
@@ -61,7 +60,7 @@ async function initializeServer() {
 				// secret: 'secrets.REDIS_KEY',
 				resave: false,
 				saveUninitialized: false,
-				cookie: { secure: true }, 
+				cookie: { secure: true },
 			})
 		); */
 
@@ -167,6 +166,7 @@ async function initializeServer() {
 			res.status(404).sendFile(
 				path.join(__dirname, '../public', 'not-found.html')
 			);
+			next();
 		});
 
 		// Error Handling Middleware
@@ -179,6 +179,8 @@ async function initializeServer() {
 				res.status(500).send(
 					`Server error - something failed ${err.stack}`
 				);
+
+				next();
 			}
 		);
 

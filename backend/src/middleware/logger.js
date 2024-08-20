@@ -1,42 +1,40 @@
+import { __awaiter } from 'tslib';
 import pkg from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import loadEnv from './loadEnv.js';
-
+import loadEnv from '../config/loadEnv.js';
 const { createLogger, format, transports } = pkg;
 const { combine, timestamp, printf, colorize, errors, json } = format;
-
 const logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp}, ${level}: ${stack || message}`;
 });
-
-async function setupLogger() {
-	loadEnv();
-
-	const logger = createLogger({
-		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-		format: combine(
-			timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-			errors({ stack: true }),
-			json()
-		),
-		defaultMeta: { service: 'guestbook-service' },
-		transports: [
-			new transports.Console({
-				format: combine(colorize(), logFormat)
-			}),
-			new DailyRotateFile({
-				filename: './logs/server/error-%DATE%.log',
-				dirname: './logs/server',
-				datePattern: 'YYYY-MM-DD',
-				zippedArchive: true,
-				maxSize: '20m',
-				maxFiles: '14d',
-				format: logFormat
-			})
-		]
+function setupLogger() {
+	return __awaiter(this, void 0, void 0, function* () {
+		loadEnv();
+		const logger = createLogger({
+			level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+			format: combine(
+				timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+				errors({ stack: true }),
+				json()
+			),
+			defaultMeta: { service: 'guestbook-service' },
+			transports: [
+				new transports.Console({
+					format: combine(colorize(), logFormat)
+				}),
+				new DailyRotateFile({
+					filename: './logs/server/error-%DATE%.log',
+					dirname: './logs/server',
+					datePattern: 'YYYY-MM-DD',
+					zippedArchive: true,
+					maxSize: '20m',
+					maxFiles: '14d',
+					format: logFormat
+				})
+			]
+		});
+		return logger;
 	});
-
-	return logger;
 }
-
 export default setupLogger;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibG9nZ2VyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vdHMvbWlkZGxld2FyZS9sb2dnZXIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQUFBLE9BQU8sR0FBRyxNQUFNLFNBQVMsQ0FBQztBQUMxQixPQUFPLGVBQWUsTUFBTSwyQkFBMkIsQ0FBQztBQUN4RCxPQUFPLE9BQU8sTUFBTSxtQkFBbUIsQ0FBQztBQUV4QyxNQUFNLEVBQUUsWUFBWSxFQUFFLE1BQU0sRUFBRSxVQUFVLEVBQUUsR0FBRyxHQUFHLENBQUM7QUFDakQsTUFBTSxFQUFFLE9BQU8sRUFBRSxTQUFTLEVBQUUsTUFBTSxFQUFFLFFBQVEsRUFBRSxNQUFNLEVBQUUsSUFBSSxFQUFFLEdBQUcsTUFBTSxDQUFDO0FBRXRFLE1BQU0sU0FBUyxHQUFHLE1BQU0sQ0FBQyxDQUFDLEVBQUUsS0FBSyxFQUFFLE9BQU8sRUFBRSxTQUFTLEVBQUUsS0FBSyxFQUFFLEVBQUUsRUFBRTtJQUNqRSxPQUFPLEdBQUcsU0FBUyxLQUFLLEtBQUssS0FBSyxLQUFLLElBQUksT0FBTyxFQUFFLENBQUM7QUFDdEQsQ0FBQyxDQUFDLENBQUM7QUFFSCxTQUFlLFdBQVc7O1FBQ3pCLE9BQU8sRUFBRSxDQUFDO1FBRVYsTUFBTSxNQUFNLEdBQUcsWUFBWSxDQUFDO1lBQzNCLEtBQUssRUFBRSxPQUFPLENBQUMsR0FBRyxDQUFDLFFBQVEsS0FBSyxZQUFZLENBQUMsQ0FBQyxDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQUMsT0FBTztZQUMvRCxNQUFNLEVBQUUsT0FBTyxDQUNkLFNBQVMsQ0FBQyxFQUFFLE1BQU0sRUFBRSxxQkFBcUIsRUFBRSxDQUFDLEVBQzVDLE1BQU0sQ0FBQyxFQUFFLEtBQUssRUFBRSxJQUFJLEVBQUUsQ0FBQyxFQUN2QixJQUFJLEVBQUUsQ0FDTjtZQUNELFdBQVcsRUFBRSxFQUFFLE9BQU8sRUFBRSxtQkFBbUIsRUFBRTtZQUM3QyxVQUFVLEVBQUU7Z0JBQ1gsSUFBSSxVQUFVLENBQUMsT0FBTyxDQUFDO29CQUN0QixNQUFNLEVBQUUsT0FBTyxDQUFDLFFBQVEsRUFBRSxFQUFFLFNBQVMsQ0FBQztpQkFDdEMsQ0FBQztnQkFDRixJQUFJLGVBQWUsQ0FBQztvQkFDbkIsUUFBUSxFQUFFLGdDQUFnQztvQkFDMUMsT0FBTyxFQUFFLGVBQWU7b0JBQ3hCLFdBQVcsRUFBRSxZQUFZO29CQUN6QixhQUFhLEVBQUUsSUFBSTtvQkFDbkIsT0FBTyxFQUFFLEtBQUs7b0JBQ2QsUUFBUSxFQUFFLEtBQUs7b0JBQ2YsTUFBTSxFQUFFLFNBQVM7aUJBQ2pCLENBQUM7YUFDRjtTQUNELENBQUMsQ0FBQztRQUVILE9BQU8sTUFBTSxDQUFDO0lBQ2YsQ0FBQztDQUFBO0FBRUQsZUFBZSxXQUFXLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgcGtnIGZyb20gJ3dpbnN0b24nO1xuaW1wb3J0IERhaWx5Um90YXRlRmlsZSBmcm9tICd3aW5zdG9uLWRhaWx5LXJvdGF0ZS1maWxlJztcbmltcG9ydCBsb2FkRW52IGZyb20gJy4uL2NvbmZpZy9sb2FkRW52JztcblxuY29uc3QgeyBjcmVhdGVMb2dnZXIsIGZvcm1hdCwgdHJhbnNwb3J0cyB9ID0gcGtnO1xuY29uc3QgeyBjb21iaW5lLCB0aW1lc3RhbXAsIHByaW50ZiwgY29sb3JpemUsIGVycm9ycywganNvbiB9ID0gZm9ybWF0O1xuXG5jb25zdCBsb2dGb3JtYXQgPSBwcmludGYoKHsgbGV2ZWwsIG1lc3NhZ2UsIHRpbWVzdGFtcCwgc3RhY2sgfSkgPT4ge1xuXHRyZXR1cm4gYCR7dGltZXN0YW1wfSwgJHtsZXZlbH06ICR7c3RhY2sgfHwgbWVzc2FnZX1gO1xufSk7XG5cbmFzeW5jIGZ1bmN0aW9uIHNldHVwTG9nZ2VyKCkge1xuXHRsb2FkRW52KCk7XG5cblx0Y29uc3QgbG9nZ2VyID0gY3JlYXRlTG9nZ2VyKHtcblx0XHRsZXZlbDogcHJvY2Vzcy5lbnYuTk9ERV9FTlYgPT09ICdwcm9kdWN0aW9uJyA/ICdpbmZvJyA6ICdkZWJ1ZycsXG5cdFx0Zm9ybWF0OiBjb21iaW5lKFxuXHRcdFx0dGltZXN0YW1wKHsgZm9ybWF0OiAnWVlZWS1NTS1ERCBISDptbTpzcycgfSksXG5cdFx0XHRlcnJvcnMoeyBzdGFjazogdHJ1ZSB9KSxcblx0XHRcdGpzb24oKVxuXHRcdCksXG5cdFx0ZGVmYXVsdE1ldGE6IHsgc2VydmljZTogJ2d1ZXN0Ym9vay1zZXJ2aWNlJyB9LFxuXHRcdHRyYW5zcG9ydHM6IFtcblx0XHRcdG5ldyB0cmFuc3BvcnRzLkNvbnNvbGUoe1xuXHRcdFx0XHRmb3JtYXQ6IGNvbWJpbmUoY29sb3JpemUoKSwgbG9nRm9ybWF0KVxuXHRcdFx0fSksXG5cdFx0XHRuZXcgRGFpbHlSb3RhdGVGaWxlKHtcblx0XHRcdFx0ZmlsZW5hbWU6ICcuL2xvZ3Mvc2VydmVyL2Vycm9yLSVEQVRFJS5sb2cnLFxuXHRcdFx0XHRkaXJuYW1lOiAnLi9sb2dzL3NlcnZlcicsXG5cdFx0XHRcdGRhdGVQYXR0ZXJuOiAnWVlZWS1NTS1ERCcsXG5cdFx0XHRcdHppcHBlZEFyY2hpdmU6IHRydWUsXG5cdFx0XHRcdG1heFNpemU6ICcyMG0nLFxuXHRcdFx0XHRtYXhGaWxlczogJzE0ZCcsXG5cdFx0XHRcdGZvcm1hdDogbG9nRm9ybWF0XG5cdFx0XHR9KVxuXHRcdF1cblx0fSk7XG5cblx0cmV0dXJuIGxvZ2dlcjtcbn1cblxuZXhwb3J0IGRlZmF1bHQgc2V0dXBMb2dnZXI7XG4iXX0=

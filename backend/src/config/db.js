@@ -1,41 +1,38 @@
+import { __awaiter } from 'tslib';
 import { Sequelize } from 'sequelize';
 import setupLogger from '../middleware/logger.js';
 import getSecrets from './secrets.js';
-
 let sequelize;
-
-async function initializeDatabase() {
-	const secrets = await getSecrets();
-	const logger = await setupLogger();
-
-	if (
-		!secrets.DB_NAME ||
-		!secrets.DB_USER ||
-		!secrets.DB_PASSWORD ||
-		!secrets.DB_HOST
-	) {
-		throw new Error('Missing database configuration in secrets.');
-	}
-
-	sequelize = new Sequelize(
-		secrets.DB_NAME,
-		secrets.DB_USER,
-		secrets.DB_PASSWORD,
-		{
-			host: secrets.DB_HOST,
-			dialect: secrets.DB_DIALECT,
-			logging: (msg) => logger.info(msg)
+function initializeDatabase() {
+	return __awaiter(this, void 0, void 0, function* () {
+		const secrets = yield getSecrets();
+		const logger = yield setupLogger();
+		if (
+			!secrets.DB_NAME ||
+			!secrets.DB_USER ||
+			!secrets.DB_PASSWORD ||
+			!secrets.DB_HOST
+		) {
+			throw new Error('Missing database configuration in secrets.');
 		}
-	);
-
-	try {
-		await sequelize.authenticate();
-		logger.info('Connection has been established successfully.');
-	} catch (error) {
-		logger.error('Unable to connect to the database:', error);
-	}
-
-	return sequelize;
+		sequelize = new Sequelize(
+			secrets.DB_NAME,
+			secrets.DB_USER,
+			secrets.DB_PASSWORD,
+			{
+				host: secrets.DB_HOST,
+				dialect: secrets.DB_DIALECT,
+				logging: (msg) => logger.info(msg)
+			}
+		);
+		try {
+			yield sequelize.authenticate();
+			logger.info('Connection has been established successfully.');
+		} catch (error) {
+			logger.error('Unable to connect to the database:', error);
+		}
+		return sequelize;
+	});
 }
-
 export default initializeDatabase;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZGIuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi90cy9jb25maWcvZGIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQUFBLE9BQU8sRUFBRSxTQUFTLEVBQUUsTUFBTSxXQUFXLENBQUM7QUFDdEMsT0FBTyxXQUFXLE1BQU0sc0JBQXNCLENBQUM7QUFDL0MsT0FBTyxVQUFVLE1BQU0sV0FBVyxDQUFDO0FBRW5DLElBQUksU0FBUyxDQUFDO0FBRWQsU0FBZSxrQkFBa0I7O1FBQ2hDLE1BQU0sT0FBTyxHQUFHLE1BQU0sVUFBVSxFQUFFLENBQUM7UUFDbkMsTUFBTSxNQUFNLEdBQUcsTUFBTSxXQUFXLEVBQUUsQ0FBQztRQUVuQyxJQUNDLENBQUMsT0FBTyxDQUFDLE9BQU87WUFDaEIsQ0FBQyxPQUFPLENBQUMsT0FBTztZQUNoQixDQUFDLE9BQU8sQ0FBQyxXQUFXO1lBQ3BCLENBQUMsT0FBTyxDQUFDLE9BQU8sRUFDZixDQUFDO1lBQ0YsTUFBTSxJQUFJLEtBQUssQ0FBQyw0Q0FBNEMsQ0FBQyxDQUFDO1FBQy9ELENBQUM7UUFFRCxTQUFTLEdBQUcsSUFBSSxTQUFTLENBQ3hCLE9BQU8sQ0FBQyxPQUFPLEVBQ2YsT0FBTyxDQUFDLE9BQU8sRUFDZixPQUFPLENBQUMsV0FBVyxFQUNuQjtZQUNDLElBQUksRUFBRSxPQUFPLENBQUMsT0FBTztZQUNyQixPQUFPLEVBQUUsT0FBTyxDQUFDLFVBQVU7WUFDM0IsT0FBTyxFQUFFLENBQUMsR0FBRyxFQUFFLEVBQUUsQ0FBQyxNQUFNLENBQUMsSUFBSSxDQUFDLEdBQUcsQ0FBQztTQUNsQyxDQUNELENBQUM7UUFFRixJQUFJLENBQUM7WUFDSixNQUFNLFNBQVMsQ0FBQyxZQUFZLEVBQUUsQ0FBQztZQUMvQixNQUFNLENBQUMsSUFBSSxDQUFDLCtDQUErQyxDQUFDLENBQUM7UUFDOUQsQ0FBQztRQUFDLE9BQU8sS0FBSyxFQUFFLENBQUM7WUFDaEIsTUFBTSxDQUFDLEtBQUssQ0FBQyxvQ0FBb0MsRUFBRSxLQUFLLENBQUMsQ0FBQztRQUMzRCxDQUFDO1FBRUQsT0FBTyxTQUFTLENBQUM7SUFDbEIsQ0FBQztDQUFBO0FBRUQsZUFBZSxrQkFBa0IsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IFNlcXVlbGl6ZSB9IGZyb20gJ3NlcXVlbGl6ZSc7XG5pbXBvcnQgc2V0dXBMb2dnZXIgZnJvbSAnLi4vbWlkZGxld2FyZS9sb2dnZXInO1xuaW1wb3J0IGdldFNlY3JldHMgZnJvbSAnLi9zZWNyZXRzJztcblxubGV0IHNlcXVlbGl6ZTtcblxuYXN5bmMgZnVuY3Rpb24gaW5pdGlhbGl6ZURhdGFiYXNlKCkge1xuXHRjb25zdCBzZWNyZXRzID0gYXdhaXQgZ2V0U2VjcmV0cygpO1xuXHRjb25zdCBsb2dnZXIgPSBhd2FpdCBzZXR1cExvZ2dlcigpO1xuXG5cdGlmIChcblx0XHQhc2VjcmV0cy5EQl9OQU1FIHx8XG5cdFx0IXNlY3JldHMuREJfVVNFUiB8fFxuXHRcdCFzZWNyZXRzLkRCX1BBU1NXT1JEIHx8XG5cdFx0IXNlY3JldHMuREJfSE9TVFxuXHQpIHtcblx0XHR0aHJvdyBuZXcgRXJyb3IoJ01pc3NpbmcgZGF0YWJhc2UgY29uZmlndXJhdGlvbiBpbiBzZWNyZXRzLicpO1xuXHR9XG5cblx0c2VxdWVsaXplID0gbmV3IFNlcXVlbGl6ZShcblx0XHRzZWNyZXRzLkRCX05BTUUsXG5cdFx0c2VjcmV0cy5EQl9VU0VSLFxuXHRcdHNlY3JldHMuREJfUEFTU1dPUkQsXG5cdFx0e1xuXHRcdFx0aG9zdDogc2VjcmV0cy5EQl9IT1NULFxuXHRcdFx0ZGlhbGVjdDogc2VjcmV0cy5EQl9ESUFMRUNULFxuXHRcdFx0bG9nZ2luZzogKG1zZykgPT4gbG9nZ2VyLmluZm8obXNnKVxuXHRcdH1cblx0KTtcblxuXHR0cnkge1xuXHRcdGF3YWl0IHNlcXVlbGl6ZS5hdXRoZW50aWNhdGUoKTtcblx0XHRsb2dnZXIuaW5mbygnQ29ubmVjdGlvbiBoYXMgYmVlbiBlc3RhYmxpc2hlZCBzdWNjZXNzZnVsbHkuJyk7XG5cdH0gY2F0Y2ggKGVycm9yKSB7XG5cdFx0bG9nZ2VyLmVycm9yKCdVbmFibGUgdG8gY29ubmVjdCB0byB0aGUgZGF0YWJhc2U6JywgZXJyb3IpO1xuXHR9XG5cblx0cmV0dXJuIHNlcXVlbGl6ZTtcbn1cblxuZXhwb3J0IGRlZmF1bHQgaW5pdGlhbGl6ZURhdGFiYXNlO1xuIl19

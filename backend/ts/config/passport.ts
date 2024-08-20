@@ -9,6 +9,13 @@ import setupLogger from '../middleware/logger';
 import getSecrets from './secrets';
 import UserModelPromise from '../models/User';
 
+// Define the shape of a user instance based on User model
+interface UserInstance {
+	id: string;
+	username: string;
+	comparePassword: (password: string) => Promise<boolean>;
+}
+
 export default async function configurePassport(passport: PassportStatic) {
 	const secrets = await getSecrets();
 	const logger = await setupLogger();
@@ -24,7 +31,11 @@ export default async function configurePassport(passport: PassportStatic) {
 			opts,
 			async (
 				jwt_payload: { id: string },
-				done: (error: any, user?: any, info?: any) => void
+				done: (
+					error: Error | null,
+					user?: UserInstance | false,
+					info?: unknown
+				) => void
 			) => {
 				try {
 					const user = await UserModel.findByPk(jwt_payload.id);
@@ -43,7 +54,7 @@ export default async function configurePassport(passport: PassportStatic) {
 					}
 				} catch (err) {
 					logger.error('JWT authentication error: ', err);
-					return done(err, false);
+					return done(err as Error, false);
 				}
 			}
 		)

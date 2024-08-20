@@ -14,6 +14,7 @@ export const getEntries =
 			const entries = await Model.findAll();
 			res.status(200).json(entries);
 		} catch (error) {
+			console.error(error);
 			res.status(500).json({
 				error: `Failed to fetch entries from ${Model.name}`
 			});
@@ -31,6 +32,7 @@ export const createEntry =
 			const newEntry = await Model.create(req.body);
 			res.status(201).json(newEntry);
 		} catch (error) {
+			console.error(error);
 			res.status(400).json({
 				error: `Failed to create entry in ${Model.name}`
 			});
@@ -59,6 +61,7 @@ export const updateEntry =
 			}
 			res.status(200).json({ message: `${Model.name} entry updated` });
 		} catch (error) {
+			console.error(error);
 			res.status(400).json({
 				error: `Failed to update entry in ${Model.name}`
 			});
@@ -86,6 +89,7 @@ export const deleteEntry =
 			}
 			res.status(200).json({ message: `${Model.name} entry deleted` });
 		} catch (error) {
+			console.error(error);
 			res.status(500).json({
 				error: `Failed to delete entry from ${Model.name}`
 			});

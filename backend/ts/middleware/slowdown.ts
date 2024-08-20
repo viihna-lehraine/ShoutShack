@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import '../../types/custom/express-session';
 
 function slowdownMiddleware(req: Request, res: Response, next: NextFunction) {
 	const requestTime = new Date().getTime();

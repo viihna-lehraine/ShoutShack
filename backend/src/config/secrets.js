@@ -1,21 +1,25 @@
+import { __awaiter } from 'tslib';
 import { execSync } from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-async function getSecrets() {
-	try {
-		const secretsPath = path.join(__dirname, 'secrets.json.gpg');
-		const decryptedSecrets = execSync(
-			`sops -d --output-type json ${secretsPath}`
-		).toString();
-		return JSON.parse(decryptedSecrets);
-	} catch (err) {
-		console.error('Error retrieving secrets from SOPS: ', err);
-		throw err;
-	}
+function getDirectoryPath() {
+	return path.resolve(process.cwd(), path.dirname(''));
 }
-
+function getSecrets() {
+	return __awaiter(this, void 0, void 0, function* () {
+		try {
+			const secretsPath = path.join(
+				getDirectoryPath(),
+				'../../config/secrets.json.gpg'
+			);
+			const decryptedSecrets = execSync(
+				`sops -d --output-type json ${secretsPath}`
+			).toString();
+			return JSON.parse(decryptedSecrets);
+		} catch (err) {
+			console.error('Error retrieving secrets from SOPS: ', err);
+			throw err;
+		}
+	});
+}
 export default getSecrets;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic2VjcmV0cy5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3RzL2NvbmZpZy9zZWNyZXRzLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSxPQUFPLEVBQUUsUUFBUSxFQUFFLE1BQU0sZUFBZSxDQUFDO0FBQ3pDLE9BQU8sSUFBSSxNQUFNLE1BQU0sQ0FBQztBQUV4QixTQUFTLGdCQUFnQjtJQUN4QixPQUFPLElBQUksQ0FBQyxPQUFPLENBQUMsT0FBTyxDQUFDLEdBQUcsRUFBRSxFQUFFLElBQUksQ0FBQyxPQUFPLENBQUMsRUFBRSxDQUFDLENBQUMsQ0FBQztBQUN0RCxDQUFDO0FBRUQsU0FBZSxVQUFVOztRQUN4QixJQUFJLENBQUM7WUFDSixNQUFNLFdBQVcsR0FBRyxJQUFJLENBQUMsSUFBSSxDQUM1QixnQkFBZ0IsRUFBRSxFQUNsQiwrQkFBK0IsQ0FDL0IsQ0FBQztZQUNGLE1BQU0sZ0JBQWdCLEdBQUcsUUFBUSxDQUNoQyw4QkFBOEIsV0FBVyxFQUFFLENBQzNDLENBQUMsUUFBUSxFQUFFLENBQUM7WUFDYixPQUFPLElBQUksQ0FBQyxLQUFLLENBQUMsZ0JBQWdCLENBQUMsQ0FBQztRQUNyQyxDQUFDO1FBQUMsT0FBTyxHQUFHLEVBQUUsQ0FBQztZQUNkLE9BQU8sQ0FBQyxLQUFLLENBQUMsc0NBQXNDLEVBQUUsR0FBRyxDQUFDLENBQUM7WUFDM0QsTUFBTSxHQUFHLENBQUM7UUFDWCxDQUFDO0lBQ0YsQ0FBQztDQUFBO0FBRUQsZUFBZSxVQUFVLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBleGVjU3luYyB9IGZyb20gJ2NoaWxkX3Byb2Nlc3MnO1xuaW1wb3J0IHBhdGggZnJvbSAncGF0aCc7XG5cbmZ1bmN0aW9uIGdldERpcmVjdG9yeVBhdGgoKSB7XG5cdHJldHVybiBwYXRoLnJlc29sdmUocHJvY2Vzcy5jd2QoKSwgcGF0aC5kaXJuYW1lKCcnKSk7XG59XG5cbmFzeW5jIGZ1bmN0aW9uIGdldFNlY3JldHMoKSB7XG5cdHRyeSB7XG5cdFx0Y29uc3Qgc2VjcmV0c1BhdGggPSBwYXRoLmpvaW4oXG5cdFx0XHRnZXREaXJlY3RvcnlQYXRoKCksXG5cdFx0XHQnLi4vLi4vY29uZmlnL3NlY3JldHMuanNvbi5ncGcnXG5cdFx0KTtcblx0XHRjb25zdCBkZWNyeXB0ZWRTZWNyZXRzID0gZXhlY1N5bmMoXG5cdFx0XHRgc29wcyAtZCAtLW91dHB1dC10eXBlIGpzb24gJHtzZWNyZXRzUGF0aH1gXG5cdFx0KS50b1N0cmluZygpO1xuXHRcdHJldHVybiBKU09OLnBhcnNlKGRlY3J5cHRlZFNlY3JldHMpO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRjb25zb2xlLmVycm9yKCdFcnJvciByZXRyaWV2aW5nIHNlY3JldHMgZnJvbSBTT1BTOiAnLCBlcnIpO1xuXHRcdHRocm93IGVycjtcblx0fVxufVxuXG5leHBvcnQgZGVmYXVsdCBnZXRTZWNyZXRzO1xuIl19

@@ -1,0 +1,1 @@
+{"version":3,"file":"slowdown.d.ts","sourceRoot":"","sources":["../../../../ts/middleware/slowdown.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAC1D,OAAO,oCAAoC,CAAC;AAE5C,iBAAS,kBAAkB,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ,EAAE,IAAI,EAAE,YAAY,QAmB1E;AAED,eAAe,kBAAkB,CAAC"}

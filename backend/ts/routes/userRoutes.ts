@@ -63,7 +63,7 @@ router.post('/register', async (req: Request, res: Response) => {
 			.json({ password: 'Registration failure: password is too weak' });
 	}
 
-	let didHibpCheckFail = false; // *DEV-NOTE* need to figure out what, if anything, to do with this variable
+	// let didHibpCheckFail = false; // *DEV-NOTE* need to figure out what, if anything, to do with this variable
 
 	try {
 		let pwnedResponse = await axios.get(
@@ -82,8 +82,9 @@ router.post('/register', async (req: Request, res: Response) => {
 			});
 		}
 	} catch (error) {
+		console.error(error);
 		logger.error('Registration error: HIBP API check failed');
-		didHibpCheckFail = true;
+		// didHibpCheckFail = true;
 	}
 
 	try {
@@ -178,6 +179,7 @@ router.post('/login', async (req: Request, res: Response) => {
 			return res.status(400).json({ password: 'Incorrect password' });
 		}
 	} catch (err) {
+		console.error(err);
 		logger.error('Login - server error');
 		res.status(500).json({ error: 'Login - Server error' });
 	}
@@ -201,7 +203,7 @@ router.post('/recover-password', async (req: Request, res: Response) => {
 		}
 		// Generate a token (customize this later)
 		let token = await bcrypt.genSalt(25);
-		let passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
+		// let passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
 
 		// Store the token in the database (simplified for now)
 		user.resetPasswordToken = token;
@@ -222,10 +224,10 @@ router.post('/recover-password', async (req: Request, res: Response) => {
 // Route for TOTP secret generation
 router.post('/generate-totp', async (req: Request, res: Response) => {
 	let logger = await setupLogger();
-	let { username } = req.body; // *DEV-NOTE* does this even need to be here?
+	// let { username } = req.body; // *DEV-NOTE* does this even need to be here?
 
 	// sanitize username input
-	let sanitizedUsername = xss(username); // *DEV-NOTE* or this?
+	// let sanitizedUsername = xss(username); // *DEV-NOTE* or this?
 
 	// *DEV-NOTE* here, we could store the secret in the session or send it to the client
 	// depending on the use case; food for thought
@@ -243,12 +245,12 @@ router.post('/generate-totp', async (req: Request, res: Response) => {
 // Route to verify TOTP tokens
 router.post('/verify-totp', async (req: Request, res: Response) => {
 	let logger = await setupLogger();
-	let { username, token, secret } = req.body;
 
-	// sanitize username input
-	let sanitizedUsername = xss(username); // *DEV-NOTE* again, do I need the username here or not?
+	// Extract token and secret from req.body
+	let { token, secret } = req.body;
 
 	try {
+		// Verify the TOTP token using the provided secret
 		let isTOTPTokenValid = verifyTOTPToken(secret, token);
 		res.json({ isTOTPTokenValid });
 	} catch (err) {

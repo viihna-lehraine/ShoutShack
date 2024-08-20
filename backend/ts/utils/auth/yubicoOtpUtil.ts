@@ -1,5 +1,6 @@
 import yub from 'yub';
-import getSecrets from '../../config/secrets.js';
+import getSecrets from '../../config/secrets';
+import '../../../types/custom/yub.d.ts';
 
 interface Secrets {
 	YUBICO_CLIENT_ID: number;
@@ -16,7 +17,7 @@ interface YubClient {
 
 interface YubResponse {
 	status: string;
-	[key: string]: any;
+	[key: string]: string | number | boolean | object | null | undefined; // *DEV-NOTE* this is my way of saying "I have absolutely no idea what type this could be yet
 }
 
 let secrets: Secrets | undefined;

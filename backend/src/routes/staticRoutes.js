@@ -1,102 +1,109 @@
+import { __awaiter } from 'tslib';
 import express from 'express';
 import path from 'path';
 import setupLogger from '../middleware/logger.js';
-
 const router = express.Router();
-
-async function setupRoutes() {
-	const logger = await setupLogger();
-	const staticRootPath = process.env.STATIC_ROOT_PATH;
-
-	// Define root file path for public/
-	router.get('/', (req, res) => {
-		logger.info('GET request received at /');
-		res.sendFile(path.join(staticRootPath, 'index.html'));
-		logger.info('index.html was accessed');
-	});
-
-	// Serve root HTML files
-	router.get('/:page', (req, res) => {
-		const page = req.params.page;
-		res.sendFile(path.join(staticRootPath, `${page}.html`), (err) => {
-			if (err) {
-				res.status(404).send('Page not found');
-			}
+function setupRoutes() {
+	return __awaiter(this, void 0, void 0, function* () {
+		const logger = yield setupLogger();
+		const staticRootPath = process.env.STATIC_ROOT_PATH;
+		// Define root file path for public/
+		router.get('/', (req, res) => {
+			logger.info('GET request received at /');
+			res.sendFile(path.join(staticRootPath, 'index.html'));
+			logger.info('index.html was accessed');
 		});
-	});
-
-	// Serve static directories
-	router.use('/css', express.static(path.join(staticRootPath, 'assets/css')));
-	router.use('/js', express.static(path.join(staticRootPath, 'assets/js')));
-	router.use(
-		'/images',
-		express.static(path.join(staticRootPath, 'assets/images'))
-	);
-	router.use(
-		'/fonts',
-		express.static(path.join(staticRootPath, 'assets/fonts'))
-	);
-	router.use(
-		'/icons',
-		express.static(path.join(staticRootPath, 'assets/icons'))
-	);
-
-	// Serve nested HTML files
-	router.get('/*', (req, res) => {
-		res.sendFile(path.join(staticRootPath, req.path + '.html'), (err) => {
-			if (err) {
-				res.status(404).send('Page not found');
-			}
+		// Serve root HTML files
+		router.get('/:page', (req, res) => {
+			const page = req.params.page;
+			res.sendFile(path.join(staticRootPath, `${page}.html`), (err) => {
+				if (err) {
+					res.status(404).send('Page not found');
+				}
+			});
 		});
-	});
-
-	// Serve specific static files
-	router.get('/app.js', (req, res) => {
-		logger.info('GET request received at /app.js');
-		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
-		logger.info('app.js was accessed');
-	});
-
-	router.get('/secrets.json.gpg', (req, res) => {
-		logger.info('GET request received at /secrets.json.gpg');
-		res.sendFile(process.env.FRONTEND_SECRETS_PATH, (err) => {
-			if (err) {
-				logger.error('Failed to send secrets.json.gpg:', err);
-				res.status(404).send('File not found');
-			} else {
-				logger.info('secrets.json.gpg was accessed');
-			}
+		// Serve static directories
+		router.use(
+			'/css',
+			express.static(path.join(staticRootPath, 'assets/css'))
+		);
+		router.use(
+			'/js',
+			express.static(path.join(staticRootPath, 'assets/js'))
+		);
+		router.use(
+			'/images',
+			express.static(path.join(staticRootPath, 'assets/images'))
+		);
+		router.use(
+			'/fonts',
+			express.static(path.join(staticRootPath, 'assets/fonts'))
+		);
+		router.use(
+			'/icons',
+			express.static(path.join(staticRootPath, 'assets/icons'))
+		);
+		// Serve nested HTML files
+		router.get('/*', (req, res) => {
+			res.sendFile(
+				path.join(staticRootPath, req.path + '.html'),
+				(err) => {
+					if (err) {
+						res.status(404).send('Page not found');
+					}
+				}
+			);
 		});
-	});
-
-	router.get('/browser-config.xml', (req, res) => {
-		logger.info('GET request received at /browser-config.xml');
-		res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH);
-		logger.info('browser-config.xml was accessed');
-	});
-
-	router.get('/humans.md', (req, res) => {
-		logger.info('GET request received at /humans.md');
-		res.sendFile(process.env.process.env.FRONTEND_HUMANS_MD_PATH);
-		logger.info('humans.md was accessed');
-	});
-
-	router.get('/robots.txt', (req, res) => {
-		logger.info('GET request received at /robots.txt');
-		res.sendFile(process.env.FRONTEND_APP_JS_PATH);
-		logger.info('robots.txt was accessed');
-	});
-
-	// 404 handler for unmatched routes
-	router.use((req, res) => {
-		res.status(404).sendFile(path.join(staticRootPath, 'not-found.html'));
-		logger.info('404 - Not Found');
+		// Serve specific static files
+		router.get('/app.js', (req, res) => {
+			logger.info('GET request received at /app.js');
+			res.sendFile(process.env.FRONTEND_APP_JS_PATH);
+			logger.info('app.js was accessed');
+		});
+		router.get('/secrets.json.gpg', (req, res) => {
+			logger.info('GET request received at /secrets.json.gpg');
+			res.sendFile(process.env.FRONTEND_SECRETS_PATH, (err) => {
+				if (err) {
+					logger.error('Failed to send secrets.json.gpg:', err);
+					res.status(404).send('File not found');
+				} else {
+					logger.info('secrets.json.gpg was accessed');
+				}
+			});
+		});
+		router.get('/browser-config.xml', (req, res) => {
+			logger.info('GET request received at /browser-config.xml');
+			res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH);
+			logger.info('browser-config.xml was accessed');
+		});
+		router.get('/humans.md', (req, res) => {
+			logger.info('GET request received at /humans.md');
+			res.sendFile(process.env.FRONTEND_HUMANS_MD_PATH);
+			logger.info('humans.md was accessed');
+		});
+		router.get('/robots.txt', (req, res) => {
+			logger.info('GET request received at /robots.txt');
+			res.sendFile(process.env.FRONTEND_ROBOTS_TXT_PATH);
+			logger.info('robots.txt was accessed');
+		});
+		// 404 handler for unmatched routes
+		router.use((req, res) => {
+			res.status(404).sendFile(
+				path.join(staticRootPath, 'not-found.html')
+			);
+			logger.info('404 - Not Found');
+		});
 	});
 }
-
-// Call setupRoutes to initialize routes
-setupRoutes().catch((err) => {
-	console.error('Error setting up routes: ', err);
-});
-
-export default router;
+// For setting up routes when initializing the application
+export default function initializeRoutes(app) {
+	return __awaiter(this, void 0, void 0, function* () {
+		try {
+			yield setupRoutes();
+			app.use('/', router);
+		} catch (err) {
+			console.error('Error setting up routes: ', err);
+		}
+	});
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic3RhdGljUm91dGVzLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vdHMvcm91dGVzL3N0YXRpY1JvdXRlcy50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiO0FBQUEsT0FBTyxPQUFPLE1BQU0sU0FBUyxDQUFDO0FBQzlCLE9BQU8sSUFBSSxNQUFNLE1BQU0sQ0FBQztBQUN4QixPQUFPLFdBQVcsTUFBTSxzQkFBc0IsQ0FBQztBQUUvQyxNQUFNLE1BQU0sR0FBRyxPQUFPLENBQUMsTUFBTSxFQUFFLENBQUM7QUFFaEMsU0FBZSxXQUFXOztRQUN6QixNQUFNLE1BQU0sR0FBRyxNQUFNLFdBQVcsRUFBRSxDQUFDO1FBQ25DLE1BQU0sY0FBYyxHQUFHLE9BQU8sQ0FBQyxHQUFHLENBQUMsZ0JBQTBCLENBQUM7UUFFOUQsb0NBQW9DO1FBQ3BDLE1BQU0sQ0FBQyxHQUFHLENBQUMsR0FBRyxFQUFFLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxFQUFFO1lBQzVCLE1BQU0sQ0FBQyxJQUFJLENBQUMsMkJBQTJCLENBQUMsQ0FBQztZQUN6QyxHQUFHLENBQUMsUUFBUSxDQUFDLElBQUksQ0FBQyxJQUFJLENBQUMsY0FBYyxFQUFFLFlBQVksQ0FBQyxDQUFDLENBQUM7WUFDdEQsTUFBTSxDQUFDLElBQUksQ0FBQyx5QkFBeUIsQ0FBQyxDQUFDO1FBQ3hDLENBQUMsQ0FBQyxDQUFDO1FBRUgsd0JBQXdCO1FBQ3hCLE1BQU0sQ0FBQyxHQUFHLENBQUMsUUFBUSxFQUFFLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxFQUFFO1lBQ2pDLE1BQU0sSUFBSSxHQUFHLEdBQUcsQ0FBQyxNQUFNLENBQUMsSUFBSSxDQUFDO1lBQzdCLEdBQUcsQ0FBQyxRQUFRLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQyxjQUFjLEVBQUUsR0FBRyxJQUFJLE9BQU8sQ0FBQyxFQUFFLENBQUMsR0FBRyxFQUFFLEVBQUU7Z0JBQy9ELElBQUksR0FBRyxFQUFFLENBQUM7b0JBQ1Qs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LENBQUMsT0FBTyxVQUFnQixnQkFBZ0IsQ0FDN0MsR0FBd0I7O1FBRXhCLElBQUksQ0FBQztZQUNKLE1BQU0sV0FBVyxFQUFFLENBQUM7WUFDcEIsR0FBRyxDQUFDLEdBQUcsQ0FBQyxHQUFHLEVBQUUsTUFBTSxDQUFDLENBQUM7UUFDdEIsQ0FBQztRQUFDLE9BQU8sR0FBRyxFQUFFLENBQUM7WUFDZCxPQUFPLENBQUMsS0FBSyxDQUFDLDJCQUEyQixFQUFFLEdBQUcsQ0FBQyxDQUFDO1FBQ2pELENBQUM7SUFDRixDQUFDO0NBQUEiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgZXhwcmVzcyBmcm9tICdleHByZXNzJztcbmltcG9ydCBwYXRoIGZyb20gJ3BhdGgnO1xuaW1wb3J0IHNldHVwTG9nZ2VyIGZyb20gJy4uL21pZGRsZXdhcmUvbG9nZ2VyJztcblxuY29uc3Qgcm91dGVyID0gZXhwcmVzcy5Sb3V0ZXIoKTtcblxuYXN5bmMgZnVuY3Rpb24gc2V0dXBSb3V0ZXMoKTogUHJvbWlzZTx2b2lkPiB7XG5cdGNvbnN0IGxvZ2dlciA9IGF3YWl0IHNldHVwTG9nZ2VyKCk7XG5cdGNvbnN0IHN0YXRpY1Jvb3RQYXRoID0gcHJvY2Vzcy5lbnYuU1RBVElDX1JPT1RfUEFUSCBhcyBzdHJpbmc7XG5cblx0Ly8gRGVmaW5lIHJvb3QgZmlsZSBwYXRoIGZvciBwdWJsaWMvXG5cdHJvdXRlci5nZXQoJy8nLCAocmVxLCByZXMpID0+IHtcblx0XHRsb2dnZXIuaW5mbygnR0VUIHJlcXVlc3QgcmVjZWl2ZWQgYXQgLycpO1xuXHRcdHJlcy5zZW5kRmlsZShwYXRoLmpvaW4oc3RhdGljUm9vdFBhdGgsICdpbmRleC5odG1sJykpO1xuXHRcdGxvZ2dlci5pbmZvKCdpbmRleC5odG1sIHdhcyBhY2Nlc3NlZCcpO1xuXHR9KTtcblxuXHQvLyBTZXJ2ZSByb290IEhUTUwgZmlsZXNcblx0cm91dGVyLmdldCgnLzpwYWdlJywgKHJlcSwgcmVzKSA9PiB7XG5cdFx0Y29uc3QgcGFnZSA9IHJlcS5wYXJhbXMucGFnZTtcblx0XHRyZXMuc2VuZEZpbGUocGF0aC5qb2luKHN0YXRpY1Jvb3RQYXRoLCBgJHtwYWdlfS5odG1sYCksIChlcnIpID0+IHtcblx0XHRcdGlmIChlcnIpIHtcblx0XHRcdFx0cmVzLnN0YXR1cyg0MDQpLnNlbmQoJ1BhZ2Ugbm90IGZvdW5kJyk7XG5cdFx0XHR9XG5cdFx0fSk7XG5cdH0pO1xuXG5cdC8vIFNlcnZlIHN0YXRpYyBkaXJlY3Rvcmllc1xuXHRyb3V0ZXIudXNlKCcvY3NzJywgZXhwcmVzcy5zdGF0aWMocGF0aC5qb2luKHN0YXRpY1Jvb3RQYXRoLCAnYXNzZXRzL2NzcycpKSk7XG5cdHJvdXRlci51c2UoJy9qcycsIGV4cHJlc3Muc3RhdGljKHBhdGguam9pbihzdGF0aWNSb290UGF0aCwgJ2Fzc2V0cy9qcycpKSk7XG5cdHJvdXRlci51c2UoXG5cdFx0Jy9pbWFnZXMnLFxuXHRcdGV4cHJlc3Muc3RhdGljKHBhdGguam9pbihzdGF0aWNSb290UGF0aCwgJ2Fzc2V0cy9pbWFnZXMnKSlcblx0KTtcblx0cm91dGVyLnVzZShcblx0XHQnL2ZvbnRzJyxcblx0XHRleHByZXNzLnN0YXRpYyhwYXRoLmpvaW4oc3RhdGljUm9vdFBhdGgsICdhc3NldHMvZm9udHMnKSlcblx0KTtcblx0cm91dGVyLnVzZShcblx0XHQnL2ljb25zJyxcblx0XHRleHByZXNzLnN0YXRpYyhwYXRoLmpvaW4oc3RhdGljUm9vdFBhdGgsICdhc3NldHMvaWNvbnMnKSlcblx0KTtcblxuXHQvLyBTZXJ2ZSBuZXN0ZWQgSFRNTCBmaWxlc1xuXHRyb3V0ZXIuZ2V0KCcvKicsIChyZXEsIHJlcykgPT4ge1xuXHRcdHJlcy5zZW5kRmlsZShwYXRoLmpvaW4oc3RhdGljUm9vdFBhdGgsIHJlcS5wYXRoICsgJy5odG1sJyksIChlcnIpID0+IHtcblx0XHRcdGlmIChlcnIpIHtcblx0XHRcdFx0cmVzLnN0YXR1cyg0MDQpLnNlbmQoJ1BhZ2Ugbm90IGZvdW5kJyk7XG5cdFx0XHR9XG5cdFx0fSk7XG5cdH0pO1xuXG5cdC8vIFNlcnZlIHNwZWNpZmljIHN0YXRpYyBmaWxlc1xuXHRyb3V0ZXIuZ2V0KCcvYXBwLmpzJywgKHJlcSwgcmVzKSA9PiB7XG5cdFx0bG9nZ2VyLmluZm8oJ0dFVCByZXF1ZXN0IHJlY2VpdmVkIGF0IC9hcHAuanMnKTtcblx0XHRyZXMuc2VuZEZpbGUocHJvY2Vzcy5lbnYuRlJPTlRFTkRfQVBQX0pTX1BBVEggYXMgc3RyaW5nKTtcblx0XHRsb2dnZXIuaW5mbygnYXBwLmpzIHdhcyBhY2Nlc3NlZCcpO1xuXHR9KTtcblxuXHRyb3V0ZXIuZ2V0KCcvc2VjcmV0cy5qc29uLmdwZycsIChyZXEsIHJlcykgPT4ge1xuXHRcdGxvZ2dlci5pbmZvKCdHRVQgcmVxdWVzdCByZWNlaXZlZCBhdCAvc2VjcmV0cy5qc29uLmdwZycpO1xuXHRcdHJlcy5zZW5kRmlsZShwcm9jZXNzLmVudi5GUk9OVEVORF9TRUNSRVRTX1BBVEggYXMgc3RyaW5nLCAoZXJyKSA9PiB7XG5cdFx0XHRpZiAoZXJyKSB7XG5cdFx0XHRcdGxvZ2dlci5lcnJvcignRmFpbGVkIHRvIHNlbmQgc2VjcmV0cy5qc29uLmdwZzonLCBlcnIpO1xuXHRcdFx0XHRyZXMuc3RhdHVzKDQwNCkuc2VuZCgnRmlsZSBub3QgZm91bmQnKTtcblx0XHRcdH0gZWxzZSB7XG5cdFx0XHRcdGxvZ2dlci5pbmZvKCdzZWNyZXRzLmpzb24uZ3BnIHdhcyBhY2Nlc3NlZCcpO1xuXHRcdFx0fVxuXHRcdH0pO1xuXHR9KTtcblxuXHRyb3V0ZXIuZ2V0KCcvYnJvd3Nlci1jb25maWcueG1sJywgKHJlcSwgcmVzKSA9PiB7XG5cdFx0bG9nZ2VyLmluZm8oJ0dFVCByZXF1ZXN0IHJlY2VpdmVkIGF0IC9icm93c2VyLWNvbmZpZy54bWwnKTtcblx0XHRyZXMuc2VuZEZpbGUocHJvY2Vzcy5lbnYuRlJPTlRFTkRfQlJPV1NFUl9DT05GSUdfWE1MX1BBVEggYXMgc3RyaW5nKTtcblx0XHRsb2dnZXIuaW5mbygnYnJvd3Nlci1jb25maWcueG1sIHdhcyBhY2Nlc3NlZCcpO1xuXHR9KTtcblxuXHRyb3V0ZXIuZ2V0KCcvaHVtYW5zLm1kJywgKHJlcSwgcmVzKSA9PiB7XG5cdFx0bG9nZ2VyLmluZm8oJ0dFVCByZXF1ZXN0IHJlY2VpdmVkIGF0IC9odW1hbnMubWQnKTtcblx0XHRyZXMuc2VuZEZpbGUocHJvY2Vzcy5lbnYuRlJPTlRFTkRfSFVNQU5TX01EX1BBVEggYXMgc3RyaW5nKTtcblx0XHRsb2dnZXIuaW5mbygnaHVtYW5zLm1kIHdhcyBhY2Nlc3NlZCcpO1xuXHR9KTtcblxuXHRyb3V0ZXIuZ2V0KCcvcm9ib3RzLnR4dCcsIChyZXEsIHJlcykgPT4ge1xuXHRcdGxvZ2dlci5pbmZvKCdHRVQgcmVxdWVzdCByZWNlaXZlZCBhdCAvcm9ib3RzLnR4dCcpO1xuXHRcdHJlcy5zZW5kRmlsZShwcm9jZXNzLmVudi5GUk9OVEVORF9ST0JPVFNfVFhUX1BBVEggYXMgc3RyaW5nKTtcblx0XHRsb2dnZXIuaW5mbygncm9ib3RzLnR4dCB3YXMgYWNjZXNzZWQnKTtcblx0fSk7XG5cblx0Ly8gNDA0IGhhbmRsZXIgZm9yIHVubWF0Y2hlZCByb3V0ZXNcblx0cm91dGVyLnVzZSgocmVxLCByZXMpID0+IHtcblx0XHRyZXMuc3RhdHVzKDQwNCkuc2VuZEZpbGUocGF0aC5qb2luKHN0YXRpY1Jvb3RQYXRoLCAnbm90LWZvdW5kLmh0bWwnKSk7XG5cdFx0bG9nZ2VyLmluZm8oJzQwNCAtIE5vdCBGb3VuZCcpO1xuXHR9KTtcbn1cblxuLy8gRm9yIHNldHRpbmcgdXAgcm91dGVzIHdoZW4gaW5pdGlhbGl6aW5nIHRoZSBhcHBsaWNhdGlvblxuZXhwb3J0IGRlZmF1bHQgYXN5bmMgZnVuY3Rpb24gaW5pdGlhbGl6ZVJvdXRlcyhcblx0YXBwOiBleHByZXNzLkFwcGxpY2F0aW9uXG4pOiBQcm9taXNlPHZvaWQ+IHtcblx0dHJ5IHtcblx0XHRhd2FpdCBzZXR1cFJvdXRlcygpO1xuXHRcdGFwcC51c2UoJy8nLCByb3V0ZXIpO1xuXHR9IGNhdGNoIChlcnIpIHtcblx0XHRjb25zb2xlLmVycm9yKCdFcnJvciBzZXR0aW5nIHVwIHJvdXRlczogJywgZXJyKTtcblx0fVxufVxuIl19

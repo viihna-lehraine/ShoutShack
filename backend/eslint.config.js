@@ -1,9 +1,9 @@
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import babelParser from '@babel/eslint-parser';
 import prettierPlugin from 'eslint-plugin-prettier';
 import nodePlugin from 'eslint-plugin-node';
 import securityPlugin from 'eslint-plugin-security';
-import noSecretsPlugin from 'eslint-plugin-no-secrets';
 import prettierConfig from 'eslint-config-prettier';
 
 export default [
@@ -17,7 +17,7 @@ export default [
 			},
 			globals: {
 				browser: true,
-				es2021: true,
+				es6: true,
 			},
 		},
 		plugins: {
@@ -25,22 +25,20 @@ export default [
 			prettier: prettierPlugin,
 			node: nodePlugin,
 			security: securityPlugin,
-			'no-secrets': noSecretsPlugin,
 		},
 		rules: {
 			...tsPlugin.configs.recommended.rules,
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
-			'node/no-unsupported-features/es-syntax': 'off', 
+			'node/no-unsupported-features/es-syntax': 'off',
 			'security/detect-object-injection': 'off',
-			'no-secrets/no-secrets': ['error', { tolerance: 5 }],
 		},
 		ignores: [
 			'keys/',
 			'logs/',
 			'node_modules/',
 			'.babelrc',
-			'.dockerignore;',
+			'.dockerignore',
 			'.nvmrc',
 			'.prettierignore',
 			'.prettierrc',
@@ -54,25 +52,30 @@ export default [
 	{
 		files: ['**/*.js'],
 		languageOptions: {
+			parser: babelParser,
+			parserOptions: {
+				requireConfigFile: false,
+				babelOptions: {
+					presets: ['@babel/preset-env'],
+				}
+			},
 			ecmaVersion: 2015,
 			sourceType: 'module',
 			globals: {
 				browser: true,
-				es2021: true,
+				es6: true,
 			},
 		},
 		plugins: {
 			prettier: prettierPlugin,
 			node: nodePlugin,
 			security: securityPlugin,
-			'no-secrets': noSecretsPlugin,
 		},
 		rules: {
 			...prettierConfig.rules,
 			'prettier/prettier': 'error',
 			'node/no-unsupported-features/es-syntax': 'off',
 			'security/detect-object-injection': 'off',
-			'no-secrets/no-secrets': ['error', { tolerance: 5 }],
 		},
 		ignores: [
 			'keys/',

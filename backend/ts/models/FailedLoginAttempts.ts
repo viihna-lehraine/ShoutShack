@@ -2,8 +2,7 @@ import {
 	DataTypes,
 	Model,
 	InferAttributes,
-	InferCreationAttributes,
-	CreationOptional
+	InferCreationAttributes
 } from 'sequelize';
 import initializeDatabase from '../config/db';
 
