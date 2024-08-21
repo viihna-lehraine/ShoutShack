@@ -1,12 +1,9 @@
 import {
-	DataTypes,
-	Model,
+	CreationOptional,
 	InferAttributes,
 	InferCreationAttributes,
-	CreationOptional
+	Model
 } from 'sequelize';
-import { getSequelizeInstance } from '../config/db';
-import User from './User';
 
 interface GuestbookEntryAttributes {
 	id: string;
@@ -31,56 +28,5 @@ class GuestbookEntry
 	guestMessageStyles!: object | null;
 	entryDate!: CreationOptional<Date>;
 }
-
-// Get the Sequelize instance
-const sequelize = getSequelizeInstance();
-
-// Initialize the GuestbookEntry model
-GuestbookEntry.init(
-	{
-		id: {
-			type: DataTypes.UUID,
-			defaultValue: DataTypes.UUIDV4,
-			primaryKey: true,
-			allowNull: false,
-			unique: true,
-			references: {
-				model: User,
-				key: 'id'
-			}
-		},
-		guestName: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			unique: false
-		},
-		guestEmail: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			unique: false
-		},
-		guestMessage: {
-			type: DataTypes.TEXT,
-			allowNull: false,
-			unique: false
-		},
-		guestMessageStyles: {
-			type: DataTypes.JSON,
-			allowNull: true,
-			unique: false
-		},
-		entryDate: {
-			type: DataTypes.DATE,
-			defaultValue: DataTypes.NOW,
-			allowNull: false,
-			unique: false
-		}
-	},
-	{
-		sequelize,
-		modelName: 'GuestbookEntry',
-		timestamps: false
-	}
-);
 
 export default GuestbookEntry;

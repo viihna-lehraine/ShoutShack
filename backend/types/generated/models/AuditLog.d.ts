@@ -25,6 +25,5 @@ declare class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAtt
     auditLogDate: Date;
     auditLogUpdateDate?: Date | null;
 }
-declare const AuditLogModelPromise: Promise<typeof AuditLog>;
-export default AuditLogModelPromise;
+export default AuditLog;
 //# sourceMappingURL=AuditLog.d.ts.map

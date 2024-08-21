@@ -23,6 +23,5 @@ declare class DataShareOptions extends Model<InferAttributes<DataShareOptions>, 
     randomAnonSurveyOption: boolean;
     lastUpdated: CreationOptional<Date>;
 }
-declare const DataShareOptionsModelPromise: Promise<typeof DataShareOptions>;
-export default DataShareOptionsModelPromise;
+export default DataShareOptions;
 //# sourceMappingURL=DataShareOptions.d.ts.map

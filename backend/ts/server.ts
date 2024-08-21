@@ -6,38 +6,73 @@ import {
 	initializeIpBlacklist,
 	setupHttp
 } from './index';
-import { initializeApp, app } from './config/app';
+import { app, initializeApp } from './config/app';
+import featureFlags from './config/featureFlags';
+import { getSequelizeInstance } from './config/db';
+import { initializeModels } from './models/ModelsIndex';
 
 loadEnv();
 
-async function initializeServer() {
-	let sequelize = await initializeDatabase();
-	await configurePassport(passport);
-	await initializeIpBlacklist();
-
+async function initializeServer(): Promise<void> {
 	try {
-		await initializeApp(); // Initialize the app with all middlewares and routes
+		// Initialize the database
+		console.log('Initializing database');
+		await initializeDatabase();
 
-		// Test database connection and sync models
-		try {
-			await sequelize.sync();
-			console.info('Database and tables created!');
-		} catch (err) {
-			console.error(
-				'Database Connection Test and Sync: Server error: ',
-				err
+		// Initialize all models
+		console.log('Initializing models');
+		initializeModels();
+
+		// Configure Passport for authentication]
+		console.log('Initializing passport');
+		await configurePassport(passport);
+
+		// Initialize IP blacklist
+		console.log('Initializing IP blacklist');
+		await initializeIpBlacklist();
+
+		// Initialize the Express application with all middlewares and routes
+		console.log('Initializing app');
+		await initializeApp();
+
+		// Sync Datababase Connection and Models, dependent on flag value
+		console.log(
+			'DB Sync Flag: ',
+			featureFlags.dbSyncFlag,
+			typeof featureFlags.dbSyncFlag
+		);
+
+		if (featureFlags.dbSyncFlag) {
+			// Test the database connection and sync models
+			console.log(
+				'Testing database connection and syncing models using getSequelizeInstance'
 			);
-			throw err;
+			let sequelize = getSequelizeInstance();
+			try {
+				await sequelize.sync(); // if sync isnt working, try adding { force: true }	for one round then removing again
+				console.info('Database and tables created!');
+			} catch (err) {
+				console.error(
+					'Database Connection Test and Sync: Server error:',
+					err
+				);
+				throw err;
+			}
 		}
 
-		// Start HTTP2 server
-		await setupHttp(app);
+		// Start Web Server
+		console.log('Starting server');
+		setupHttp(app);
+		console.info('Server started successfully!');
 	} catch (err) {
-		console.error('Failed to start server: ', err);
+		console.error('Failed to start server:', err);
 		process.exit(1); // exit process with failure
 	}
 }
 
-initializeServer();
+initializeServer().catch((err) => {
+	console.error('Unhandled error during server initialization:', err);
+	process.exit(1); // exit process with failure
+});
 
 export default app;

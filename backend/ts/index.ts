@@ -1,7 +1,7 @@
 import { initializeDatabase } from './config/db';
 import featureFlags from './config/featureFlags';
 import loadEnv, { __dirname } from './config/loadEnv';
-import { setupHttp } from './middleware/http';
+import { setupHttp } from './config/http';
 import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';

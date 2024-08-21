@@ -1,8 +1,8 @@
-import { InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface FeatureRequestAttributes {
+    featureRequestNumber: number;
     id: string;
     email?: string | null;
-    featureRequestNumber: number;
     featureRequestType: string;
     featureRequestContent: string;
     canFollowUpFeatureRequest: boolean;
@@ -10,15 +10,14 @@ interface FeatureRequestAttributes {
     featureRequestCloseDate?: Date | null;
 }
 declare class FeatureRequest extends Model<InferAttributes<FeatureRequest>, InferCreationAttributes<FeatureRequest>> implements FeatureRequestAttributes {
+    featureRequestNumber: number;
     id: string;
     email: string | null;
-    featureRequestNumber: number;
     featureRequestType: string;
     featureRequestContent: string;
     canFollowUpFeatureRequest: boolean;
     featureRequestOpenDate: CreationOptional<Date>;
     featureRequestCloseDate: Date | null;
 }
-declare const FeatureRequestModelPromise: Promise<typeof FeatureRequest>;
-export default FeatureRequestModelPromise;
+export default FeatureRequest;
 //# sourceMappingURL=FeatureRequest.d.ts.map

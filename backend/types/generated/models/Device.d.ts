@@ -25,6 +25,5 @@ declare class Device extends Model<InferAttributes<Device>, InferCreationAttribu
     creationDate: CreationOptional<Date>;
     lastUpdated: CreationOptional<Date>;
 }
-declare const DeviceModelPromise: Promise<typeof Device>;
-export default DeviceModelPromise;
+export default Device;
 //# sourceMappingURL=Device.d.ts.map

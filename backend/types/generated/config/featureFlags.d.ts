@@ -8,6 +8,7 @@ interface FeatureFlags {
     loadStaticRoutesFlag: boolean;
     loadTestRoutesFlag: boolean;
     secureHeadersFlag: boolean;
+    sequelizeLoggingFlag: boolean;
 }
 declare let featureFlags: FeatureFlags;
 export default featureFlags;

@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface SupportRequestAttributes {
     id: string;
     email: string;
@@ -19,6 +19,5 @@ declare class SupportRequest extends Model<InferAttributes<SupportRequest>, Infe
     supportTicketOpenDate: Date;
     supportTicketCloseDate?: Date | null;
 }
-declare const SupportRequestModelPromise: Promise<typeof SupportRequest>;
-export default SupportRequestModelPromise;
+export default SupportRequest;
 //# sourceMappingURL=SupportRequest.d.ts.map

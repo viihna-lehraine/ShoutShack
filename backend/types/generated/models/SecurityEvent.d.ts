@@ -1,4 +1,4 @@
-import { InferAttributes, InferCreationAttributes, Model, CreationOptional } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface SecurityEventAttributes {
     id: string;
     eventId: string;
@@ -19,6 +19,5 @@ declare class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferC
     securityEventDate: Date;
     securityEventLastUpdated: CreationOptional<Date>;
 }
-declare const SecurityEventModelPromise: Promise<typeof SecurityEvent>;
-export default SecurityEventModelPromise;
+export default SecurityEvent;
 //# sourceMappingURL=SecurityEvent.d.ts.map

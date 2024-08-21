@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface RecoveryMethodAttributes {
     id: string;
     isRecoveryActive: boolean;
@@ -13,8 +13,7 @@ declare class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, Infe
     recoveryId: string;
     recoveryMethod: 'email' | 'backupCodes';
     backupCodes: string[] | null;
-    recoveryLastUpdated: Date;
+    recoveryLastUpdated: CreationOptional<Date>;
 }
-declare const RecoveryMethodModelPromise: Promise<typeof RecoveryMethod>;
-export default RecoveryMethodModelPromise;
+export default RecoveryMethod;
 //# sourceMappingURL=RecoveryMethod.d.ts.map

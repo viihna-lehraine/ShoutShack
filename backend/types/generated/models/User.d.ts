@@ -26,6 +26,5 @@ declare class User extends Model<InferAttributes<User>, InferCreationAttributes<
     static validatePassword(password: string): boolean;
     static createUser(username: string, password: string, email: string): Promise<User>;
 }
-declare const UserModelPromise: Promise<typeof User>;
-export default UserModelPromise;
+export default User;
 //# sourceMappingURL=User.d.ts.map

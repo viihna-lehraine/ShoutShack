@@ -1,23 +1,34 @@
 import { Sequelize } from 'sequelize';
 import setupLogger from '../middleware/logger';
+import featureFlags from './featureFlags';
 import getSecrets from './secrets';
 
 let sequelize: Sequelize | null = null;
 
 export async function initializeDatabase(): Promise<Sequelize> {
 	if (!sequelize) {
-		const secrets = await getSecrets();
-		const logger = await setupLogger();
+		let secrets = await getSecrets();
+		let logger = await setupLogger();
 
-		if (!secrets.DB_NAME || !secrets.DB_USER || !secrets.DB_PASSWORD || !secrets.DB_HOST || !secrets.DB_DIALECT) {
-			throw new Error('Missing database configuration in secrets.');
-		}
+		console.log(
+			'Sequelize logging is set to ',
+			featureFlags.sequelizeLoggingFlag,
+			' data type: ',
+			typeof featureFlags.sequelizeLoggingFlag
+		);
 
-		sequelize = new Sequelize(secrets.DB_NAME, secrets.DB_USER, secrets.DB_PASSWORD, {
-			host: secrets.DB_HOST,
-			dialect: secrets.DB_DIALECT,
-			logging: (msg) => logger.info(msg),
-		});
+		sequelize = new Sequelize(
+			secrets.DB_NAME,
+			secrets.DB_USER,
+			secrets.DB_PASSWORD,
+			{
+				host: secrets.DB_HOST,
+				dialect: secrets.DB_DIALECT,
+				logging: process.env.FEATURE_SEQUELIZE_LOGGING
+					? (msg) => logger.info(msg)
+					: false
+			}
+		);
 
 		try {
 			await sequelize.authenticate();
@@ -33,7 +44,9 @@ export async function initializeDatabase(): Promise<Sequelize> {
 
 export function getSequelizeInstance(): Sequelize {
 	if (!sequelize) {
-		throw new Error('Database has not been initialized. Call initializeDatabase() first.');
+		throw new Error(
+			'Database has not been initialized. Call initializeDatabase() first.'
+		);
 	}
 	return sequelize;
 }

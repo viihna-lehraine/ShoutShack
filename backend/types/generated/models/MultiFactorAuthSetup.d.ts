@@ -1,7 +1,7 @@
-import { Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface MultiFactorAuthSetupAttributes {
-    id: string;
     mfaId: number;
+    id: string;
     userId: string;
     method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
     secret?: string | null;
@@ -12,8 +12,8 @@ interface MultiFactorAuthSetupAttributes {
     updatedAt: Date;
 }
 declare class MultiFactorAuthSetup extends Model<InferAttributes<MultiFactorAuthSetup>, InferCreationAttributes<MultiFactorAuthSetup>> implements MultiFactorAuthSetupAttributes {
-    id: string;
     mfaId: number;
+    id: string;
     userId: string;
     method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
     secret: string | null;
@@ -23,6 +23,5 @@ declare class MultiFactorAuthSetup extends Model<InferAttributes<MultiFactorAuth
     createdAt: CreationOptional<Date>;
     updatedAt: CreationOptional<Date>;
 }
-declare const MultiFactorAuthSetupModelPromise: Promise<typeof MultiFactorAuthSetup>;
-export default MultiFactorAuthSetupModelPromise;
+export default MultiFactorAuthSetup;
 //# sourceMappingURL=MultiFactorAuthSetup.d.ts.map

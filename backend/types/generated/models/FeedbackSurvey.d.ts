@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface FeedbackSurveyAttributes {
     surveyId: string;
     questionGeneralApproval?: number | null;
@@ -47,6 +47,5 @@ declare class FeedbackSurvey extends Model<InferAttributes<FeedbackSurvey>, Infe
     email?: string | null;
     surveyDate: Date;
 }
-declare const FeedbackSurveyModelPromise: Promise<typeof FeedbackSurvey>;
-export default FeedbackSurveyModelPromise;
+export default FeedbackSurvey;
 //# sourceMappingURL=FeedbackSurvey.d.ts.map

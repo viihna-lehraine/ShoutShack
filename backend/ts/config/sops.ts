@@ -53,8 +53,11 @@ async function getSSLKeys() {
 	let logger = await setupLogger();
 
 	try {
-		let keyPath = path.join(__dirname, '../../keys/ssl/app.pem.key.gpg');
-		let certPath = path.join(__dirname, '../../keys/ssl/app.cert.pem.gpg');
+		let keyPath = path.join(__dirname, './keys/ssl/guestbook_key.pem.gpg');
+		let certPath = path.join(
+			__dirname,
+			'./keys/ssl/guestbook_cert.pem.gpg'
+		);
 		let decryptedKey = await decryptFile(keyPath);
 		let decryptedCert = await decryptFile(certPath);
 

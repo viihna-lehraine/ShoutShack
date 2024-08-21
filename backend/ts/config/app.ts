@@ -7,9 +7,6 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import passport from 'passport';
 import { randomBytes } from 'crypto';
-// import sentry from '@sentry/node';
-// import session from 'express-session';
-// import connectRedis from 'connect-redis';
 import path from 'path';
 import initializeStaticRoutes from '../routes/staticRoutes';
 import apiRoutes from '../routes/apiRoutes';
@@ -25,10 +22,10 @@ import setupLogger from '../middleware/logger';
 const app = express();
 const staticRootPath = process.env.STATIC_ROOT_PATH!;
 
-// Setup middlewares and routes
-async function initializeApp() {
-	let logger = await setupLogger();
+async function initializeApp(): Promise<void> {
+	const logger = await setupLogger();
 
+	// Set up middlewares
 	app.use(bodyParser.json());
 	app.use(express.urlencoded({ extended: true }));
 	app.use(
@@ -47,6 +44,8 @@ async function initializeApp() {
 	app.use(passport.initialize());
 	app.use(cookieParser());
 	app.use(express.static(staticRootPath));
+
+	// Initialize routes
 	app.use('/', initializeStaticRoutes);
 	app.use('/api', apiRoutes);
 	app.use(rateLimitMiddleware);
@@ -59,6 +58,7 @@ async function initializeApp() {
 		next();
 	});
 
+	// Set up security headers
 	setupSecurityHeaders(app);
 
 	// Load test routes
@@ -85,14 +85,12 @@ async function initializeApp() {
 		next();
 	});
 
-	// Error handling middleware
+	// General error handling
 	app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 		logger.error('Error occurred: ', err.stack || err.message || err);
 		res.status(500).send(`Server error - something failed ${err.stack}`);
 		next();
 	});
-
-	return app;
 }
 
 export { app, initializeApp };

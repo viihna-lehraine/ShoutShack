@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url';
 
 let __filename = fileURLToPath(import.meta.url);
 let __dirname = path.dirname(__filename);
-let srcDir = path.join(__dirname, '../src');
-let backupsDir = path.join(__dirname, '../data/src-backups');
+let srcDir = path.join(__dirname, '../../src');
+let backupsDir = path.join(__dirname, '../../data/src-backups');
 
 if (!fs.existsSync(backupsDir)) {
 	fs.mkdirSync(backupsDir, { recursive: true });

@@ -1,7 +1,6 @@
 import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface UserMfaAttributes {
     id: string;
-    userid: string;
     isMfaEnabled: boolean;
     backupCodes: string[] | null;
     isEmail2faEnabled: boolean;
@@ -23,7 +22,6 @@ interface UserMfaAttributes {
 }
 declare class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttributes<UserMfa>> implements UserMfaAttributes {
     id: string;
-    userid: string;
     isMfaEnabled: boolean;
     backupCodes: string[] | null;
     isEmail2faEnabled: boolean;
@@ -43,6 +41,5 @@ declare class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttri
     passkeyCounter: number | null;
     passkeyAttestationFormat: string | null;
 }
-declare const UserMfaModelPromise: Promise<typeof UserMfa>;
-export default UserMfaModelPromise;
+export default UserMfa;
 //# sourceMappingURL=UserMfa.d.ts.map
