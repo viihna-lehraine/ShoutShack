@@ -2,7 +2,7 @@ import path from 'path';
 import { config } from 'dotenv';
 
 // Declare process to capture cwd
-const __dirname = process.cwd();
+let __dirname = process.cwd();
 
 function loadEnv() {
 	const envPath = path.join(__dirname, 'backend.dev.env');

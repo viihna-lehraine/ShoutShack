@@ -5,12 +5,12 @@ import {
 	InferCreationAttributes,
 	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface MultiFactorAuthSetupAttributes {
-	id: string;
 	mfaId: number;
+	id: string;
 	userId: string;
 	method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
 	secret?: string | null;
@@ -28,8 +28,8 @@ class MultiFactorAuthSetup
 	>
 	implements MultiFactorAuthSetupAttributes
 {
-	id!: string;
 	mfaId!: number;
+	id!: string;
 	userId!: string;
 	method!: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
 	secret!: string | null;
@@ -40,83 +40,70 @@ class MultiFactorAuthSetup
 	updatedAt!: CreationOptional<Date>;
 }
 
-async function initializeMultiFactorAuthSetupModel(): Promise<
-	typeof MultiFactorAuthSetup
-> {
-	const sequelize = await initializeDatabase();
+// Get the Sequelize instance
+const sequelize = getSequelizeInstance();
 
-	MultiFactorAuthSetup.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			mfaId: {
-				type: DataTypes.INTEGER,
-				primaryKey: true,
-				autoIncrement: true,
-				allowNull: false,
-				unique: true
-			},
-			userId: {
-				type: DataTypes.UUID,
-				allowNull: false
-			},
-			method: {
-				type: DataTypes.ENUM(
-					'totp',
-					'email',
-					'yubico',
-					'fido2',
-					'passkey'
-				),
-				allowNull: false
-			},
-			secret: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			publicKey: {
-				type: DataTypes.TEXT,
-				allowNull: true
-			},
-			counter: {
-				type: DataTypes.INTEGER,
-				allowNull: true
-			},
-			isActive: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: true,
-				allowNull: false
-			},
-			createdAt: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
-			},
-			updatedAt: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
+// Initialize the MultiFactorAuthSetup model
+MultiFactorAuthSetup.init(
+	{
+		mfaId: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true,
+			allowNull: false,
+			unique: true
+		},
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'MultiFactorAuthSetup',
-			timestamps: true
+		userId: {
+			type: DataTypes.UUID,
+			allowNull: false
+		},
+		method: {
+			type: DataTypes.ENUM('totp', 'email', 'yubico', 'fido2', 'passkey'),
+			allowNull: false
+		},
+		secret: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		publicKey: {
+			type: DataTypes.TEXT,
+			allowNull: true
+		},
+		counter: {
+			type: DataTypes.INTEGER,
+			allowNull: true
+		},
+		isActive: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: true,
+			allowNull: false
+		},
+		createdAt: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
+		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'MultiFactorAuthSetup',
+		timestamps: true
+	}
+);
 
-	await MultiFactorAuthSetup.sync();
-	return MultiFactorAuthSetup;
-}
-
-const MultiFactorAuthSetupModelPromise = initializeMultiFactorAuthSetupModel();
-export default MultiFactorAuthSetupModelPromise;
+export default MultiFactorAuthSetup;

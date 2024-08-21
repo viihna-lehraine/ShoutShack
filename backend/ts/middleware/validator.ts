@@ -6,7 +6,7 @@ export const validateEntry = (
 	res: Response,
 	next: NextFunction
 ) => {
-	const errors = [];
+	let errors = [];
 
 	// Name validation
 	if (validator.isEmpty(req.body.name || '')) {

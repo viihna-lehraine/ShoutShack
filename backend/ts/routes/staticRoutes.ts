@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import setupLogger from '../middleware/logger';
 
-const router = express.Router();
+let router = express.Router();
 
 async function setupStaticRoutes(): Promise<void> {
 	let logger = await setupLogger();

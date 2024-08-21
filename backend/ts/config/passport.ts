@@ -17,11 +17,11 @@ interface UserInstance {
 }
 
 export default async function configurePassport(passport: PassportStatic) {
-	const secrets = await getSecrets();
-	const logger = await setupLogger();
-	const UserModel = await UserModelPromise;
+	let secrets = await getSecrets();
+	let logger = await setupLogger();
+	let UserModel = await UserModelPromise;
 
-	const opts: StrategyOptions = {
+	let opts: StrategyOptions = {
 		jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 		secretOrKey: secrets.JWT_SECRET
 	};
@@ -38,7 +38,7 @@ export default async function configurePassport(passport: PassportStatic) {
 				) => void
 			) => {
 				try {
-					const user = await UserModel.findByPk(jwt_payload.id);
+					let user = await UserModel.findByPk(jwt_payload.id);
 					if (user) {
 						logger.info(
 							'JWT authentication successful for user ID: ',
@@ -63,7 +63,7 @@ export default async function configurePassport(passport: PassportStatic) {
 	passport.use(
 		new LocalStrategy(async (username, password, done) => {
 			try {
-				const user = await UserModel.findOne({ where: { username } });
+				let user = await UserModel.findOne({ where: { username } });
 				if (!user) {
 					logger.warn(
 						'Local authentication failed: User not found: ',
@@ -72,7 +72,7 @@ export default async function configurePassport(passport: PassportStatic) {
 					return done(null, false, { message: 'User not found' });
 				}
 
-				const isMatch = await user.comparePassword(password);
+				let isMatch = await user.comparePassword(password);
 				if (isMatch) {
 					logger.info(
 						'Local authentication successful for user: ',

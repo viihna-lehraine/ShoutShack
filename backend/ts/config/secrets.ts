@@ -1,17 +1,21 @@
 import { execSync } from 'child_process';
 import path from 'path';
 
+let __dirname = process.cwd();
+
 function getDirectoryPath() {
-	return path.resolve(process.cwd(), path.dirname(''));
+	// Return the absolute path to the directory containing secrets.js
+	return path.resolve(__dirname);
 }
 
 async function getSecrets() {
 	try {
-		const secretsPath = path.join(
+		let secretsPath = path.join(
 			getDirectoryPath(),
-			'../../config/secrets.json.gpg'
+			'../backend/config/secrets.json.gpg'
 		);
-		const decryptedSecrets = execSync(
+		console.log('Resolved secrets path:', secretsPath); // debugging line to verify the correct path
+		let decryptedSecrets = execSync(
 			`sops -d --output-type json ${secretsPath}`
 		).toString();
 		return JSON.parse(decryptedSecrets);

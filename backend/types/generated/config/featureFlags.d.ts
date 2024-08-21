@@ -9,6 +9,6 @@ interface FeatureFlags {
     loadTestRoutesFlag: boolean;
     secureHeadersFlag: boolean;
 }
-declare const featureFlags: FeatureFlags;
+declare let featureFlags: FeatureFlags;
 export default featureFlags;
 //# sourceMappingURL=featureFlags.d.ts.map

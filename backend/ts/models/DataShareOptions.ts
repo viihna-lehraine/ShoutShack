@@ -5,8 +5,8 @@ import {
 	InferCreationAttributes,
 	CreationOptional
 } from 'sequelize';
-import { initializeDatabase } from '../index';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface DataShareOptionsAttributes {
 	id: string;
@@ -40,80 +40,73 @@ class DataShareOptions
 	lastUpdated!: CreationOptional<Date>;
 }
 
-async function initializeDataShareOptionsModel(): Promise<
-	typeof DataShareOptions
-> {
-	const sequelize = await initializeDatabase();
+// Initialize the DataShareOptions model
+const sequelize = getSequelizeInstance();
 
-	DataShareOptions.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			trackingPixelOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			featureUsageOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			pageViewsOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			interactionDataOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			deviceTypeOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			browserInfoOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			operatingSystemOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			randomAnonSurveyOption: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			lastUpdated: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: true
+DataShareOptions.init(
+	{
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			primaryKey: true,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'DataShareOptions',
-			timestamps: true
+		trackingPixelOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		featureUsageOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		pageViewsOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		interactionDataOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		deviceTypeOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		browserInfoOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		operatingSystemOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		randomAnonSurveyOption: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		lastUpdated: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: true
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'DataShareOptions',
+		timestamps: true
+	}
+);
 
-	await DataShareOptions.sync();
-	return DataShareOptions;
-}
-
-const DataShareOptionsModelPromise = initializeDataShareOptionsModel();
-export default DataShareOptionsModelPromise;
+export default DataShareOptions;

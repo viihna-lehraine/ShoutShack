@@ -4,10 +4,10 @@ import { __dirname } from './loadEnv';
 import setupLogger from '../middleware/logger';
 
 async function decryptFile(encryptedFilePath: string) {
-	const logger = await setupLogger();
+	let logger = await setupLogger();
 
 	try {
-		const decryptedFile = execSync(
+		let decryptedFile = execSync(
 			`sops -d --output-type json ${encryptedFilePath}`
 		).toString();
 		return decryptedFile;
@@ -18,19 +18,19 @@ async function decryptFile(encryptedFilePath: string) {
 }
 
 async function decryptDataFiles() {
-	const logger = await setupLogger();
+	let logger = await setupLogger();
 
 	try {
-		const filePaths = [
+		let filePaths = [
 			process.env.SERVER_DATA_FILE_PATH_1,
 			process.env.SERVER_DATA_FILE_PATH_2,
 			process.env.SERVER_DATA_FILE_PATH_3,
 			process.env.SERVER_DATA_FILE_PATH_4
 		];
 
-		const decryptedFiles: { [key: string]: string } = {};
+		let decryptedFiles: { [key: string]: string } = {};
 
-		for (const [index, filePath] of filePaths.entries()) {
+		for (let [index, filePath] of filePaths.entries()) {
 			if (filePath) {
 				decryptedFiles[`files${index + 1}`] = execSync(
 					`sops -d --output-type json ${filePath}`
@@ -50,16 +50,13 @@ async function decryptDataFiles() {
 }
 
 async function getSSLKeys() {
-	const logger = await setupLogger();
+	let logger = await setupLogger();
 
 	try {
-		const keyPath = path.join(__dirname, '../../keys/ssl/app.pem.key.gpg');
-		const certPath = path.join(
-			__dirname,
-			'../../keys/ssl/app.cert.pem.gpg'
-		);
-		const decryptedKey = await decryptFile(keyPath);
-		const decryptedCert = await decryptFile(certPath);
+		let keyPath = path.join(__dirname, '../../keys/ssl/app.pem.key.gpg');
+		let certPath = path.join(__dirname, '../../keys/ssl/app.cert.pem.gpg');
+		let decryptedKey = await decryptFile(keyPath);
+		let decryptedCert = await decryptFile(certPath);
 
 		return {
 			key: decryptedKey,

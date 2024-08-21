@@ -1,7 +1,6 @@
 import { __awaiter } from 'tslib';
 import yub from 'yub';
 import getSecrets from '../../config/secrets.js';
-import '../../../types/custom/yub.d.ts';
 let secrets;
 let yubClient;
 function initializeYubicoOtpUtil() {

@@ -5,14 +5,14 @@ import loadEnv from '../config/loadEnv';
 const { createLogger, format, transports } = pkg;
 const { combine, timestamp, printf, colorize, errors, json } = format;
 
-const logFormat = printf(({ level, message, timestamp, stack }) => {
+let logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp}, ${level}: ${stack || message}`;
 });
 
 async function setupLogger() {
 	loadEnv();
 
-	const logger = createLogger({
+	let logger = createLogger({
 		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
 		format: combine(
 			timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),

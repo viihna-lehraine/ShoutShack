@@ -6,23 +6,23 @@ import { exec } from 'child_process';
 import { __dirname } from '../index';
 import setupLogger from '../middleware/logger';
 
-const compressAndExportLogs = async (
+let compressAndExportLogs = async (
 	sourceDir: string,
 	exportDir: string,
 	logFileName: string
 ) => {
-	const logger = await setupLogger();
-	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const outputFileName = `${logFileName.replace('.log', '')}-${timestamp}.gz`;
-	const outputFilePath = path.join(exportDir, outputFileName);
-	const sourceFilePath = path.join(sourceDir, logFileName);
+	let logger = await setupLogger();
+	let timestamp = new Date().toISOString().replace(/:/g, '-');
+	let outputFileName = `${logFileName.replace('.log', '')}-${timestamp}.gz`;
+	let outputFilePath = path.join(exportDir, outputFileName);
+	let sourceFilePath = path.join(sourceDir, logFileName);
 
 	try {
 		await compressing.gzip.compressFile(sourceFilePath, outputFilePath);
 		logger.info(`${logFileName} successfully compressed`);
 		return outputFilePath;
 	} catch (err) {
-		const error = err as Error;
+		let error = err as Error;
 		logger.error(`Unable to compress ${logFileName}: ${error.message}`);
 		throw new Error(`Error compessing log files: ${error.message}`);
 	}
@@ -33,8 +33,8 @@ const runCommandAndLog = (
 	logFilePath: string
 ): Promise<void> => {
 	return new Promise((resolve, reject) => {
-		const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
-		const process = exec(
+		let logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+		let process = exec(
 			command,
 			{ maxBuffer: 1024 * 500 },
 			(error, stdout, stderr) => {
@@ -57,10 +57,10 @@ const runCommandAndLog = (
 };
 
 const exportLogs = async () => {
-	const logger = await setupLogger();
-	const serverLogDir = path.join(__dirname, process.env.SERVER_LOG_PATH!);
-	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH!);
-	const exportDir = path.join(
+	let logger = await setupLogger();
+	let serverLogDir = path.join(__dirname, process.env.SERVER_LOG_PATH!);
+	let npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH!);
+	let exportDir = path.join(
 		__dirname,
 		process.env.BACKEND_LOGGER_EXPORT_PATH!
 	);
@@ -72,37 +72,34 @@ const exportLogs = async () => {
 
 	try {
 		// compress and export server logs
-		const serverLogFiles = fs
+		let serverLogFiles = fs
 			.readdirSync(serverLogDir)
 			.filter((file) => file.endsWith('.log'));
-		for (const logFile of serverLogFiles) {
+		for (let logFile of serverLogFiles) {
 			await compressAndExportLogs(serverLogDir, exportDir, logFile);
 		}
 
 		// Compress and export npm logs
-		const npmLogFiles = fs
+		let npmLogFiles = fs
 			.readdirSync(npmLogDir)
 			.filter((file) => file.endsWith('.logs'));
-		for (const logFile of npmLogFiles) {
+		for (let logFile of npmLogFiles) {
 			await compressAndExportLogs(npmLogDir, exportDir, logFile);
 		}
 
 		logger.info('Logs have been successfully compresseed and exported.');
 	} catch (err) {
-		const error = err as Error;
+		let error = err as Error;
 		logger.error(`Error exporting logs: ${error.message}`);
 	}
 };
 
 // Perform hourly npm audit and update
 const performNpmTasks = async () => {
-	const logger = await setupLogger();
-	const npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH!);
-	const timestamp = new Date().toISOString().replace(/:/g, '-');
-	const logFilePath = path.join(
-		npmLogDir,
-		`npm-audit-update-${timestamp}.log`
-	);
+	let logger = await setupLogger();
+	let npmLogDir = path.join(__dirname, process.env.SERVER_NPM_LOG_PATH!);
+	let timestamp = new Date().toISOString().replace(/:/g, '-');
+	let logFilePath = path.join(npmLogDir, `npm-audit-update-${timestamp}.log`);
 
 	try {
 		logger.info('Starting npm audit...');
@@ -113,14 +110,14 @@ const performNpmTasks = async () => {
 		await runCommandAndLog('npm update --verbose', logFilePath);
 		logger.info('npm update completed successfully.');
 	} catch (err) {
-		const error = err as Error;
+		let error = err as Error;
 		logger.error(`Error during npm tasks: ${error.message}`);
 	}
 };
 
 // Determine the cron schedule based on LOGGER environment
 const scheduleLogJobs = async () => {
-	const logger = await setupLogger();
+	let logger = await setupLogger();
 
 	let schedule = '';
 

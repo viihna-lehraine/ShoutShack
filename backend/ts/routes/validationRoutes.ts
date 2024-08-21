@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { registrationValidationRules } from '../middleware/validator';
 
-const router = express.Router();
+let router = express.Router();
 
 router.post(
 	'/register',

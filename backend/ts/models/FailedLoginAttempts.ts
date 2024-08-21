@@ -4,11 +4,12 @@ import {
 	InferAttributes,
 	InferCreationAttributes
 } from 'sequelize';
-import initializeDatabase from '../config/db';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface FailedLoginAttemptsAttributes {
-	id: string;
 	attemptId: string;
+	id: string;
 	ipAddress: string;
 	userAgent: string;
 	attemptDate: Date;
@@ -22,8 +23,8 @@ class FailedLoginAttempts
 	>
 	implements FailedLoginAttemptsAttributes
 {
-	id!: string;
 	attemptId!: string;
+	id!: string;
 	ipAddress!: string;
 	userAgent!: string;
 	attemptDate!: Date;
@@ -31,55 +32,50 @@ class FailedLoginAttempts
 }
 
 // Initialize the FailedLoginAttempt model
-async function initializeFailedLoginAttemptsModel(): Promise<
-	typeof FailedLoginAttempts
-> {
-	const sequelize = await initializeDatabase();
+const sequelize = getSequelizeInstance(); // Get the Sequelize instance
 
-	FailedLoginAttempts.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true
-			},
-			attemptId: {
-				type: DataTypes.INTEGER,
-				autoIncrement: true,
-				allowNull: true,
-				unique: true
-			},
-			ipAddress: {
-				type: DataTypes.STRING,
-				allowNull: false
-			},
-			userAgent: {
-				type: DataTypes.STRING,
-				allowNull: false
-			},
-			attemptDate: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
-			},
-			isLocked: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: false
+FailedLoginAttempts.init(
+	{
+		attemptId: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true,
+			allowNull: true,
+			unique: true
+		},
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'FailedLoginAttempts',
-			timestamps: true
+		ipAddress: {
+			type: DataTypes.STRING,
+			allowNull: false
+		},
+		userAgent: {
+			type: DataTypes.STRING,
+			allowNull: false
+		},
+		attemptDate: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
+		},
+		isLocked: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'FailedLoginAttempts',
+		timestamps: true
+	}
+);
 
-	await FailedLoginAttempts.sync();
-	return FailedLoginAttempts;
-}
-
-// Export the initialized model
-const FailedLoginAttemptsModelPromise = initializeFailedLoginAttemptsModel();
-export default FailedLoginAttemptsModelPromise;
+export default FailedLoginAttempts;

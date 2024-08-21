@@ -12,15 +12,15 @@ interface User {
 
 let secrets: Secrets | undefined;
 
-const loadSecrets = async () => {
+let loadSecrets = async () => {
 	if (!secrets) {
 		secrets = await getSecrets();
 	}
 	return secrets;
 };
 
-export const generateToken = async (user: User) => {
-	const secrets = await loadSecrets();
+export let generateToken = async (user: User) => {
+	let secrets = await loadSecrets();
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
 	}
@@ -31,9 +31,9 @@ export const generateToken = async (user: User) => {
 	);
 };
 
-export const verifyJwToken = async (token: string) => {
+export let verifyJwToken = async (token: string) => {
 	try {
-		const secrets = await loadSecrets();
+		let secrets = await loadSecrets();
 		if (!secrets) {
 			throw new Error('Secrets could not be loaded');
 		}

@@ -1,4 +1,4 @@
-import rangeCheck from 'range_check';
+import { inRange } from 'range_check';
 import { Logger } from 'winston';
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
@@ -6,22 +6,13 @@ import path from 'path';
 import { __dirname } from '../config/loadEnv';
 import setupLogger from '../middleware/logger';
 
-type RangeCheckType = {
-	inRange: (ip: string, range: string) => boolean;
-};
-
 let blacklist: string[] = [];
 let logger: Logger;
-let rangeCheckModule: RangeCheckType | undefined;
 
 // Initialize rangeCheck and load the blacklist
 const initializeBlacklist = async (): Promise<void> => {
 	logger = await setupLogger();
 	try {
-		if (!rangeCheckModule) {
-			rangeCheckModule = rangeCheck;
-			logger.info('rangeCheck module loaded successfully');
-		}
 		await loadBlacklist();
 		logger.info('Blacklist and range_check module loaded successfully.');
 	} catch (err) {
@@ -32,11 +23,11 @@ const initializeBlacklist = async (): Promise<void> => {
 
 // Load the blacklist from file
 export const loadBlacklist = async (): Promise<void> => {
-	const logger = await setupLogger();
-	const filePath = path.join(__dirname, '../../data/blacklist.json');
+	let logger = await setupLogger();
+	let filePath = path.join(__dirname, '../../data/blacklist.json');
 	try {
 		if (fs.existsSync(filePath)) {
-			const data = fs.readFileSync(filePath, 'utf8');
+			let data = fs.readFileSync(filePath, 'utf8');
 			blacklist = JSON.parse(data);
 		}
 	} catch (err) {
@@ -55,7 +46,7 @@ export const addToBlacklist = (ip: string): void => {
 
 // Save the blacklist
 const saveBlacklist = async (): Promise<void> => {
-	const filePath = path.join(__dirname, '../../data/blacklist.json');
+	let filePath = path.join(__dirname, '../../data/blacklist.json');
 	try {
 		fs.writeFileSync(filePath, JSON.stringify(blacklist, null, 2));
 	} catch (err) {
@@ -69,19 +60,14 @@ export const ipBlacklistMiddleware = (
 	res: Response,
 	next: NextFunction
 ) => {
-	if (!rangeCheck) {
-		console.error('rangeCheck module is not loaded');
-		return res.status(500).json({ error: 'Server error' });
-	}
-
-	const clientIp = req.ip;
+	let clientIp = req.ip;
 
 	if (!clientIp) {
 		console.error('Client IP undefined');
 		return res.status(500).json({ error: 'Bad request' });
 	}
 
-	if (blacklist.some((range) => rangeCheck!.inRange(clientIp, range))) {
+	if (blacklist.some((range) => inRange(clientIp, range))) {
 		console.log(`Blocked request from blacklisted IP: ${clientIp}`);
 		return res.status(403).json({ error: 'Access denied' });
 	}
@@ -90,7 +76,7 @@ export const ipBlacklistMiddleware = (
 };
 
 // Remove an IP or range from the blacklist
-export const removeFromBlacklist = (ip: string): void => {
+export let removeFromBlacklist = (ip: string): void => {
 	blacklist = blacklist.filter((range) => range != ip);
 	saveBlacklist();
 };

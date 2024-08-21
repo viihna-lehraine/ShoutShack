@@ -11,7 +11,7 @@ export const getEntries =
 	<T extends ModelType>(Model: { new (): T; findAll: () => Promise<T[]> }) =>
 	async (req: Request, res: Response) => {
 		try {
-			const entries = await Model.findAll();
+			let entries = await Model.findAll();
 			res.status(200).json(entries);
 		} catch (error) {
 			console.error(error);
@@ -29,7 +29,7 @@ export const createEntry =
 	}) =>
 	async (req: Request, res: Response) => {
 		try {
-			const newEntry = await Model.create(req.body);
+			let newEntry = await Model.create(req.body);
 			res.status(201).json(newEntry);
 		} catch (error) {
 			console.error(error);
@@ -50,8 +50,8 @@ export const updateEntry =
 	}) =>
 	async (req: Request, res: Response) => {
 		try {
-			const { id } = req.params;
-			const updatedEntry = await Model.update(req.body, {
+			let { id } = req.params;
+			let updatedEntry = await Model.update(req.body, {
 				where: { id } as WhereOptions<T>
 			});
 			if (updatedEntry[0] === 0) {
@@ -78,8 +78,8 @@ export const deleteEntry =
 	}) =>
 	async (req: Request, res: Response) => {
 		try {
-			const { id } = req.params;
-			const deleted = await Model.destroy({
+			let { id } = req.params;
+			let deleted = await Model.destroy({
 				where: { id } as WhereOptions<T>
 			});
 			if (!deleted) {

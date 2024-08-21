@@ -2,9 +2,10 @@ import {
 	DataTypes,
 	Model,
 	InferAttributes,
-	InferCreationAttributes
+	InferCreationAttributes,
+	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
+import { getSequelizeInstance } from '../config/db';
 
 interface FeedbackSurveyAttributes {
 	surveyId: string;
@@ -62,158 +63,153 @@ class FeedbackSurvey
 	surveyDate!: Date;
 }
 
-async function initializeFeedbackSurveyModel(): Promise<typeof FeedbackSurvey> {
-	const sequelize = await initializeDatabase();
+// Get the Sequelize instance
+const sequelize = getSequelizeInstance();
 
-	FeedbackSurvey.init(
-		{
-			surveyId: {
-				type: DataTypes.INTEGER,
-				autoIncrement: true,
-				allowNull: false,
-				unique: true
-			},
-			questionGeneralApproval: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 5
-				}
-			},
-			questionServiceQuality: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 5
-				}
-			},
-			questionEaseOfUse: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 5
-				}
-			},
-			questionUserSupport: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 0, // allows for N/A
-					max: 5
-				}
-			},
-			questionHelpGuides: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 0, // allows for N/A
-					max: 5
-				}
-			},
-			questionIsPremiumUser: {
-				type: DataTypes.BOOLEAN,
-				allowNull: true
-			},
-			questionPremiumValue: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 0,
-					max: 5
-				}
-			},
-			questionLikelihoodToRecommend: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 5
-				}
-			},
-			questionUsefulFeaturesAndAspects: {
-				// checklist; last option is Other and user can define it
-				type: DataTypes.JSON,
-				allowNull: true,
-				defaultValue: []
-			},
-			questionFeaturesThatNeedImprovement: {
-				type: DataTypes.JSON,
-				allowNull: true,
-				defaultValue: []
-			},
-			questionOpenEndedLikeTheMost: {
-				type: DataTypes.TEXT,
-				allowNull: true,
-				defaultValue: ''
-			},
-			questionOpenEndedWhatCanWeImprove: {
-				type: DataTypes.TEXT,
-				allowNull: true,
-				defaultValue: ''
-			},
-			questionDemoHeardAboutUs: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 5
-				}
-			},
-			questionDemoAgeGroup: {
-				type: DataTypes.INTEGER,
-				allowNull: true,
-				validate: {
-					min: 1,
-					max: 7
-				}
-			},
-			questionDemoGender: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			questionDemoRegion: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			questionDemoLangPref: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			questionFinalThoughts: {
-				type: DataTypes.TEXT,
-				allowNull: true,
-				defaultValue: ''
-			},
-			hasOptedInForFollowUp: {
-				type: DataTypes.BOOLEAN,
-				allowNull: true,
-				defaultValue: false
-			},
-			email: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				defaultValue: ''
-			},
-			surveyDate: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
+// Initialize the FeedbackSurvey model
+FeedbackSurvey.init(
+	{
+		surveyId: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true,
+			allowNull: false,
+			unique: true
+		},
+		questionGeneralApproval: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 5
 			}
 		},
-		{
-			sequelize,
-			modelName: 'FeedbackSurvey',
-			timestamps: true
+		questionServiceQuality: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 5
+			}
+		},
+		questionEaseOfUse: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 5
+			}
+		},
+		questionUserSupport: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 0, // allows for N/A
+				max: 5
+			}
+		},
+		questionHelpGuides: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 0, // allows for N/A
+				max: 5
+			}
+		},
+		questionIsPremiumUser: {
+			type: DataTypes.BOOLEAN,
+			allowNull: true
+		},
+		questionPremiumValue: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 0,
+				max: 5
+			}
+		},
+		questionLikelihoodToRecommend: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 5
+			}
+		},
+		questionUsefulFeaturesAndAspects: {
+			type: DataTypes.JSON,
+			allowNull: true,
+			defaultValue: []
+		},
+		questionFeaturesThatNeedImprovement: {
+			type: DataTypes.JSON,
+			allowNull: true,
+			defaultValue: []
+		},
+		questionOpenEndedLikeTheMost: {
+			type: DataTypes.TEXT,
+			allowNull: true,
+			defaultValue: ''
+		},
+		questionOpenEndedWhatCanWeImprove: {
+			type: DataTypes.TEXT,
+			allowNull: true,
+			defaultValue: ''
+		},
+		questionDemoHeardAboutUs: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 5
+			}
+		},
+		questionDemoAgeGroup: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			validate: {
+				min: 1,
+				max: 7
+			}
+		},
+		questionDemoGender: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		questionDemoRegion: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		questionDemoLangPref: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		questionFinalThoughts: {
+			type: DataTypes.TEXT,
+			allowNull: true,
+			defaultValue: ''
+		},
+		hasOptedInForFollowUp: {
+			type: DataTypes.BOOLEAN,
+			allowNull: true,
+			defaultValue: false
+		},
+		email: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			defaultValue: ''
+		},
+		surveyDate: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'FeedbackSurvey',
+		timestamps: true
+	}
+);
 
-	await FeedbackSurvey.sync();
-	return FeedbackSurvey;
-}
-
-// Export the initialized model
-const FeedbackSurveyModelPromise = initializeFeedbackSurveyModel();
-export default FeedbackSurveyModelPromise;
+export default FeedbackSurvey;

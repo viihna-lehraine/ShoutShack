@@ -15,7 +15,7 @@ interface FeatureFlags {
 	secureHeadersFlag: boolean;
 }
 
-const featureFlags: FeatureFlags = {
+let featureFlags: FeatureFlags = {
 	apiRoutesCsrfFlag: parseBoolean(process.env.FEATURE_API_ROUTES_CSRF),
 	dbSyncFlag: parseBoolean(process.env.FEATURE_DB_SYNC),
 	http1Flag: parseBoolean(process.env.FEATURE_HTTP1),

@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import setupLogger from '../../middleware/logger';
-import UserMfaModelPromise from 'ts/models/UserMfa';
+import UserMfaModelPromise from '../../models/UserMfa';
 
 interface BackupCode {
 	code: string;
@@ -12,8 +12,8 @@ interface BackupCode {
 async function generateBackupCodes(id: string): Promise<string[]> {
 	let backupCodes: BackupCode[] = [];
 	for (let i = 0; i < 16; i++) {
-		const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
-		const hashedCode = await bcrypt.hash(code, 10);
+		let code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
+		let hashedCode = await bcrypt.hash(code, 10);
 		backupCodes.push({ code: hashedCode, used: false });
 	}
 
@@ -34,7 +34,7 @@ async function verifyBackupCode(
 
 	if (storedCodes) {
 		for (let i = 0; i < storedCodes.length; i++) {
-			const match = await bcrypt.compare(inputCode, storedCodes[i].code);
+			let match = await bcrypt.compare(inputCode, storedCodes[i].code);
 			if (match && !storedCodes[i].used) {
 				storedCodes[i].used = true;
 				await updateBackupCodesInDatabase(id, storedCodes); // mark the code as used
@@ -58,11 +58,11 @@ async function saveBackupCodesToDatabase(
 	let UserfMfa = await UserMfaModelPromise; // await the UserMfa model when needed
 
 	try {
-		const user = await UserfMfa.findByPk(id); // find user by primary key
+		let user = await UserfMfa.findByPk(id); // find user by primary key
 		if (!user) throw new Error('User not found');
 
 		// map the codes element of backupCodes to an array of strings
-		const backupCodesAsStrings = backupCodes.map((codeObj) => codeObj.code);
+		let backupCodesAsStrings = backupCodes.map((codeObj) => codeObj.code);
 
 		// assign the array of strings to user.backupCodes
 		user.backupCodes = backupCodesAsStrings;
@@ -81,11 +81,11 @@ async function getBackupCodesFromDatabase(
 	let UserMfa = await UserMfaModelPromise; // await the User model when needed
 
 	try {
-		const user = await UserMfa.findByPk(id); // find user by primary key
+		let user = await UserMfa.findByPk(id); // find user by primary key
 		if (!user) throw new Error('User not found');
 
 		// assume user.backupCodes is a string[] or null, convert it to BackuopCode[] or undefined
-		const backupCodes = user.backupCodes as string[] | null;
+		let backupCodes = user.backupCodes as string[] | null;
 
 		if (backupCodes === null) {
 			return undefined; // *DEV-NOTE* probably need to configure this later
@@ -108,7 +108,7 @@ async function updateBackupCodesInDatabase(
 	let UserMfa = await UserMfaModelPromise; // await the UserMfa model when needed
 
 	try {
-		const user = await UserMfa.findByPk(id); // find user by primary key
+		let user = await UserMfa.findByPk(id); // find user by primary key
 		if (!user) throw new Error('User not found');
 
 		// map the codes element of backupCodes to an array of strings

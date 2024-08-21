@@ -5,13 +5,13 @@ import {
 	Model,
 	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface FeatureRequestAttributes {
+	featureRequestNumber: number;
 	id: string;
 	email?: string | null;
-	featureRequestNumber: number;
 	featureRequestType: string;
 	featureRequestContent: string;
 	canFollowUpFeatureRequest: boolean;
@@ -26,9 +26,9 @@ class FeatureRequest
 	>
 	implements FeatureRequestAttributes
 {
+	featureRequestNumber!: number;
 	id!: string;
 	email!: string | null;
-	featureRequestNumber!: number;
 	featureRequestType!: string;
 	featureRequestContent!: string;
 	canFollowUpFeatureRequest!: boolean;
@@ -36,70 +36,65 @@ class FeatureRequest
 	featureRequestCloseDate!: Date | null;
 }
 
-async function initializeFeatureRequestModel(): Promise<typeof FeatureRequest> {
-	const sequelize = await initializeDatabase();
+// Get the Sequelize instance
+const sequelize = getSequelizeInstance();
 
-	FeatureRequest.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			email: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				defaultValue: null
-			},
-			featureRequestNumber: {
-				type: DataTypes.INTEGER,
-				autoIncrement: true,
-				allowNull: true,
-				unique: true
-			},
-			featureRequestType: {
-				type: DataTypes.TEXT,
-				allowNull: false,
-				defaultValue: null
-			},
-			featureRequestContent: {
-				type: DataTypes.TEXT,
-				allowNull: false,
-				defaultValue: null
-			},
-			canFollowUpFeatureRequest: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false
-			},
-			featureRequestOpenDate: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
-			},
-			featureRequestCloseDate: {
-				type: DataTypes.DATE,
-				allowNull: true,
-				defaultValue: null
+// Initialize the FeatureRequest model
+FeatureRequest.init(
+	{
+		featureRequestNumber: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true,
+			allowNull: true,
+			unique: true
+		},
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'FeatureRequest',
-			timestamps: true
+		email: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			defaultValue: null
+		},
+		featureRequestType: {
+			type: DataTypes.TEXT,
+			allowNull: false,
+			defaultValue: null
+		},
+		featureRequestContent: {
+			type: DataTypes.TEXT,
+			allowNull: false,
+			defaultValue: null
+		},
+		canFollowUpFeatureRequest: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
+		},
+		featureRequestOpenDate: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
+		},
+		featureRequestCloseDate: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			defaultValue: null
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'FeatureRequest',
+		timestamps: true
+	}
+);
 
-	await FeatureRequest.sync();
-	return FeatureRequest;
-}
-
-// Export the initialized model
-const FeatureRequestModelPromise = initializeFeatureRequestModel();
-export default FeatureRequestModelPromise;
+export default FeatureRequest;

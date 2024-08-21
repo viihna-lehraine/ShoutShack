@@ -1,4 +1,4 @@
-declare const redisClient: Promise<import("@redis/client").RedisClientType<{
+declare let redisClient: Promise<import("@redis/client").RedisClientType<{
     graph: {
         CONFIG_GET: typeof import("@redis/graph/dist/commands/CONFIG_GET");
         configGet: typeof import("@redis/graph/dist/commands/CONFIG_GET");

@@ -9,31 +9,30 @@ const __dirname = process.cwd();
 
 // Define an array of file paths and their corresponding import lines to remove
 const filesToClean = [
-    {
-        filePath: path.join(__dirname, '../src/server.js'),
-        importLine: "import '../types/custom/express-async-errors';\n"
-    },
-    {
-        filePath: path.join(__dirname, '../src/utils/auth/yubicoOtpUtil.js'),
-        importLine: "import '../../../types/custom/yub.d.ts';\n"
-    }
+	{
+		filePath: path.join(__dirname, './src/utils/auth/yubicoOtpUtil.js'),
+		importLine: "import '../../../types/custom/yub.d.ts';\n"
+	},
+	{
+		filePath: path.join(__dirname, './src/middleware/slowdown.js'),
+		importLine: "import '../../types/custom/express-session';\n"
+	}
 ];
 
 // Iterate over the files and remove the specified import lines
 filesToClean.forEach(({ filePath, importLine }) => {
-    // Read the content of the file
-    const fileContent = fs.readFileSync(filePath, 'utf8');
+	// Read the content of the file
+	const fileContent = fs.readFileSync(filePath, 'utf8');
 
-    // Remove the specific import line
-    const updatedContent = fileContent.replace(importLine, '');
+	// Remove the specific import line
+	const updatedContent = fileContent.replace(importLine, '');
 
-    // Write the updated content back to the file if it was changed
-    if (fileContent !== updatedContent) {
-        fs.writeFileSync(filePath, updatedContent, 'utf8');
-        console.log(`Removed the import line from ${filePath}`);
+	// Write the updated content back to the file if it was changed
+	if (fileContent !== updatedContent) {
+		fs.writeFileSync(filePath, updatedContent, 'utf8');
+		console.log(`Removed the import line from ${filePath}`);
 		console.log('BEGONE THOT!');
-    } else {
-        console.log(`The import line was not found in ${filePath}`);
-    }
+	} else {
+		console.log(`The import line was not found in ${filePath}`);
+	}
 });
-

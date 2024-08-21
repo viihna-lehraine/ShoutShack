@@ -2,14 +2,14 @@ import { Request, Response } from 'express';
 import { generateToken } from '../utils/auth/jwtUtil';
 import UserModelPromise from '../models/User';
 
-export const login = async (req: Request, res: Response) => {
+export let login = async (req: Request, res: Response) => {
 	try {
-		const User = await UserModelPromise;
+		let User = await UserModelPromise;
 
-		const { username, password } = req.body;
+		let { username, password } = req.body;
 
 		// Correctly type `user` and ensure the correct model is used
-		const user = await User.findOne({ where: { username } });
+		let user = await User.findOne({ where: { username } });
 
 		if (!user) {
 			return res
@@ -18,14 +18,14 @@ export const login = async (req: Request, res: Response) => {
 		}
 
 		// Use the comparePassword method from the User model
-		const isPasswordValid = await user.comparePassword(password);
+		let isPasswordValid = await user.comparePassword(password);
 
 		if (!isPasswordValid) {
 			return res.status(401).json({ message: 'Invalid credentials' });
 		}
 
 		// Generate JWT token
-		const token = await generateToken(user);
+		let token = await generateToken(user);
 
 		// Respond with the token
 		res.json({ token });

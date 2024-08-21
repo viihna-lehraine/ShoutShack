@@ -25,6 +25,18 @@ const getBackupNumber = () => {
 	return backupNumbers.length > 0 ? Math.max(...backupNumbers) + 1 : 1;
 };
 
+// Function to get the current bundle number
+const getBundleNumber = () => {
+	let files = fs.readdirSync(backupsDir);
+	let bundleNumbers = files
+		.map((file) => {
+			const match = file.match(/^srcBackupBundle(\d+)\.tar\.gz$/);
+			return match ? parseInt(match[1], 10) : null;
+		})
+		.filter((num) => num !== null);
+	return bundleNumbers.length > 0 ? Math.max(...bundleNumbers) + 1 : 1;
+};
+
 const createSrcBackup = () => {
 	let backupNumber = getBackupNumber();
 	let backupFileName = `srcBackup${backupNumber}.tar.gz`;
@@ -63,7 +75,7 @@ const bundleTarballs = () => {
 		);
 
 	if (tarballs.length >= maxTarballs) {
-		const bundleNumber = getBackupNumber() - 1; // Ensure bundle number matches last backup
+		const bundleNumber = getBundleNumber(); // Get the correct bundle number
 		const bundleName = `srcBackupBundle${bundleNumber}.tar.gz`;
 		const bundlePath = path.join(backupsDir, bundleName);
 
@@ -92,5 +104,4 @@ const bundleTarballs = () => {
 };
 
 createSrcBackup();
-
 bundleTarballs();

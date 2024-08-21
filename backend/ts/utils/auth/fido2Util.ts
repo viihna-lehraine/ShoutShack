@@ -59,9 +59,9 @@ type Factor = 'first' | 'second' | 'either';
 async function generateU2fRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	const passkeyRegistrationOptions = await fido2.attestationOptions();
+	let passkeyRegistrationOptions = await fido2.attestationOptions();
 
-	const u2fRegistrationOptions: PublicKeyCredentialCreationOptions = {
+	let u2fRegistrationOptions: PublicKeyCredentialCreationOptions = {
 		...passkeyRegistrationOptions,
 		user: {
 			id: Buffer.from(user.id, 'utf8'), // UID from db (base64 encoded)
@@ -90,7 +90,7 @@ async function verifyU2fRegistration(
 		throw new Error('Secrets could not be loaded');
 	}
 
-	const u2fAttestationExpectations: ExpectedAttestationResult = {
+	let u2fAttestationExpectations: ExpectedAttestationResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either' as Factor,
@@ -106,14 +106,14 @@ async function verifyU2fRegistration(
 async function generateU2fAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	const userCredentials = user.credential.map((credential) => ({
+	let userCredentials = user.credential.map((credential) => ({
 		type: 'public-key' as const, // Explicit type
 		id: Buffer.from(credential.credentialId, 'base64')
 	}));
 
-	const assertionOptions = await fido2.assertionOptions();
+	let assertionOptions = await fido2.assertionOptions();
 
-	const u2fAuthenticationOptions: PublicKeyCredentialRequestOptions = {
+	let u2fAuthenticationOptions: PublicKeyCredentialRequestOptions = {
 		...assertionOptions,
 		allowCredentials: userCredentials,
 		userVerification: 'preferred',
@@ -135,7 +135,7 @@ async function verifyU2fAuthentication(
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
 	}
-	const assertionExpectations: ExpectedAssertionResult = {
+	let assertionExpectations: ExpectedAssertionResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either' as Factor,

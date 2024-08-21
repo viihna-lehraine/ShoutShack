@@ -60,10 +60,10 @@ let fido2: Fido2Lib;
 async function generatePasskeyRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	const passkeyRegistrationOptions = await fido2.attestationOptions();
+	let passkeyRegistrationOptions = await fido2.attestationOptions();
 
 	// constructing PublicKeyCredentialCreationOptions
-	const credentialCreationOptions: PublicKeyCredentialCreationOptions = {
+	let credentialCreationOptions: PublicKeyCredentialCreationOptions = {
 		...passkeyRegistrationOptions,
 		user: {
 			id: Buffer.from(user.id, 'utf8'),
@@ -90,7 +90,7 @@ async function verifyPasskeyRegistration(
 		throw new Error('Secrets could not be loaded');
 	}
 
-	const attestationExpectations: ExpectedAttestationResult = {
+	let attestationExpectations: ExpectedAttestationResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either', // 'factor` type should match as defined in the library
@@ -103,13 +103,13 @@ async function verifyPasskeyRegistration(
 async function generatePasskeyAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	const userCredentials = user.credential.map((cred) => ({
+	let userCredentials = user.credential.map((cred) => ({
 		type: 'public-key' as const, // ensures 'public-key' is strictly typed
 		id: Buffer.from(cred.credentialId, 'base64'),
 		transports: ['usb', 'nfc', 'ble'] as AuthenticatorTransport[] // *DEV-NOTE* these are just example transports!
 	}));
 
-	const assertionOptions: PublicKeyCredentialRequestOptions = {
+	let assertionOptions: PublicKeyCredentialRequestOptions = {
 		...(await fido2.assertionOptions()),
 		allowCredentials: userCredentials,
 		userVerification: 'required',
@@ -132,7 +132,7 @@ async function verifyPasskeyAuthentication(
 		throw new Error('Secrets could not be loaded');
 	}
 
-	const assertionExpectations: ExpectedAssertionResult = {
+	let assertionExpectations: ExpectedAssertionResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either',

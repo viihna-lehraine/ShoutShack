@@ -3,23 +3,23 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 
 // Define the storage location and filename
-const storage = multer.diskStorage({
+let storage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		cb(null, path.join(__dirname, '../../uploads')); // save files to 'uploads' directory
 	},
 	filename: (req, file, cb) => {
-		const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+		let uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 		cb(null, `${uniqueSuffix}-${file.originalname}`);
 	}
 });
 
 // File filter definition with type declarations
-const fileFilter = (
+let fileFilter = (
 	req: Request,
 	file: Express.Multer.File,
 	cb: FileFilterCallback
 ) => {
-	const allowedMimeTypes = [
+	let allowedMimeTypes = [
 		'application/json',
 		'application/x-x509-ca-cert',
 		'application/pgp-keys',
@@ -51,7 +51,7 @@ const fileFilter = (
 		'video/x-msvideo'
 	];
 
-	const allowedExtensions = [
+	let allowedExtensions = [
 		'.avi',
 		'.json',
 		'.gpg',
@@ -80,7 +80,7 @@ const fileFilter = (
 		'.crt'
 	];
 
-	const ext = path.extname(file.originalname).toLowerCase();
+	let ext = path.extname(file.originalname).toLowerCase();
 	if (
 		allowedMimeTypes.includes(file.mimetype) &&
 		allowedExtensions.includes(ext)
@@ -91,13 +91,13 @@ const fileFilter = (
 	}
 };
 
-// Set limits for the uploaded filesconst multerLimits = {
-const multerLimits = {
+// Set limits for the uploaded fileslet multerLimits = {
+let multerLimits = {
 	fileSize: 1024 * 1024 * 5
 }; // Limit files to 5MB
 
 // Create the multer instance with the storage, fileFilter, and limits
-const multerConfiguredUpload = multer({
+let multerConfiguredUpload = multer({
 	storage: storage,
 	fileFilter: fileFilter,
 	limits: multerLimits

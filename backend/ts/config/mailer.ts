@@ -2,9 +2,9 @@ import nodemailer, { Transporter } from 'nodemailer';
 import getSecrets from './secrets';
 
 async function createTransporter(): Promise<Transporter> {
-	const secrets = await getSecrets();
+	let secrets = await getSecrets();
 
-	const transporter = nodemailer.createTransport({
+	let transporter = nodemailer.createTransport({
 		host: secrets.EMAIL_HOST,
 		port: secrets.EMAIL_PORT,
 		secure: secrets.EMAIL_SECURE,

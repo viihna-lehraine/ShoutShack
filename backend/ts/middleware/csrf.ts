@@ -16,7 +16,7 @@ export function csrfMiddleware(
 
 		// If the request method is not GET, validate the CSRF token
 		if (req.method !== 'GET') {
-			const token =
+			let token =
 				req.body.csrfToken || (req.headers['x-xsrf-token'] as string);
 			if (!token || !csrfProtection.verify(req.sessionID || '', token)) {
 				return res.status(403).send('Invalid CSRF token');

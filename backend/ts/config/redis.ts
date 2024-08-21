@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 
 async function connectRedis() {
-	const client = createClient({
+	let client = createClient({
 		url: 'redis://localhost:6379'
 	});
 
@@ -13,12 +13,12 @@ async function connectRedis() {
 	console.log('Connected to Redis');
 
 	await client.set('key', 'value');
-	const value = await client.get('key');
+	let value = await client.get('key');
 	console.log('Key value:', value);
 
 	return client;
 }
 
-const redisClient = connectRedis();
+let redisClient = connectRedis();
 
 export default redisClient;

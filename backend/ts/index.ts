@@ -1,11 +1,11 @@
-import initializeDatabase from './config/db';
+import { initializeDatabase } from './config/db';
 import featureFlags from './config/featureFlags';
 import loadEnv, { __dirname } from './config/loadEnv';
-import startServer from './middleware/http';
+import { setupHttp } from './middleware/http';
 import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';
-import redisClient from './config/redis';
+// import redisClient from './config/redis';
 import setupSecurityHeaders from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
 import { csrfMiddleware } from './middleware/csrf';
@@ -97,13 +97,13 @@ export {
 	multerConfiguredUpload,
 	parseBoolean,
 	rateLimitMiddleware,
-	redisClient,
+	//	redisClient,
 	registrationValidationRules,
 	removeFromBlacklist,
 	saveBackupCodesToDatabase,
+	setupHttp,
 	setupSecurityHeaders,
 	slowdownMiddleware,
-	startServer,
 	validateEntry,
 	validateYubicoOTP,
 	verifyBackupCode,
@@ -117,4 +117,4 @@ export {
 	__dirname
 };
 
-const { decryptDataFiles, getSSLKeys } = sops;
+let { decryptDataFiles, getSSLKeys } = sops;

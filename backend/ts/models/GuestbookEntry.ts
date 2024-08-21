@@ -5,8 +5,8 @@ import {
 	InferCreationAttributes,
 	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface GuestbookEntryAttributes {
 	id: string;
@@ -32,60 +32,55 @@ class GuestbookEntry
 	entryDate!: CreationOptional<Date>;
 }
 
-async function initializeGuestbookEntryModel(): Promise<typeof GuestbookEntry> {
-	const sequelize = await initializeDatabase();
+// Get the Sequelize instance
+const sequelize = getSequelizeInstance();
 
-	GuestbookEntry.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			guestName: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				unique: false
-			},
-			guestEmail: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				unique: false
-			},
-			guestMessage: {
-				type: DataTypes.TEXT,
-				allowNull: false,
-				unique: false
-			},
-			guestMessageStyles: {
-				type: DataTypes.JSON,
-				allowNull: true,
-				unique: false
-			},
-			entryDate: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false,
-				unique: false
+// Initialize the GuestbookEntry model
+GuestbookEntry.init(
+	{
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			primaryKey: true,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'GuestbookEntry',
-			timestamps: false
+		guestName: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			unique: false
+		},
+		guestEmail: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			unique: false
+		},
+		guestMessage: {
+			type: DataTypes.TEXT,
+			allowNull: false,
+			unique: false
+		},
+		guestMessageStyles: {
+			type: DataTypes.JSON,
+			allowNull: true,
+			unique: false
+		},
+		entryDate: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false,
+			unique: false
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'GuestbookEntry',
+		timestamps: false
+	}
+);
 
-	await GuestbookEntry.sync();
-	return GuestbookEntry;
-}
-
-// Export the initialized model
-const GuestbookEntryModelPromise = initializeGuestbookEntryModel();
-export default GuestbookEntryModelPromise;
+export default GuestbookEntry;

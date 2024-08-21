@@ -5,8 +5,8 @@ import {
 	InferCreationAttributes,
 	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface DeviceAttributes {
 	deviceId: number;
@@ -40,83 +40,76 @@ class Device
 }
 
 // Initialize the Device model
-async function initializeDeviceModel(): Promise<typeof Device> {
-	const sequelize = await initializeDatabase();
+const sequelize = getSequelizeInstance();
 
-	Device.init(
-		{
-			deviceId: {
-				type: DataTypes.INTEGER,
-				primaryKey: true,
-				autoIncrement: true,
-				allowNull: false,
-				unique: true
-			},
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			deviceName: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			deviceType: {
-				type: DataTypes.STRING,
-				allowNull: true,
-				validate: {
-					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
-				}
-			},
-			os: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			browser: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			ipAddress: {
-				type: DataTypes.STRING,
-				allowNull: false
-			},
-			lastUsed: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: true
-			},
-			isTrusted: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: false
-			},
-			creationDate: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: false
-			},
-			lastUpdated: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: true
+Device.init(
+	{
+		deviceId: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true,
+			allowNull: false,
+			unique: true
+		},
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			primaryKey: true,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'Device',
-			timestamps: true
+		deviceName: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		deviceType: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			validate: {
+				isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
+			}
+		},
+		os: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		browser: {
+			type: DataTypes.STRING,
+			allowNull: true
+		},
+		ipAddress: {
+			type: DataTypes.STRING,
+			allowNull: false
+		},
+		lastUsed: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: true
+		},
+		isTrusted: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
+		},
+		creationDate: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: false
+		},
+		lastUpdated: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: true
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'Device',
+		timestamps: true
+	}
+);
 
-	await Device.sync();
-	return Device;
-}
-
-// Export the initialized model
-const DeviceModelPromise = initializeDeviceModel();
-export default DeviceModelPromise;
+export default Device;

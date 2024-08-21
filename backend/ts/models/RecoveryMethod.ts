@@ -2,10 +2,11 @@ import {
 	DataTypes,
 	Model,
 	InferAttributes,
-	InferCreationAttributes
+	InferCreationAttributes,
+	CreationOptional
 } from 'sequelize';
-import initializeDatabase from '../config/db';
-import UserModelPromise from './User';
+import { getSequelizeInstance } from '../config/db';
+import User from './User';
 
 interface RecoveryMethodAttributes {
 	id: string;
@@ -28,61 +29,57 @@ class RecoveryMethod
 	recoveryId!: string;
 	recoveryMethod!: 'email' | 'backupCodes';
 	backupCodes!: string[] | null;
-	recoveryLastUpdated!: Date;
+	recoveryLastUpdated!: CreationOptional<Date>;
 }
 
-async function initializeRecoveryMethodModel(): Promise<typeof RecoveryMethod> {
-	const sequelize = await initializeDatabase();
+// Get the Sequelize instance
+const sequelize = getSequelizeInstance();
 
-	RecoveryMethod.init(
-		{
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: await UserModelPromise,
-					key: 'id'
-				}
-			},
-			isRecoveryActive: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: false,
-				allowNull: false
-			},
-			recoveryId: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4,
-				primaryKey: true,
-				allowNull: false,
-				unique: true
-			},
-			recoveryMethod: {
-				type: DataTypes.ENUM('email', 'backupCodes'),
-				allowNull: true
-			},
-			backupCodes: {
-				type: DataTypes.ARRAY(DataTypes.STRING),
-				allowNull: true
-			},
-			recoveryLastUpdated: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW,
-				allowNull: true
+// Initialize the RecoveryMethod model
+RecoveryMethod.init(
+	{
+		id: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			primaryKey: true,
+			allowNull: false,
+			unique: true,
+			references: {
+				model: User,
+				key: 'id'
 			}
 		},
-		{
-			sequelize,
-			modelName: 'RecoveryMethod',
-			timestamps: true
+		isRecoveryActive: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false
+		},
+		recoveryId: {
+			type: DataTypes.UUID,
+			defaultValue: DataTypes.UUIDV4,
+			primaryKey: true,
+			allowNull: false,
+			unique: true
+		},
+		recoveryMethod: {
+			type: DataTypes.ENUM('email', 'backupCodes'),
+			allowNull: true
+		},
+		backupCodes: {
+			type: DataTypes.ARRAY(DataTypes.STRING),
+			allowNull: true
+		},
+		recoveryLastUpdated: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+			allowNull: true
 		}
-	);
+	},
+	{
+		sequelize,
+		modelName: 'RecoveryMethod',
+		timestamps: true
+	}
+);
 
-	await RecoveryMethod.sync();
-	return RecoveryMethod;
-}
-
-const RecoveryMethodModelPromise = initializeRecoveryMethodModel();
-export default RecoveryMethodModelPromise;
+export default RecoveryMethod;

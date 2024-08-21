@@ -1,4 +1,4 @@
-declare const __dirname: string;
+declare let __dirname: string;
 declare function loadEnv(): void;
 export { __dirname };
 export default loadEnv;

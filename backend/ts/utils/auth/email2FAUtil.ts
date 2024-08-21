@@ -20,10 +20,10 @@ async function getSecretsOrThrow(): Promise<Secrets> {
 }
 
 async function generateEmail2FACode() {
-	const secrets = await getSecretsOrThrow();
+	let secrets = await getSecretsOrThrow();
 
-	const email2FACode = await bcrypt.genSalt(6); // generates a 6-character hex code
-	const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
+	let email2FACode = await bcrypt.genSalt(6); // generates a 6-character hex code
+	let email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
 		expiresIn: '30m'
 	});
 	return {
@@ -33,10 +33,10 @@ async function generateEmail2FACode() {
 }
 
 async function verifyEmail2FACode(token: string, email2FACode: string) {
-	const secrets = await getSecretsOrThrow();
+	let secrets = await getSecretsOrThrow();
 
 	try {
-		const decodedEmail2FACode = jwt.verify(
+		let decodedEmail2FACode = jwt.verify(
 			token,
 			secrets.EMAIL_2FA_KEY
 		) as JwtPayload;
