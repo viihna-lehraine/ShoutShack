@@ -1,3 +1,3 @@
 declare module 'yub' {
-    export function init(clientId: string, secretKey: string): any;
+	export function init(clientId: string, secretKey: string): any;
 }

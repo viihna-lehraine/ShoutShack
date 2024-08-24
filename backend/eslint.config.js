@@ -12,12 +12,8 @@ export default [
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
-				ecmaVersion: 2015,
+				ecmaVersion: 2022,
 				sourceType: 'module',
-			},
-			globals: {
-				browser: true,
-				es6: true,
 			},
 		},
 		plugins: {
@@ -32,11 +28,11 @@ export default [
 			'prettier/prettier': 'error',
 			'node/no-unsupported-features/es-syntax': 'off',
 			'security/detect-object-injection': 'off',
-			'@typescript-eslint/no-explicit-any': 'error',
 		},
 		ignores: [
 			'keys/',
 			'logs/',
+			'types/**/*.d.ts',
 			'node_modules/',
 			'.dockerignore',
 			'.nvmrc',
@@ -47,7 +43,7 @@ export default [
 			'nodemon.json',
 			'eslint.config.js',
 			'config/.babelrc',
-			'src/config/*.*',
+			'src/config/*.*'
 		],
 	},
 	{
@@ -60,12 +56,8 @@ export default [
 					presets: ['@babel/preset-env'],
 				},
 			},
-			ecmaVersion: 2015,
+			ecmaVersion: 2022,
 			sourceType: 'module',
-			globals: {
-				browser: true,
-				es6: true,
-			},
 		},
 		plugins: {
 			prettier: prettierPlugin,
@@ -81,6 +73,7 @@ export default [
 		ignores: [
 			'keys/',
 			'logs/',
+			'types/**/*.d.ts',
 			'node_modules/',
 			'.babelrc',
 			'.dockerignore',
@@ -90,9 +83,7 @@ export default [
 			'backend.env',
 			'Dockerfile',
 			'nodemon.json',
-			'eslint.config.js',
-			'src/config/secrets.json',
-			'src/config/secrets.json.gpg',
+			'eslint.config.js'
 		],
 	},
 ];

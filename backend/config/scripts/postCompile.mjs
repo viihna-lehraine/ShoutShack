@@ -6,7 +6,7 @@ let __filename = fileURLToPath(import.meta.url);
 let __dirname = dirname(__filename);
 
 // Defines location of compiled JS files
-let jsDir = resolve(__dirname, '../../src');
+let jsDir = resolve(__dirname, '../../dist');
 
 console.log(`Looking for files in: ${jsDir}`);
 

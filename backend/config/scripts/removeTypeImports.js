@@ -10,11 +10,11 @@ const __dirname = process.cwd();
 // Define an array of file paths and their corresponding import lines to remove
 const filesToClean = [
 	{
-		filePath: path.join(__dirname, './src/utils/auth/yubicoOtpUtil.js'),
+		filePath: path.join(__dirname, './dist/utils/auth/yubicoOtpUtil.js'),
 		importLine: "import '../../../types/custom/yub.d.ts';\n"
 	},
 	{
-		filePath: path.join(__dirname, './src/middleware/slowdown.js'),
+		filePath: path.join(__dirname, './dist/middleware/slowdown.js'),
 		importLine: "import '../../types/custom/express-session';\n"
 	}
 ];

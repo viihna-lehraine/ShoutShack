@@ -1,1 +1,1 @@
-{"version":3,"file":"loadTestRoutes.d.ts","sourceRoot":"","sources":["../../../../ts/utils/test/loadTestRoutes.ts"],"names":[],"mappings":"AAAA,OAAO,OAAO,MAAM,SAAS,CAAC;AAI9B,wBAAgB,cAAc,CAAC,GAAG,EAAE,OAAO,CAAC,WAAW,GAAG,IAAI,CAe7D;AAED,eAAe,cAAc,CAAC"}
+{"version":3,"file":"loadTestRoutes.d.ts","sourceRoot":"","sources":["../../../../src/utils/test/loadTestRoutes.ts"],"names":[],"mappings":"AAAA,OAAO,OAAO,MAAM,SAAS,CAAC;AAI9B,wBAAgB,cAAc,CAAC,GAAG,EAAE,OAAO,CAAC,WAAW,GAAG,IAAI,CAe7D;AAED,eAAe,cAAc,CAAC"}

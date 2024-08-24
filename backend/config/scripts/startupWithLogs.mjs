@@ -11,7 +11,7 @@ function runServerAndLog() {
   const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
   logStream.write(`\n----- TIMESTAMP -----\n${timestamp}\n\n`);
 
-  const serverProcess = spawn('node', ['src/server.js'], {
+  const serverProcess = spawn('node', ['dist/server.js'], {
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: false,
   });
