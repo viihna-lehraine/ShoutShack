@@ -1,4 +1,6 @@
-const generateAccountDeletedConfirmationEmailTemplate = (username: string) => {
+const generateAccountDeletedConfirmationEmailTemplate = (
+	username: string
+): string => {
 	return `
         <!DOCTYPE html>
         <html lang="en">

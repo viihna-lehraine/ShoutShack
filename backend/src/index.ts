@@ -32,19 +32,19 @@ import {
 	generateEmail2FACode,
 	verifyEmail2FACode
 } from './utils/auth/email2FAUtil';
-import {
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
-	verifyU2fAuthentication,
-	verifyU2fRegistration
-} from './utils/auth/fido2Util';
+//import {
+//	generateU2fAuthenticationOptions,
+//	generateU2fRegistrationOptions,
+//	verifyU2fAuthentication,
+//	verifyU2fRegistration
+// } from './utils/auth/fido2Util';
 import { verifyJwToken } from './utils/auth/jwtUtil';
-import {
-	generatePasskeyAuthenticationOptions,
-	generatePasskeyRegistrationOptions,
-	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration
-} from './utils/auth/passkeyUtil';
+// import {
+// 	generatePasskeyAuthenticationOptions,
+// 	generatePasskeyRegistrationOptions,
+// 	verifyPasskeyAuthentication,
+// 	verifyPasskeyRegistration
+// } from './utils/auth/passkeyUtil';
 import {
 	generateYubicoOtpOptions,
 	validateYubicoOTP
@@ -77,11 +77,11 @@ export {
 	generateBackupCodes,
 	generateConfirmationEmailTemplate,
 	generateEmail2FACode,
-	generatePasskeyAuthenticationOptions,
-	generatePasskeyRegistrationOptions,
+	// generatePasskeyAuthenticationOptions,
+	// generatePasskeyRegistrationOptions,
 	generateQRCode,
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
+	// generateU2fAuthenticationOptions,
+	// generateU2fRegistrationOptions,
 	generateTOTPSecret,
 	generateTOTPToken,
 	generateYubicoOtpOptions,
@@ -109,12 +109,12 @@ export {
 	verifyBackupCode,
 	verifyEmail2FACode,
 	verifyJwToken,
-	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration,
+	// verifyPasskeyAuthentication,
+	// verifyPasskeyRegistration,
 	verifyTOTPToken,
-	verifyU2fAuthentication,
-	verifyU2fRegistration,
+	// verifyU2fAuthentication,
+	// verifyU2fRegistration,
 	__dirname
 };
 
-let { decryptDataFiles, getSSLKeys } = sops;
+const { decryptDataFiles, getSSLKeys } = sops;

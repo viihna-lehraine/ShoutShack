@@ -1,12 +1,13 @@
 import path from 'path';
 import { config } from 'dotenv';
+import setupLogger from './logger';
 
-// Declare process to capture cwd
-let __dirname = process.cwd();
+const __dirname = process.cwd();
+const logger = await setupLogger();
 
-function loadEnv() {
+async function loadEnv() {
 	const envPath = path.join(__dirname, 'backend.dev.env');
-	console.log(`Loading environment from: ${envPath}`);
+	logger.info(`Loading environment from: ${envPath}`);
 
 	config({ path: envPath });
 }

@@ -1,4 +1,4 @@
-const generate2FAEnabledEmailTemplate = (username: string) => {
+const generate2FAEnabledEmailTemplate = (username: string): string => {
 	return `
         <!DOCTYPE html>
         <html lang="en">

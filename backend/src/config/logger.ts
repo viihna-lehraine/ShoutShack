@@ -1,18 +1,15 @@
 import pkg from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import loadEnv from '../config/loadEnv';
 
 const { createLogger, format, transports } = pkg;
 const { combine, timestamp, printf, colorize, errors, json } = format;
 
-let logFormat = printf(({ level, message, timestamp, stack }) => {
+const logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp}, ${level}: ${stack || message}`;
 });
 
-async function setupLogger() {
-	loadEnv();
-
-	let logger = createLogger({
+async function setupLogger(): Promise<pkg.Logger> {
+	const logger = createLogger({
 		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
 		format: combine(
 			timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),

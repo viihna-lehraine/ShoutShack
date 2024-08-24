@@ -17,20 +17,23 @@ interface YubClient {
 
 interface YubResponse {
 	status: string;
-	[key: string]: string | number | boolean | object | null | undefined; // *DEV-NOTE* this is my way of saying "I have absolutely no idea what type this could be yet
+	[key: string]: string | number | boolean | object | null | undefined; // *DEV-NOTE* I have absolutely no idea what type should be
 }
 
-let secrets: Secrets | undefined;
+interface YubicoOtpOptions {
+	clientId: number;
+	apiKey: string;
+	apiUrl: string;
+}
+
+const secrets: Secrets = await getSecrets();
 let yubClient: YubClient | undefined;
 
 async function initializeYubicoOtpUtil(): Promise<void> {
-	if (!secrets || !yubClient) {
-		secrets = await getSecrets();
-		yubClient = yub.init(
-			secrets!.YUBICO_CLIENT_ID.toString(),
-			secrets!.YUBICO_SECRET_KEY
-		) as YubClient;
-	}
+	yubClient = yub.init(
+		secrets!.YUBICO_CLIENT_ID.toString(),
+		secrets!.YUBICO_SECRET_KEY
+	) as YubClient;
 }
 
 // for validating a Yubico OTP
@@ -55,7 +58,7 @@ async function validateYubicoOTP(otp: string): Promise<boolean> {
 }
 
 // generated OTP configruation options
-function generateYubicoOtpOptions() {
+function generateYubicoOtpOptions(): YubicoOtpOptions {
 	if (!secrets) {
 		throw new Error('Secrets have not been initialized');
 	}

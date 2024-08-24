@@ -18,7 +18,7 @@ import UserSession from './UserSession';
 import getSecrets from '../config/secrets';
 
 export function initializeModels(): void {
-	let sequelize = getSequelizeInstance();
+	const sequelize = getSequelizeInstance();
 	// console.log('Sequelize instance: ', sequelize);
 
 	console.log('Initializing User');
@@ -83,7 +83,7 @@ export function initializeModels(): void {
 			hooks: {
 				beforeCreate: async (user: User) => {
 					try {
-						let secrets = await getSecrets();
+						const secrets = await getSecrets();
 						user.password = await argon2.hash(
 							user.password + secrets.PEPPER,
 							{
@@ -96,7 +96,7 @@ export function initializeModels(): void {
 					} catch (error: unknown) {
 						if (error instanceof Error) {
 							throw new Error(
-								'Error hashing password: ' + error.message
+								`Error hashing password: ${error.message}`
 							);
 						} else {
 							throw new Error(
@@ -1045,12 +1045,12 @@ export function initializeModels(): void {
 			modelName: 'UserSession',
 			timestamps: true,
 			hooks: {
-				beforeCreate: (session) => {
+				beforeCreate: session => {
 					session.expiresAt = new Date(
 						(session.createdAt as Date).getTime() + 60 * 60000
 					); // default expiration time is 60 minutes after session generation
 				},
-				beforeUpdate: (session) => {
+				beforeUpdate: session => {
 					session.updatedAt = new Date(); // update the updatedAt field on every update
 				}
 			}

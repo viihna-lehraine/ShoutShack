@@ -1,6 +1,6 @@
 import express from 'express';
 
-let router = express.Router();
+const router = express.Router();
 
 router.get('/test', (req, res) => {
 	res.send('Test route is working!');

@@ -5,8 +5,8 @@ export const validateEntry = (
 	req: Request,
 	res: Response,
 	next: NextFunction
-) => {
-	let errors = [];
+): void => {
+	const errors: Array<{ msg: string; param: string }> = [];
 
 	// Name validation
 	if (validator.isEmpty(req.body.name || '')) {
@@ -19,18 +19,19 @@ export const validateEntry = (
 	}
 
 	if (errors.length) {
-		return res.status(400).json({ errors });
+		res.status(400).json({ errors });
+		return;
 	}
 
-	return next;
+	next();
 };
 
 export const registrationValidationRules = (
 	req: Request,
 	res: Response,
 	next: NextFunction
-) => {
-	const errors = [];
+): void => {
+	const errors: Array<{ msg: string; param: string }> = [];
 
 	// Username validation
 	if (!validator.isLength(req.body.username || '', { min: 3 })) {

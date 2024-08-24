@@ -16,17 +16,28 @@ import {
 	rateLimitMiddleware,
 	setupSecurityHeaders
 } from '../index';
-import setupLogger from '../middleware/logger';
+import setupLogger from './logger';
 
 const app = express();
-const staticRootPath = process.env.STATIC_ROOT_PATH!;
+const staticRootPath =
+	process.env.STATIC_ROOT_PATH ?? path.join(__dirname, '../public');
+const logger = await setupLogger();
 
 async function initializeApp(): Promise<void> {
-	const logger = await setupLogger();
+	const middlewares = [
+		express.json(),
+		express.urlencoded({ extended: true }),
+		cookieParser(),
+		passport.initialize(),
+		express.static(staticRootPath),
+		hpp(),
+		rateLimitMiddleware,
+		ipBlacklistMiddleware,
+		csrfMiddleware
+	];
 
-	// Set up middlewares
-	app.use(express.json);
-	app.use(express.urlencoded({ extended: true }));
+	app.use(...middlewares);
+
 	app.use(
 		cors({
 			methods: 'GET,POST,PUT,DELETE',
@@ -34,39 +45,28 @@ async function initializeApp(): Promise<void> {
 			credentials: true
 		})
 	);
-	app.use(hpp());
+
 	app.use(
 		morgan('combined', {
 			stream: { write: (message = '') => logger.info(message.trim()) }
 		})
 	);
-	app.use(passport.initialize());
-	app.use(cookieParser());
-	app.use(
-		express.static(staticRootPath ?? path.join(__dirname, '../public'))
-	);
 
-	// Initialize routes
 	app.use('/', initializeStaticRoutes);
-	app.use('/api', apiRoutes);
-	app.use(rateLimitMiddleware);
-	app.use(ipBlacklistMiddleware);
-	app.use(csrfMiddleware);
 
-	// Generate nonce for each request
+	app.use('/api', apiRoutes);
+
 	app.use(async (req: Request, res: Response, next: NextFunction) => {
 		try {
-			res.locals.cspNonce = (await randomBytes(16)).toString('hex');
+			res.locals.cspNonce = randomBytes(16).toString('hex');
 			next();
-		} catch (error) {
-			next(error);
+		} catch {
+			next();
 		}
 	});
 
-	// Set up security headers
 	setupSecurityHeaders(app);
 
-	// Load test routes
 	loadTestRoutes(app);
 
 	// Session management
@@ -79,8 +79,10 @@ async function initializeApp(): Promise<void> {
 	// }));
 
 	// Apply Sentry middleware for request and error handling
-	// app.use(Sentry.RequestHandlers.requestHandler());
-	// app.use(Sentry.Handlers.errorHandler());
+	// if (process.env.NODE_ENV === 'production') {
+	// 	app.use(Sentry.RequestHandlers.requestHandler());
+	// 	app.use(Sentry.Handlers.errorHandler());
+	// }
 
 	// 404 error handling
 	app.use((req: Request, res: Response, next: NextFunction) => {
@@ -92,9 +94,9 @@ async function initializeApp(): Promise<void> {
 
 	// General error handling
 	app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-		logger.error('Error occurred: ', err?.stack ?? err?.message ?? err);
+		logger.error(`Error occurred: ${err.stack ?? err.message ?? err}`);
 		res.status(500).send(
-			`Server error - something failed ${err.stack ?? 'Unknown error'}`
+			`Server error - something failed: ${err.stack ?? 'Unknown error'}`
 		);
 		next();
 	});

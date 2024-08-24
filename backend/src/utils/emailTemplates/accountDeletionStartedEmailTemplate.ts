@@ -1,4 +1,6 @@
-const generateAccountDeletionStartedEmailTemplate = (username: string) => {
+const generateAccountDeletionStartedEmailTemplate = (
+	username: string
+): string => {
 	return `
         <!DOCTYPE html>
         <html lang="en">

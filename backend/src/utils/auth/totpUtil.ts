@@ -9,7 +9,7 @@ interface TOTPSecret {
 }
 
 function generateTOTPSecret(): TOTPSecret {
-	let totpSecret = speakeasy.generateSecret({ length: 20 });
+	const totpSecret = speakeasy.generateSecret({ length: 20 });
 	return {
 		ascii: totpSecret.ascii || '',
 		hex: totpSecret.hex || '',
@@ -19,18 +19,18 @@ function generateTOTPSecret(): TOTPSecret {
 }
 
 function generateTOTPToken(secret: string): string {
-	let totpToken = speakeasy.totp({
-		secret: secret,
+	const totpToken = speakeasy.totp({
+		secret,
 		encoding: 'base32'
 	});
 	return totpToken;
 }
 
 function verifyTOTPToken(secret: string, token: string): boolean {
-	let isTOTPTokenValid = speakeasy.totp.verify({
-		secret: secret,
+	const isTOTPTokenValid = speakeasy.totp.verify({
+		secret,
 		encoding: 'base32',
-		token: token,
+		token,
 		window: 1 // gives leeway for clock drift
 	});
 	return isTOTPTokenValid;

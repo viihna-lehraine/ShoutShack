@@ -1,29 +1,25 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import setupLogger from '../../config/logger.js';
 import getSecrets from '../../config/secrets.js';
 
 interface Secrets {
 	EMAIL_2FA_KEY: string;
 }
 
-let secrets: Secrets | undefined;
+const logger = await setupLogger();
+const secrets: Secrets = await getSecrets();
 
-async function getSecretsOrThrow(): Promise<Secrets> {
-	if (!secrets) {
-		secrets = await getSecrets();
-		if (!secrets) {
-			throw new Error('Secrets could not be loaded');
-		}
-	}
-
-	return secrets;
+if (!secrets) {
+	throw new Error('Secrets could not be loaded');
 }
 
-async function generateEmail2FACode() {
-	let secrets = await getSecretsOrThrow();
-
-	let email2FACode = await bcrypt.genSalt(6); // generates a 6-character hex code
-	let email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
+async function generateEmail2FACode(): Promise<{
+	email2FACode: string;
+	email2FAToken: string;
+}> {
+	const email2FACode = await bcrypt.genSalt(6); // generates a 6-character hex code
+	const email2FAToken = jwt.sign({ email2FACode }, secrets.EMAIL_2FA_KEY, {
 		expiresIn: '30m'
 	});
 	return {
@@ -32,11 +28,12 @@ async function generateEmail2FACode() {
 	};
 }
 
-async function verifyEmail2FACode(token: string, email2FACode: string) {
-	let secrets = await getSecretsOrThrow();
-
+async function verifyEmail2FACode(
+	token: string,
+	email2FACode: string
+): Promise<boolean> {
 	try {
-		let decodedEmail2FACode = jwt.verify(
+		const decodedEmail2FACode = jwt.verify(
 			token,
 			secrets.EMAIL_2FA_KEY
 		) as JwtPayload;
@@ -44,7 +41,7 @@ async function verifyEmail2FACode(token: string, email2FACode: string) {
 		// ensue the decoded 2FA code matches the one provided
 		return decodedEmail2FACode.code === email2FACode;
 	} catch (err) {
-		console.error(err);
+		logger.error(err);
 		return false;
 	}
 }

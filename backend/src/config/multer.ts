@@ -5,7 +5,7 @@ import path from 'path';
 // Define the storage location and filename
 let storage = multer.diskStorage({
 	destination: (req, file, cb) => {
-		cb(null, path.join(__dirname, '../../uploads')); // save files to 'uploads' directory
+		cb(null, path.join(__dirname, '../../uploads'));
 	},
 	filename: (req, file, cb) => {
 		let uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;

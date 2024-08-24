@@ -1,20 +1,23 @@
 import { createClient } from 'redis';
+import setupLogger from './logger';
+
+const logger = await setupLogger();
 
 async function connectRedis() {
 	let client = createClient({
 		url: 'redis://localhost:6379'
 	});
 
-	client.on('error', (err) => {
-		console.error('Redis client error:', err);
+	client.on('error', err => {
+		logger.error('Redis client error:', err);
 	});
 
 	await client.connect();
-	console.log('Connected to Redis');
+	logger.info('Connected to Redis');
 
 	await client.set('key', 'value');
 	let value = await client.get('key');
-	console.log('Key value:', value);
+	logger.info('Key value:', value);
 
 	return client;
 }

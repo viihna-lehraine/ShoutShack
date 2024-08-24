@@ -11,8 +11,8 @@ export const rateLimitMiddleware = (
 	req: Request,
 	res: Response,
 	next: NextFunction
-) => {
-	let ip = req.ip || 'unknown'; // provides fallback if req.ip is undefined
+): void => {
+	const ip = req.ip || 'unknown'; // provides fallback if req.ip is undefined
 
 	rateLimiter
 		.consume(ip)

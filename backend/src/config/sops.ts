@@ -1,11 +1,11 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { __dirname } from './loadEnv';
-import setupLogger from '../middleware/logger';
+import setupLogger from './logger';
+
+const logger = await setupLogger();
 
 async function decryptFile(encryptedFilePath: string) {
-	let logger = await setupLogger();
-
 	try {
 		let decryptedFile = execSync(
 			`sops -d --output-type json ${encryptedFilePath}`
@@ -18,17 +18,15 @@ async function decryptFile(encryptedFilePath: string) {
 }
 
 async function decryptDataFiles() {
-	let logger = await setupLogger();
-
 	try {
-		let filePaths = [
+		const filePaths = [
 			process.env.SERVER_DATA_FILE_PATH_1,
 			process.env.SERVER_DATA_FILE_PATH_2,
 			process.env.SERVER_DATA_FILE_PATH_3,
 			process.env.SERVER_DATA_FILE_PATH_4
 		];
 
-		let decryptedFiles: { [key: string]: string } = {};
+		const decryptedFiles: { [key: string]: string } = {};
 
 		for (let [index, filePath] of filePaths.entries()) {
 			if (filePath) {
@@ -50,16 +48,17 @@ async function decryptDataFiles() {
 }
 
 async function getSSLKeys() {
-	let logger = await setupLogger();
-
 	try {
-		let keyPath = path.join(__dirname, './keys/ssl/guestbook_key.pem.gpg');
-		let certPath = path.join(
+		const keyPath = path.join(
+			__dirname,
+			'./keys/ssl/guestbook_key.pem.gpg'
+		);
+		const certPath = path.join(
 			__dirname,
 			'./keys/ssl/guestbook_cert.pem.gpg'
 		);
-		let decryptedKey = await decryptFile(keyPath);
-		let decryptedCert = await decryptFile(certPath);
+		const decryptedKey = await decryptFile(keyPath);
+		const decryptedCert = await decryptFile(certPath);
 
 		return {
 			key: decryptedKey,

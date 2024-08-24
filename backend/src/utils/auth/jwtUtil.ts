@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import setupLogger from '../../config/logger';
 import getSecrets from '../../config/secrets';
 
 interface Secrets {
@@ -10,20 +11,14 @@ interface User {
 	username: string;
 }
 
-let secrets: Secrets | undefined;
+const logger = await setupLogger();
+const secrets: Secrets = await getSecrets();
 
-let loadSecrets = async () => {
-	if (!secrets) {
-		secrets = await getSecrets();
-	}
-	return secrets;
-};
+if (!secrets) {
+	throw new Error('Secrets could not be loaded');
+}
 
-export let generateToken = async (user: User) => {
-	let secrets = await loadSecrets();
-	if (!secrets) {
-		throw new Error('Secrets could not be loaded');
-	}
+export const generateToken = async (user: User): Promise<string> => {
 	return jwt.sign(
 		{ id: user.id, username: user.username },
 		secrets.JWT_SECRET,
@@ -31,15 +26,13 @@ export let generateToken = async (user: User) => {
 	);
 };
 
-export let verifyJwToken = async (token: string) => {
+export const verifyJwToken = async (
+	token: string
+): Promise<string | object | null> => {
 	try {
-		let secrets = await loadSecrets();
-		if (!secrets) {
-			throw new Error('Secrets could not be loaded');
-		}
 		return jwt.verify(token, secrets.JWT_SECRET);
 	} catch (err) {
-		console.log(err);
+		logger.error(err);
 		return null;
 	}
 };

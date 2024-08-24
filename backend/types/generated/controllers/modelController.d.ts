@@ -6,22 +6,22 @@ interface ModelType extends Model {
 export declare const getEntries: <T extends ModelType>(Model: {
     new (): T;
     findAll: () => Promise<T[]>;
-}) => (req: Request, res: Response) => Promise<void>;
+}) => ((req: Request, res: Response) => Promise<void>);
 export declare const createEntry: <T extends ModelType>(Model: {
     new (): T;
     create: (values: object) => Promise<T>;
-}) => (req: Request, res: Response) => Promise<void>;
+}) => ((req: Request, res: Response) => Promise<void>);
 export declare const updateEntry: <T extends ModelType>(Model: {
     new (): T;
     update: (values: object, options: {
         where: WhereOptions<T>;
     }) => Promise<[number, T[]]>;
-}) => (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+}) => ((req: Request, res: Response) => Promise<void>);
 export declare const deleteEntry: <T extends ModelType>(Model: {
     new (): T;
     destroy: (options: {
         where: WhereOptions<T>;
     }) => Promise<number>;
-}) => (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+}) => ((req: Request, res: Response) => Promise<void>);
 export {};
 //# sourceMappingURL=modelController.d.ts.map

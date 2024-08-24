@@ -5,7 +5,7 @@ import {
 	StrategyOptions
 } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
-import setupLogger from '../middleware/logger';
+import setupLogger from './logger';
 import getSecrets from './secrets';
 import UserModelPromise from '../models/User';
 

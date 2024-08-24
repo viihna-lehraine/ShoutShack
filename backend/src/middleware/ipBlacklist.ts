@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { __dirname } from '../config/loadEnv';
-import setupLogger from '../middleware/logger';
+import setupLogger from '../config/logger';
 
 let blacklist: string[] = [];
 let logger: Logger;
@@ -23,11 +23,11 @@ const initializeBlacklist = async (): Promise<void> => {
 
 // Load the blacklist from file
 export const loadBlacklist = async (): Promise<void> => {
-	let logger = await setupLogger();
-	let filePath = path.join(__dirname, '../../data/blacklist.json');
+	const logger = await setupLogger();
+	const filePath = path.join(__dirname, '../../data/blacklist.json');
 	try {
 		if (fs.existsSync(filePath)) {
-			let data = fs.readFileSync(filePath, 'utf8');
+			const data = fs.readFileSync(filePath, 'utf8');
 			blacklist = JSON.parse(data);
 		}
 	} catch (err) {
@@ -46,7 +46,7 @@ export const addToBlacklist = (ip: string): void => {
 
 // Save the blacklist
 const saveBlacklist = async (): Promise<void> => {
-	let filePath = path.join(__dirname, '../../data/blacklist.json');
+	const filePath = path.join(__dirname, '../../data/blacklist.json');
 	try {
 		fs.writeFileSync(filePath, JSON.stringify(blacklist, undefined, 2));
 	} catch (err) {
@@ -59,25 +59,27 @@ export const ipBlacklistMiddleware = (
 	req: Request,
 	res: Response,
 	next: NextFunction
-) => {
-	let clientIp = req.ip;
+): void => {
+	const clientIp = req.ip;
 
 	if (!clientIp) {
 		console.error('Client IP undefined');
-		return res.status(500).json({ error: 'Bad request' });
+		res.status(500).json({ error: 'Bad request' });
+		return;
 	}
 
-	if (blacklist.some((range) => inRange(clientIp, range))) {
+	if (blacklist.some(range => inRange(clientIp, range))) {
 		console.log(`Blocked request from blacklisted IP: ${clientIp}`);
-		return res.status(403).json({ error: 'Access denied' });
+		res.status(403).json({ error: 'Access denied' });
+		return;
 	}
 
-	return next();
+	next();
 };
 
 // Remove an IP or range from the blacklist
-export let removeFromBlacklist = (ip: string): void => {
-	blacklist = blacklist.filter((range) => range != ip);
+export const removeFromBlacklist = (ip: string): void => {
+	blacklist = blacklist.filter(range => range != ip);
 	saveBlacklist();
 };
 

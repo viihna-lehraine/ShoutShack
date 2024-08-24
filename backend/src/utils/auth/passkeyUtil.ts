@@ -1,3 +1,4 @@
+/* *DEV-NOTE* NEEDS A COMPLETE REBUILD
 import {
 	AssertionResult,
 	AttestationResult,
@@ -36,7 +37,7 @@ type AuthenticatorTransport = 'usb' | 'nfc' | 'ble' | 'internal';
 let fido2: Fido2Lib;
 
 (async () => {
-	let secrets: Secrets = await getSecrets();
+	const secrets: Secrets = await getSecrets();
 
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
@@ -60,10 +61,10 @@ let fido2: Fido2Lib;
 async function generatePasskeyRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	let passkeyRegistrationOptions = await fido2.attestationOptions();
+	const passkeyRegistrationOptions = await fido2.attestationOptions();
 
 	// constructing PublicKeyCredentialCreationOptions
-	let credentialCreationOptions: PublicKeyCredentialCreationOptions = {
+	const credentialCreationOptions: PublicKeyCredentialCreationOptions = {
 		...passkeyRegistrationOptions,
 		user: {
 			id: Buffer.from(user.id, 'utf8'),
@@ -84,13 +85,13 @@ async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
 	expectedChallenge: string
 ) {
-	let secrets: Secrets = await getSecrets();
+	const secrets: Secrets = await getSecrets();
 
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
 	}
 
-	let attestationExpectations: ExpectedAttestationResult = {
+	const attestationExpectations: ExpectedAttestationResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either', // 'factor` type should match as defined in the library
@@ -103,13 +104,13 @@ async function verifyPasskeyRegistration(
 async function generatePasskeyAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	let userCredentials = user.credential.map((cred) => ({
+	const userCredentials = user.credential.map(cred => ({
 		type: 'public-key' as const, // ensures 'public-key' is strictly typed
 		id: Buffer.from(cred.credentialId, 'base64'),
 		transports: ['usb', 'nfc', 'ble'] as AuthenticatorTransport[] // *DEV-NOTE* these are just example transports!
 	}));
 
-	let assertionOptions: PublicKeyCredentialRequestOptions = {
+	const assertionOptions: PublicKeyCredentialRequestOptions = {
 		...(await fido2.assertionOptions()),
 		allowCredentials: userCredentials,
 		userVerification: 'required',
@@ -126,17 +127,17 @@ async function verifyPasskeyAuthentication(
 	previousCounter: number,
 	id: string
 ) {
-	let secrets: Secrets = await getSecrets();
+	const secrets: Secrets = await getSecrets();
 
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
 	}
 
-	let assertionExpectations: ExpectedAssertionResult = {
+	const assertionExpectations: ExpectedAssertionResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either',
-		publicKey: publicKey,
+		publicKey,
 		prevCounter: previousCounter,
 		userHandle: id
 	};
@@ -150,3 +151,4 @@ export {
 	verifyPasskeyAuthentication,
 	verifyPasskeyRegistration
 };
+*/

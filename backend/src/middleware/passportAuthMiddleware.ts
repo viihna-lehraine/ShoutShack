@@ -5,7 +5,7 @@ export const authenticate = (
 	req: Request,
 	res: Response,
 	next: NextFunction
-) => {
+): void => {
 	passport.authenticate(
 		'jwt',
 		{ session: false } as AuthenticateOptions,

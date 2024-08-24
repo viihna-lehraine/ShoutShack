@@ -28,6 +28,17 @@ export default [
 			'prettier/prettier': 'error',
 			'node/no-unsupported-features/es-syntax': 'off',
 			'security/detect-object-injection': 'off',
+			'prefer-const': 'error',
+			'no-var': 'error',
+			'prefer-arrow-callback': 'error',
+			'prefer-template': 'error',
+			'no-useless-concat': 'error',
+			'object-shorthand': 'error',
+			'arrow-parens': ['error', 'as-needed'],
+			'@typescript-eslint/no-unused-vars': 'warn',
+			'@typescript-eslint/explicit-function-return-type': 'error',
+			'@typescript-eslint/no-explicit-any': 'warn',
+			'@typescript-eslint/consistent-type-definitions': ['error', 'interface']
 		},
 		ignores: [
 			'keys/',
@@ -69,6 +80,13 @@ export default [
 			'prettier/prettier': 'error',
 			'node/no-unsupported-features/es-syntax': 'off',
 			'security/detect-object-injection': 'off',
+			'prefer-const': 'error',
+			'no-var': 'error',
+			'prefer-arrow-callback': 'error',
+			'prefer-template': 'error',
+			'no-useless-concat': 'error',
+			'object-shorthand': 'error',
+			'arrow-parens': ['error', 'as-needed']
 		},
 		ignores: [
 			'keys/',

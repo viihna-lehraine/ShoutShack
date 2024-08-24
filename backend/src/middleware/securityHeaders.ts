@@ -2,7 +2,7 @@ import { Application, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import permissionsPolicy from 'permissions-policy';
 
-export default function setupSecurityHeaders(app: Application) {
+export default function setupSecurityHeaders(app: Application): void {
 	// Initial Helmet Configuration
 	app.use(
 		helmet({

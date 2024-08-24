@@ -1,12 +1,12 @@
 import express from 'express';
 import path from 'path';
-import setupLogger from '../middleware/logger';
+import setupLogger from '../config/logger';
 
-let router = express.Router();
+const router = express.Router();
+const logger = await setupLogger();
 
 async function setupStaticRoutes(): Promise<void> {
-	let logger = await setupLogger();
-	let staticRootPath = process.env.STATIC_ROOT_PATH as string;
+	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
 
 	// Define root file path for public/
 	router.get('/', (req, res) => {
@@ -17,8 +17,8 @@ async function setupStaticRoutes(): Promise<void> {
 
 	// Serve root HTML files
 	router.get('/:page', (req, res) => {
-		let page = req.params.page;
-		res.sendFile(path.join(staticRootPath, `${page}.html`), (err) => {
+		const page = req.params.page;
+		res.sendFile(path.join(staticRootPath, `${page}.html`), err => {
 			if (err) {
 				res.status(404).send('Page not found');
 			}
@@ -43,7 +43,7 @@ async function setupStaticRoutes(): Promise<void> {
 
 	// Serve nested HTML files
 	router.get('/*', (req, res) => {
-		res.sendFile(path.join(staticRootPath, req.path + '.html'), (err) => {
+		res.sendFile(path.join(staticRootPath, `${req.path}.html`), err => {
 			if (err) {
 				res.status(404).send('Page not found');
 			}
@@ -59,7 +59,7 @@ async function setupStaticRoutes(): Promise<void> {
 
 	router.get('/secrets.json.gpg', (req, res) => {
 		logger.info('GET request received at /secrets.json.gpg');
-		res.sendFile(process.env.FRONTEND_SECRETS_PATH as string, (err) => {
+		res.sendFile(process.env.FRONTEND_SECRETS_PATH as string, err => {
 			if (err) {
 				logger.error('Failed to send secrets.json.gpg:', err);
 				res.status(404).send('File not found');
@@ -102,6 +102,6 @@ export default async function initializeStaticRoutes(
 		await setupStaticRoutes();
 		app.use('/', router);
 	} catch (err) {
-		console.error('Error setting up routes: ', err);
+		logger.error('Error setting up routes: ', err);
 	}
 }

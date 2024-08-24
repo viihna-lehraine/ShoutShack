@@ -53,13 +53,5 @@
     "useDefineForClassFields": true,
     "useUnknownInCatchVariables": true
   },
-  "include": ["./src/**/*"],
-  "exclude": [
-    "./config",
-    "./data",
-    "./keys",
-    "./logs",
-    "./node_modules",
-    "./types/generated"
-  ]
+  "include": ["./src/**/*"]
 }

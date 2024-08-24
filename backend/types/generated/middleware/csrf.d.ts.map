@@ -1,1 +1,1 @@
-{"version":3,"file":"csrf.d.ts","sourceRoot":"","sources":["../../../src/middleware/csrf.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAM1D,wBAAgB,cAAc,CAC7B,GAAG,EAAE,OAAO,EACZ,GAAG,EAAE,QAAQ,EACb,IAAI,EAAE,YAAY,kDAqBlB"}
+{"version":3,"file":"csrf.d.ts","sourceRoot":"","sources":["../../../src/middleware/csrf.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAM1D,wBAAgB,cAAc,CAC7B,GAAG,EAAE,OAAO,EACZ,GAAG,EAAE,QAAQ,EACb,IAAI,EAAE,YAAY,GAChB,IAAI,CAqBN"}

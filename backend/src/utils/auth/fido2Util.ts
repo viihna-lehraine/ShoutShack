@@ -1,6 +1,5 @@
+/* *DEV-NOTE* NEEDS A COMPLETE REBUILD
 import {
-	AssertionResult,
-	AttestationResult,
 	ExpectedAssertionResult,
 	ExpectedAttestationResult,
 	Fido2Lib,
@@ -8,6 +7,12 @@ import {
 	PublicKeyCredentialRequestOptions
 } from 'fido2-lib';
 import getSecrets from '../../config/secrets.js';
+import {
+	AssertionResult,
+	AttestationResult,
+	Fido2AttestationResult,
+	Fido2AssertionResult
+} from '../../../types/custom/fido2-lib.js';
 
 let fido2: Fido2Lib;
 
@@ -36,8 +41,8 @@ interface Secrets {
 
 type Factor = 'first' | 'second' | 'either';
 
-(async () => {
-	let secrets: Secrets = await getSecrets();
+(async (): Promise<void> => {
+	const secrets: Secrets = await getSecrets();
 
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
@@ -59,9 +64,9 @@ type Factor = 'first' | 'second' | 'either';
 async function generateU2fRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	let passkeyRegistrationOptions = await fido2.attestationOptions();
+	const passkeyRegistrationOptions = await fido2.attestationOptions();
 
-	let u2fRegistrationOptions: PublicKeyCredentialCreationOptions = {
+	const u2fRegistrationOptions: PublicKeyCredentialCreationOptions = {
 		...passkeyRegistrationOptions,
 		user: {
 			id: Buffer.from(user.id, 'utf8'), // UID from db (base64 encoded)
@@ -83,37 +88,35 @@ async function generateU2fRegistrationOptions(
 async function verifyU2fRegistration(
 	attestation: AttestationResult,
 	expectedChallenge: string
-) {
-	let secrets: Secrets = await getSecrets();
-
-	if (!secrets) {
-		throw new Error('Secrets could not be loaded');
-	}
-
-	let u2fAttestationExpectations: ExpectedAttestationResult = {
+): Promise<AttestationResult> {
+	const secrets: Secrets = await getSecrets();
+	const u2fAttestationExpectations: ExpectedAttestationResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either' as Factor,
 		rpId: secrets.RP_ID
 	};
 
-	return await fido2.attestationResult(
+	const result = (await fido2.attestationResult(
 		attestation,
 		u2fAttestationExpectations
-	);
+	)) as Fido2AttestationResult;
+
+	// TypeScript now understands that `result.request` is of type `AttestationResult`
+	return result;
 }
 
 async function generateU2fAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	let userCredentials = user.credential.map((credential) => ({
+	const userCredentials = user.credential.map(credential => ({
 		type: 'public-key' as const, // Explicit type
 		id: Buffer.from(credential.credentialId, 'base64')
 	}));
 
-	let assertionOptions = await fido2.assertionOptions();
+	const assertionOptions = await fido2.assertionOptions();
 
-	let u2fAuthenticationOptions: PublicKeyCredentialRequestOptions = {
+	const u2fAuthenticationOptions: PublicKeyCredentialRequestOptions = {
 		...assertionOptions,
 		allowCredentials: userCredentials,
 		userVerification: 'preferred',
@@ -129,22 +132,25 @@ async function verifyU2fAuthentication(
 	publicKey: string,
 	previousCounter: number,
 	id: string
-) {
-	let secrets: Secrets = await getSecrets();
+): Promise<AssertionResult> {
+	const secrets: Secrets = await getSecrets();
 
-	if (!secrets) {
-		throw new Error('Secrets could not be loaded');
-	}
-	let assertionExpectations: ExpectedAssertionResult = {
+	const assertionExpectations: ExpectedAssertionResult = {
 		challenge: expectedChallenge,
 		origin: secrets.RP_ORIGIN,
 		factor: 'either' as Factor,
-		publicKey: publicKey,
+		publicKey,
 		prevCounter: previousCounter,
 		userHandle: id
 	};
 
-	return await fido2.assertionResult(assertion, assertionExpectations);
+	const result = (await fido2.assertionResult(
+		assertion,
+		assertionExpectations
+	)) as Fido2AssertionResult;
+
+	// TypeScript now understands that `result.request` is of type `AssertionResult`
+	return result;
 }
 
 export {
@@ -153,3 +159,4 @@ export {
 	verifyU2fAuthentication,
 	verifyU2fRegistration
 };
+*/

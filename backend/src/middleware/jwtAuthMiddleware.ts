@@ -13,7 +13,7 @@ export const authenticateJwT = async (
 		return;
 	}
 
-	let user = await verifyJwToken(token);
+	const user = await verifyJwToken(token);
 
 	if (!user) {
 		res.sendStatus(403);

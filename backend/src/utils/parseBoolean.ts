@@ -1,3 +1,7 @@
+import setupLogger from '../config/logger';
+
+const logger = await setupLogger();
+
 export const parseBoolean = (value: string | boolean | undefined): boolean => {
 	if (typeof value === 'string') {
 		value = value.toLowerCase();
@@ -8,7 +12,7 @@ export const parseBoolean = (value: string | boolean | undefined): boolean => {
 	} else if (value === false || value === 'false') {
 		return false;
 	} else {
-		console.warn(
+		logger.warn(
 			`parseBoolean received an unexpected value: "${value}". Defaulting to false.`
 		);
 

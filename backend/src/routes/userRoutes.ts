@@ -15,28 +15,28 @@ import {
 	verifyEmail2FACode,
 	verifyTOTPToken
 } from '../index.js';
-import setupLogger from '../middleware/logger';
+import setupLogger from '../config/logger.js';
 import getSecrets from '../config/secrets';
-import UserModelPromise from '../models/User';
+import User from '../models/User';
 
-let router = express.Router();
+const router = express.Router();
+const logger = await setupLogger();
+const secrets = await getSecrets();
 
 // Password strength checker
-let checkPasswordStrength = (password: string) => {
-	let { score } = zxcvbn(password);
+const checkPasswordStrength = (password: string): boolean => {
+	const { score } = zxcvbn(password);
 	return score >= 3;
 };
 
 // Register
 router.post('/register', async (req: Request, res: Response) => {
-	let { username, email, password, confirmPassword } = req.body;
-	let secrets = await getSecrets();
-	let logger = await setupLogger();
+	const { username, email, password, confirmPassword } = req.body;
 
 	// Sanitize inputs
-	let sanitizedUsername = xss(username);
-	let sanitizedEmail = xss(email);
-	let sanitizedPassword = xss(password);
+	const sanitizedUsername = xss(username);
+	const sanitizedEmail = xss(email);
+	const sanitizedPassword = xss(password);
 
 	if (sanitizedPassword !== confirmPassword) {
 		logger.info('Registration failure: passwords do not match');
@@ -45,7 +45,6 @@ router.post('/register', async (req: Request, res: Response) => {
 			.json({ password: 'Registration failure: passwords do not match' });
 	}
 
-	let User = await UserModelPromise;
 	if (!User.validatePassword(sanitizedPassword)) {
 		logger.info(
 			'Registration failure: passwords do not meet complexity requirements'
@@ -63,13 +62,11 @@ router.post('/register', async (req: Request, res: Response) => {
 			.json({ password: 'Registration failure: password is too weak' });
 	}
 
-	// let didHibpCheckFail = false; // *DEV-NOTE* need to figure out what, if anything, to do with this variable
-
 	try {
-		let pwnedResponse = await axios.get(
+		const pwnedResponse = await axios.get(
 			`https://api.pwnedpasswords.com/range/${sanitizedPassword.substring(0, 5)}`
 		);
-		let pwnedList = pwnedResponse.data
+		const pwnedList = pwnedResponse.data
 			.split('\n')
 			.map((p: string) => p.split(':')[0]);
 		if (pwnedList.includes(sanitizedPassword.substring(5).toUpperCase())) {
@@ -82,47 +79,46 @@ router.post('/register', async (req: Request, res: Response) => {
 			});
 		}
 	} catch (error) {
-		console.error(error);
+		logger.error(error);
 		logger.error('Registration error: HIBP API check failed');
-		// didHibpCheckFail = true;
 	}
 
 	try {
-		let user = await User.findOne({ where: { email: sanitizedEmail } });
+		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (user) {
 			logger.info('Registration failure: email already exists');
 			return res
 				.status(400)
 				.json({ email: 'Registration failure: email already exists' });
 		} else {
-			let hashedPassword = await argon2.hash(
+			const hashedPassword = await argon2.hash(
 				sanitizedPassword + secrets.PEPPER,
 				{
 					type: argon2.argon2id
 				}
 			);
-			let newUser = await User.create({
+			const newUser = await User.create({
 				id: uuidv4(),
 				username: sanitizedUsername,
 				password: hashedPassword,
 				email: sanitizedEmail,
 				isAccountVerified: false,
-				resetPasswordToken: null, // Set to null initially
-				resetPasswordExpires: null, // Set to null initially
+				resetPasswordToken: null,
+				resetPasswordExpires: null,
 				isMfaEnabled: false,
 				creationDate: new Date()
 			});
 
 			// Generate a confirmation token
-			let confirmationToken = jwt.sign(
+			const confirmationToken = jwt.sign(
 				{ id: newUser.id },
 				secrets.JWT_SECRET,
 				{ expiresIn: '1d' }
 			);
-			let confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
+			const confirmationUrl = `http://localhost:${process.env.SERVER_PORT}/api/users/confirm/${confirmationToken}`;
 
 			// Send confirmation email
-			let mailOptions = {
+			const mailOptions = {
 				from: process.env.EMAIL_USER,
 				to: newUser.email,
 				subject: 'Guestbook - Account Confirmation',
@@ -150,28 +146,25 @@ router.post('/register', async (req: Request, res: Response) => {
 
 // Login
 router.post('/login', async (req: Request, res: Response) => {
-	let secrets = await getSecrets();
-	let logger = await setupLogger();
-	let { email, password } = req.body;
+	const { email, password } = req.body;
 
 	// sanitize inputs
-	let sanitizedEmail = xss(email);
-	let sanitizedPassword = xss(password);
+	const sanitizedEmail = xss(email);
+	const sanitizedPassword = xss(password);
 
 	try {
-		let User = await UserModelPromise;
-		let user = await User.findOne({ where: { email: sanitizedEmail } });
+		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			logger.info('400 - User not found');
 			return res.status(400).json({ email: 'User not found' });
 		}
-		let isMatch = await argon2.verify(
+		const isMatch = await argon2.verify(
 			user.password,
 			sanitizedPassword + secrets.PEPPER
 		);
 		if (isMatch) {
-			let payload = { id: user.userid, username: user.username };
-			let token = jwt.sign(payload, secrets.JWT_SECRET, {
+			const payload = { id: user.userid, username: user.username };
+			const token = jwt.sign(payload, secrets.JWT_SECRET, {
 				expiresIn: '1h'
 			});
 			res.json({ success: true, token: `Bearer ${token}` });
@@ -189,20 +182,18 @@ router.post('/login', async (req: Request, res: Response) => {
 
 // Password Recovery (simplified)
 router.post('/recover-password', async (req: Request, res: Response) => {
-	let logger = await setupLogger();
-	let { email } = req.body;
+	const { email } = req.body;
 
 	// sanitize inputs
-	let sanitizedEmail = xss(email);
+	const sanitizedEmail = xss(email);
 
 	try {
-		let User = await UserModelPromise;
-		let user = await User.findOne({ where: { email: sanitizedEmail } });
+		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			return res.status(404).json({ email: 'User not found' });
 		}
 		// Generate a token (customize this later)
-		let token = await bcrypt.genSalt(25);
+		const token = await bcrypt.genSalt(25);
 		// let passwordResetUrl = `https://localhost:${process.env.SERVER_PORT}/password-reset${token}`;
 
 		// Store the token in the database (simplified for now)
@@ -223,7 +214,6 @@ router.post('/recover-password', async (req: Request, res: Response) => {
 
 // Route for TOTP secret generation
 router.post('/generate-totp', async (req: Request, res: Response) => {
-	let logger = await setupLogger();
 	// let { username } = req.body; // *DEV-NOTE* does this even need to be here?
 
 	// sanitize username input
@@ -233,8 +223,8 @@ router.post('/generate-totp', async (req: Request, res: Response) => {
 	// depending on the use case; food for thought
 
 	try {
-		let { base32, otpauth_url } = generateTOTPSecret();
-		let qrCodeUrl = await generateQRCode(otpauth_url);
+		const { base32, otpauth_url } = generateTOTPSecret();
+		const qrCodeUrl = await generateQRCode(otpauth_url);
 		res.json({ secret: base32, qrCodeUrl });
 	} catch (err) {
 		logger.error('Error generating TOTP secret: ', err);
@@ -244,14 +234,11 @@ router.post('/generate-totp', async (req: Request, res: Response) => {
 
 // Route to verify TOTP tokens
 router.post('/verify-totp', async (req: Request, res: Response) => {
-	let logger = await setupLogger();
-
-	// Extract token and secret from req.body
-	let { token, secret } = req.body;
+	const { token, secret } = req.body;
 
 	try {
-		// Verify the TOTP token using the provided secret
-		let isTOTPTokenValid = verifyTOTPToken(secret, token);
+		// verify TOTP token using the secret
+		const isTOTPTokenValid = verifyTOTPToken(secret, token);
 		res.json({ isTOTPTokenValid });
 	} catch (err) {
 		logger.error('Error verifying TOTP token: ', err);
@@ -263,15 +250,13 @@ router.post('/verify-totp', async (req: Request, res: Response) => {
 
 // Route to generate and send 2FA codes by email
 router.post('/generate-2fa', async (req: Request, res: Response) => {
-	let logger = await setupLogger();
-	let { email } = req.body;
+	const { email } = req.body;
 
 	// sanitize email input
-	let sanitizedEmail = xss(email);
+	const sanitizedEmail = xss(email);
 
 	try {
-		let User = await UserModelPromise;
-		let user = await User.findOne({ where: { email: sanitizedEmail } });
+		const user = await User.findOne({ where: { email: sanitizedEmail } });
 
 		if (!user) {
 			return res
@@ -279,28 +264,24 @@ router.post('/generate-2fa', async (req: Request, res: Response) => {
 				.json({ error: 'Generate 2FA: user not found' });
 		}
 
-		// generate 2FA token
-		let { email2FAToken } = await generateEmail2FACode();
+		const { email2FAToken } = await generateEmail2FACode();
 
-		// save the 2FA token and expiration time in the user's record
+		// save 2FA token and expiration in user's record
 		user.resetPasswordToken = email2FAToken;
 		user.resetPasswordExpires = new Date(Date.now() + 30 * 60000); // 30 min
-		await user.save(); // save the user data with the new 2FA token and expiration time
+		await user.save(); // save user data with the new 2FA token and expiration
 
 		// send the 2FA code to user's email
 		await (
 			await getTransporter()
 		).sendMail({
-			// send the 2FA code to user's email
 			to: sanitizedEmail,
 			subject: 'Guestbook - Your Login Code',
 			text: `Your 2FA code is ${email2FAToken}`
 		});
 
-		// respond with success message
 		res.json({ message: '2FA code sent to email' });
 	} catch (err) {
-		// log the error and respond with a 500 status message
 		logger.error('Error generating 2FA code: ', err);
 		res.status(500).json({ error: 'Generate 2FA: internal server error' });
 	}
@@ -310,15 +291,13 @@ router.post('/generate-2fa', async (req: Request, res: Response) => {
 
 // Route to verify email 2FA code
 router.post('/verify-2fa', async (req: Request, res: Response) => {
-	let logger = await setupLogger();
-	let { email, email2FACode } = req.body;
+	const { email, email2FACode } = req.body;
 
 	// sanitize inputs
-	let sanitizedEmail = xss(email);
+	const sanitizedEmail = xss(email);
 
 	try {
-		let User = await UserModelPromise;
-		let user = await User.findOne({ where: { email: sanitizedEmail } });
+		const user = await User.findOne({ where: { email: sanitizedEmail } });
 		if (!user) {
 			logger.error('Verify 2FA: user not found');
 			return res
@@ -326,9 +305,9 @@ router.post('/verify-2fa', async (req: Request, res: Response) => {
 				.json({ error: 'Verify 2FA: User not found' });
 		}
 
-		let resetPasswordToken = user.resetPasswordToken || '';
+		const resetPasswordToken = user.resetPasswordToken || '';
 
-		let isEmail2FACodeValid = verifyEmail2FACode(
+		const isEmail2FACodeValid = verifyEmail2FACode(
 			resetPasswordToken,
 			email2FACode
 		);
