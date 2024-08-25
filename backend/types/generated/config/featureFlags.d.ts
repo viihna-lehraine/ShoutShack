@@ -1,6 +1,9 @@
 interface FeatureFlags {
     apiRoutesCsrfFlag: boolean;
     dbSyncFlag: boolean;
+    enableRedisFlag: boolean;
+    enableSentryFlag: boolean;
+    enableSslFlag: boolean;
     httpsRedirectFlag: boolean;
     ipBlacklistFlag: boolean;
     loadStaticRoutesFlag: boolean;
@@ -8,6 +11,7 @@ interface FeatureFlags {
     secureHeadersFlag: boolean;
     sequelizeLoggingFlag: boolean;
 }
-declare let featureFlags: FeatureFlags;
-export default featureFlags;
+export declare const parseBoolean: (value: string | boolean | undefined) => boolean;
+export declare function getFeatureFlags(): FeatureFlags;
+export {};
 //# sourceMappingURL=featureFlags.d.ts.map

@@ -1,8 +1,15 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import getSecrets from './secrets';
+import getSecrets from './sops';
+
+interface MailerSecrets {
+	EMAIL_HOST: string;
+	EMAIL_PORT: number;
+	EMAIL_SECURE: boolean;
+	SMTP_TOKEN: string;
+}
 
 async function createTransporter(): Promise<Transporter> {
-	let secrets = await getSecrets();
+	const secrets: MailerSecrets = await getSecrets.getSecrets();
 
 	let transporter = nodemailer.createTransport({
 		host: secrets.EMAIL_HOST,

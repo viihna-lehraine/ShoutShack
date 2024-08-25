@@ -8,7 +8,7 @@ interface BackupCode {
 	used: boolean;
 }
 
-const logger = await setupLogger();
+const logger = setupLogger();
 
 // Generate Backup Coedes
 async function generateBackupCodes(id: string): Promise<string[]> {

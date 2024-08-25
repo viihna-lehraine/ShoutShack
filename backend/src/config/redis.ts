@@ -1,27 +1,50 @@
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import setupLogger from './logger';
+import { getFeatureFlags } from './featureFlags';
 
-const logger = await setupLogger();
+const logger = setupLogger();
+const REDIS_FLAG = getFeatureFlags().enableRedisFlag;
 
-async function connectRedis() {
-	let client = createClient({
-		url: 'redis://localhost:6379'
-	});
+let redisClient: RedisClientType | null = null;
 
-	client.on('error', err => {
-		logger.error('Redis client error:', err);
-	});
+export async function connectRedis(): Promise<RedisClientType | null> {
+	if (!REDIS_FLAG || REDIS_FLAG !== true) {
+		logger.info('Redis is disabled based on REDIS_FLAG');
+		return null; // return null if REDIS_FLAG is false
+	}
 
-	await client.connect();
-	logger.info('Connected to Redis');
+	try {
+		const client: RedisClientType = createClient({
+			url: 'redis://localhost:6379',
+			socket: {
+				reconnectStrategy: retries => {
+					logger.warn(`Redis retry attempt: ${retries}`);
+					if (retries >= 10) {
+						logger.error(
+							'Max retries reached. Could not connect to Redis.'
+						);
+						return new Error('Max retries reached');
+					}
+					return Math.min(retries * 100, 3000); // reconnect after increasing intervals up to 3 seconds
+				}
+			}
+		});
 
-	await client.set('key', 'value');
-	let value = await client.get('key');
-	logger.info('Key value:', value);
+		client.on('error', err => {
+			logger.error('Redis client error:', err);
+		});
 
-	return client;
+		await client.connect();
+		logger.info('Connected to Redis');
+
+		redisClient = client;
+		return client;
+	} catch (err) {
+		logger.error('Failed to connect to Redis:', err);
+		return null; // Ensure no further Redis operations are attempted
+	}
 }
 
-let redisClient = connectRedis();
-
-export default redisClient;
+export function getRedisClient(): RedisClientType | null {
+	return redisClient;
+}

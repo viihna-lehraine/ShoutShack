@@ -6,8 +6,8 @@ import {
 } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
 import setupLogger from './logger';
-import getSecrets from './secrets';
-import UserModelPromise from '../models/User';
+import getSecrets from './sops';
+import User from '../models/User';
 
 // Define the shape of a user instance based on User model
 interface UserInstance {
@@ -16,10 +16,14 @@ interface UserInstance {
 	comparePassword: (password: string) => Promise<boolean>;
 }
 
+interface PassportSecrets {
+	JWT_SECRET: string;
+}
+
+const logger = setupLogger();
+
 export default async function configurePassport(passport: PassportStatic) {
-	let secrets = await getSecrets();
-	let logger = await setupLogger();
-	let UserModel = await UserModelPromise;
+	const secrets: PassportSecrets = await getSecrets.getSecrets();
 
 	let opts: StrategyOptions = {
 		jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -38,7 +42,7 @@ export default async function configurePassport(passport: PassportStatic) {
 				) => void
 			) => {
 				try {
-					let user = await UserModel.findByPk(jwt_payload.id);
+					let user = await User.findByPk(jwt_payload.id);
 					if (user) {
 						logger.info(
 							'JWT authentication successful for user ID: ',
@@ -63,7 +67,7 @@ export default async function configurePassport(passport: PassportStatic) {
 	passport.use(
 		new LocalStrategy(async (username, password, done) => {
 			try {
-				let user = await UserModel.findOne({ where: { username } });
+				let user = await User.findOne({ where: { username } });
 				if (!user) {
 					logger.warn(
 						'Local authentication failed: User not found: ',

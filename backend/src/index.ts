@@ -1,11 +1,12 @@
-import { initializeDatabase } from './config/db';
-import featureFlags from './config/featureFlags';
-import loadEnv, { __dirname } from './config/loadEnv';
+import { getSequelizeInstance, initializeDatabase } from './config/db';
+import { getFeatureFlags, parseBoolean } from './config/featureFlags';
+import loadEnv from './config/loadEnv';
 import { setupHttp } from './config/http';
 import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';
-// import redisClient from './config/redis';
+import { getRedisClient } from './config/redis';
+import errorHandler from './middleware/errorHandler';
 import setupSecurityHeaders from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
 import { csrfMiddleware } from './middleware/csrf';
@@ -61,7 +62,7 @@ import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTempla
 import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate';
 import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
 import loadTestRoutes from './utils/test/loadTestRoutes';
-import { parseBoolean } from './utils/parseBoolean';
+import { startMemoryMonitor } from './utils/memoryMonitor';
 
 export {
 	addToBlacklist,
@@ -69,7 +70,7 @@ export {
 	createTransporter,
 	csrfMiddleware,
 	decryptDataFiles,
-	featureFlags,
+	errorHandler,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
@@ -80,12 +81,15 @@ export {
 	// generatePasskeyAuthenticationOptions,
 	// generatePasskeyRegistrationOptions,
 	generateQRCode,
+	getRedisClient,
 	// generateU2fAuthenticationOptions,
 	// generateU2fRegistrationOptions,
 	generateTOTPSecret,
 	generateTOTPToken,
 	generateYubicoOtpOptions,
 	getBackupCodesFromDatabase,
+	getFeatureFlags,
+	getSequelizeInstance,
 	getSSLKeys,
 	getTransporter,
 	ipBlacklistMiddleware,
@@ -97,13 +101,13 @@ export {
 	multerConfiguredUpload,
 	parseBoolean,
 	rateLimitMiddleware,
-	//	redisClient,
 	registrationValidationRules,
 	removeFromBlacklist,
 	saveBackupCodesToDatabase,
 	setupHttp,
 	setupSecurityHeaders,
 	slowdownMiddleware,
+	startMemoryMonitor,
 	validateEntry,
 	validateYubicoOTP,
 	verifyBackupCode,
@@ -111,10 +115,9 @@ export {
 	verifyJwToken,
 	// verifyPasskeyAuthentication,
 	// verifyPasskeyRegistration,
-	verifyTOTPToken,
+	verifyTOTPToken
 	// verifyU2fAuthentication,
-	// verifyU2fRegistration,
-	__dirname
+	// verifyU2fRegistration
 };
 
 const { decryptDataFiles, getSSLKeys } = sops;

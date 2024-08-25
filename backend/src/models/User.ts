@@ -1,7 +1,7 @@
 import argon2 from 'argon2';
 import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import getSecrets from '../config/secrets';
+import getSecrets from '../config/sops';
 
 interface UserAttributes {
 	id: string;
@@ -14,6 +14,10 @@ interface UserAttributes {
 	resetPasswordExpires?: Date | null;
 	isMfaEnabled: boolean;
 	creationDate: Date;
+}
+
+interface UserSecrets {
+	PEPPER: string;
 }
 
 class User
@@ -33,7 +37,7 @@ class User
 
 	// Method to compare passwords
 	async comparePassword(password: string): Promise<boolean> {
-		const secrets = await getSecrets();
+		const secrets: UserSecrets = await getSecrets.getSecrets();
 		return argon2.verify(this.password, password + secrets.PEPPER);
 	}
 

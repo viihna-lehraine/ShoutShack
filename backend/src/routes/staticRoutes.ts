@@ -3,7 +3,7 @@ import path from 'path';
 import setupLogger from '../config/logger';
 
 const router = express.Router();
-const logger = await setupLogger();
+const logger = setupLogger();
 
 async function setupStaticRoutes(): Promise<void> {
 	const staticRootPath = process.env.STATIC_ROOT_PATH as string;

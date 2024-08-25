@@ -3,7 +3,7 @@ import { generateToken } from '../utils/auth/jwtUtil';
 import setupLogger from '../config/logger';
 import User from '../models/User';
 
-const logger = await setupLogger();
+const logger = setupLogger();
 
 export const login = async (
 	req: Request,

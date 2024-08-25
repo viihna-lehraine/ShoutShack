@@ -15,11 +15,33 @@ import SupportRequest from './SupportRequest';
 import User from './User';
 import UserMfa from './UserMfa';
 import UserSession from './UserSession';
-import getSecrets from '../config/secrets';
+import getSecrets from '../config/sops';
+import setupLogger from '../config/logger';
+import { getFeatureFlags } from '../config/featureFlags';
 
-export function initializeModels(): void {
+const logger = setupLogger();
+const featureFlags = getFeatureFlags();
+
+const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
+
+interface ModelsIndexSecrets {
+	PEPPER: string;
+}
+
+export async function initializeModels(): Promise<void> {
 	const sequelize = getSequelizeInstance();
-	// console.log('Sequelize instance: ', sequelize);
+	const secrets: ModelsIndexSecrets = await getSecrets.getSecrets();
+
+	if (SEQUELIZE_LOGGING) {
+		logger.info(
+			'initializeModels() in ModelsIndex: SEQUELIZE_LOGGING is true. Printing sequelize'
+		);
+		logger.info(`Sequelize: ${sequelize}`);
+	} else {
+		logger.info(
+			'initializeModels() in ModelsIndex: SEQUELIZE_LOGGING is false. Not printing sequelize to console'
+		);
+	}
 
 	console.log('Initializing User');
 	User.init(
@@ -83,7 +105,6 @@ export function initializeModels(): void {
 			hooks: {
 				beforeCreate: async (user: User) => {
 					try {
-						const secrets = await getSecrets();
 						user.password = await argon2.hash(
 							user.password + secrets.PEPPER,
 							{

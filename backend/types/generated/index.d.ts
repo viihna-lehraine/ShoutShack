@@ -1,10 +1,12 @@
-import { initializeDatabase } from './config/db';
-import featureFlags from './config/featureFlags';
-import loadEnv, { __dirname } from './config/loadEnv';
+import { getSequelizeInstance, initializeDatabase } from './config/db';
+import { getFeatureFlags, parseBoolean } from './config/featureFlags';
+import loadEnv from './config/loadEnv';
 import { setupHttp } from './config/http';
 import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';
+import { getRedisClient } from './config/redis';
+import errorHandler from './middleware/errorHandler';
 import setupSecurityHeaders from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
 import { csrfMiddleware } from './middleware/csrf';
@@ -22,8 +24,8 @@ import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTempla
 import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate';
 import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
 import loadTestRoutes from './utils/test/loadTestRoutes';
-import { parseBoolean } from './utils/parseBoolean';
-export { addToBlacklist, configurePassport, createTransporter, csrfMiddleware, decryptDataFiles, featureFlags, generate2FactorEmailTemplate, generate2FAEnabledEmailTemplate, generateAccountDeletedConfirmationEmailTemplate, generateAccountDeletionStartedEmailTemplate, generateBackupCodes, generateConfirmationEmailTemplate, generateEmail2FACode, generateQRCode, generateTOTPSecret, generateTOTPToken, generateYubicoOtpOptions, getBackupCodesFromDatabase, getSSLKeys, getTransporter, ipBlacklistMiddleware, initializeDatabase, initializeIpBlacklist, loadBlacklist, loadEnv, loadTestRoutes, multerConfiguredUpload, parseBoolean, rateLimitMiddleware, registrationValidationRules, removeFromBlacklist, saveBackupCodesToDatabase, setupHttp, setupSecurityHeaders, slowdownMiddleware, validateEntry, validateYubicoOTP, verifyBackupCode, verifyEmail2FACode, verifyJwToken, verifyTOTPToken, __dirname };
+import { startMemoryMonitor } from './utils/memoryMonitor';
+export { addToBlacklist, configurePassport, createTransporter, csrfMiddleware, decryptDataFiles, errorHandler, generate2FactorEmailTemplate, generate2FAEnabledEmailTemplate, generateAccountDeletedConfirmationEmailTemplate, generateAccountDeletionStartedEmailTemplate, generateBackupCodes, generateConfirmationEmailTemplate, generateEmail2FACode, generateQRCode, getRedisClient, generateTOTPSecret, generateTOTPToken, generateYubicoOtpOptions, getBackupCodesFromDatabase, getFeatureFlags, getSequelizeInstance, getSSLKeys, getTransporter, ipBlacklistMiddleware, initializeDatabase, initializeIpBlacklist, loadBlacklist, loadEnv, loadTestRoutes, multerConfiguredUpload, parseBoolean, rateLimitMiddleware, registrationValidationRules, removeFromBlacklist, saveBackupCodesToDatabase, setupHttp, setupSecurityHeaders, slowdownMiddleware, startMemoryMonitor, validateEntry, validateYubicoOTP, verifyBackupCode, verifyEmail2FACode, verifyJwToken, verifyTOTPToken };
 declare const decryptDataFiles: () => Promise<{
     [key: string]: string;
 }>, getSSLKeys: () => Promise<{

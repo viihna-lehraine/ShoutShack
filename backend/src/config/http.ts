@@ -4,19 +4,28 @@ import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
 import setupLogger from './logger';
 import sops from './sops';
-import { getSequelizeInstance } from './db';
 import { Sequelize } from 'sequelize';
-import connectRedis from './redis';
+import { SecureContextOptions } from 'tls';
+import {
+	getFeatureFlags,
+	getRedisClient,
+	getSequelizeInstance,
+	initializeDatabase
+} from '../index';
 
 interface SSLKeys {
 	key: string;
 	cert: string;
 }
 
-const logger = await setupLogger();
-const sslKeys: SSLKeys = await sops.getSSLKeys();
+type Options = SecureContextOptions;
+
+const logger = setupLogger();
+const featureFlags = getFeatureFlags();
+
 const SERVER_PORT = process.env.SERVER_PORT || 3000;
-const sequelize: Sequelize = getSequelizeInstance();
+const SSL_FLAG = featureFlags.enableSslFlag;
+const REDIS_FLAG = featureFlags.enableRedisFlag;
 
 const ciphers = [
 	'ECDHE-ECDSA-AES256-GCM-SHA384',
@@ -31,20 +40,37 @@ const ciphers = [
 	'ECDHE-RSA-AES128-SHA256'
 ];
 
-const options = {
-	key: sslKeys.key,
-	cert: sslKeys.cert,
-	allowHTTP1: true,
-	secureOptions: constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
-	ciphers: ciphers.join(':'),
-	honorCipherOrder: true
-};
+async function declareOptions(): Promise<Options> {
+	const sslKeys: SSLKeys = await sops.getSSLKeys();
+	logger.info('SSL keys retrieved');
+
+	try {
+		const options = {
+			key: sslKeys.key,
+			cert: sslKeys.cert,
+			allowHTTP1: true,
+			secureOptions:
+				constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
+			ciphers: ciphers.join(':'),
+			honorCipherOrder: true
+		};
+
+		return options;
+	} catch (error) {
+		logger.error(`Error declaring options: ${error}`);
+		throw new Error('Error declaring options');
+	}
+}
 
 export async function setupHttp(app: Application) {
 	logger.info('setupHttp() executing');
 
+	const options = await declareOptions();
+
 	async function onShutdown() {
 		logger.info('Cleaning up resources before shutdown');
+
+		const sequelize: Sequelize = getSequelizeInstance();
 
 		try {
 			await sequelize.close();
@@ -53,39 +79,67 @@ export async function setupHttp(app: Application) {
 			logger.error(`Error closing database connection: ${error}`);
 		}
 
+		if (REDIS_FLAG) {
+			logger.info('REDIS_FLAG is true. Closing Redis connection');
+		}
 		try {
-			const redisClient = await connectRedis;
-			await redisClient.quit();
-			logger.info('Redis connection closed');
+			const redisClient = getRedisClient();
+			if (redisClient) {
+				await redisClient.quit();
+				logger.info('Redis connection closed');
+			}
 		} catch (error) {
 			logger.error(`Error closing Redis connection: ${error}`);
 		}
 
+		// Notify monitoring systems here
+		// try {
+		// } catch (error) {
+		// } logger.error(`Error notifying monitoring systems: ${error} `);
+
 		try {
-			await new Promise<void>((resolve, reject) => {
+			await new Promise<void>(resolve => {
 				logger.close();
 				resolve();
 			});
-			logger.info('Logger closed');
+			console.log('Logger closed');
 		} catch (error) {
 			logger.error(`Error closing logger: ${error}`);
 		}
-
-		// Notify monitoring systems here
 	}
 
 	async function startServer() {
 		try {
-			logger.info('Starting HTTP1.1 server');
-			logger.info(`Server port: ${SERVER_PORT}`);
+			logger.info(`Starting HTTP server on port ${SERVER_PORT}`);
+			logger.info(
+				'Initializing database before starting server. Awaiting execution of initializeDatabase()'
+			);
 
-			const server = https
-				.createServer(options, app)
-				.listen(SERVER_PORT, () => {
+			await initializeDatabase();
+
+			let server;
+
+			if (SSL_FLAG) {
+				logger.info('SSL_FLAG is true. Starting HTTP server with SSL');
+
+				server = https
+					.createServer(options, app)
+					.listen(SERVER_PORT, () => {
+						logger.info(
+							`HTTP1.1 server running on port ${SERVER_PORT}`
+						);
+					});
+			} else {
+				logger.info(
+					'SSL_FLAG is false. Starting HTTP server without SSL'
+				);
+
+				server = app.listen(SERVER_PORT, () => {
 					logger.info(
 						`HTTP1.1 server running on port ${SERVER_PORT}`
 					);
 				});
+			}
 
 			gracefulShutdown(server, {
 				signals: 'SIGINT SIGTERM',
@@ -93,7 +147,7 @@ export async function setupHttp(app: Application) {
 				development: false,
 				onShutdown,
 				finally: () => {
-					logger.info('Server has gracefully shut down');
+					console.log('Server has gracefully shut down');
 				}
 			});
 		} catch (err) {

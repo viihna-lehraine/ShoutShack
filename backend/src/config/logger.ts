@@ -8,7 +8,7 @@ const logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp}, ${level}: ${stack || message}`;
 });
 
-async function setupLogger(): Promise<pkg.Logger> {
+function setupLogger(): pkg.Logger {
 	const logger = createLogger({
 		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
 		format: combine(
@@ -22,13 +22,16 @@ async function setupLogger(): Promise<pkg.Logger> {
 				format: combine(colorize(), logFormat)
 			}),
 			new DailyRotateFile({
-				filename: './logs/server/error-%DATE%.log',
-				dirname: './logs/server',
+				filename: 'server-%DATE%.log',
+				dirname: './data/logs/server/main',
 				datePattern: 'YYYY-MM-DD',
 				zippedArchive: true,
 				maxSize: '20m',
 				maxFiles: '14d',
-				format: logFormat
+				format: combine(
+					timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+					logFormat
+				)
 			})
 		]
 	});

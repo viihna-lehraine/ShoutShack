@@ -3,9 +3,9 @@ import { config } from 'dotenv';
 import setupLogger from './logger';
 
 const __dirname = process.cwd();
-const logger = await setupLogger();
+const logger = setupLogger();
 
-async function loadEnv() {
+function loadEnv(): void {
 	const envPath = path.join(__dirname, 'backend.dev.env');
 	logger.info(`Loading environment from: ${envPath}`);
 

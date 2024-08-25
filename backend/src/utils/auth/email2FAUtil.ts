@@ -1,14 +1,14 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import setupLogger from '../../config/logger.js';
-import getSecrets from '../../config/secrets.js';
+import setupLogger from '../../config/logger';
+import getSecrets from '../../config/sops';
 
 interface Secrets {
 	EMAIL_2FA_KEY: string;
 }
 
-const logger = await setupLogger();
-const secrets: Secrets = await getSecrets();
+const logger = setupLogger();
+const secrets: Secrets = await getSecrets.getSecrets();
 
 if (!secrets) {
 	throw new Error('Secrets could not be loaded');

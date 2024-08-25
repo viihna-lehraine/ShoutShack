@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 interface AuditLogAttributes {
     auditId: string;
     id: string;

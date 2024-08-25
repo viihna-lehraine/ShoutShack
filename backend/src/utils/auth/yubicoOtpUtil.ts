@@ -1,5 +1,5 @@
 import yub from 'yub';
-import getSecrets from '../../config/secrets';
+import getSecrets from '../../config/sops';
 import '../../../types/custom/yub.d.ts';
 
 interface Secrets {
@@ -26,7 +26,7 @@ interface YubicoOtpOptions {
 	apiUrl: string;
 }
 
-const secrets: Secrets = await getSecrets();
+const secrets: Secrets = await getSecrets.getSecrets();
 let yubClient: YubClient | undefined;
 
 async function initializeYubicoOtpUtil(): Promise<void> {

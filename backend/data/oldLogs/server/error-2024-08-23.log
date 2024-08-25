@@ -1,4 +1,0 @@
-2024-08-23 21:29:13, info: Executing (default): SELECT 1+1 AS result
-2024-08-23 21:29:13, info: Connection has been established successfully.
-2024-08-23 21:29:13, info: Blacklist and range_check module loaded successfully.
-2024-08-23 21:29:13, info: Test routes loaded

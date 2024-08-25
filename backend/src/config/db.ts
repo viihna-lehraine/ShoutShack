@@ -1,7 +1,8 @@
 import { Sequelize } from 'sequelize';
 import setupLogger from './logger';
-import featureFlags from './featureFlags';
-import getSecrets from './secrets';
+import { getFeatureFlags } from './featureFlags';
+import getSecrets from './sops';
+import AppError from '../errors/AppError';
 
 interface DBSecrets {
 	DB_NAME: string;
@@ -10,15 +11,17 @@ interface DBSecrets {
 	DB_HOST: string;
 	DB_DIALECT: 'mysql' | 'postgres' | 'sqlite' | 'mariadb' | 'mssql';
 }
-
 let sequelize: Sequelize | null = null;
-const logger = await setupLogger();
-const secrets: DBSecrets = await getSecrets();
+const featureFlags = getFeatureFlags();
+const logger = setupLogger();
+const secrets: DBSecrets = await getSecrets.getSecrets();
+
+const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
 
 export async function initializeDatabase(): Promise<Sequelize> {
 	if (!sequelize) {
 		logger.info(
-			`Sequelize logging is set to ${featureFlags.sequelizeLoggingFlag}, data type: ${typeof featureFlags.sequelizeLoggingFlag}`
+			`Sequelize logging set to ${SEQUELIZE_LOGGING}, data type: ${typeof SEQUELIZE_LOGGING}`
 		);
 
 		sequelize = new Sequelize(
@@ -28,9 +31,7 @@ export async function initializeDatabase(): Promise<Sequelize> {
 			{
 				host: secrets.DB_HOST,
 				dialect: secrets.DB_DIALECT,
-				logging: featureFlags.sequelizeLoggingFlag
-					? msg => logger.info(msg)
-					: false
+				logging: SEQUELIZE_LOGGING ? msg => logger.info(msg) : false
 			}
 		);
 
@@ -53,10 +54,14 @@ export async function initializeDatabase(): Promise<Sequelize> {
 }
 
 export function getSequelizeInstance(): Sequelize {
+	logger.info('getSequelizeInstance() executing');
 	if (!sequelize) {
-		throw new Error(
-			'Database has not been initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.'
+		logger.error('Database has not bee initialized');
+		throw new AppError(
+			'Database has not been initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.',
+			400
 		);
 	}
+
 	return sequelize;
 }

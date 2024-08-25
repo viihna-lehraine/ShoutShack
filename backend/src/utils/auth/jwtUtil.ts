@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import setupLogger from '../../config/logger';
-import getSecrets from '../../config/secrets';
+import getSecrets from '../../config/sops';
 
 interface Secrets {
 	JWT_SECRET: string;
@@ -11,12 +11,8 @@ interface User {
 	username: string;
 }
 
-const logger = await setupLogger();
-const secrets: Secrets = await getSecrets();
-
-if (!secrets) {
-	throw new Error('Secrets could not be loaded');
-}
+const logger = setupLogger();
+const secrets: Secrets = await getSecrets.getSecrets();
 
 export const generateToken = async (user: User): Promise<string> => {
 	return jwt.sign(

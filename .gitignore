@@ -6,7 +6,14 @@
 logs
 node_modules/
 
-backend/data/*.json
+backend/data/dist-backups/*
+backend/data/exports/*
+backend/data/ip-lists/*
+backend/data/logs/npm/cron/*
+backend/data/logs/server/cron/*
+backend/data/logs/server/main/*
+backend/data/logs/server/startup/*
+backend/data/logs/server/test/*
 
 *.crt
 *.csr

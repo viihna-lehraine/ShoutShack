@@ -1,18 +1,39 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { __dirname } from './loadEnv';
 import setupLogger from './logger';
 
-const logger = await setupLogger();
+const logger = setupLogger();
+const __dirname = process.cwd();
 
-async function decryptFile(encryptedFilePath: string) {
+function getDirectoryPath() {
+	return path.resolve(__dirname);
+}
+
+async function getSecrets() {
 	try {
-		let decryptedFile = execSync(
-			`sops -d --output-type json ${encryptedFilePath}`
+		const secretsPath = path.join(
+			getDirectoryPath(),
+			'../backend/config/secrets.json.gpg'
+		);
+		logger.info('Resolved secrets path:', secretsPath);
+		const decryptedSecrets = execSync(
+			`sops -d --output-type json ${secretsPath}`
 		).toString();
-		return decryptedFile;
+		return JSON.parse(decryptedSecrets);
 	} catch (err) {
-		logger.error('Error decrypting file from SOPS: ', err);
+		logger.info('Error retrieving secrets from SOPS: ', err);
+		throw err;
+	}
+}
+
+async function decryptKey(encryptedFilePath: string) {
+	try {
+		let decryptedKey = execSync(
+			`sops -d --output-type string ${encryptedFilePath}`
+		).toString('utf-8');
+		return decryptedKey;
+	} catch (err) {
+		logger.error('Error decrypting key from SOPS: ', err);
 		throw err;
 	}
 }
@@ -46,7 +67,6 @@ async function decryptDataFiles() {
 		throw err;
 	}
 }
-
 async function getSSLKeys() {
 	try {
 		const keyPath = path.join(
@@ -57,8 +77,8 @@ async function getSSLKeys() {
 			__dirname,
 			'./keys/ssl/guestbook_cert.pem.gpg'
 		);
-		const decryptedKey = await decryptFile(keyPath);
-		const decryptedCert = await decryptFile(certPath);
+		const decryptedKey = await decryptKey(keyPath);
+		const decryptedCert = await decryptKey(certPath);
 
 		return {
 			key: decryptedKey,
@@ -70,4 +90,4 @@ async function getSSLKeys() {
 	}
 }
 
-export default { decryptDataFiles, getSSLKeys };
+export default { decryptDataFiles, getSecrets, getSSLKeys };

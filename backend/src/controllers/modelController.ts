@@ -7,7 +7,7 @@ interface ModelType extends Model {
 	id?: number | string;
 }
 
-const logger = await setupLogger();
+const logger = setupLogger();
 
 // Retrieve all entries for any model
 export const getEntries =

@@ -7,11 +7,10 @@ import { __dirname } from '../config/loadEnv';
 import setupLogger from '../config/logger';
 
 let blacklist: string[] = [];
-let logger: Logger;
+const logger: Logger = setupLogger();
 
 // Initialize rangeCheck and load the blacklist
 const initializeBlacklist = async (): Promise<void> => {
-	logger = await setupLogger();
 	try {
 		await loadBlacklist();
 		logger.info('Blacklist and range_check module loaded successfully.');
@@ -23,7 +22,6 @@ const initializeBlacklist = async (): Promise<void> => {
 
 // Load the blacklist from file
 export const loadBlacklist = async (): Promise<void> => {
-	const logger = await setupLogger();
 	const filePath = path.join(__dirname, '../../data/blacklist.json');
 	try {
 		if (fs.existsSync(filePath)) {

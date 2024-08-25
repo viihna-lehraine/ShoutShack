@@ -16,12 +16,17 @@ import {
 	verifyTOTPToken
 } from '../index.js';
 import setupLogger from '../config/logger.js';
-import getSecrets from '../config/secrets';
+import getSecrets from '../config/sops';
 import User from '../models/User';
 
+interface UserSecrets {
+	JWT_SECRET: string;
+	PEPPER: string;
+}
+
 const router = express.Router();
-const logger = await setupLogger();
-const secrets = await getSecrets();
+const logger = setupLogger();
+const secrets: UserSecrets = await getSecrets.getSecrets();
 
 // Password strength checker
 const checkPasswordStrength = (password: string): boolean => {
