@@ -10,8 +10,8 @@ import passport from 'passport';
 import { randomBytes } from 'crypto';
 import path from 'path';
 import RedisStore from 'connect-redis';
-import initializeStaticRoutes from '../routes/staticRoutes';
-import apiRoutes from '../routes/apiRoutes';
+import initializeStaticRoutes from '../routes/staticRoutes.mjs';
+import apiRoutes from '../routes/apiRoutes.mjs';
 import {
 	csrfMiddleware,
 	errorHandler,
@@ -22,8 +22,8 @@ import {
 	rateLimitMiddleware,
 	setupSecurityHeaders,
 	startMemoryMonitor
-} from '../index';
-import setupLogger from './logger';
+} from '../index.mjs';
+import setupLogger from './logger.mjs';
 const app = express();
 const logger = setupLogger();
 const __filename = fileURLToPath(import.meta.url);

@@ -1,5 +1,5 @@
 import yub from 'yub';
-import getSecrets from '../../config/sops';
+import getSecrets from '../../config/sops.mjs';
 const secrets = await getSecrets.getSecrets();
 let yubClient;
 async function initializeYubicoOtpUtil() {

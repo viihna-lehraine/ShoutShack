@@ -7,13 +7,13 @@ import {
     PublicKeyCredentialCreationOptions,
     PublicKeyCredentialRequestOptions
 } from 'fido2-lib';
-import getSecrets from '../../config/secrets';
+import getSecrets from '../../config/secrets.mjs';
 import {
     AssertionResult,
     AttestationResult,
     Fido2AttestationResult,
     Fido2AssertionResult
-} from '../../../types/custom/fido2-lib';
+} from '../../../types/custom/fido2-lib.mjs';
 
 let fido2: Fido2Lib;
 

@@ -1,5 +1,5 @@
-import testRoutes from '../../routes/testRoutes';
-import setupLogger from '../../config/logger';
+import testRoutes from '../../routes/testRoutes.mjs';
+import setupLogger from '../../config/logger.mjs';
 const logger = setupLogger();
 export function loadTestRoutes(app) {
 	if (process.env.FEATURE_LOAD_TEST_ROUTES) {

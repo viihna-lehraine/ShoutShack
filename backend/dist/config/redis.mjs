@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
-import setupLogger from './logger';
-import { getFeatureFlags } from './featureFlags';
+import setupLogger from './logger.mjs';
+import { getFeatureFlags } from './featureFlags.mjs';
 const logger = setupLogger();
 const REDIS_FLAG = getFeatureFlags().enableRedisFlag;
 let redisClient = null;

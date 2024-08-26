@@ -1,7 +1,7 @@
 import argon2 from 'argon2';
 import { Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import getSecrets from '../config/sops';
+import getSecrets from '../config/sops.mjs';
 class User extends Model {
 	id;
 	userid;

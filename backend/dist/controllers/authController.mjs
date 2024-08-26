@@ -1,6 +1,6 @@
-import { generateToken } from '../utils/auth/jwtUtil';
-import setupLogger from '../config/logger';
-import User from '../models/User';
+import { generateToken } from '../utils/auth/jwtUtil.mjs';
+import setupLogger from '../config/logger.mjs';
+import User from '../models/User.mjs';
 const logger = setupLogger();
 export const login = async (req, res) => {
 	try {

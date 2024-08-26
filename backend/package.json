@@ -8,7 +8,7 @@
   "scripts": {
     "backup:dist": "node ./config/scripts/distBackup.mjs",
     "build": "node ./config/scripts/buildTime.mjs",
-    "build:original": "npm run backup:dist && npm run clean:compiled && npm run clean:tsbuildinfo && npm run tsc && npm run postCompile && npm run mjsExtensions && npm run lintAndFormat:mjs && npm run removeTypeImports && npm run es-check",
+    "build:original": "npm run backup:dist && npm run clean:compiled && npm run clean:tsbuildinfo && npm run tsc && npm run mjsExtensions && npm run lintAndFormat:mjs && npm run removeTypeImports && npm run es-check && npm run postCompile",
     "circular": "madge --circular ./src",
     "clean:compiled": "find ./dist -type f -name '*.mjs' -delete",
     "clean:tsbuildinfo": "find ./dist -type f -name '*.tsbuildinfo' -delete",

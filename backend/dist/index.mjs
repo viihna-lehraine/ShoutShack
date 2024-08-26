@@ -1,68 +1,68 @@
-import { getSequelizeInstance, initializeDatabase } from './config/db';
-import { getFeatureFlags, parseBoolean } from './config/featureFlags';
-import loadEnv from './config/loadEnv';
-import { setupHttp } from './config/http';
-import { createTransporter, getTransporter } from './config/mailer';
-import multerConfiguredUpload from './config/multer';
-import configurePassport from './config/passport';
-import { getRedisClient } from './config/redis';
-import errorHandler from './middleware/errorHandler';
-import setupSecurityHeaders from './middleware/securityHeaders';
-import slowdownMiddleware from './middleware/slowdown';
-import { csrfMiddleware } from './middleware/csrf';
-import sops from './config/sops';
+import { getSequelizeInstance, initializeDatabase } from './config/db.mjs';
+import { getFeatureFlags, parseBoolean } from './config/featureFlags.mjs';
+import loadEnv from './config/loadEnv.mjs';
+import { setupHttp } from './config/http.mjs';
+import { createTransporter, getTransporter } from './config/mailer.mjs';
+import multerConfiguredUpload from './config/multer.mjs';
+import configurePassport from './config/passport.mjs';
+import { getRedisClient } from './config/redis.mjs';
+import errorHandler from './middleware/errorHandler.mjs';
+import setupSecurityHeaders from './middleware/securityHeaders.mjs';
+import slowdownMiddleware from './middleware/slowdown.mjs';
+import { csrfMiddleware } from './middleware/csrf.mjs';
+import sops from './config/sops.mjs';
 import {
 	addToBlacklist,
 	initializeIpBlacklist,
 	ipBlacklistMiddleware,
 	loadBlacklist,
 	removeFromBlacklist
-} from './middleware/ipBlacklist';
-import { rateLimitMiddleware } from './middleware/rateLimit';
+} from './middleware/ipBlacklist.mjs';
+import { rateLimitMiddleware } from './middleware/rateLimit.mjs';
 import {
 	registrationValidationRules,
 	validateEntry
-} from './middleware/validator';
+} from './middleware/validator.mjs';
 import {
 	generateBackupCodes,
 	getBackupCodesFromDatabase,
 	saveBackupCodesToDatabase,
 	verifyBackupCode
-} from './utils/auth/backupCodeUtil';
+} from './utils/auth/backupCodeUtil.mjs';
 import {
 	generateEmail2FACode,
 	verifyEmail2FACode
-} from './utils/auth/email2FAUtil';
+} from './utils/auth/email2FAUtil.mjs';
 //import {
 //	generateU2fAuthenticationOptions,
 //	generateU2fRegistrationOptions,
 //	verifyU2fAuthentication,
 //	verifyU2fRegistration
-// } from './utils/auth/fido2Util';
-import { verifyJwToken } from './utils/auth/jwtUtil';
+// } from './utils/auth/fido2Util.mjs';
+import { verifyJwToken } from './utils/auth/jwtUtil.mjs';
 // import {
 // 	generatePasskeyAuthenticationOptions,
 // 	generatePasskeyRegistrationOptions,
 // 	verifyPasskeyAuthentication,
 // 	verifyPasskeyRegistration
-// } from './utils/auth/passkeyUtil';
+// } from './utils/auth/passkeyUtil.mjs';
 import {
 	generateYubicoOtpOptions,
 	validateYubicoOTP
-} from './utils/auth/yubicoOtpUtil';
+} from './utils/auth/yubicoOtpUtil.mjs';
 import {
 	generateTOTPSecret,
 	generateTOTPToken,
 	verifyTOTPToken,
 	generateQRCode
-} from './utils/auth/totpUtil';
-import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate';
-import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate';
-import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate';
-import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate';
-import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
-import loadTestRoutes from './utils/test/loadTestRoutes';
-import { startMemoryMonitor } from './utils/memoryMonitor';
+} from './utils/auth/totpUtil.mjs';
+import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate.mjs';
+import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate.mjs';
+import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate.mjs';
+import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate.mjs';
+import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate.mjs';
+import loadTestRoutes from './utils/test/loadTestRoutes.mjs';
+import { startMemoryMonitor } from './utils/memoryMonitor.mjs';
 export {
 	addToBlacklist,
 	configurePassport,

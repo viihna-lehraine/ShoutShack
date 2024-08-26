@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import setupLogger from '../../config/logger';
-import getSecrets from '../../config/sops';
+import setupLogger from '../../config/logger.mjs';
+import getSecrets from '../../config/sops.mjs';
 const logger = setupLogger();
 const secrets = await getSecrets.getSecrets();
 if (!secrets) {

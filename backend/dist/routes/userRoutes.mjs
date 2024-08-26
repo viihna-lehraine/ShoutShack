@@ -14,10 +14,10 @@ import {
 	getTransporter,
 	verifyEmail2FACode,
 	verifyTOTPToken
-} from '../index';
-import setupLogger from '../config/logger';
-import getSecrets from '../config/sops';
-import User from '../models/User';
+} from '../index.mjs';
+import setupLogger from '../config/logger.mjs';
+import getSecrets from '../config/sops.mjs';
+import User from '../models/User.mjs';
 const router = express.Router();
 const logger = setupLogger();
 const secrets = await getSecrets.getSecrets();

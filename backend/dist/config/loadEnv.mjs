@@ -1,6 +1,6 @@
 import path from 'path';
 import { config } from 'dotenv';
-import setupLogger from './logger';
+import setupLogger from './logger.mjs';
 const __dirname = process.cwd();
 const logger = setupLogger();
 function loadEnv() {

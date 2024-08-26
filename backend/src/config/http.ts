@@ -1,4 +1,5 @@
 import { Application } from 'express';
+import { promises as fs } from 'fs';
 import { constants } from 'crypto';
 import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
@@ -24,6 +25,9 @@ const logger = setupLogger();
 const featureFlags = getFeatureFlags();
 
 const SERVER_PORT = process.env.SERVER_PORT || 3000;
+const SSL_KEY = process.env.SERVER_SSL_KEY_PATH;
+const SSL_CERT = process.env.SERVER_SSL_CERT_PATH;
+const DECRYPT_KEYS = featureFlags.decryptKeysFlag;
 const SSL_FLAG = featureFlags.enableSslFlag;
 const REDIS_FLAG = featureFlags.enableRedisFlag;
 
@@ -41,25 +45,38 @@ const ciphers = [
 ];
 
 async function declareOptions(): Promise<Options> {
-	const sslKeys: SSLKeys = await sops.getSSLKeys();
-	logger.info('SSL keys retrieved');
+    let sslKeys: SSLKeys;
 
-	try {
-		const options = {
-			key: sslKeys.key,
-			cert: sslKeys.cert,
-			allowHTTP1: true,
-			secureOptions:
-				constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
-			ciphers: ciphers.join(':'),
-			honorCipherOrder: true
-		};
+    if (DECRYPT_KEYS) {
+        sslKeys = await sops.getSSLKeys();
+        logger.info('SSL keys retrieved via sops.getSSLKeys()');
+    } else {
+        if (!SSL_KEY || !SSL_CERT) {
+            throw new Error('SSL_KEY or SSL_CERT environment variable is not set');
+        }
+        const key = await fs.readFile(SSL_KEY, 'utf8');
+        const cert = await fs.readFile(SSL_CERT, 'utf8');
 
-		return options;
-	} catch (error) {
-		logger.error(`Error declaring options: ${error}`);
-		throw new Error('Error declaring options');
-	}
+        sslKeys = { key, cert };
+        logger.info('Using unencrypted SSL keys from environment files');
+    }
+
+    try {
+        const options = {
+            key: sslKeys.key,
+            cert: sslKeys.cert,
+            allowHTTP1: true,
+            secureOptions:
+                constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
+            ciphers: ciphers.join(':'),
+            honorCipherOrder: true
+        };
+
+        return options;
+    } catch (error) {
+        logger.error(`Error declaring options: ${error}`);
+        throw new Error('Error declaring options');
+    }
 }
 
 export async function setupHttp(app: Application) {

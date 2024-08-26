@@ -27,5 +27,5 @@ function logMemoryUsage(): void {
 }
 
 export function startMemoryMonitor(): NodeJS.Timeout {
-	return setInterval(logMemoryUsage, 15000);
+	return setInterval(logMemoryUsage, 300000);
 }

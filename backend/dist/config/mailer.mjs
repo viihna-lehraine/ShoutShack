@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import getSecrets from './sops';
+import getSecrets from './sops.mjs';
 async function createTransporter() {
 	const secrets = await getSecrets.getSecrets();
 	const transporter = nodemailer.createTransport({

@@ -8,6 +8,15 @@ const logger = setupLogger();
 async function setupStaticRoutes(): Promise<void> {
 	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
 
+	// Middleware to log static asset access
+	router.use((req, res, next) => {
+		const assetTypes = ['css', 'js', 'images', 'fonts', 'icons'];
+		if (assetTypes.some(type => req.url.startsWith(type))) {
+			logger.info(`GET request received at ${req.url}`);
+		}
+		next();
+	});
+
 	// Define root file path for public/
 	router.get('/', (req, res) => {
 		logger.info('GET request received at /');
@@ -89,8 +98,8 @@ async function setupStaticRoutes(): Promise<void> {
 
 	// 404 handler for unmatched routes
 	router.use((req, res) => {
+		logger.info(`404 - ${req.url} was not found`);
 		res.status(404).sendFile(path.join(staticRootPath, 'not-found.html'));
-		logger.info('404 - Not Found');
 	});
 }
 
@@ -102,6 +111,6 @@ export default async function initializeStaticRoutes(
 		await setupStaticRoutes();
 		app.use('/', router);
 	} catch (err) {
-		logger.error('Error setting up routes: ', err);
+		logger.error(`Error setting up routes: ${err}`);
 	}
 }

@@ -1,8 +1,8 @@
 import { Sequelize } from 'sequelize';
-import setupLogger from './logger';
-import { getFeatureFlags } from './featureFlags';
-import getSecrets from './sops';
-import AppError from '../errors/AppError';
+import setupLogger from './logger.mjs';
+import { getFeatureFlags } from './featureFlags.mjs';
+import getSecrets from './sops.mjs';
+import AppError from '../errors/AppError.mjs';
 let sequelize = null;
 const featureFlags = getFeatureFlags();
 const logger = setupLogger();

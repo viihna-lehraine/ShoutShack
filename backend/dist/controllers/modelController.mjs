@@ -1,4 +1,4 @@
-import setupLogger from '../config/logger';
+import setupLogger from '../config/logger.mjs';
 const logger = setupLogger();
 // Retrieve all entries for any model
 export const getEntries = Model => async (req, res) => {

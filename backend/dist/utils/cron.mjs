@@ -5,7 +5,7 @@ import compressing from 'compressing';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import setupLogger from '../config/logger';
+import setupLogger from '../config/logger.mjs';
 const logger = setupLogger();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

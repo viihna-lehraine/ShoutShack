@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import setupLogger from './logger';
+import setupLogger from './logger.mjs';
 const logger = setupLogger();
 const __dirname = process.cwd();
 function getDirectoryPath() {

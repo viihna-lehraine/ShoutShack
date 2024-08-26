@@ -1,16 +1,16 @@
 import passport from 'passport';
-import loadEnv from './config/loadEnv';
+import loadEnv from './config/loadEnv.mjs';
 import {
 	initializeDatabase,
 	configurePassport,
 	initializeIpBlacklist,
 	setupHttp
-} from './index';
-import { app, initializeApp } from './config/app';
-import { getFeatureFlags } from './config/featureFlags';
-import { getSequelizeInstance } from './config/db';
-import setupLogger from './config/logger';
-import { initializeModels } from './models/ModelsIndex';
+} from './index.mjs';
+import { app, initializeApp } from './config/app.mjs';
+import { getFeatureFlags } from './config/featureFlags.mjs';
+import { getSequelizeInstance } from './config/db.mjs';
+import setupLogger from './config/logger.mjs';
+import { initializeModels } from './models/ModelsIndex.mjs';
 loadEnv();
 const logger = setupLogger();
 logger.info('Logger is working');

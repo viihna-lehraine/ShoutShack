@@ -1,6 +1,6 @@
 import express from 'express';
 import { validationResult } from 'express-validator';
-import { registrationValidationRules } from '../middleware/validator';
+import { registrationValidationRules } from '../middleware/validator.mjs';
 const router = express.Router();
 router.post(
 	'/register',

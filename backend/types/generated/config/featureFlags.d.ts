@@ -1,11 +1,15 @@
 interface FeatureFlags {
     apiRoutesCsrfFlag: boolean;
     dbSyncFlag: boolean;
+    decryptKeysFlag: boolean;
+    enableCsrfFlag: boolean;
+    enableErrorHandlerFlag: boolean;
+    enableIpBlacklistFlag: boolean;
+    enableJwtAuthFlag: boolean;
     enableRedisFlag: boolean;
     enableSentryFlag: boolean;
     enableSslFlag: boolean;
     httpsRedirectFlag: boolean;
-    ipBlacklistFlag: boolean;
     loadStaticRoutesFlag: boolean;
     loadTestRoutesFlag: boolean;
     secureHeadersFlag: boolean;

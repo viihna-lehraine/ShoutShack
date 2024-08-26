@@ -8,7 +8,7 @@ import {
     Fido2Lib,
     PublicKeyCredentialCreationOptions
 } from 'fido2-lib';
-import getSecrets from '../../config/secrets';
+import getSecrets from '../../config/secrets.mjs';
 
 interface User {
     id: string;
