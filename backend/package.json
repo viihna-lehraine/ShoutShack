@@ -6,35 +6,38 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "backup:dist": "node ./config/scripts/distBackup.js",
-    "build": "npm run lint:ts && npm run format:ts && npm run backup:dist && npm run clean:compiled && npm run tsc && npm run postCompile && npm run lint:js && npm run format:js && npm run removeTypeImports && npm run es-check",
+    "backup:dist": "node ./config/scripts/distBackup.mjs",
+    "build": "node ./config/scripts/buildTime.mjs",
+    "build:original": "npm run backup:dist && npm run clean:compiled && npm run clean:tsbuildinfo && npm run tsc && npm run postCompile && npm run mjsExtensions && npm run lintAndFormat:mjs && npm run removeTypeImports && npm run es-check",
     "circular": "madge --circular ./src",
-    "clean:compiled": "find ./dist -type f -name '*.js' -delete && rm -f tsconfig.tsbuildinfo",
-    "es-check": "es-check es2022 'dist/**/*.js' --module",
-    "format": "prettier --write './dist/**/*.js' './src/**/*.ts'",
-    "format:js": "prettier --write './dist/**/*.js'",
+    "clean:compiled": "find ./dist -type f -name '*.mjs' -delete",
+    "clean:tsbuildinfo": "find ./dist -type f -name '*.tsbuildinfo' -delete",
+    "es-check": "es-check es2022 'dist/**/*.mjs' --module",
+    "format": "prettier --write './dist/**/*.mjs' './src/**/*.ts'",
+    "format:mjs": "prettier --write './dist/**/*.mjs'",
     "format:ts": "prettier --write './src/**/*.ts'",
-    "lint": "eslint --fix 'dist/**/*.js' && eslint --fix 'src/**/*.ts'",
-    "lint:js": "eslint --fix 'dist/**/*.js'",
-    "lint:ts": "eslint --fix 'src/**/*.ts'",
-    "lint-and-format": "npm run lint && npm run format",
+    "lint": "eslint --fix 'dist/**/*.mjs' && eslint --fix 'src/**/*.ts'",
+    "lint:mjs": "eslint --fix 'dist/**/*.mjs'",
+    "lint:ts": "eslint --fix --cache 'src/**/*.ts'",
+    "lintAndFormat:mjs": "npm-run-all --parallel lint:mjs format:mjs",
+    "lintAndFormat:ts": "npm-run-all --parallel lint:ts format:ts",
+    "mjsExtensions": "node ./config/scripts/mjsExtensions.mjs",
     "npmCheckUpdates": "ncu -u && ncu -u & ncu install && npm audit",
     "postCompile": "node ./config/scripts/postCompile.mjs",
-    "removeTypeImports": "node ./config/scripts/removeTypeImports.js",
-    "start": "node ./dist/server.js",
-    "start:dev": "nodemon dist/server.js",
+    "removeTypeImports": "node ./config/scripts/removeTypeImports.mjs",
+    "start": "node ./dist/server.mjs",
+    "start:dev": "nodemon dist/server.mjs",
     "start:log": "node ./config/scripts/startupWithLogs.mjs",
     "start:dev:log": "nodemon dist/server.js 2>&1 | tee logs/npm/npm-debug.log",
     "tsc": "tsc --project tsconfig.json",
-    "tsc:full": "npm run tsc && npm run postCompile",
-    "tsc:verbose": "tsc --project tsconfig.json --verbose",
-    "test": "mocha --experimental-specifier-resolution=node",
+    "tsc:listFiles": "tsc --project tsconfig.json --listFiles",
+    "test": "vitest",
     "watch:all": "npm-run-all --parallel watch:lint watch:format watch:tsc",
     "watch:format": "npm-run-all --parallel watch:format:ts watch:format:js",
-    "watch:lint": "npm-run-all --parallel watch:lint:ts watch:lint:js",
-    "watch:format:js": "chokidar 'dist/**/*.js' -c 'npm run format:js'",
+    "watch:format:mjs": "chokidar 'dist/**/*.mjs' -c 'npm run format:js'",
     "watch:format:ts": "chokidar 'src/**/*.ts' -c 'npm run format:ts'",
-    "watch:lint:js": "chokidar 'dist/**/*.js' -c 'npm run lint:js'",
+    "watch:lint": "npm-run-all --parallel watch:lint:ts watch:lint:mjs",
+    "watch:lint:mjs": "chokidar 'dist/**/*.mjs' -c 'npm run lint:mjs'",
     "watch:lint:ts": "chokidar 'src/**/*.ts' -c 'npm run lint:ts'",
     "watch:tsc": "tsc --watch --project tsconfig.json"
   },
@@ -64,6 +67,8 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.2.0",
     "@typescript-eslint/parser": "^8.2.0",
+    "@vitest/ui": "^2.0.5",
+    "babel-jest": "^29.7.0",
     "babel-plugin-transform-import-meta": "^2.2.1",
     "chokidar-cli": "^3.0.0",
     "es-check": "^7.2.1",
@@ -75,8 +80,9 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-sonarjs": "^2.0.1-alpha.2",
     "eslint-plugin-unicorn": "^55.0.0",
+    "husky": "^9.1.5",
+    "lint-staged": "^15.2.9",
     "madge": "^8.0.0",
-    "mocha": "^10.7.3",
     "nock": "^13.5.5",
     "nodemon": "^3.1.4",
     "npm-run-all": "^4.1.5",
@@ -84,7 +90,8 @@
     "prettier": "^3.3.3",
     "sinon": "^18.0.0",
     "supertest": "^7.0.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
   },
   "dependencies": {
     "@sentry/node": "^8.26.0",
@@ -220,6 +227,18 @@
   "babel": {
     "presets": [
       "@babel/preset-env"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write",
+      "git add"
     ]
   }
 }

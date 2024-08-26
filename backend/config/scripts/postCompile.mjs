@@ -1,81 +1,79 @@
 import { fileURLToPath } from 'url';
 import { dirname, resolve, join } from 'path';
-import fs from 'fs';
+import fs from 'fs/promises';
 
-let __filename = fileURLToPath(import.meta.url);
-let __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Defines location of compiled JS files
-let jsDir = resolve(__dirname, '../../dist');
+// Defines location of compiled MJS files
+const mjsDir = resolve(__dirname, '../../dist');
 
-console.log(`Looking for files in: ${jsDir}`);
+console.log(`Looking for files in: ${mjsDir}`);
 
-// Recursively find all .js files in directory
-function findJsFiles(dir) {
-    let results = [];
-    let list = fs.readdirSync(dir);
+// Recursively find all .mjs files in the directory
+async function findMjsFiles(dir) {
+	const results = [];
+	const list = await fs.readdir(dir, { withFileTypes: true });
 
-    list.forEach((file) => {
-        let filePath = join(dir, file);
-        let stat = fs.statSync(filePath);
-        if (stat && stat.isDirectory()) {
-            results.push(...findJsFiles(filePath));
-        } else if (stat && stat.isFile() && file.endsWith('.js')) {
-            results.push(filePath);
-        }
-    });
+	for (const file of list) {
+		const filePath = join(dir, file.name);
+		if (file.isDirectory()) {
+			const subDirFiles = await findMjsFiles(filePath);
+			results.push(...subDirFiles);
+		} else if (file.isFile() && file.name.endsWith('.mjs')) {
+			results.push(filePath);
+		}
+	}
 
-    return results;
+	return results;
 }
 
-// Process all found .js files
-let files = findJsFiles(jsDir);
+// Strip extensions from all import statements
+async function stripExtensions(filePath) {
+	console.log(`Processing file: ${filePath}`);
 
-if (files.length === 0) {
-    console.log('No .js files found.');
-} else {
-    console.log(`Found .js files: ${files}`);
-    files.forEach((file) => addJsExtension(file));
+	let fileContent = await fs.readFile(filePath, 'utf8');
+	let modified = false;
+
+	// Match and strip .js or .mjs extensions in import statements
+	fileContent = fileContent.replace(
+		/import\s+([\s\S]*?)\s+from\s+['"](\.{1,2}\/[^'"]+)\.m?js['"]/g,
+		(fullMatch, imports, path) => {
+			console.log(`Original import: ${fullMatch}`);
+			const updatedPath = `import ${imports.trim()} from '${path}'`;
+			console.log(`Updated import: ${updatedPath}`);
+			modified = true;
+			return updatedPath;
+		}
+	);
+
+	// Fallback logging to identify any unprocessed imports
+	if (!modified) {
+		console.log(`No changes made in: ${filePath}`);
+	}
+
+	// Write updated content back to the file if there are changes
+	if (modified) {
+		await fs.writeFile(filePath, fileContent, 'utf8');
+		console.log(`Updated and wrote back file: ${filePath}`);
+	}
 }
 
-// Ensures all import statements have exactly 1 instance of the .js extension
-function addJsExtension(filePath) {
-    console.log(`Processing file: ${filePath}`);
+async function processFiles() {
+	try {
+		const files = await findMjsFiles(mjsDir);
 
-    let fileContent = fs.readFileSync(filePath, 'utf8');
+		if (files.length === 0) {
+			console.log('No .mjs files found.');
+		} else {
+			console.log(`Found .mjs files: ${files}`);
+			await Promise.all(files.map(file => stripExtensions(file)));
+		}
 
-    // Update imports without extensions
-    let updatedContent = fileContent.replace(
-        /import\s+(.+?)\s+from\s+['"](\.{1,2}\/[^'"]+)['"]/g,
-        (fullMatch, imports, path) => {
-            console.log(`Original import: ${fullMatch}`);
-            if (!/\.\w+$/.test(path)) {
-                let updatedPath = `import ${imports} from '${path}.js'`;
-                console.log(`Updated import: ${updatedPath}`);
-                return updatedPath;
-            }
-            return fullMatch;
-        }
-    );
-
-    // Handle special cases where `index` files are imported
-    updatedContent = updatedContent.replace(
-        /import\s+(.+?)\s+from\s+['"](.*?\/index)['"]/g,
-        (fullMatch, imports, path) => {
-            console.log(`Original import for '/index': ${fullMatch}`);
-            let updatedPath = `import ${imports} from '${path}.js'`;
-            console.log(`Updated import for '/index': ${updatedPath}`);
-            return updatedPath;
-        }
-    );
-
-    // Write updated content back to the JS file if there are changes
-    if (fileContent !== updatedContent) {
-        fs.writeFileSync(filePath, updatedContent, 'utf8');
-        console.log(`Updated and wrote back file: ${filePath}`);
-    } else {
-        console.log(`No changes needed for file: ${filePath}`);
-    }
+		console.log('Stripped extensions from import statements.');
+	} catch (err) {
+		console.error('Error processing files:', err);
+	}
 }
 
-console.log('Added .js extensions to import statements.');
+processFiles();

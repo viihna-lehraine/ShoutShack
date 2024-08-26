@@ -58,7 +58,7 @@ export default [
 		],
 	},
 	{
-		files: ['**/*.js'],
+		files: ['**/*.js', '**/*.mjs'],
 		languageOptions: {
 			parser: babelParser,
 			parserOptions: {
