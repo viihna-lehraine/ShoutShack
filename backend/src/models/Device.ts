@@ -2,7 +2,9 @@ import {
 	Model,
 	InferAttributes,
 	InferCreationAttributes,
-	CreationOptional
+	CreationOptional,
+	DataTypes,
+	Sequelize
 } from 'sequelize';
 
 interface DeviceAttributes {
@@ -36,4 +38,66 @@ class Device
 	lastUpdated!: CreationOptional<Date>;
 }
 
-export default Device;
+export default function createDeviceModel(sequelize: Sequelize): typeof Device {
+	Device.init(
+		{
+			deviceId: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				autoIncrement: true,
+				primaryKey: true
+			},
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				unique: true
+			},
+			deviceName: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			deviceType: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			os: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			browser: {
+				type: DataTypes.STRING,
+				allowNull: true
+			},
+			ipAddress: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			lastUsed: {
+				type: DataTypes.DATE,
+				allowNull: true,
+				defaultValue: DataTypes.NOW
+			},
+			isTrusted: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false
+			},
+			creationDate: {
+				type: DataTypes.DATE,
+				allowNull: true,
+				defaultValue: DataTypes.NOW
+			},
+			lastUpdated: {
+				type: DataTypes.DATE,
+				allowNull: true,
+				defaultValue: DataTypes.NOW
+			}
+		},
+		{
+			sequelize,
+			tableName: 'Devices',
+			timestamps: false
+		}
+	);
+
+	return Device;
+}

@@ -1,7 +1,11 @@
-import argon2 from 'argon2';
-import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import {
+	InferAttributes,
+	InferCreationAttributes,
+	Model,
+	Sequelize,
+	DataTypes
+} from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import getSecrets from '../config/sops';
 
 interface UserAttributes {
 	id: string;
@@ -20,6 +24,12 @@ interface UserSecrets {
 	PEPPER: string;
 }
 
+interface UserModelDependencies {
+	argon2: typeof import('argon2');
+	uuidv4: typeof uuidv4;
+	getSecrets: () => Promise<UserSecrets>;
+}
+
 class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
 	implements UserAttributes
@@ -35,10 +45,21 @@ class User
 	isMfaEnabled!: boolean;
 	creationDate!: Date;
 
-	// Method to compare passwords
-	async comparePassword(password: string): Promise<boolean> {
-		const secrets: UserSecrets = await getSecrets.getSecrets();
+	async comparePassword(
+		password: string,
+		argon2: typeof import('argon2'),
+		secrets: UserSecrets
+	): Promise<boolean> {
 		return argon2.verify(this.password, password + secrets.PEPPER);
+	}
+
+	static async comparePasswordWithDependencies(
+		hashedPassword: string,
+		password: string,
+		argon2: typeof import('argon2'),
+		secrets: UserSecrets
+	): Promise<boolean> {
+		return argon2.verify(hashedPassword, password + secrets.PEPPER);
 	}
 
 	// Static method to validate passwords
@@ -58,8 +79,9 @@ class User
 		);
 	}
 
-	// Static method to create a new user
+	// Static method to create a new user, now taking dependencies as arguments
 	static async createUser(
+		{ argon2, uuidv4, getSecrets }: UserModelDependencies,
 		username: string,
 		password: string,
 		email: string
@@ -71,14 +93,17 @@ class User
 			);
 		}
 
+		const secrets = await getSecrets();
+		const hashedPassword = await argon2.hash(password + secrets.PEPPER);
+
 		const newUser = await User.create({
 			id: uuidv4(),
 			username,
-			password,
+			password: hashedPassword,
 			email,
 			isAccountVerified: false,
-			resetPasswordToken: null, // Set to null initially
-			resetPasswordExpires: null, // Set to null initially
+			resetPasswordToken: null,
+			resetPasswordExpires: null,
 			isMfaEnabled: false,
 			creationDate: new Date()
 		});
@@ -87,4 +112,64 @@ class User
 	}
 }
 
-export default User;
+export default function createUserModel(sequelize: Sequelize): typeof User {
+	User.init(
+		{
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				primaryKey: true
+			},
+			userid: {
+				type: DataTypes.INTEGER,
+				autoIncrement: true,
+				allowNull: false,
+				unique: true
+			},
+			username: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				unique: true
+			},
+			password: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			email: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				unique: true
+			},
+			isAccountVerified: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false
+			},
+			resetPasswordToken: {
+				type: DataTypes.STRING,
+				allowNull: true
+			},
+			resetPasswordExpires: {
+				type: DataTypes.DATE,
+				allowNull: true
+			},
+			isMfaEnabled: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false
+			},
+			creationDate: {
+				type: DataTypes.DATE,
+				allowNull: false,
+				defaultValue: DataTypes.NOW
+			}
+		},
+		{
+			sequelize,
+			tableName: 'Users',
+			timestamps: false
+		}
+	);
+
+	return User;
+}

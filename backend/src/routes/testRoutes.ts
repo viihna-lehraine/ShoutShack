@@ -1,9 +1,19 @@
-import express from 'express';
+import express, { Request, Response, Router } from 'express';
 
-const router = express.Router();
+interface TestRouteDependencies {
+	logger: {
+		info: (msg: string) => void;
+	};
+}
 
-router.get('/test', (req, res) => {
-	res.send('Test route is working!');
-});
+export default function createTestRouter(deps: TestRouteDependencies): Router {
+	const router = express.Router();
+	const { logger } = deps;
 
-export default router;
+	router.get('/test', (req: Request, res: Response) => {
+		logger.info('Test route was accessed.');
+		res.send('Test route is working!');
+	});
+
+	return router;
+}

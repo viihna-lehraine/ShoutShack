@@ -1,29 +1,41 @@
-import pkg from 'winston';
+import { log } from 'console';
+import { createLogger, format, Logger, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
-const { createLogger, format, transports } = pkg;
-const { combine, timestamp, printf, colorize, errors, json } = format;
+const { colorize, combine, errors, json, printf, timestamp } = format;
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
-	return `${timestamp}, ${level}: ${stack || message}`;
+	return `${timestamp} ${level}: ${stack || message}`;
 });
 
-function setupLogger(): pkg.Logger {
+export interface LoggerDependencies {
+	logLevel?: string | undefined;
+	logDirectory?: string | undefined;
+	serviceName?: string | undefined;
+	isProduction?: boolean | undefined;
+}
+
+function setupLogger({
+	logLevel = 'debug',
+	logDirectory = '../../data/logs/server/main',
+	serviceName = 'guestbook-service',
+	isProduction = process.env.NODE_ENV === 'development'
+}: LoggerDependencies = {}): Logger {
 	const logger = createLogger({
-		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+		level: isProduction ? 'info' : logLevel,
 		format: combine(
-			timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
 			errors({ stack: true }),
+			timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
 			json()
 		),
-		defaultMeta: { service: 'guestbook-service' },
+		defaultMeta: { service: serviceName },
 		transports: [
 			new transports.Console({
 				format: combine(colorize(), logFormat)
 			}),
 			new DailyRotateFile({
 				filename: 'server-%DATE%.log',
-				dirname: './data/logs/server/main',
+				dirname: logDirectory,
 				datePattern: 'YYYY-MM-DD',
 				zippedArchive: true,
 				maxSize: '20m',

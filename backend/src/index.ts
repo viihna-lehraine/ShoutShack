@@ -1,123 +1,81 @@
 import { getSequelizeInstance, initializeDatabase } from './config/db';
 import { getFeatureFlags, parseBoolean } from './config/featureFlags';
-import loadEnv from './config/loadEnv';
+import { loadEnv } from './config/loadEnv';
 import { setupHttp } from './config/http';
-import { createTransporter, getTransporter } from './config/mailer';
+import { getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';
 import configurePassport from './config/passport';
 import { getRedisClient } from './config/redis';
 import errorHandler from './middleware/errorHandler';
-import setupSecurityHeaders from './middleware/securityHeaders';
+import { setupSecurityHeaders } from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
-import { csrfMiddleware } from './middleware/csrf';
+import { createCsrfMiddleware } from './middleware/csrf';
 import sops from './config/sops';
-import {
-	addToBlacklist,
-	initializeIpBlacklist,
-	ipBlacklistMiddleware,
-	loadBlacklist,
-	removeFromBlacklist
-} from './middleware/ipBlacklist';
+import { createIpBlacklist } from './middleware/ipBlacklist';
 import { rateLimitMiddleware } from './middleware/rateLimit';
-import {
-	registrationValidationRules,
-	validateEntry
-} from './middleware/validator';
-import {
-	generateBackupCodes,
-	getBackupCodesFromDatabase,
-	saveBackupCodesToDatabase,
-	verifyBackupCode
-} from './utils/auth/backupCodeUtil';
-import {
-	generateEmail2FACode,
-	verifyEmail2FACode
-} from './utils/auth/email2FAUtil';
+import { createValidatorMiddleware } from './middleware/validator';
+import createBackupCodeService from './utils/auth/backupCodeUtil';
+import createEmail2FAUtil from './utils/auth/email2FAUtil';
 //import {
 //	generateU2fAuthenticationOptions,
 //	generateU2fRegistrationOptions,
 //	verifyU2fAuthentication,
 //	verifyU2fRegistration
 // } from './utils/auth/fido2Util';
-import { verifyJwToken } from './utils/auth/jwtUtil';
+import createJwtUtil from './utils/auth/jwtUtil';
 // import {
 // 	generatePasskeyAuthenticationOptions,
 // 	generatePasskeyRegistrationOptions,
 // 	verifyPasskeyAuthentication,
 // 	verifyPasskeyRegistration
 // } from './utils/auth/passkeyUtil';
-import {
-	generateYubicoOtpOptions,
-	validateYubicoOTP
-} from './utils/auth/yubicoOtpUtil';
-import {
-	generateTOTPSecret,
-	generateTOTPToken,
-	verifyTOTPToken,
-	generateQRCode
-} from './utils/auth/totpUtil';
+import createYubicoOtpUtil from './utils/auth/yubicoOtpUtil';
+import createTOTPUtil from './utils/auth/totpUtil';
 import generate2FactorEmailTemplate from './utils/emailTemplates/2FactorEmailTemplate';
 import generate2FAEnabledEmailTemplate from './utils/emailTemplates/2FAEnabledEmailTemplate';
 import generateAccountDeletedConfirmationEmailTemplate from './utils/emailTemplates/accountDeletedConfirmationEmailTemplate';
 import generateAccountDeletionStartedEmailTemplate from './utils/emailTemplates/accountDeletionStartedEmailTemplate';
 import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
 import loadTestRoutes from './utils/test/loadTestRoutes';
-import { startMemoryMonitor } from './utils/memoryMonitor';
+import { createMemoryMonitor } from './utils/memoryMonitor';
 
 export {
-	addToBlacklist,
 	configurePassport,
-	createTransporter,
-	csrfMiddleware,
-	decryptDataFiles,
+	createBackupCodeService,
+	createCsrfMiddleware,
+	createEmail2FAUtil,
+	createIpBlacklist,
+	createJwtUtil,
+	createMemoryMonitor,
+	createTOTPUtil,
+	createValidatorMiddleware,
+	createYubicoOtpUtil,
 	errorHandler,
 	generate2FactorEmailTemplate,
 	generate2FAEnabledEmailTemplate,
 	generateAccountDeletedConfirmationEmailTemplate,
 	generateAccountDeletionStartedEmailTemplate,
-	generateBackupCodes,
 	generateConfirmationEmailTemplate,
-	generateEmail2FACode,
 	// generatePasskeyAuthenticationOptions,
 	// generatePasskeyRegistrationOptions,
-	generateQRCode,
 	getRedisClient,
 	// generateU2fAuthenticationOptions,
 	// generateU2fRegistrationOptions,
-	generateTOTPSecret,
-	generateTOTPToken,
-	generateYubicoOtpOptions,
-	getBackupCodesFromDatabase,
 	getFeatureFlags,
 	getSequelizeInstance,
-	getSSLKeys,
 	getTransporter,
-	ipBlacklistMiddleware,
 	initializeDatabase,
-	initializeIpBlacklist,
-	loadBlacklist,
 	loadEnv,
 	loadTestRoutes,
 	multerConfiguredUpload,
 	parseBoolean,
 	rateLimitMiddleware,
-	registrationValidationRules,
-	removeFromBlacklist,
-	saveBackupCodesToDatabase,
 	setupHttp,
 	setupSecurityHeaders,
 	slowdownMiddleware,
-	startMemoryMonitor,
-	validateEntry,
-	validateYubicoOTP,
-	verifyBackupCode,
-	verifyEmail2FACode,
-	verifyJwToken,
+	sops
 	// verifyPasskeyAuthentication,
 	// verifyPasskeyRegistration,
-	verifyTOTPToken
 	// verifyU2fAuthentication,
 	// verifyU2fRegistration
 };
-
-const { decryptDataFiles, getSSLKeys } = sops;

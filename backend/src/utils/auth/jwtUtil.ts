@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import setupLogger from '../../config/logger';
-import getSecrets from '../../config/sops';
+import sops from '../../config/sops';
+import { execSync } from 'child_process';
 
 interface Secrets {
 	JWT_SECRET: string;
@@ -12,25 +13,52 @@ interface User {
 }
 
 const logger = setupLogger();
-const secrets: Secrets = await getSecrets.getSecrets();
 
-export const generateToken = async (user: User): Promise<string> => {
-	return jwt.sign(
-		{ id: user.id, username: user.username },
-		secrets.JWT_SECRET,
-		{ expiresIn: '1h' }
-	);
-};
+async function loadSecrets(): Promise<Secrets> {
+	return sops.getSecrets({
+		logger,
+		execSync,
+		getDirectoryPath: () => process.cwd()
+	});
+}
 
-export const verifyJwToken = async (
-	token: string
-): Promise<string | object | null> => {
-	try {
-		return jwt.verify(token, secrets.JWT_SECRET);
-	} catch (err) {
-		logger.error(err);
-		return null;
-	}
-};
+export function createJwtUtil(): {
+	generateToken: (user: User) => Promise<string>;
+	verifyJwtToken: (token: string) => Promise<string | object | null>;
+} {
+	let secrets: Secrets;
 
-export default verifyJwToken;
+	const loadAndCacheSecrets = async (): Promise<void> => {
+		if (!secrets) {
+			secrets = await loadSecrets();
+		}
+	};
+
+	const generateToken = async (user: User): Promise<string> => {
+		await loadAndCacheSecrets();
+		return jwt.sign(
+			{ id: user.id, username: user.username },
+			secrets.JWT_SECRET,
+			{ expiresIn: '1h' }
+		);
+	};
+
+	const verifyJwtToken = async (
+		token: string
+	): Promise<string | object | null> => {
+		await loadAndCacheSecrets();
+		try {
+			return jwt.verify(token, secrets.JWT_SECRET);
+		} catch (err) {
+			logger.error(err);
+			return null;
+		}
+	};
+
+	return {
+		generateToken,
+		verifyJwtToken
+	};
+}
+
+export default createJwtUtil;

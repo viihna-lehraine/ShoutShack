@@ -1,6 +1,8 @@
 import yub from 'yub';
-import getSecrets from '../../config/sops';
 import '../../../types/custom/yub.d.ts';
+import getSecrets from '../../config/sops';
+import { execSync } from 'child_process';
+import { Logger } from 'winston';
 
 interface Secrets {
 	YUBICO_CLIENT_ID: number;
@@ -17,7 +19,7 @@ interface YubClient {
 
 interface YubResponse {
 	status: string;
-	[key: string]: string | number | boolean | object | null | undefined; // *DEV-NOTE* I have absolutely no idea what type should be
+	[key: string]: string | number | boolean | object | null | undefined;
 }
 
 interface YubicoOtpOptions {
@@ -26,48 +28,71 @@ interface YubicoOtpOptions {
 	apiUrl: string;
 }
 
-const secrets: Secrets = await getSecrets.getSecrets();
-let yubClient: YubClient | undefined;
-
-async function initializeYubicoOtpUtil(): Promise<void> {
-	yubClient = yub.init(
-		secrets!.YUBICO_CLIENT_ID.toString(),
-		secrets!.YUBICO_SECRET_KEY
-	) as YubClient;
+interface YubicoUtilDependencies {
+	yub: typeof yub;
+	getSecrets: typeof getSecrets.getSecrets;
+	logger: Logger;
+	execSync: typeof execSync;
+	getDirectoryPath: () => string;
 }
 
-// for validating a Yubico OTP
-async function validateYubicoOTP(otp: string): Promise<boolean> {
-	if (!yubClient) {
-		await initializeYubicoOtpUtil();
+export default function createYubicoOtpUtil({
+	yub,
+	getSecrets,
+	logger,
+	execSync,
+	getDirectoryPath
+}: YubicoUtilDependencies): {
+	initializeYubicoOtpUtil: () => Promise<void>;
+	validateYubicoOTP: (otp: string) => Promise<boolean>;
+	generateYubicoOtpOptions: () => YubicoOtpOptions;
+} {
+	let secrets: Secrets;
+	let yubClient: YubClient | undefined;
+
+	async function initializeYubicoOtpUtil(): Promise<void> {
+		secrets = await getSecrets({ logger, execSync, getDirectoryPath });
+		yubClient = yub.init(
+			secrets.YUBICO_CLIENT_ID.toString(),
+			secrets.YUBICO_SECRET_KEY
+		) as YubClient;
 	}
 
-	return new Promise((resolve, reject) => {
-		yubClient!.verify(otp, (err: Error | null, data: YubResponse) => {
-			if (err) {
-				return reject(err);
-			}
+	async function validateYubicoOTP(otp: string): Promise<boolean> {
+		if (!yubClient) {
+			await initializeYubicoOtpUtil();
+		}
 
-			if (data && data.status === 'OK') {
-				resolve(true);
-			} else {
-				resolve(false);
-			}
+		return new Promise((resolve, reject) => {
+			yubClient!.verify(otp, (err: Error | null, data: YubResponse) => {
+				if (err) {
+					return reject(err);
+				}
+
+				if (data && data.status === 'OK') {
+					resolve(true);
+				} else {
+					resolve(false);
+				}
+			});
 		});
-	});
-}
+	}
 
-// generated OTP configruation options
-function generateYubicoOtpOptions(): YubicoOtpOptions {
-	if (!secrets) {
-		throw new Error('Secrets have not been initialized');
+	function generateYubicoOtpOptions(): YubicoOtpOptions {
+		if (!secrets) {
+			throw new Error('Secrets have not been initialized');
+		}
+
+		return {
+			clientId: secrets.YUBICO_CLIENT_ID,
+			apiKey: secrets.YUBICO_SECRET_KEY,
+			apiUrl: secrets.YUBICO_API_URL
+		};
 	}
 
 	return {
-		clientId: secrets.YUBICO_CLIENT_ID,
-		apiKey: secrets.YUBICO_SECRET_KEY,
-		apiUrl: secrets.YUBICO_API_URL
+		initializeYubicoOtpUtil,
+		validateYubicoOTP,
+		generateYubicoOtpOptions
 	};
 }
-
-export { generateYubicoOtpOptions, validateYubicoOTP };

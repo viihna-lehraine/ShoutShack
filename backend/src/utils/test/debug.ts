@@ -1,19 +1,24 @@
-import debug from 'debug';
+import debug, { Debugger } from 'debug';
 
-const log = debug('app:server');
-const dbLog = debug('app:db');
+interface DebugUtilDependencies {
+	debug: typeof debug;
+}
 
-// Enable debug for the 'app:server' namespace
-// DEBUG=app:server node server.js
+export default function createDebugUtil({ debug }: DebugUtilDependencies): {
+	log: Debugger;
+	dbLog: Debugger;
+	logError: (message: string, error: Error) => void;
+} {
+	const log = debug('app:server');
+	const dbLog = debug('app:db');
 
-log('Starting server...');
-dbLog('Connecting to database...');
+	function logError(message: string, error: Error): void {
+		log(`${message}:`, error);
+	}
 
-// Example error // *DEV-NOTE* rip this out and replace when configuring debug.ts funcionality //
-const someError = new Error(
-	'ERROR: BOTTOM TEXT NOT FOUND! ARE YOU A SUBSCRIBER?'
-);
-
-if (someError) {
-	log('An error occurred:', someError);
+	return {
+		log,
+		dbLog,
+		logError
+	};
 }

@@ -2,7 +2,9 @@ import {
 	CreationOptional,
 	InferAttributes,
 	InferCreationAttributes,
-	Model
+	Model,
+	DataTypes,
+	Sequelize
 } from 'sequelize';
 
 interface RecoveryMethodAttributes {
@@ -29,4 +31,45 @@ class RecoveryMethod
 	recoveryLastUpdated!: CreationOptional<Date>;
 }
 
-export default RecoveryMethod;
+export default function createRecoveryMethodModel(
+	sequelize: Sequelize
+): typeof RecoveryMethod {
+	RecoveryMethod.init(
+		{
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				primaryKey: true
+			},
+			isRecoveryActive: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: true
+			},
+			recoveryId: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			recoveryMethod: {
+				type: DataTypes.ENUM('email', 'backupCodes'),
+				allowNull: false
+			},
+			backupCodes: {
+				type: DataTypes.ARRAY(DataTypes.STRING),
+				allowNull: true
+			},
+			recoveryLastUpdated: {
+				type: DataTypes.DATE,
+				allowNull: false,
+				defaultValue: DataTypes.NOW
+			}
+		},
+		{
+			sequelize,
+			tableName: 'RecoveryMethods',
+			timestamps: false
+		}
+	);
+
+	return RecoveryMethod;
+}

@@ -1,46 +1,70 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import setupLogger from '../config/logger';
 
 const router = express.Router();
-const logger = setupLogger();
 
-async function setupStaticRoutes(): Promise<void> {
-	const staticRootPath = process.env.STATIC_ROOT_PATH as string;
+interface StaticRoutesDependencies {
+	logLevel?: string;
+	logDirectory?: string;
+	serviceName?: string;
+	isProduction?: boolean;
+	staticRootPath: string;
+	appMjsPath: string;
+	appJsPath: string;
+	secretsPath: string;
+	browserConfigXmlPath: string;
+	humansMdPath: string;
+	robotsTxtPath: string;
+}
+
+export function setupStaticRoutes(
+	deps: StaticRoutesDependencies
+): express.Router {
+	const logger = setupLogger({
+		logLevel: deps.logLevel,
+		logDirectory: deps.logDirectory,
+		serviceName: deps.serviceName,
+		isProduction: deps.isProduction
+	});
+
+	const {
+		staticRootPath,
+		appMjsPath,
+		appJsPath,
+		secretsPath,
+		browserConfigXmlPath,
+		humansMdPath,
+		robotsTxtPath
+	} = deps;
 
 	// Middleware to log static asset access
-	router.use((req, res, next) => {
-		const assetTypes = ['css', 'js', 'images', 'fonts', 'icons'];
+	router.use((req: Request, res: Response, next: NextFunction) => {
+		const assetTypes = ['css', '/mjs', 'js', '/fonts', '/icons', '/images'];
 		if (assetTypes.some(type => req.url.startsWith(type))) {
 			logger.info(`GET request received at ${req.url}`);
 		}
 		next();
 	});
 
-	// Define root file path for public/
-	router.get('/', (req, res) => {
-		logger.info('GET request received at /');
-		res.sendFile(path.join(staticRootPath, 'index.html'));
-		logger.info('index.html was accessed');
-	});
-
 	// Serve root HTML files
-	router.get('/:page', (req, res) => {
+	router.get('/:page', (req: Request, res: Response) => {
 		const page = req.params.page;
-		res.sendFile(path.join(staticRootPath, `${page}.html`), err => {
+		const filePath = path.join(staticRootPath, `${page}.html`);
+		res.sendFile(filePath, err => {
 			if (err) {
+				logger.error(`Failed to send ${page}.html: ${err}`);
 				res.status(404).send('Page not found');
+			} else {
+				logger.info(`${page}.html was accessed`);
 			}
 		});
 	});
 
 	// Serve static directories
 	router.use('/css', express.static(path.join(staticRootPath, 'assets/css')));
+	router.use('/mjs', express.static(path.join(staticRootPath, 'assets/mjs')));
 	router.use('/js', express.static(path.join(staticRootPath, 'assets/js')));
-	router.use(
-		'/images',
-		express.static(path.join(staticRootPath, 'assets/images'))
-	);
 	router.use(
 		'/fonts',
 		express.static(path.join(staticRootPath, 'assets/fonts'))
@@ -49,68 +73,79 @@ async function setupStaticRoutes(): Promise<void> {
 		'/icons',
 		express.static(path.join(staticRootPath, 'assets/icons'))
 	);
+	router.use(
+		'/images',
+		express.static(path.join(staticRootPath, 'assets/images'))
+	);
 
 	// Serve nested HTML files
-	router.get('/*', (req, res) => {
-		res.sendFile(path.join(staticRootPath, `${req.path}.html`), err => {
+	router.get('/*', (req: Request, res: Response) => {
+		const filePath = path.join(staticRootPath, `${req.path}.html`);
+		res.sendFile(filePath, err => {
 			if (err) {
+				logger.error(`Failed to send ${req.path}.html: ${err}`);
 				res.status(404).send('Page not found');
+			} else {
+				logger.info(`${req.path}.html was accessed`);
 			}
 		});
 	});
 
 	// Serve specific static files
-	router.get('/app.js', (req, res) => {
-		logger.info('GET request received at /app.js');
-		res.sendFile(process.env.FRONTEND_APP_JS_PATH as string);
-		logger.info('app.js was accessed');
-	});
+	const staticFiles = [
+		{ route: '/app.mjs', filePath: appMjsPath },
+		{ route: '/app.js', filePath: appJsPath },
+		{ route: '/secrets.json.gpg', filePath: secretsPath },
+		{ route: '/browserconfig.xml', filePath: browserConfigXmlPath },
+		{ route: '/humans.md', filePath: humansMdPath },
+		{ route: '/robots.txt', filePath: robotsTxtPath }
+	];
 
-	router.get('/secrets.json.gpg', (req, res) => {
-		logger.info('GET request received at /secrets.json.gpg');
-		res.sendFile(process.env.FRONTEND_SECRETS_PATH as string, err => {
-			if (err) {
-				logger.error('Failed to send secrets.json.gpg:', err);
-				res.status(404).send('File not found');
-			} else {
-				logger.info('secrets.json.gpg was accessed');
-			}
+	staticFiles.forEach(file => {
+		router.get(file.route, (req: Request, res: Response) => {
+			logger.info(`GET request received at ${file.route}`);
+			res.sendFile(file.filePath, err => {
+				if (err) {
+					logger.error(`Failed to send ${file.route}: ${err}`);
+					res.status(404).send('File not found');
+				} else {
+					logger.info(`${file.route} was accessed`);
+				}
+			});
 		});
 	});
 
-	router.get('/browser-config.xml', (req, res) => {
-		logger.info('GET request received at /browser-config.xml');
-		res.sendFile(process.env.FRONTEND_BROWSER_CONFIG_XML_PATH as string);
-		logger.info('browser-config.xml was accessed');
-	});
-
-	router.get('/humans.md', (req, res) => {
-		logger.info('GET request received at /humans.md');
-		res.sendFile(process.env.FRONTEND_HUMANS_MD_PATH as string);
-		logger.info('humans.md was accessed');
-	});
-
-	router.get('/robots.txt', (req, res) => {
-		logger.info('GET request received at /robots.txt');
-		res.sendFile(process.env.FRONTEND_ROBOTS_TXT_PATH as string);
-		logger.info('robots.txt was accessed');
-	});
-
 	// 404 handler for unmatched routes
-	router.use((req, res) => {
+	router.use((req: Request, res: Response) => {
 		logger.info(`404 - ${req.url} was not found`);
-		res.status(404).sendFile(path.join(staticRootPath, 'not-found.html'));
+		res.status(404).sendFile(
+			path.join(staticRootPath, 'not-found.html'),
+			err => {
+				if (err) {
+					logger.error(`Failed to send not-found.html: ${err}`);
+					res.status(500).send('Internal server error');
+				}
+			}
+		);
 	});
+
+	return router;
 }
 
-// For setting up routes when initializing the application
-export default async function initializeStaticRoutes(
-	app: express.Application
-): Promise<void> {
-	try {
-		await setupStaticRoutes();
-		app.use('/', router);
-	} catch (err) {
-		logger.error(`Error setting up routes: ${err}`);
-	}
+export function initializeStaticRoutes(app: express.Application): void {
+	const deps: StaticRoutesDependencies = {
+		staticRootPath: process.env.STATIC_ROOT_PATH!,
+		appMjsPath: process.env.FRONTEND_APP_MJS_PATH!,
+		appJsPath: process.env.FRONTEND_APP_JS_PATH!,
+		secretsPath: process.env.FRONTEND_SECRETS_PATH!,
+		browserConfigXmlPath: process.env.FRONTEND_BROWSER_CONFIG_XML_PATH!,
+		humansMdPath: process.env.FRONTEND_HUMANS_MD_PATH!,
+		robotsTxtPath: process.env.FRONTEND_ROBOTS_TXT_PATH!,
+		logLevel: process.env.LOG_LEVEL!,
+		logDirectory: process.env.LOG_DIRECTORY!,
+		serviceName: process.env.SERVICE_NAME!,
+		isProduction: process.env.NODE_ENV! === 'development' ? false : true
+	};
+	const router = setupStaticRoutes(deps);
+	app.use('/', router);
 }

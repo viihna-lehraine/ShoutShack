@@ -1,49 +1,66 @@
+import { DataTypes, Sequelize } from 'sequelize';
+import { execSync } from 'child_process';
+import path from 'path';
 import argon2 from 'argon2';
-import { getSequelizeInstance } from '../config/db';
-import { DataTypes } from 'sequelize';
-import AuditLog from './AuditLog';
-import DataShareOptions from './DataShareOptions';
-import Device from './Device';
-import FailedLoginAttempts from './FailedLoginAttempts';
-import FeatureRequest from './FeatureRequest';
-import FeedbackSurvey from './FeedbackSurvey';
-import GuestbookEntry from './GuestbookEntry';
-import MultiFactorAuthSetup from './MultiFactorAuthSetup';
-import RecoveryMethod from './RecoveryMethod';
-import SecurityEvent from './SecurityEvent';
-import SupportRequest from './SupportRequest';
-import User from './User';
-import UserMfa from './UserMfa';
-import UserSession from './UserSession';
+import createUserModel from './User';
+import createAuditLogModel from './AuditLog';
+import createDataShareOptionsModel from './DataShareOptions';
+import createDeviceModel from './Device';
+import createFailedLoginAttemptsModel from './FailedLoginAttempts';
+import createFeatureRequestModel from './FeatureRequest';
+import createFeedbackSurveyModel from './FeedbackSurvey';
+import createGuestbookEntryModel from './GuestbookEntry';
+import createMultiFactorAuthSetupModel from './MultiFactorAuthSetup';
+import createRecoveryMethodModel from './RecoveryMethod';
+import createSecurityEventModel from './SecurityEvent';
+import createSupportRequestModel from './SupportRequest';
+import createUserMfaModel from './UserMfa';
+import createUserSessionModel from './UserSession';
 import getSecrets from '../config/sops';
 import setupLogger from '../config/logger';
-import { getFeatureFlags } from '../config/featureFlags';
 
 const logger = setupLogger();
-const featureFlags = getFeatureFlags();
+const getDirectoryPath = (): string => path.resolve(__dirname, '../..');
 
-const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
-
-interface ModelsIndexSecrets {
-	PEPPER: string;
+interface Models {
+	User: ReturnType<typeof createUserModel>;
+	AuditLog: ReturnType<typeof createAuditLogModel>;
+	DataShareOptions: ReturnType<typeof createDataShareOptionsModel>;
+	Device: ReturnType<typeof createDeviceModel>;
+	FailedLoginAttempts: ReturnType<typeof createFailedLoginAttemptsModel>;
+	FeatureRequest: ReturnType<typeof createFeatureRequestModel>;
+	FeedbackSurvey: ReturnType<typeof createFeedbackSurveyModel>;
+	GuestbookEntry: ReturnType<typeof createGuestbookEntryModel>;
+	MultiFactorAuthSetup: ReturnType<typeof createMultiFactorAuthSetupModel>;
+	RecoveryMethod: ReturnType<typeof createRecoveryMethodModel>;
+	SecurityEvent: ReturnType<typeof createSecurityEventModel>;
+	SupportRequest: ReturnType<typeof createSupportRequestModel>;
+	UserMfa: ReturnType<typeof createUserMfaModel>;
+	UserSession: ReturnType<typeof createUserSessionModel>;
 }
 
-export async function initializeModels(): Promise<void> {
-	const sequelize = getSequelizeInstance();
-	const secrets: ModelsIndexSecrets = await getSecrets.getSecrets();
+export async function initializeModels(sequelize: Sequelize): Promise<Models> {
+	const secrets = await getSecrets.getSecrets({
+		logger,
+		execSync,
+		getDirectoryPath
+	});
 
-	if (SEQUELIZE_LOGGING) {
-		logger.info(
-			'initializeModels() in ModelsIndex: SEQUELIZE_LOGGING is true. Printing sequelize'
-		);
-		logger.info(`Sequelize: ${sequelize}`);
-	} else {
-		logger.info(
-			'initializeModels() in ModelsIndex: SEQUELIZE_LOGGING is false. Not printing sequelize to console'
-		);
-	}
+	const User = createUserModel(sequelize);
+	const AuditLog = createAuditLogModel(sequelize);
+	const DataShareOptions = createDataShareOptionsModel(sequelize);
+	const Device = createDeviceModel(sequelize);
+	const FailedLoginAttempts = createFailedLoginAttemptsModel(sequelize);
+	const FeatureRequest = createFeatureRequestModel(sequelize);
+	const FeedbackSurvey = createFeedbackSurveyModel(sequelize);
+	const GuestbookEntry = createGuestbookEntryModel(sequelize);
+	const MultiFactorAuthSetup = createMultiFactorAuthSetupModel(sequelize);
+	const RecoveryMethod = createRecoveryMethodModel(sequelize);
+	const SecurityEvent = createSecurityEventModel(sequelize);
+	const SupportRequest = createSupportRequestModel(sequelize);
+	const UserMfa = createUserMfaModel(sequelize);
+	const UserSession = createUserSessionModel(sequelize);
 
-	console.log('Initializing User');
 	User.init(
 		{
 			id: {
@@ -103,7 +120,7 @@ export async function initializeModels(): Promise<void> {
 			modelName: 'User',
 			timestamps: false,
 			hooks: {
-				beforeCreate: async (user: User) => {
+				beforeCreate: async (user: InstanceType<typeof User>) => {
 					try {
 						user.password = await argon2.hash(
 							user.password + secrets.PEPPER,
@@ -126,8 +143,7 @@ export async function initializeModels(): Promise<void> {
 						}
 					}
 				},
-				// synchronize isMfaEnabled value with the associated id's value on the UserMfa table
-				afterUpdate: async (user: User) => {
+				afterUpdate: async (user: InstanceType<typeof User>) => {
 					if (user.changed('isMfaEnabled')) {
 						await UserMfa.update(
 							{ isMfaEnabled: user.isMfaEnabled },
@@ -139,7 +155,6 @@ export async function initializeModels(): Promise<void> {
 		}
 	);
 
-	console.log('Initializing AuditLog');
 	AuditLog.init(
 		{
 			auditId: {
@@ -1003,7 +1018,7 @@ export async function initializeModels(): Promise<void> {
 			}
 		},
 		{
-			sequelize: getSequelizeInstance(),
+			sequelize,
 			modelName: 'UserMfa',
 			timestamps: true
 		}
@@ -1077,4 +1092,21 @@ export async function initializeModels(): Promise<void> {
 			}
 		}
 	);
+
+	return {
+		User,
+		AuditLog,
+		DataShareOptions,
+		Device,
+		FailedLoginAttempts,
+		FeatureRequest,
+		FeedbackSurvey,
+		GuestbookEntry,
+		MultiFactorAuthSetup,
+		RecoveryMethod,
+		SecurityEvent,
+		SupportRequest,
+		UserMfa,
+		UserSession
+	};
 }

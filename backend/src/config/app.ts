@@ -1,7 +1,5 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import session from 'express-session';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import hpp from 'hpp';
@@ -9,43 +7,68 @@ import morgan from 'morgan';
 import passport from 'passport';
 import { randomBytes } from 'crypto';
 import path from 'path';
-import RedisStore from 'connect-redis';
-import initializeStaticRoutes from '../routes/staticRoutes';
-import apiRoutes from '../routes/apiRoutes';
-import {
+import RedisStore from 'connect-redis'
+
+
+interface AppDependencies {
+	express: typeof express;
+	session: typeof session;
+	cookieParser: typeof cookieParser;
+	cors: typeof cors;
+	hpp: typeof hpp;
+	morgan: typeof morgan;
+	passport: typeof passport;
+	randomBytes: typeof randomBytes;
+	path: typeof path;
+	RedisStore: typeof RedisStore;
+	initializeStaticRoutes: (app: Application) => void;
+	apiRoutes: (app: Application) => void;
+	csrfMiddleware: (req: Request, res: Response, next: NextFunction) => void;
+	errorHandler: (err: any, req: Request, res: Response, next: NextFunction) => void;
+	getRedisClient: () => any;
+	ipBlacklistMiddleware: (req: Request, res: Response, next: NextFunction) => void;
+	loadTestRoutes: (app: Application) => void;
+	rateLimitMiddleware: (req: Request, res: Response, next: NextFunction) => void;
+	setupSecurityHeaders: (app: Application) => void;
+	startMemoryMonitor: () => void;
+	logger: any;
+	staticRootPath: string;
+	NODE_ENV: string | undefined;
+	SSL_FLAG: boolean;
+	REDIS_FLAG: boolean;
+}
+
+async function initializeApp({
+	express,
+	session,
+	cookieParser,
+	cors,
+	hpp,
+	morgan,
+	passport,
+	randomBytes,
+	path,
+	RedisStore,
+	initializeStaticRoutes,
 	csrfMiddleware,
 	errorHandler,
-	getFeatureFlags,
 	getRedisClient,
 	ipBlacklistMiddleware,
 	loadTestRoutes,
 	rateLimitMiddleware,
 	setupSecurityHeaders,
-	startMemoryMonitor
-} from '../index';
-import setupLogger from './logger';
+	startMemoryMonitor,
+	logger,
+	staticRootPath,
+	NODE_ENV,
+	SSL_FLAG,
+	REDIS_FLAG,
+}: AppDependencies): Promise<Application> {
+	const app = express();
 
-const app = express();
-const logger = setupLogger();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const staticRootPath =
-	process.env.STATIC_ROOT_PATH ?? path.join(__dirname, '../public');
-const featureFlags = getFeatureFlags();
-
-const NODE_ENV = process.env.NODE_ENV;
-const SSL_FLAG = featureFlags.enableSslFlag;
-const REDIS_FLAG = featureFlags.enableRedisFlag;
-
-async function initializeApp(): Promise<void> {
-	let memoryMonitor = false;
-
-	if (NODE_ENV === 'development' || NODE_ENV === 'testing') {
-		memoryMonitor = true;
-	}
-
+	let memoryMonitor = NODE_ENV === 'development' || NODE_ENV === 'testing';
 	if (memoryMonitor) {
-		logger.info('Memory monitor started');
+		logger.info('Memory Monitor enabled');
 		startMemoryMonitor();
 	}
 
@@ -77,9 +100,7 @@ async function initializeApp(): Promise<void> {
 		})
 	);
 
-	app.use('/', initializeStaticRoutes);
-
-	app.use('/api', apiRoutes);
+	initializeStaticRoutes(app);
 
 	app.use(async (req: Request, res: Response, next: NextFunction) => {
 		try {
@@ -91,15 +112,14 @@ async function initializeApp(): Promise<void> {
 	});
 
 	setupSecurityHeaders(app);
-
 	loadTestRoutes(app);
 
-	// Session management
+	// session management
 	if (REDIS_FLAG && getRedisClient()) {
 		logger.info('REDIS_FLAG is true. Using Redis for session management');
 		app.use(
 			session({
-				store: new RedisStore({ client: getRedisClient }),
+				store: new RedisStore({ client: getRedisClient() }),
 				secret: 'secrets.REDIS_KEY',
 				resave: false,
 				saveUninitialized: false,
@@ -107,40 +127,28 @@ async function initializeApp(): Promise<void> {
 			})
 		);
 	} else {
-		logger.info(
-			'REDIS_FLAG is false. Skipping Redis operations because REDIS_FLAG is false or Redis is not connected. Using in-memory storage for session management'
-		);
-
-		let secureCookie: boolean;
-
-		if (SSL_FLAG) {
-			logger.info('SSL_FLAG is true. Using secure cookies');
-			secureCookie = true;
-		} else {
-			logger.info('SSL_FLAG is false. Using insecure cookies');
-			secureCookie = false;
-		}
+		logger.info('REDIS_FLAG is false. Using in-memory store for session management');
 
 		app.use(
 			session({
 				secret: 'secrets.SESSION_KEY',
 				resave: false,
 				saveUninitialized: false,
-				cookie: { secure: secureCookie }
+				cookie: { secure: SSL_FLAG }
 			})
 		);
 	}
 
 	// 404 error handling
 	app.use((req: Request, res: Response, next: NextFunction) => {
-		res.status(404).sendFile(
-			path.join(__dirname, '../public', 'not-found.html')
-		);
+		res.status(404).sendFile(path.join(staticRootPath, '404.html'));
 		next();
 	});
 
-	// General error handling
+	// general error handling
 	app.use(errorHandler);
+
+	return app;
 }
 
-export { app, initializeApp };
+export { initializeApp };

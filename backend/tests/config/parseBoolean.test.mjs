@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseBoolean } from '../../dist/config/featureFlags.mjs';
 import setupLogger from '../../dist/config/logger.mjs';
 

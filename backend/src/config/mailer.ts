@@ -1,22 +1,31 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import getSecrets from './sops';
 
-interface MailerSecrets {
+export interface MailerSecrets {
 	EMAIL_HOST: string;
 	EMAIL_PORT: number;
 	EMAIL_SECURE: boolean;
 	SMTP_TOKEN: string;
 }
 
-async function createTransporter(): Promise<Transporter> {
-	const secrets: MailerSecrets = await getSecrets.getSecrets();
+export interface MailerDependencies {
+	nodemailer: typeof nodemailer;
+	getSecrets: () => Promise<MailerSecrets>;
+	emailUser: string;
+}
 
-	let transporter = nodemailer.createTransport({
+async function createTransporter({
+	nodemailer,
+	getSecrets,
+	emailUser
+}: MailerDependencies): Promise<Transporter> {
+	const secrets: MailerSecrets = await getSecrets();
+
+	const transporter = nodemailer.createTransport({
 		host: secrets.EMAIL_HOST,
 		port: secrets.EMAIL_PORT,
 		secure: secrets.EMAIL_SECURE,
 		auth: {
-			user: process.env.EMAIL_USER as string,
+			user: emailUser,
 			pass: secrets.SMTP_TOKEN
 		}
 	});
@@ -26,11 +35,10 @@ async function createTransporter(): Promise<Transporter> {
 
 let transporter: Transporter | null = null;
 
-async function getTransporter(): Promise<Transporter> {
+export async function getTransporter(deps: MailerDependencies): Promise<Transporter> {
 	if (!transporter) {
-		transporter = await createTransporter();
+		transporter = await createTransporter(deps);
 	}
 	return transporter;
 }
 
-export { createTransporter, getTransporter };

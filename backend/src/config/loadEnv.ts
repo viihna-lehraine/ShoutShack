@@ -1,16 +1,16 @@
 import path from 'path';
 import { config } from 'dotenv';
-import setupLogger from './logger';
 
-const __dirname = process.cwd();
-const logger = setupLogger();
+export interface LoadEnvDependencies {
+	logger: {
+		info: (msg: string) => void;
+	};
+	envFilePath?: string; // optional, but allows overriding the default path
+}
 
-function loadEnv(): void {
-	const envPath = path.join(__dirname, 'backend.dev.env');
-	logger.info(`Loading environment from: ${envPath}`);
+export function loadEnv({ logger, envFilePath }: LoadEnvDependencies): void {
+	const envPath = envFilePath || path.join(process.cwd(), '../../backend.dev.env');
+	logger.info(`Loading environment variables from ${envPath}`);
 
 	config({ path: envPath });
 }
-
-export { __dirname };
-export default loadEnv;

@@ -1,20 +1,26 @@
 import { NextFunction, Request, Response } from 'express';
-import passport, { AuthenticateOptions } from 'passport';
+import { AuthenticateOptions, PassportStatic } from 'passport';
 
-export const authenticate = (
-	req: Request,
-	res: Response,
-	next: NextFunction
-): void => {
-	passport.authenticate(
-		'jwt',
-		{ session: false } as AuthenticateOptions,
-		(err: Error | null, user: Express.User | false) => {
-			if (err || !user) {
-				return res.status(401).json({ error: 'Unauthorized' });
+interface PassportAuthMiddlewareDependencies {
+	passport: PassportStatic;
+	authenticateOptions: AuthenticateOptions;
+}
+
+export const createPassportAuthMiddleware = ({
+	passport,
+	authenticateOptions
+}: PassportAuthMiddlewareDependencies) => {
+	return (req: Request, res: Response, next: NextFunction): void => {
+		passport.authenticate(
+			'jwt',
+			authenticateOptions,
+			(err: Error | null, user: Express.User | false) => {
+				if (err || !user) {
+					return res.status(401).json({ error: 'Unauthorized' });
+				}
+				req.user = user;
+				return next();
 			}
-			req.user = user;
-			return next;
-		}
-	)(req, res, next);
+		)(req, res, next);
+	};
 };

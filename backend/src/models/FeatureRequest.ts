@@ -1,8 +1,10 @@
 import {
-	CreationOptional,
+	Model,
 	InferAttributes,
 	InferCreationAttributes,
-	Model
+	CreationOptional,
+	DataTypes,
+	Sequelize
 } from 'sequelize';
 
 interface FeatureRequestAttributes {
@@ -33,4 +35,53 @@ class FeatureRequest
 	featureRequestCloseDate!: Date | null;
 }
 
-export default FeatureRequest;
+export default function createFeatureRequestModel(
+	sequelize: Sequelize
+): typeof FeatureRequest {
+	FeatureRequest.init(
+		{
+			featureRequestNumber: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				primaryKey: true,
+				autoIncrement: true // Assuming this should be auto-incremented
+			},
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			email: {
+				type: DataTypes.STRING,
+				allowNull: true
+			},
+			featureRequestType: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			featureRequestContent: {
+				type: DataTypes.TEXT,
+				allowNull: false
+			},
+			canFollowUpFeatureRequest: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false
+			},
+			featureRequestOpenDate: {
+				type: DataTypes.DATE,
+				allowNull: false,
+				defaultValue: DataTypes.NOW
+			},
+			featureRequestCloseDate: {
+				type: DataTypes.DATE,
+				allowNull: true
+			}
+		},
+		{
+			sequelize,
+			tableName: 'FeatureRequests',
+			timestamps: false
+		}
+	);
+
+	return FeatureRequest;
+}

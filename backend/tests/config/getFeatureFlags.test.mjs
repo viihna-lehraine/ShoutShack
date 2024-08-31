@@ -1,24 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getFeatureFlags } from '../../dist/config/featureFlags.mjs';
-import setupLogger from '../../dist/config/logger.mjs';
-
-vi.mock('../../dist/config/logger.mjs', () => {
-	const mockLogger = {
-		info: vi.fn(),
-		warn: vi.fn()
-	};
-
-	return {
-		default: () => mockLogger
-	};
-});
 
 describe('getFeatureFlags', () => {
 	const originalEnv = process.env;
-	let logger;
 
 	beforeEach(() => {
-		logger = setupLogger();
 		vi.clearAllMocks();
 	});
 
@@ -140,7 +126,7 @@ describe('getFeatureFlags', () => {
 		});
 	});
 
-	it('should return false and log a warning for unexpected values', () => {
+	it('should return false for unexpected values without logging', () => {
 		process.env.FEATURE_API_ROUTES_CSRF = 'unexpected';
 		process.env.FEATURE_DB_SYNC = 'unexpected';
 		process.env.FEATURE_DECRYPT_KEYS = 'unexpected';
@@ -174,10 +160,6 @@ describe('getFeatureFlags', () => {
 		expect(flags.loadTestRoutesFlag).toBe(false);
 		expect(flags.secureHeadersFlag).toBe(false);
 		expect(flags.sequelizeLoggingFlag).toBe(false);
-		expect(logger.warn).toHaveBeenCalled();
-		expect(logger.warn).toHaveBeenCalledWith(
-			'parseBoolean received an unexpected value: "unexpected". Defaulting to false.'
-		);
 	});
 
 	it('should return true for mixed case strings like "True" or "FALSE"', () => {

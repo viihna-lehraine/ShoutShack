@@ -5,11 +5,10 @@ import {
 	StrategyOptions
 } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
-import setupLogger from './logger';
-import getSecrets from './sops';
-import User from '../models/User';
+import { Sequelize } from 'sequelize';
 
-// Define the shape of a user instance based on User model
+import createUserModel from '../models/User';
+
 interface UserInstance {
 	id: string;
 	username: string;
@@ -18,84 +17,57 @@ interface UserInstance {
 
 interface PassportSecrets {
 	JWT_SECRET: string;
+	PEPPER: string;
 }
 
-const logger = setupLogger();
+interface PassportDependencies {
+	passport: PassportStatic;
+	logger: ReturnType<typeof import('./logger').default>;
+	getSecrets: () => Promise<PassportSecrets>;
+	UserModel: ReturnType<typeof createUserModel>;
+	argon2: typeof import('argon2');
+}
 
-export default async function configurePassport(passport: PassportStatic) {
-	const secrets: PassportSecrets = await getSecrets.getSecrets();
+export default async function configurePassport({
+	passport,
+	logger,
+	getSecrets,
+	UserModel,
+	argon2
+}: PassportDependencies) {
+	const secrets = await getSecrets();
 
-	let opts: StrategyOptions = {
+	const opts: StrategyOptions = {
 		jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 		secretOrKey: secrets.JWT_SECRET
 	};
 
 	passport.use(
-		new JwtStrategy(
-			opts,
-			async (
-				jwt_payload: { id: string },
-				done: (
-					error: Error | null,
-					user?: UserInstance | false,
-					info?: unknown
-				) => void
-			) => {
-				try {
-					let user = await User.findByPk(jwt_payload.id);
-					if (user) {
-						logger.info(
-							'JWT authentication successful for user ID: ',
-							jwt_payload.id
-						);
-						return done(null, user);
-					} else {
-						logger.warn(
-							'JWT authentication failed for user ID: ',
-							jwt_payload.id
-						);
-						return done(null, false);
-					}
-				} catch (err) {
-					logger.error('JWT authentication error: ', err);
-					return done(err as Error, false);
-				}
-			}
-		)
-	);
-
-	passport.use(
 		new LocalStrategy(async (username, password, done) => {
 			try {
-				let user = await User.findOne({ where: { username } });
+				const user = await UserModel.findOne({ where: { username } });
 				if (!user) {
-					logger.warn(
-						'Local authentication failed: User not found: ',
-						username
-					);
+					logger.warn(`Local authentication failed: User not found: ${username}`);
 					return done(null, false, { message: 'User not found' });
 				}
 
-				let isMatch = await user.comparePassword(password);
+				const secrets = await getSecrets(); // Get the secrets
+
+				// Use the comparePassword method with all necessary dependencies
+				const isMatch = await user.comparePassword(password, argon2, secrets);
+
 				if (isMatch) {
-					logger.info(
-						'Local authentication successful for user: ',
-						username
-					);
+					logger.info(`Local authentication successful for user: ${username}`);
 					return done(null, user);
 				} else {
 					logger.warn(
-						'Local authentication failed: incorrect password for user: ',
-						username
+						`Local authentication failed: Incorrect password for user: ${username}`
 					);
 					return done(null, false, { message: 'Incorrect password' });
 				}
 			} catch (err) {
 				logger.error(
-					'Local authenticaton error for user: ',
-					username,
-					' : Error: ',
-					err
+					`Local authentication error for user ${username}: Error: ${err}`,
 				);
 				return done(err);
 			}

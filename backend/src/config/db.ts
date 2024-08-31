@@ -1,27 +1,33 @@
 import { Sequelize } from 'sequelize';
-import setupLogger from './logger';
 import { getFeatureFlags } from './featureFlags';
-import getSecrets from './sops';
 import AppError from '../errors/AppError';
+import { Logger } from 'winston';
 
-interface DBSecrets {
+export interface DBSecrets {
 	DB_NAME: string;
 	DB_USER: string;
 	DB_PASSWORD: string;
 	DB_HOST: string;
 	DB_DIALECT: 'mysql' | 'postgres' | 'sqlite' | 'mariadb' | 'mssql';
 }
+
+export interface DBDependencies {
+	logger: Logger;
+	getFeatureFlags: (logger: any) => ReturnType<typeof getFeatureFlags>;
+	getSecrets: () => Promise<DBSecrets>;
+}
+
 let sequelize: Sequelize | null = null;
-const featureFlags = getFeatureFlags();
-const logger = setupLogger();
-const secrets: DBSecrets = await getSecrets.getSecrets();
 
-const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
+export async function initializeDatabase({ logger, getFeatureFlags, getSecrets }: DBDependencies): Promise<Sequelize> {
+	const featureFlags = getFeatureFlags(logger);
+	const secrets: DBSecrets = await getSecrets();
 
-export async function initializeDatabase(): Promise<Sequelize> {
+	const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
+
 	if (!sequelize) {
 		logger.info(
-			`Sequelize logging set to ${SEQUELIZE_LOGGING}, data type: ${typeof SEQUELIZE_LOGGING}`
+			`Sequelize logging set to ${SEQUELIZE_LOGGING}`
 		);
 
 		sequelize = new Sequelize(
@@ -31,7 +37,7 @@ export async function initializeDatabase(): Promise<Sequelize> {
 			{
 				host: secrets.DB_HOST,
 				dialect: secrets.DB_DIALECT,
-				logging: SEQUELIZE_LOGGING ? msg => logger.info(msg) : false
+				logging: SEQUELIZE_LOGGING ? (msg: string) => logger.info(msg) : false,
 			}
 		);
 
@@ -40,7 +46,7 @@ export async function initializeDatabase(): Promise<Sequelize> {
 			logger.info('Connection has been established successfully.');
 		} catch (error) {
 			if (error instanceof Error) {
-				logger.error('Unable to connect to the database:', error);
+				logger.error(`Unable to connect to the database: ${error}`);
 			} else {
 				logger.error(
 					'Unable to connect to the database due to an unknown error'
@@ -53,15 +59,17 @@ export async function initializeDatabase(): Promise<Sequelize> {
 	return sequelize;
 }
 
-export function getSequelizeInstance(): Sequelize {
-	logger.info('getSequelizeInstance() executing');
-	if (!sequelize) {
-		logger.error('Database has not bee initialized');
-		throw new AppError(
-			'Database has not been initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.',
-			400
-		);
-	}
+export function getSequelizeInstance({ logger }: Pick<DBDependencies, 'logger'>): Sequelize {
+    logger.info('getSequelizeInstance() executing');
+    if (!sequelize) {
+        logger.error('Sequelize instance is not initialized');
+        throw new AppError({
+            message: 'Sequelize instance is not initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.',
+            statusCode: 500,
+            isOperational: true,
+            errorCode: 'SEQUELIZE_NOT_INITIALIZED',
+        }, { logger });
+    }
 
-	return sequelize;
+    return sequelize;
 }

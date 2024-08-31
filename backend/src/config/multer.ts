@@ -2,105 +2,58 @@ import { Request } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 
-// Define the storage location and filename
-let storage = multer.diskStorage({
-	destination: (req, file, cb) => {
-		cb(null, path.join(__dirname, '../../uploads'));
-	},
-	filename: (req, file, cb) => {
-		let uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-		cb(null, `${uniqueSuffix}-${file.originalname}`);
-	}
-});
+export interface MulterDependencies {
+	multer: typeof multer;
+	path: typeof path;
+	storageDir: string;
+	allowedMimeTypes: string[];
+	allowedExtensions: string[];
+	fileSizeLimit: number;
+}
 
-// File filter definition with type declarations
-let fileFilter = (
-	req: Request,
-	file: Express.Multer.File,
-	cb: FileFilterCallback
-) => {
-	let allowedMimeTypes = [
-		'application/json',
-		'application/x-x509-ca-cert',
-		'application/pgp-keys',
-		'application/pgp-signature',
-		'application/xml',
-		'application/x-gpg-key',
-		'application/x-pkcs7-certificates',
-		'audio/mp4',
-		'audio/mpeg',
-		'audio/ogg',
-		'audio/wav',
-		'audio/webm',
-		'image/bmp',
-		'image/jpeg',
-		'image/jpg',
-		'image/gif',
-		'image/png',
-		'image/svg+xml',
-		'image/tiff',
-		'image/webp',
-		'text/html',
-		'text/css',
-		'text/csv',
-		'text/markdown',
-		'text/plain',
-		'video/mp4',
-		'video/mpeg',
-		'video/quicktime',
-		'video/x-msvideo'
-	];
+export function createMulterUpload({
+	multer,
+	path,
+	storageDir,
+	allowedMimeTypes,
+	allowedExtensions,
+	fileSizeLimit
+}: MulterDependencies) {
+	const storage = multer.diskStorage({
+		destination: (req, file, cb) => {
+			cb(null, storageDir);
+		},
+		filename: (req, file, cb) => {
+			const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+			cb(null, `${uniqueSuffix}-${file.originalname}`);
+		}
+	});
 
-	let allowedExtensions = [
-		'.avi',
-		'.json',
-		'.gpg',
-		'.asc',
-		'.xml',
-		'.mp4',
-		'.mp3',
-		'.ogg',
-		'.wav',
-		'.webm',
-		'.bmp',
-		'.jpeg',
-		'.jpg',
-		'.gif',
-		'.png',
-		'.svg',
-		'.tiff',
-		'.webp',
-		'.html',
-		'.css',
-		'.csv',
-		'.md',
-		'.txt',
-		'.mpeg',
-		'.mov',
-		'.crt'
-	];
+	const fileFilter = (
+		req: Request,
+		file: Express.Multer.File,
+		cb: FileFilterCallback
+	) => {
+		const ext = path.extname(file.originalname).toLowerCase();
+		if (
+			allowedMimeTypes.includes(file.mimetype) &&
+			allowedExtensions.includes(ext)
+		) {
+			cb(null, true);
+		} else {
+			cb(null, false);
+		}
+	};
 
-	let ext = path.extname(file.originalname).toLowerCase();
-	if (
-		allowedMimeTypes.includes(file.mimetype) &&
-		allowedExtensions.includes(ext)
-	) {
-		cb(null, true);
-	} else {
-		cb(null, false);
-	}
-};
+	const multerLimits = {
+		fileSize: fileSizeLimit
+	};
 
-// Set limits for the uploaded fileslet multerLimits = {
-let multerLimits = {
-	fileSize: 1024 * 1024 * 5
-}; // Limit files to 5MB
+	return multer({
+		storage: storage,
+		fileFilter: fileFilter,
+		limits: multerLimits
+	});
+}
 
-// Create the multer instance with the storage, fileFilter, and limits
-let multerConfiguredUpload = multer({
-	storage: storage,
-	fileFilter: fileFilter,
-	limits: multerLimits
-});
-
-export default multerConfiguredUpload;
+export default createMulterUpload;

@@ -1,11 +1,20 @@
-import express from 'express';
-import testRoutes from '../../routes/testRoutes.js';
-import setupLogger from '../../config/logger.js';
+import express, { Application } from 'express';
+import { Logger } from 'winston';
 
-const logger = setupLogger();
+interface LoadTestRoutesDependencies {
+	app: Application;
+	testRoutes: express.Router;
+	logger: Logger;
+	featureFlag: string | undefined;
+}
 
-export function loadTestRoutes(app: express.Application): void {
-	if (process.env.FEATURE_LOAD_TEST_ROUTES) {
+export function loadTestRoutes({
+	app,
+	testRoutes,
+	logger,
+	featureFlag
+}: LoadTestRoutesDependencies): void {
+	if (featureFlag) {
 		app.use('/test', testRoutes);
 		logger.info('Test routes loaded');
 	} else {

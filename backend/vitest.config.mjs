@@ -1,3 +1,5 @@
+import { defineConfig } from 'vite';
+
 export default defineConfig({
 	test: {
 		globals: true,
@@ -5,7 +7,6 @@ export default defineConfig({
 			reporter: ['text', 'lcov'],
 			reportsDirectory: './coverage'
 		},
-		environment: 'node',
-		setupFiles: './tests/vitest.setup.mjs'
+		environment: 'node'
 	}
 });

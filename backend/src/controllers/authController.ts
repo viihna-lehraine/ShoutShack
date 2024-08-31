@@ -1,37 +1,52 @@
 import { Request, Response } from 'express';
-import { generateToken } from '../utils/auth/jwtUtil';
-import setupLogger from '../config/logger';
-import User from '../models/User';
+import { Logger } from 'winston';
+import createJwtUtil from '../utils/auth/jwtUtil';
+import createUserModel from '../models/User';
+import argon2 from 'argon2';
+import sops from '../config/sops';
+import { execSync } from 'child_process';
 
-const logger = setupLogger();
+interface AuthDependencies {
+	logger: Logger;
+	UserModel: ReturnType<typeof createUserModel>;
+	jwtUtil: ReturnType<typeof createJwtUtil>;
+	argon2: typeof argon2;
+}
 
-export const login = async (
-	req: Request,
-	res: Response
-): Promise<Response | null> => {
-	try {
-		const { username, password } = req.body;
-		const user = await User.findOne({ where: { username } });
+export const login =
+	({ logger, UserModel, jwtUtil }: AuthDependencies) =>
+	async (req: Request, res: Response): Promise<Response | null> => {
+		try {
+			const { username, password } = req.body;
+			const user = await UserModel.findOne({ where: { username } });
 
-		if (!user) {
-			return res
-				.status(401)
-				.json({ message: 'Login failed - invalid credentials' });
+			if (!user) {
+				return res
+					.status(401)
+					.json({ msg: 'Login failed - invalid credentials' });
+			}
+
+			const secrets = await sops.getSecrets({
+				logger,
+				execSync,
+				getDirectoryPath: () => process.cwd()
+			});
+
+			const isPasswordValid = await user.comparePassword(
+				password,
+				argon2,
+				secrets
+			);
+
+			if (!isPasswordValid) {
+				return res.status(401).json({ msg: 'Invalid credentials' });
+			}
+
+			// generate JWT token and use it to respond
+			const token = await jwtUtil.generateToken(user);
+			return res.json({ token });
+		} catch (err) {
+			logger.error(err);
+			return res.status(500).json({ msg: 'Server error' });
 		}
-
-		const isPasswordValid = await user.comparePassword(password);
-
-		if (!isPasswordValid) {
-			return res.status(401).json({ message: 'Invalid credentials' });
-		}
-
-		// Generate JWT token and use it to respond
-		const token = await generateToken(user);
-		res.json({ token });
-	} catch (err) {
-		logger.error(err);
-		res.status(500).json({ message: 'Server error' });
-	}
-
-	return null; // unreachable code, but it satisfies TypeScript *shrug*
-};
+	};

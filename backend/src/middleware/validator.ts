@@ -1,104 +1,124 @@
 import { NextFunction, Request, Response } from 'express';
 import validator from 'validator';
 
-export const validateEntry = (
-	req: Request,
-	res: Response,
-	next: NextFunction
-): void => {
-	const errors: Array<{ msg: string; param: string }> = [];
+interface ValidatorDependencies {
+	validator: typeof validator;
+}
 
-	// Name validation
-	if (validator.isEmpty(req.body.name || '')) {
-		errors.push({ msg: 'Name is required', param: 'name' });
-	}
+export function createValidatorMiddleware({
+	validator
+}: ValidatorDependencies): {
+	validateEntry: (req: Request, res: Response, next: NextFunction) => void;
+	registrationValidationRules: (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => void;
+} {
+	const validateEntry = (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): void => {
+		const errors: Array<{ msg: string; param: string }> = [];
 
-	// Message validation
-	if (validator.isEmpty(req.body.message || '')) {
-		errors.push({ msg: 'Message is required', param: 'message' });
-	}
+		// name validation
+		if (validator.isEmpty(req.body.name || '')) {
+			errors.push({ msg: 'Name is required', param: 'name' });
+		}
 
-	if (errors.length) {
-		res.status(400).json({ errors });
-		return;
-	}
+		// message validation
+		if (validator.isEmpty(req.body.message || '')) {
+			errors.push({ msg: 'Message is required', param: 'message' });
+		}
 
-	next();
-};
+		if (errors.length) {
+			res.status(400).json({ errors });
+			return;
+		}
 
-export const registrationValidationRules = (
-	req: Request,
-	res: Response,
-	next: NextFunction
-): void => {
-	const errors: Array<{ msg: string; param: string }> = [];
+		next();
+	};
 
-	// Username validation
-	if (!validator.isLength(req.body.username || '', { min: 3 })) {
-		errors.push({
-			msg: 'Username must be at least 3 characters long',
-			param: 'username'
-		});
-	}
-	if (!validator.matches(req.body.username || '', /^[\w-]+$/)) {
-		errors.push({
-			msg: 'Username can only contain letters, numbers, underscores, and dashes',
-			param: 'username'
-		});
-	}
+	const registrationValidationRules = (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): void => {
+		const errors: Array<{ msg: string; param: string }> = [];
 
-	// Email validation
-	if (!validator.isEmail(req.body.email || '')) {
-		errors.push({
-			msg: 'Please provide a valid email address',
-			param: 'email'
-		});
-	}
+		// username validation
+		if (!validator.isLength(req.body.username || '', { min: 3 })) {
+			errors.push({
+				msg: 'Username must be at least 3 characters long',
+				param: 'username'
+			});
+		}
+		if (!validator.matches(req.body.username || '', /^[\w-]+$/)) {
+			errors.push({
+				msg: 'Username can only contain letters, numbers, underscores, and hyphens',
+				param: 'username'
+			});
+		}
 
-	// Password validation
-	if (!validator.isLength(req.body.password || '', { min: 8 })) {
-		errors.push({
-			msg: 'Password must be at least 8 characters long',
-			param: 'password'
-		});
-	}
-	if (!validator.matches(req.body.password || '', /[A-Z]/)) {
-		errors.push({
-			msg: 'Password must contain at least one uppercase letter',
-			param: 'password'
-		});
-	}
-	if (!validator.matches(req.body.password || '', /[a-z]/)) {
-		errors.push({
-			msg: 'Password must contain at least one lowercase letter',
-			param: 'password'
-		});
-	}
-	if (!validator.matches(req.body.password || '', /\d/)) {
-		errors.push({
-			msg: 'Password must contain at least one number',
-			param: 'password'
-		});
-	}
-	if (!validator.matches(req.body.password || '', /[^\dA-Za-z]/)) {
-		errors.push({
-			msg: 'Password must contain at least one special character',
-			param: 'password'
-		});
-	}
+		// email validation
+		if (!validator.isEmail(req.body.email || '')) {
+			errors.push({
+				msg: 'Please provide a valid email address',
+				param: 'email'
+			});
+		}
 
-	// Confirm password validation
-	if (req.body.password !== req.body.confirmPassword) {
-		errors.push({
-			msg: 'Passwords do not match',
-			param: 'confirmPassword'
-		});
-	}
+		// password validation
+		if (!validator.isLength(req.body.password || '', { min: 8 })) {
+			errors.push({
+				msg: 'Password must be at least 8 characters long',
+				param: 'password'
+			});
+		}
+		if (!validator.matches(req.body.password || '', /[A-Z]/)) {
+			errors.push({
+				msg: 'Password must contain at least one uppercase letter',
+				param: 'password'
+			});
+		}
+		if (!validator.matches(req.body.password || '', /[a-z]/)) {
+			errors.push({
+				msg: 'Password must contain at least one lowercase letter',
+				param: 'password'
+			});
+		}
+		if (!validator.matches(req.body.password || '', /\d/)) {
+			errors.push({
+				msg: 'Password must contain at least one digit',
+				param: 'password'
+			});
+		}
+		if (!validator.matches(req.body.password || '', /[^\dA-Za-z]/)) {
+			errors.push({
+				msg: 'Password must contain at least one special character',
+				param: 'password'
+			});
+		}
 
-	if (errors.length) {
-		res.status(400).json({ errors });
-		return;
-	}
+		// confirm password validation
+		if (req.body.password !== req.body.confirmPassword) {
+			errors.push({
+				msg: 'Passwords do not match',
+				param: 'confirmPassword'
+			});
+		}
 
-	next();
-};
+		if (errors.length) {
+			res.status(400).json({ errors });
+			return;
+		}
+
+		next();
+	};
+
+	return {
+		validateEntry,
+		registrationValidationRules
+	};
+}

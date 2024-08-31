@@ -1,4 +1,10 @@
-import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import {
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	DataTypes,
+	Sequelize
+} from 'sequelize';
 
 interface FailedLoginAttemptsAttributes {
 	attemptId: string;
@@ -24,4 +30,43 @@ class FailedLoginAttempts
 	isLocked!: boolean;
 }
 
-export default FailedLoginAttempts;
+export default function createFailedLoginAttemptsModel(
+	sequelize: Sequelize
+): typeof FailedLoginAttempts {
+	FailedLoginAttempts.init(
+		{
+			attemptId: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				primaryKey: true
+			},
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			ipAddress: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			userAgent: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			attemptDate: {
+				type: DataTypes.DATE,
+				allowNull: false
+			},
+			isLocked: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false
+			}
+		},
+		{
+			sequelize,
+			tableName: 'FailedLoginAttempts',
+			timestamps: false
+		}
+	);
+
+	return FailedLoginAttempts;
+}

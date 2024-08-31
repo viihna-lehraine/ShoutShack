@@ -2,7 +2,9 @@ import {
 	CreationOptional,
 	InferAttributes,
 	InferCreationAttributes,
-	Model
+	Model,
+	DataTypes,
+	Sequelize
 } from 'sequelize';
 
 interface SecurityEventAttributes {
@@ -33,4 +35,52 @@ class SecurityEvent
 	securityEventLastUpdated!: CreationOptional<Date>;
 }
 
-export default SecurityEvent;
+export default function createSecurityEventModel(
+	sequelize: Sequelize
+): typeof SecurityEvent {
+	SecurityEvent.init(
+		{
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				primaryKey: true
+			},
+			eventId: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			eventType: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			eventDescription: {
+				type: DataTypes.TEXT,
+				allowNull: true
+			},
+			ipAddress: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			userAgent: {
+				type: DataTypes.STRING,
+				allowNull: false
+			},
+			securityEventDate: {
+				type: DataTypes.DATE,
+				allowNull: false
+			},
+			securityEventLastUpdated: {
+				type: DataTypes.DATE,
+				allowNull: false,
+				defaultValue: DataTypes.NOW
+			}
+		},
+		{
+			sequelize,
+			tableName: 'SecurityEvents',
+			timestamps: false
+		}
+	);
+
+	return SecurityEvent;
+}

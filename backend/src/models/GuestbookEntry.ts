@@ -2,7 +2,9 @@ import {
 	CreationOptional,
 	InferAttributes,
 	InferCreationAttributes,
-	Model
+	Model,
+	DataTypes,
+	Sequelize
 } from 'sequelize';
 
 interface GuestbookEntryAttributes {
@@ -29,4 +31,44 @@ class GuestbookEntry
 	entryDate!: CreationOptional<Date>;
 }
 
-export default GuestbookEntry;
+export default function createGuestbookEntryModel(
+	sequelize: Sequelize
+): typeof GuestbookEntry {
+	GuestbookEntry.init(
+		{
+			id: {
+				type: DataTypes.STRING,
+				allowNull: false,
+				primaryKey: true
+			},
+			guestName: {
+				type: DataTypes.STRING,
+				allowNull: true
+			},
+			guestEmail: {
+				type: DataTypes.STRING,
+				allowNull: true
+			},
+			guestMessage: {
+				type: DataTypes.TEXT,
+				allowNull: false
+			},
+			guestMessageStyles: {
+				type: DataTypes.JSON,
+				allowNull: true
+			},
+			entryDate: {
+				type: DataTypes.DATE,
+				allowNull: false,
+				defaultValue: DataTypes.NOW
+			}
+		},
+		{
+			sequelize,
+			tableName: 'GuestbookEntries',
+			timestamps: false
+		}
+	);
+
+	return GuestbookEntry;
+}
