@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
 import setupLogger from '../../config/logger';
-import sops from '../../config/sops';
+import sops from '../sops';
 import { execSync } from 'child_process';
 
 interface Secrets {
-	JWT_SECRET: string;
+	JWT_SECRET?: string;
 }
 
 interface User {
@@ -38,7 +38,7 @@ export function createJwtUtil(): {
 		await loadAndCacheSecrets();
 		return jwt.sign(
 			{ id: user.id, username: user.username },
-			secrets.JWT_SECRET,
+			secrets.JWT_SECRET as string,
 			{ expiresIn: '1h' }
 		);
 	};
@@ -48,7 +48,7 @@ export function createJwtUtil(): {
 	): Promise<string | object | null> => {
 		await loadAndCacheSecrets();
 		try {
-			return jwt.verify(token, secrets.JWT_SECRET);
+			return jwt.verify(token, secrets.JWT_SECRET as string);
 		} catch (err) {
 			logger.error(err);
 			return null;

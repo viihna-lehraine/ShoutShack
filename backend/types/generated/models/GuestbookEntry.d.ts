@@ -1,4 +1,4 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface GuestbookEntryAttributes {
     id: string;
     guestName?: string | null;
@@ -15,5 +15,6 @@ declare class GuestbookEntry extends Model<InferAttributes<GuestbookEntry>, Infe
     guestMessageStyles: object | null;
     entryDate: CreationOptional<Date>;
 }
-export default GuestbookEntry;
+export default function createGuestbookEntryModel(sequelize: Sequelize): typeof GuestbookEntry;
+export {};
 //# sourceMappingURL=GuestbookEntry.d.ts.map

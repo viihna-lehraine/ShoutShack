@@ -1,3 +1,3 @@
-declare const router: import("express-serve-static-core").Router;
-export default router;
+import { Router } from 'express';
+export default function createValidationRoutes(): Router;
 //# sourceMappingURL=validationRoutes.d.ts.map

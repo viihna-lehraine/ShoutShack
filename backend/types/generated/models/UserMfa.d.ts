@@ -1,4 +1,4 @@
-import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface UserMfaAttributes {
     id: string;
     isMfaEnabled: boolean;
@@ -41,5 +41,7 @@ declare class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttri
     passkeyCounter: number | null;
     passkeyAttestationFormat: string | null;
 }
-export default UserMfa;
+export type UserMfaInstance = InstanceType<typeof UserMfa>;
+export default function createUserMfaModel(sequelize: Sequelize): typeof UserMfa;
+export {};
 //# sourceMappingURL=UserMfa.d.ts.map

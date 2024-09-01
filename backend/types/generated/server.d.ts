@@ -1,3 +1,3 @@
-import { app } from './config/app';
-export default app;
+import { startServer } from './config/startServer';
+export default startServer;
 //# sourceMappingURL=server.d.ts.map

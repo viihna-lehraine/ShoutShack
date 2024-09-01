@@ -6,6 +6,7 @@ import {
 	DataTypes
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import { SecretsMap } from '../utils/sops';
 
 interface UserAttributes {
 	id: string;
@@ -20,9 +21,7 @@ interface UserAttributes {
 	creationDate: Date;
 }
 
-interface UserSecrets {
-	PEPPER: string;
-}
+type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 
 interface UserModelDependencies {
 	argon2: typeof import('argon2');

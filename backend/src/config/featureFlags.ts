@@ -1,4 +1,4 @@
-interface FeatureFlags {
+export interface FeatureFlags {
 	apiRoutesCsrfFlag: boolean;
 	dbSyncFlag: boolean;
 	decryptKeysFlag: boolean;

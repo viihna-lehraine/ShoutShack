@@ -1,4 +1,4 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface UserSessionAttributes {
     id: string;
     sessionId: number;
@@ -21,5 +21,6 @@ declare class UserSession extends Model<InferAttributes<UserSession>, InferCreat
     expiresAt: Date;
     isActive: boolean;
 }
-export default UserSession;
+export default function createUserSessionModel(sequelize: Sequelize): typeof UserSession;
+export {};
 //# sourceMappingURL=UserSession.d.ts.map

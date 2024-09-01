@@ -1,3 +1,10 @@
+import csrf from 'csrf';
 import { Request, Response, NextFunction } from 'express';
-export declare function csrfMiddleware(req: Request, res: Response, next: NextFunction): void;
+interface CsrfDependencies {
+    featureFlags: ReturnType<typeof import('../config/featureFlags').getFeatureFlags>;
+    logger: ReturnType<typeof import('../config/logger').default>;
+    csrfProtection: csrf;
+}
+export declare function createCsrfMiddleware({ featureFlags, logger, csrfProtection }: CsrfDependencies): (req: Request, res: Response, next: NextFunction) => void;
+export {};
 //# sourceMappingURL=csrf.d.ts.map

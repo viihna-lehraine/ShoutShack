@@ -1,4 +1,4 @@
-import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface AuditLogAttributes {
     auditId: string;
     id: string;
@@ -25,5 +25,6 @@ declare class AuditLog extends Model<InferAttributes<AuditLog>, InferCreationAtt
     auditLogDate: Date;
     auditLogUpdateDate?: Date | null;
 }
-export default AuditLog;
+export default function createAuditLogModel(sequelize: Sequelize): typeof AuditLog;
+export {};
 //# sourceMappingURL=AuditLog.d.ts.map

@@ -1,14 +1,8 @@
 import yub from 'yub';
 import '../../../types/custom/yub.d.ts';
-import getSecrets from '../../config/sops';
+import getSecrets, { SecretsMap } from '../sops.js';
 import { execSync } from 'child_process';
 import { Logger } from 'winston';
-
-interface Secrets {
-	YUBICO_CLIENT_ID: number;
-	YUBICO_SECRET_KEY: string;
-	YUBICO_API_URL: string;
-}
 
 interface YubClient {
 	verify(
@@ -47,7 +41,7 @@ export default function createYubicoOtpUtil({
 	validateYubicoOTP: (otp: string) => Promise<boolean>;
 	generateYubicoOtpOptions: () => YubicoOtpOptions;
 } {
-	let secrets: Secrets;
+	let secrets: SecretsMap;
 	let yubClient: YubClient | undefined;
 
 	async function initializeYubicoOtpUtil(): Promise<void> {
@@ -84,9 +78,9 @@ export default function createYubicoOtpUtil({
 		}
 
 		return {
-			clientId: secrets.YUBICO_CLIENT_ID,
-			apiKey: secrets.YUBICO_SECRET_KEY,
-			apiUrl: secrets.YUBICO_API_URL
+			clientId: secrets.YUBICO_CLIENT_ID as number,
+			apiKey: secrets.YUBICO_SECRET_KEY as string,
+			apiUrl: secrets.YUBICO_API_URL as string
 		};
 	}
 

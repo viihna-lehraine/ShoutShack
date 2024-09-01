@@ -3,7 +3,7 @@ import { Logger } from 'winston';
 import createJwtUtil from '../utils/auth/jwtUtil';
 import createUserModel from '../models/User';
 import argon2 from 'argon2';
-import sops from '../config/sops';
+import sops from '../utils/sops';
 import { execSync } from 'child_process';
 
 interface AuthDependencies {

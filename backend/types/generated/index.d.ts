@@ -1,6 +1,6 @@
 import { getSequelizeInstance, initializeDatabase } from './config/db';
 import { getFeatureFlags, parseBoolean } from './config/featureFlags';
-import loadEnv from './config/loadEnv';
+import loadEnv from './utils/loadEnv';
 import { setupHttp } from './config/http';
 import { createTransporter, getTransporter } from './config/mailer';
 import multerConfiguredUpload from './config/multer';

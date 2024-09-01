@@ -10,13 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
 import { Logger } from 'winston';
 import nodemailer from 'nodemailer';
-import sops from '../config/sops';
-import {
-	createEmail2FAUtil,
-	createTOTPUtil,
-	generateConfirmationEmailTemplate,
-	getTransporter
-} from '../index';
+import sops from '../utils/sops';
+import createEmail2FAUtil from '../utils/auth/email2FAUtil';
+import createTOTPUtil from '../utils/auth/totpUtil';
+import generateConfirmationEmailTemplate from '../utils/emailTemplates/confirmationEmailTemplate';
+import { getTransporter } from '../config/mailer';
 
 interface UserSecrets {
 	JWT_SECRET: string;

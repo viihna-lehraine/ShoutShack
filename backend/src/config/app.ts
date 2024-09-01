@@ -5,6 +5,7 @@ import cors from 'cors';
 import hpp from 'hpp';
 import morgan from 'morgan';
 import passport from 'passport';
+import helmet, { HelmetOptions } from 'helmet';
 import { randomBytes } from 'crypto';
 import path from 'path';
 import RedisStore from 'connect-redis'
@@ -22,15 +23,17 @@ interface AppDependencies {
 	path: typeof path;
 	RedisStore: typeof RedisStore;
 	initializeStaticRoutes: (app: Application) => void;
-	apiRoutes: (app: Application) => void;
 	csrfMiddleware: (req: Request, res: Response, next: NextFunction) => void;
 	errorHandler: (err: any, req: Request, res: Response, next: NextFunction) => void;
 	getRedisClient: () => any;
 	ipBlacklistMiddleware: (req: Request, res: Response, next: NextFunction) => void;
-	loadTestRoutes: (app: Application) => void;
+	createTestRouter: (app: Application) => void;
 	rateLimitMiddleware: (req: Request, res: Response, next: NextFunction) => void;
-	setupSecurityHeaders: (app: Application) => void;
-	startMemoryMonitor: () => void;
+	setupSecurityHeaders: (
+		app: Application,
+		options: { helmetOptions?: HelmetOptions; permissionsPolicyOptions?: any }
+	) => void;
+	startMemoryMonitor: () => NodeJS.Timeout;
 	logger: any;
 	staticRootPath: string;
 	NODE_ENV: string | undefined;
@@ -54,7 +57,7 @@ async function initializeApp({
 	errorHandler,
 	getRedisClient,
 	ipBlacklistMiddleware,
-	loadTestRoutes,
+	createTestRouter,
 	rateLimitMiddleware,
 	setupSecurityHeaders,
 	startMemoryMonitor,
@@ -111,8 +114,16 @@ async function initializeApp({
 		}
 	});
 
-	setupSecurityHeaders(app);
-	loadTestRoutes(app);
+	setupSecurityHeaders(app, {
+		helmetOptions: {
+		// *DEV-NOTE* FILL THIS OUT
+		},
+		permissionsPolicyOptions: {
+		// *DEV-NOTE* FILL THIS OUT
+		}
+	});
+
+	createTestRouter(app);
 
 	// session management
 	if (REDIS_FLAG && getRedisClient()) {

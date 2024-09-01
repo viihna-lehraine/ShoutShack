@@ -1,3 +1,9 @@
-declare const router: import("express-serve-static-core").Router;
-export default router;
+import { Router } from 'express';
+interface TestRouteDependencies {
+    logger: {
+        info: (msg: string) => void;
+    };
+}
+export default function createTestRouter(deps: TestRouteDependencies): Router;
+export {};
 //# sourceMappingURL=testRoutes.d.ts.map

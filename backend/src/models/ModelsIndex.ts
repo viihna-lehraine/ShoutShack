@@ -1,7 +1,8 @@
 import { DataTypes, Sequelize } from 'sequelize';
 import { execSync } from 'child_process';
-import path from 'path';
+import path, { dirname } from 'path';
 import argon2 from 'argon2';
+import { fileURLToPath } from 'url';
 import createUserModel from './User';
 import createAuditLogModel from './AuditLog';
 import createDataShareOptionsModel from './DataShareOptions';
@@ -16,8 +17,11 @@ import createSecurityEventModel from './SecurityEvent';
 import createSupportRequestModel from './SupportRequest';
 import createUserMfaModel from './UserMfa';
 import createUserSessionModel from './UserSession';
-import getSecrets from '../config/sops';
+import getSecrets from '../utils/sops';
 import setupLogger from '../config/logger';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const logger = setupLogger();
 const getDirectoryPath = (): string => path.resolve(__dirname, '../..');

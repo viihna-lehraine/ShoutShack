@@ -1,3 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-export declare const authenticateJwT: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+interface JwtAuthMiddlewareDependencies {
+    logger: ReturnType<typeof import('../config/logger').default>;
+    featureFlags: ReturnType<typeof import('../config/featureFlags').getFeatureFlags>;
+    verifyJwToken: (token: string) => Promise<string | object | null>;
+}
+export declare const createJwtAuthMiddleWare: ({ logger, featureFlags, verifyJwToken }: JwtAuthMiddlewareDependencies) => (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export {};
 //# sourceMappingURL=jwtAuthMiddleware.d.ts.map

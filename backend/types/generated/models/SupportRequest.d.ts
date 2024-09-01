@@ -1,4 +1,4 @@
-import { InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface SupportRequestAttributes {
     id: string;
     email: string;
@@ -19,5 +19,6 @@ declare class SupportRequest extends Model<InferAttributes<SupportRequest>, Infe
     supportTicketOpenDate: Date;
     supportTicketCloseDate?: Date | null;
 }
-export default SupportRequest;
+export default function createSupportRequestModel(sequelize: Sequelize): typeof SupportRequest;
+export {};
 //# sourceMappingURL=SupportRequest.d.ts.map

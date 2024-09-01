@@ -1,4 +1,4 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface MultiFactorAuthSetupAttributes {
     mfaId: number;
     id: string;
@@ -23,5 +23,6 @@ declare class MultiFactorAuthSetup extends Model<InferAttributes<MultiFactorAuth
     createdAt: CreationOptional<Date>;
     updatedAt: CreationOptional<Date>;
 }
-export default MultiFactorAuthSetup;
+export default function createMultiFactorAuthSetupModel(sequelize: Sequelize): typeof MultiFactorAuthSetup;
+export {};
 //# sourceMappingURL=MultiFactorAuthSetup.d.ts.map

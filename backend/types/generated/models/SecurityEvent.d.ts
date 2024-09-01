@@ -1,4 +1,4 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface SecurityEventAttributes {
     id: string;
     eventId: string;
@@ -19,5 +19,6 @@ declare class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferC
     securityEventDate: Date;
     securityEventLastUpdated: CreationOptional<Date>;
 }
-export default SecurityEvent;
+export default function createSecurityEventModel(sequelize: Sequelize): typeof SecurityEvent;
+export {};
 //# sourceMappingURL=SecurityEvent.d.ts.map

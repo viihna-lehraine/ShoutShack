@@ -1,2 +1,13 @@
-export declare function startMemoryMonitor(): NodeJS.Timeout;
+import os from 'os';
+import { Logger } from 'winston';
+interface MemoryMonitorDependencies {
+    logger: Logger;
+    os: typeof os;
+    process: NodeJS.Process;
+    setInterval: typeof setInterval;
+}
+export declare function createMemoryMonitor({ logger, os, process, setInterval }: MemoryMonitorDependencies): {
+    startMemoryMonitor: () => NodeJS.Timeout;
+};
+export {};
 //# sourceMappingURL=memoryMonitor.d.ts.map

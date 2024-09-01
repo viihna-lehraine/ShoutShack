@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from 'sequelize';
 interface DeviceAttributes {
     deviceId: number;
     id: string;
@@ -25,5 +25,6 @@ declare class Device extends Model<InferAttributes<Device>, InferCreationAttribu
     creationDate: CreationOptional<Date>;
     lastUpdated: CreationOptional<Date>;
 }
-export default Device;
+export default function createDeviceModel(sequelize: Sequelize): typeof Device;
+export {};
 //# sourceMappingURL=Device.d.ts.map

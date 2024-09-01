@@ -1,20 +1,22 @@
-/* *DEV-NOTE* NEEDS A COMPLETE REBUILD
 import {
 	ExpectedAssertionResult,
 	ExpectedAttestationResult,
 	Fido2Lib,
 	PublicKeyCredentialCreationOptions,
-	PublicKeyCredentialRequestOptions
-} from 'fido2-lib';
-import getSecrets from '../../config/secrets.js';
-import {
-	AssertionResult,
-	AttestationResult,
+	PublicKeyCredentialDescriptor,
+	PublicKeyCredentialRequestOptions,
 	Fido2AttestationResult,
-	Fido2AssertionResult
-} from '../../../types/custom/fido2-lib.js';
+	Fido2AssertionResult,
+	AttestationResult,
+	AssertionResult
+} from 'fido2-lib';
+import path from 'path';
+import sops, { SecretsMap } from '../../utils/sops';
+import setupLogger from '../../config/logger';
+import { execSync } from 'child_process';
 
-let fido2: Fido2Lib;
+let fido2: Fido2Lib | null = null;
+let secrets: SecretsMap;
 
 interface User {
 	id: string;
@@ -25,24 +27,20 @@ interface User {
 	}[];
 }
 
-interface Secrets {
-	RP_ID: string;
-	RP_NAME: string;
-	RP_ICON: string;
-	RP_ORIGIN: string;
-	FIDO_CHALLENGE_SIZE: number;
-	FIDO_CRYPTO_PARAMETERS: number[];
-	FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY: boolean;
-	FIDO_AUTHENTICATOR_USER_VERIFICATION:
-		| 'required'
-		| 'preferred'
-		| 'discouraged';
-}
-
 type Factor = 'first' | 'second' | 'either';
 
-(async (): Promise<void> => {
-	const secrets: Secrets = await getSecrets();
+const logger = setupLogger();
+
+function getDirectoryPath(): string {
+	return path.resolve(process.cwd());
+}
+
+async function initializeFido2(): Promise<void> {
+	secrets = await sops.getSecrets({
+		logger,
+		execSync,
+		getDirectoryPath
+	});
 
 	if (!secrets) {
 		throw new Error('Secrets could not be loaded');
@@ -52,24 +50,30 @@ type Factor = 'first' | 'second' | 'either';
 		rpId: secrets.RP_ID,
 		rpName: secrets.RP_NAME,
 		challengeSize: secrets.FIDO_CHALLENGE_SIZE,
-		attestation: 'indirect', // values: 'none', 'indirect', 'direct', 'enterprise'
 		cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS,
 		authenticatorRequireResidentKey:
 			secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
 		authenticatorUserVerification:
 			secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
 	});
-})();
+}
 
-async function generateU2fRegistrationOptions(
+async function ensureFido2Initialized(): Promise<void> {
+	if (!fido2) {
+		await initializeFido2();
+	}
+}
+
+async function generatePasskeyRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	const passkeyRegistrationOptions = await fido2.attestationOptions();
+	await ensureFido2Initialized();
+	const passkeyRegistrationOptions = await fido2!.attestationOptions();
 
-	const u2fRegistrationOptions: PublicKeyCredentialCreationOptions = {
+	const registrationOptions: PublicKeyCredentialCreationOptions = {
 		...passkeyRegistrationOptions,
 		user: {
-			id: Buffer.from(user.id, 'utf8'), // UID from db (base64 encoded)
+			id: Buffer.from(user.id, 'utf-8'),
 			name: user.email,
 			displayName: user.username
 		},
@@ -78,85 +82,95 @@ async function generateU2fRegistrationOptions(
 		attestation: 'direct',
 		authenticatorSelection: {
 			authenticatorAttachment: 'platform',
-			requireResidentKey: true, // Correct property name
-			userVerification: 'required'
+			requireResidentKey: true,
+			userVerification: 'preferred'
 		}
 	};
-	return u2fRegistrationOptions;
+	return registrationOptions;
 }
 
-async function verifyU2fRegistration(
+async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
 	expectedChallenge: string
-): Promise<AttestationResult> {
-	const secrets: Secrets = await getSecrets();
+): Promise<Fido2AttestationResult> {
+	await ensureFido2Initialized();
+	secrets = await sops.getSecrets({
+		logger,
+		execSync,
+		getDirectoryPath
+	});
 	const u2fAttestationExpectations: ExpectedAttestationResult = {
 		challenge: expectedChallenge,
-		origin: secrets.RP_ORIGIN,
+		origin: secrets.RP_ORIGIN as string,
 		factor: 'either' as Factor,
 		rpId: secrets.RP_ID
 	};
 
-	const result = (await fido2.attestationResult(
+	const result = (await fido2!.attestationResult(
 		attestation,
 		u2fAttestationExpectations
 	)) as Fido2AttestationResult;
 
-	// TypeScript now understands that `result.request` is of type `AttestationResult`
 	return result;
 }
 
-async function generateU2fAuthenticationOptions(
+async function generatePasskeyAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	const userCredentials = user.credential.map(credential => ({
-		type: 'public-key' as const, // Explicit type
-		id: Buffer.from(credential.credentialId, 'base64')
-	}));
+	await ensureFido2Initialized();
 
-	const assertionOptions = await fido2.assertionOptions();
+	const userCredentials: PublicKeyCredentialDescriptor[] =
+		user.credential.map(credential => ({
+			type: 'public-key' as const,
+			id: Buffer.from(credential.credentialId, 'base64').buffer
+		}));
 
-	const u2fAuthenticationOptions: PublicKeyCredentialRequestOptions = {
+	const assertionOptions = await fido2!.assertionOptions();
+
+	const authenticationOptions: PublicKeyCredentialRequestOptions = {
 		...assertionOptions,
 		allowCredentials: userCredentials,
-		userVerification: 'preferred',
+		userVerification: 'required', // ensure this supports passwordless login
 		timeout: 60000
 	};
 
-	return u2fAuthenticationOptions;
+	return authenticationOptions;
 }
 
-async function verifyU2fAuthentication(
+async function verifyPasskeyAuthentication(
 	assertion: AssertionResult,
 	expectedChallenge: string,
 	publicKey: string,
 	previousCounter: number,
 	id: string
-): Promise<AssertionResult> {
-	const secrets: Secrets = await getSecrets();
+): Promise<Fido2AssertionResult> {
+	await ensureFido2Initialized();
+	secrets = await sops.getSecrets({
+		logger,
+		execSync,
+		getDirectoryPath
+	});
 
 	const assertionExpectations: ExpectedAssertionResult = {
 		challenge: expectedChallenge,
-		origin: secrets.RP_ORIGIN,
+		origin: secrets.RP_ORIGIN as string,
 		factor: 'either' as Factor,
 		publicKey,
 		prevCounter: previousCounter,
 		userHandle: id
 	};
 
-	const result = (await fido2.assertionResult(
+	const result = (await fido2!.assertionResult(
 		assertion,
 		assertionExpectations
 	)) as Fido2AssertionResult;
 
-	// TypeScript now understands that `result.request` is of type `AssertionResult`
 	return result;
 }
 
-export {
-	generateU2fAuthenticationOptions,
-	generateU2fRegistrationOptions,
-	verifyU2fAuthentication,
-	verifyU2fRegistration
+export default {
+	generatePasskeyAuthenticationOptions,
+	generatePasskeyRegistrationOptions,
+	verifyPasskeyAuthentication,
+	verifyPasskeyRegistration
 };
-*/

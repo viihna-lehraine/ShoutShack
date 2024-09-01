@@ -1,4 +1,4 @@
-import { Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 interface DataShareOptionsAttributes {
     id: string;
     trackingPixelOption: boolean;
@@ -23,5 +23,6 @@ declare class DataShareOptions extends Model<InferAttributes<DataShareOptions>, 
     randomAnonSurveyOption: boolean;
     lastUpdated: CreationOptional<Date>;
 }
-export default DataShareOptions;
+export default function createDataShareOptionsModel(sequelize: Sequelize): typeof DataShareOptions;
+export {};
 //# sourceMappingURL=DataShareOptions.d.ts.map

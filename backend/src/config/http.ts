@@ -1,8 +1,30 @@
 import { Application } from 'express';
-import gracefulShutdown from 'http-graceful-shutdown';
-import https from 'https';
 import { Sequelize } from 'sequelize';
 import { SecureContextOptions } from 'tls';
+import { constants as cryptoConstants } from 'crypto';
+import SopsDependencies from '../utils/sops';
+import { execSync } from 'child_process';
+import path from 'path';
+
+interface SetupHttpParams {
+	app: Application;
+	sops: any;
+	fs: typeof import('fs').promises;
+	logger: any;
+	constants: typeof cryptoConstants;
+	getFeatureFlags: () => any;
+	getRedisClient: () => any;
+	getSequelizeInstance: () => Sequelize;
+	initializeDatabase: () => Promise<Sequelize>;
+	SERVER_PORT: number;
+	SSL_FLAG: boolean;
+	REDIS_FLAG: boolean;
+}
+
+interface SetupHttpReturn {
+	options?: SecureContextOptions;
+	startServer?: () => void;
+}
 
 interface SSLKeys {
 	key: string;
@@ -46,7 +68,11 @@ export async function declareOptions({
 	let sslKeys: SSLKeys;
 
 	if (DECRYPT_KEYS) {
-		sslKeys = await sops.getSSLKeys();
+		sslKeys = await sops.getSSLKeys({
+			logger,
+			execSync,
+			getDirectoryPath: () => path.resolve(process.cwd())
+		});
 		logger.info('SSL Keys retrieved from via sops.getSSLKeys()');
 	} else {
 		if (!SSL_KEY || !SSL_CERT) {
@@ -72,128 +98,69 @@ export async function declareOptions({
 }
 
 export async function setupHttp({
-	app,
-	sops,
-	fs,
-	logger,
-	constants,
-	getFeatureFlags,
-	getRedisClient,
-	getSequelizeInstance,
-	initializeDatabase,
-	SERVER_PORT,
-	SSL_FLAG,
-	REDIS_FLAG
-}: {
-	app: Application;
-	sops: any;
-	fs: typeof import('fs').promises;
-	logger: any;
-	constants: typeof import('crypto').constants;
-	getFeatureFlags: () => any;
-	getRedisClient: () => any;
-	getSequelizeInstance: () => Sequelize;
-	initializeDatabase: () => Promise<void>;
-	SERVER_PORT: number;
-	SSL_FLAG: boolean;
-	REDIS_FLAG: boolean;
-}) {
-	logger.info('setupHttp() executing');
+    app,
+    sops,
+    fs: fsPromises,
+    logger,
+    constants,
+    getFeatureFlags,
+    getRedisClient,
+    getSequelizeInstance,
+    SERVER_PORT,
+    SSL_FLAG,
+    REDIS_FLAG
+}: SetupHttpParams): Promise<SetupHttpReturn> {
+    logger.info('setupHttp() executing');
 
-	const featureFlags = getFeatureFlags();
+    const featureFlags = getFeatureFlags();
 
-	const options = await declareOptions({
-		sops,
-		fs,
-		logger,
-		constants,
-		DECRYPT_KEYS: featureFlags.decryptKeysFlag,
-		SSL_KEY: process.env.SERVER_SSL_KEY_PATH || null,
-		SSL_CERT: process.env.SERVER_SSL_CERT_PATH || null,
-		ciphers: ciphers
-	});
+    const options = await declareOptions({
+        sops,
+        fs: fsPromises,
+        logger,
+        constants,
+        DECRYPT_KEYS: featureFlags.decryptKeysFlag,
+        SSL_KEY: process.env.SERVER_SSL_KEY_PATH || null,
+        SSL_CERT: process.env.SERVER_SSL_CERT_PATH || null,
+        ciphers: ciphers
+    });
 
-	async function onShutdown() {
-		logger.info('Cleaning up resources before shutdown');
+    async function onShutdown() {
+        logger.info('Cleaning up resources before shutdown');
 
-		const sequelize: Sequelize = getSequelizeInstance();
+        const sequelize: Sequelize = getSequelizeInstance();
 
-		try {
-			await sequelize.close();
-			logger.info('Database connection closed');
-		} catch (error) {
-			logger.error(`Error closing database connection: ${error}`);
-		}
+        try {
+            await sequelize.close();
+            logger.info('Database connection closed');
+        } catch (error) {
+            logger.error(`Error closing database connection: ${error}`);
+        }
 
-		if (REDIS_FLAG) {
-			logger.info('REDIS_FLAG is set to true, Closing redis connection');
+        if (REDIS_FLAG) {
+            logger.info('REDIS_FLAG is set to true, Closing redis connection');
 
-			try {
-				const redisClient = getRedisClient();
-				if (redisClient) {
-					await redisClient.quit();
-					logger.info('Redis connection closed');
-				}
-			} catch (error) {
-				logger.error(`Error closing redis connection: ${error}`);
-			}
-		}
+            try {
+                const redisClient = getRedisClient();
+                if (redisClient) {
+                    await redisClient.quit();
+                    logger.info('Redis connection closed');
+                }
+            } catch (error) {
+                logger.error(`Error closing redis connection: ${error}`);
+            }
+        }
 
-		try {
-			await new Promise<void>((resolve) => {
-				logger.close();
-				resolve();
-			});
-			console.log('Logger closed');
-		} catch (error) {
-			logger.error(`Error closing logger: ${error}`);
-		}
-	}
+        try {
+            await new Promise<void>((resolve) => {
+                logger.close();
+                resolve();
+            });
+            console.log('Logger closed');
+        } catch (error) {
+            logger.error(`Error closing logger: ${error}`);
+        }
+    }
 
-	async function startServer() {
-		try {
-			logger.info(`Starting HTTP server on port ${SERVER_PORT}`);
-			logger.info(
-				'Initializing database before starting server. Awaiting execution of initializeDatabase()'
-			);
-
-			await initializeDatabase();
-
-			let server;
-
-			if (SSL_FLAG) {
-				logger.info('SSL_FLAG is set to true, starting HTTPS server');
-
-				server = https
-					.createServer(options, app)
-					.listen(SERVER_PORT, () => {
-						logger.info(`HTTP.1 server running on port ${SERVER_PORT}`);
-					});
-			} else {
-				logger.info('SSL_FLAG is false. Starting HTTP server without SSL');
-
-				server = app.listen(SERVER_PORT, () => {
-					logger.info(`HTTP1.1 server running on port ${SERVER_PORT}`);
-				});
-			}
-			gracefulShutdown(server, {
-				signals: 'SIGINT SIGTERM',
-				timeout: 30000,
-				development: false,
-				onShutdown,
-				finally: () => {
-					console.log('Server has gracefully shut down');
-				}
-			});
-		} catch (err) {
-			if (err instanceof Error) {
-				logger.error(`Error starting server: ${err.message}`);
-			} else {
-				logger.error('Failed to start server due to an unknown error');
-			}
-			process.exit(1);
-		}
-	}
-
-	return { startServer };
+    return { options };
 }

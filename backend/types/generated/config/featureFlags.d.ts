@@ -1,4 +1,4 @@
-interface FeatureFlags {
+export interface FeatureFlags {
     apiRoutesCsrfFlag: boolean;
     dbSyncFlag: boolean;
     decryptKeysFlag: boolean;
@@ -15,7 +15,10 @@ interface FeatureFlags {
     secureHeadersFlag: boolean;
     sequelizeLoggingFlag: boolean;
 }
-export declare const parseBoolean: (value: string | boolean | undefined) => boolean;
-export declare function getFeatureFlags(): FeatureFlags;
-export {};
+export declare function parseBoolean(value: string | boolean | undefined, logger: {
+    warn: (message: string) => void;
+}): boolean;
+export declare function getFeatureFlags(logger: {
+    warn: (message: string) => void;
+}, env?: NodeJS.ProcessEnv): FeatureFlags;
 //# sourceMappingURL=featureFlags.d.ts.map

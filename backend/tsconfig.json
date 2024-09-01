@@ -11,6 +11,7 @@
     "declarationMap": true,
     "disableSolutionSearching": false,
     "disableReferencedProjectLoad": true,
+		"esModuleInterop": true,
     "experimentalDecorators": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
@@ -50,12 +51,17 @@
     "strictPropertyInitialization": true,
     "target": "ES2022",
 		"tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+		"typeRoots": [
+			"./node_modules/@types",
+			"./types"
+		],
     "types": ["node"],
     "useDefineForClassFields": true,
     "useUnknownInCatchVariables": true
   },
   "include": [
 		"./src/**/*.ts",
+		"./types/**/*.d.ts"
 	],
 	"exclude": [
 	"./node_modules",
