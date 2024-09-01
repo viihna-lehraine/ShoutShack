@@ -1,7 +1,7 @@
 import csrf from 'csrf';
 import { Request, Response, NextFunction } from 'express';
 interface CsrfDependencies {
-    featureFlags: ReturnType<typeof import('../config/featureFlags').getFeatureFlags>;
+    featureFlags: ReturnType<typeof import('../utils/featureFlags').getFeatureFlags>;
     logger: ReturnType<typeof import('../config/logger').default>;
     csrfProtection: csrf;
 }

@@ -1,5 +1,5 @@
 import argon2 from 'argon2';
-import sops from '../utils/sops.mjs';
+import sops from '../utils/sops';
 import { execSync } from 'child_process';
 export const login =
 	({ logger, UserModel, jwtUtil }) =>

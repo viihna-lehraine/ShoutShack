@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 interface IpBlacklistDependencies {
     logger: ReturnType<typeof import('../config/logger').default>;
-    featureFlags: ReturnType<typeof import('../config/featureFlags').getFeatureFlags>;
+    featureFlags: ReturnType<typeof import('../utils/featureFlags').getFeatureFlags>;
     __dirname: string;
     fsModule: typeof fs;
 }

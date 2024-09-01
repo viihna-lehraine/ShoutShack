@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import setupLogger from '../../config/logger.mjs';
-import sops from '../sops.mjs';
+import setupLogger from '../../config/logger';
+import sops from '../sops';
 import { execSync } from 'child_process';
 const logger = setupLogger();
 async function loadSecrets() {

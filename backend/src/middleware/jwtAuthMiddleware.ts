@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from 'express';
 interface JwtAuthMiddlewareDependencies {
 	logger: ReturnType<typeof import('../config/logger').default>;
 	featureFlags: ReturnType<
-		typeof import('../config/featureFlags').getFeatureFlags
+		typeof import('../utils/featureFlags').getFeatureFlags
 	>;
 	verifyJwToken: (token: string) => Promise<string | object | null>;
 }

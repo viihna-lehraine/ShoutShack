@@ -1,5 +1,11 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import helmet, { HelmetOptions } from 'helmet';
+import setupLogger from '../config/logger';
+import {
+	contentSecurityPolicyOptions,
+	helmetOptions as defaultHelmetOptions,
+	permissionsPolicyOptions as defaultPermissionsPolicyOptions
+} from '../config/securityOptions';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;
@@ -8,65 +14,66 @@ interface SecurityHeadersDependencies {
 	};
 }
 
+const logger = setupLogger({
+	serviceName: 'security-headers',
+	isProduction: process.env.NODE_ENV === 'development' // *DEV-NOTE* set to production before deployment
+});
+
 export function setupSecurityHeaders(
 	app: Application,
 	{
-		helmetOptions = {
-			frameguard: { action: 'deny' },
-			dnsPrefetchControl: { allow: false },
-			hidePoweredBy: true,
-			hsts: {
-				maxAge: 31536000, // 1 year
-				includeSubDomains: true,
-				preload: true // enable HSTS preload list
-			},
-			ieNoOpen: true,
-			noSniff: true
-		},
-		permissionsPolicyOptions = {
-			fullscreen: ["'self'"],
-			geolocation: ["'none'"],
-			microphone: ["'none'"],
-			camera: ["'none'"],
-			payment: ["'none'"]
-		}
+		helmetOptions = defaultHelmetOptions,
+		permissionsPolicyOptions = defaultPermissionsPolicyOptions
 	}: SecurityHeadersDependencies
 ): void {
-	app.use(helmet(helmetOptions));
+	try {
+		app.use(helmet(helmetOptions));
+	} catch (error) {
+		logger.error(`Failed to set helmet middleware ${error}`);
+	}
 
-	app.use((req: Request, res: Response, next: NextFunction) => {
-		const policies = Object.entries(permissionsPolicyOptions)
-			.map(([feature, origins]) => `${feature} ${origins.join(' ')}`)
-			.join(', ');
+	if (
+		permissionsPolicyOptions &&
+		typeof permissionsPolicyOptions === 'object'
+	) {
+		app.use((req: Request, res: Response, next: NextFunction) => {
+			try {
+				const policies = Object.entries(permissionsPolicyOptions)
+					.map(
+						([feature, origins]) =>
+							`${feature} ${origins.join(' ')}`
+					)
+					.join(', ');
 
-		res.setHeader('Permissions-Policy', policies);
-		next();
-	});
+				res.setHeader('Permissions-Policy', policies);
+			} catch (error) {
+				logger.error(
+					`Failed to set Permissions-Policy header: ${error}`
+				);
+			}
+			next();
+		});
+	} else {
+		logger.warn('Permissions-Policy options are not provided or invalid');
+	}
 
-	app.use(
-		helmet.contentSecurityPolicy({
-			directives: {
-				defaultSrc: ["'self'"],
-				scriptSrc: ["'self'", 'https://api.haveibeenpwned.com'],
-				styleSrc: ["'self'", "'unsafe-inline'"],
-				fontSrc: ["'self'"],
-				imgSrc: ["'self'", 'data:'],
-				connectSrc: [
-					"'self'",
-					'https://api.haveibeenpwned.com',
-					'https://cdnjs.cloudflare.com'
-				],
-				objectSrc: ["'none'"],
-				upgradeInsecureRequests: [],
-				frameAncestors: ["'none'"]
-			},
-			reportOnly: false
-		})
-	);
+	try {
+		app.use(
+			helmet.contentSecurityPolicy({
+				directives: contentSecurityPolicyOptions.directives,
+				reportOnly: false
+			})
+		);
+	} catch (error) {
+		logger.error(`Failed to apply Content Security Policy: ${error}`);
+	}
 
-	// Enforce certificate transparency
-	app.use((req: Request, res: Response, next: NextFunction) => {
-		res.setHeader('Expect-CT', 'enforce, max-age=86400');
-		next();
-	});
+	try {
+		app.use((req: Request, res: Response, next: NextFunction) => {
+			res.setHeader('Expect-CT', 'enforce, max-age=86400');
+			next();
+		});
+	} catch (error) {
+		logger.error(`Failed to set Expect-CT header: ${error}`);
+	}
 }

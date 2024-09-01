@@ -12,7 +12,7 @@ interface StaticRoutesDependencies {
     humansMdPath: string;
     robotsTxtPath: string;
 }
-export declare function setupStaticRoutes(deps: StaticRoutesDependencies): express.Router;
-export declare function initializeStaticRoutes(app: express.Application): void;
+export declare function setupStaticRoutes({ staticRootPath, appMjsPath, appJsPath, secretsPath, browserConfigXmlPath, humansMdPath, robotsTxtPath, logLevel, logDirectory, serviceName, isProduction }: StaticRoutesDependencies): express.Router;
+export declare function initializeStaticRoutes(app: express.Application, staticRootPath: string): void;
 export {};
 //# sourceMappingURL=staticRoutes.d.ts.map

@@ -1,3 +1,4 @@
+import '../../types/custom/express-session';
 export function createSlowdownMiddleware({
 	slowdownThreshold = 100 // default threshold in ms, can be customized
 }) {

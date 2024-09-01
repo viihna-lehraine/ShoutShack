@@ -1,3 +1,2 @@
-import { startServer } from './config/startServer';
-export default startServer;
+export {};
 //# sourceMappingURL=server.d.ts.map

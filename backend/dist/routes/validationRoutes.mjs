@@ -1,6 +1,6 @@
 import express from 'express';
 import { validationResult } from 'express-validator';
-import { createValidatorMiddleware } from '../middleware/validator.mjs';
+import { createValidatorMiddleware } from '../middleware/validator';
 const { registrationValidationRules } = createValidatorMiddleware({
 	validator: (await import('validator')).default
 });

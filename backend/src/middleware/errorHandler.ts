@@ -4,7 +4,7 @@ import AppError from '../errors/AppError';
 interface ErrorHandlerDependencies {
 	logger: ReturnType<typeof import('../config/logger').default>;
 	featureFlags: ReturnType<
-		typeof import('../config/featureFlags').getFeatureFlags
+		typeof import('../utils/featureFlags').getFeatureFlags
 	>;
 }
 

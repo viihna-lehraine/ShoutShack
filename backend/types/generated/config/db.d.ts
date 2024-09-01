@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import { getFeatureFlags } from './featureFlags';
+import { getFeatureFlags } from '../utils/featureFlags';
 import { Logger } from 'winston';
 export interface DBSecrets {
     DB_NAME: string;

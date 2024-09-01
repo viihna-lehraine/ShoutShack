@@ -18,27 +18,28 @@ interface StaticRoutesDependencies {
 	robotsTxtPath: string;
 }
 
-export function setupStaticRoutes(
-	deps: StaticRoutesDependencies
-): express.Router {
+// Setup static routes
+export function setupStaticRoutes({
+	staticRootPath,
+	appMjsPath,
+	appJsPath,
+	secretsPath,
+	browserConfigXmlPath,
+	humansMdPath,
+	robotsTxtPath,
+	logLevel = 'info',
+	logDirectory = './logs',
+	serviceName = 'StaticRouter',
+	isProduction = process.env.NODE_ENV === 'development' // *DEV-NOTE* change default value to production before deployment
+}: StaticRoutesDependencies): express.Router {
 	const logger = setupLogger({
-		logLevel: deps.logLevel,
-		logDirectory: deps.logDirectory,
-		serviceName: deps.serviceName,
-		isProduction: deps.isProduction
+		logLevel,
+		logDirectory,
+		serviceName,
+		isProduction
 	});
 
-	const {
-		staticRootPath,
-		appMjsPath,
-		appJsPath,
-		secretsPath,
-		browserConfigXmlPath,
-		humansMdPath,
-		robotsTxtPath
-	} = deps;
-
-	// Middleware to log static asset access
+	// middleware to log static asset access
 	router.use((req: Request, res: Response, next: NextFunction) => {
 		const assetTypes = ['css', '/mjs', 'js', '/fonts', '/icons', '/images'];
 		if (assetTypes.some(type => req.url.startsWith(type))) {
@@ -47,7 +48,7 @@ export function setupStaticRoutes(
 		next();
 	});
 
-	// Serve root HTML files
+	// serve root HTML files
 	router.get('/:page', (req: Request, res: Response) => {
 		const page = req.params.page;
 		const filePath = path.join(staticRootPath, `${page}.html`);
@@ -61,24 +62,21 @@ export function setupStaticRoutes(
 		});
 	});
 
-	// Serve static directories
-	router.use('/css', express.static(path.join(staticRootPath, 'assets/css')));
-	router.use('/mjs', express.static(path.join(staticRootPath, 'assets/mjs')));
-	router.use('/js', express.static(path.join(staticRootPath, 'assets/js')));
-	router.use(
-		'/fonts',
-		express.static(path.join(staticRootPath, 'assets/fonts'))
-	);
-	router.use(
-		'/icons',
-		express.static(path.join(staticRootPath, 'assets/icons'))
-	);
-	router.use(
-		'/images',
-		express.static(path.join(staticRootPath, 'assets/images'))
-	);
+	// serve static directories using Optional Chaining
+	const staticDirectories = {
+		css: path.join(staticRootPath, 'assets/css'),
+		mjs: path.join(staticRootPath, 'assets/mjs'),
+		js: path.join(staticRootPath, 'assets/js'),
+		fonts: path.join(staticRootPath, 'assets/fonts'),
+		icons: path.join(staticRootPath, 'assets/icons'),
+		images: path.join(staticRootPath, 'assets/images')
+	};
 
-	// Serve nested HTML files
+	Object.entries(staticDirectories).forEach(([route, dirPath]) => {
+		router.use(`/${route}`, express.static(dirPath ?? './fallback'));
+	});
+
+	// serve nested HTML files
 	router.get('/*', (req: Request, res: Response) => {
 		const filePath = path.join(staticRootPath, `${req.path}.html`);
 		res.sendFile(filePath, err => {
@@ -91,7 +89,7 @@ export function setupStaticRoutes(
 		});
 	});
 
-	// Serve specific static files
+	// serve specific static files
 	const staticFiles = [
 		{ route: '/app.mjs', filePath: appMjsPath },
 		{ route: '/app.js', filePath: appJsPath },
@@ -104,7 +102,7 @@ export function setupStaticRoutes(
 	staticFiles.forEach(file => {
 		router.get(file.route, (req: Request, res: Response) => {
 			logger.info(`GET request received at ${file.route}`);
-			res.sendFile(file.filePath, err => {
+			res.sendFile(file.filePath ?? './fallback', err => {
 				if (err) {
 					logger.error(`Failed to send ${file.route}: ${err}`);
 					res.status(404).send('File not found');
@@ -132,9 +130,14 @@ export function setupStaticRoutes(
 	return router;
 }
 
-export function initializeStaticRoutes(app: express.Application): void {
-	const deps: StaticRoutesDependencies = {
-		staticRootPath: process.env.STATIC_ROOT_PATH!,
+// Initialize the static routes
+export function initializeStaticRoutes(
+	app: express.Application,
+	staticRootPath: string
+): void {
+	const router = setupStaticRoutes({
+		// *DEV-NOTE* refactor to use environmentVariables
+		staticRootPath,
 		appMjsPath: process.env.FRONTEND_APP_MJS_PATH!,
 		appJsPath: process.env.FRONTEND_APP_JS_PATH!,
 		secretsPath: process.env.FRONTEND_SECRETS_PATH!,
@@ -144,8 +147,7 @@ export function initializeStaticRoutes(app: express.Application): void {
 		logLevel: process.env.LOG_LEVEL!,
 		logDirectory: process.env.LOG_DIRECTORY!,
 		serviceName: process.env.SERVICE_NAME!,
-		isProduction: process.env.NODE_ENV! === 'development' ? false : true
-	};
-	const router = setupStaticRoutes(deps);
+		isProduction: process.env.NODE_ENV === 'developpment' // *DEV-NOTE* change default value to production before deployment
+	});
 	app.use('/', router);
 }

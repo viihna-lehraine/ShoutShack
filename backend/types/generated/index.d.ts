@@ -1,5 +1,5 @@
 import { getSequelizeInstance, initializeDatabase } from './config/db';
-import { getFeatureFlags, parseBoolean } from './config/featureFlags';
+import { getFeatureFlags, parseBoolean } from './utils/featureFlags';
 import loadEnv from './utils/loadEnv';
 import { setupHttp } from './config/http';
 import { createTransporter, getTransporter } from './config/mailer';

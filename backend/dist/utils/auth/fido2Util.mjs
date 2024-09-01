@@ -1,7 +1,7 @@
 import { Fido2Lib } from 'fido2-lib';
 import path from 'path';
-import sops from '../../utils/sops.mjs';
-import setupLogger from '../../config/logger.mjs';
+import sops from '../../utils/sops';
+import setupLogger from '../../config/logger';
 import { execSync } from 'child_process';
 let fido2 = null;
 let secrets;

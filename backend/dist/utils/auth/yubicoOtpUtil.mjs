@@ -1,3 +1,4 @@
+import '../../../types/custom/yub.d.ts';
 export default function createYubicoOtpUtil({
 	yub,
 	getSecrets,
