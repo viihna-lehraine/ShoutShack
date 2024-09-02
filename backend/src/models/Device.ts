@@ -6,36 +6,37 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface DeviceAttributes {
-	deviceId: number;
-	id: string;
-	deviceName: string;
-	deviceType: string;
-	os: string;
-	browser?: string | null;
-	ipAddress: string;
-	lastUsed: Date;
-	isTrusted: boolean;
-	creationDate: Date;
-	lastUpdated: Date;
+	deviceId: number; // primary key, auto-incremented
+	id: string; // foreign key to the User model
+	deviceName: string; // name of the device
+	deviceType: string; // type of the device (e.g., desktop, laptop, etc.)
+	os: string; // pperating system of the device
+	browser?: string | null; // optional browser information
+	ipAddress: string; // IP address associated with the device
+	lastUsed: Date; // date when the device was last used
+	isTrusted: boolean; // whether the device is trusted
+	creationDate: Date; // date of creation of the record
+	lastUpdated: Date; // date when the record was last updated
 }
 
 class Device
 	extends Model<InferAttributes<Device>, InferCreationAttributes<Device>>
 	implements DeviceAttributes
 {
-	deviceId!: number;
-	id!: string;
-	deviceName!: string;
-	deviceType!: string;
-	os!: string;
-	browser!: string | null;
-	ipAddress!: string;
-	lastUsed!: CreationOptional<Date>;
-	isTrusted!: boolean;
-	creationDate!: CreationOptional<Date>;
-	lastUpdated!: CreationOptional<Date>;
+	deviceId!: number; // initialized as a non-nullable integer
+	id!: string; // initialized as a non-nullable string (UUID)
+	deviceName!: string; // initialized as a non-nullable string
+	deviceType!: string; // initialized as a non-nullable string
+	os!: string; // initialized as a non-nullable string
+	browser!: string | null; // nullable, may contain string or null
+	ipAddress!: string; // initialized as a non-nullable string
+	lastUsed!: CreationOptional<Date>; // optional field, defaults to current date
+	isTrusted!: boolean; // initialized as a non-nullable boolean
+	creationDate!: CreationOptional<Date>; // optional field, defaults to current date
+	lastUpdated!: CreationOptional<Date>; // optional field, defaults to current date
 }
 
 export default function createDeviceModel(sequelize: Sequelize): typeof Device {
@@ -43,61 +44,74 @@ export default function createDeviceModel(sequelize: Sequelize): typeof Device {
 		{
 			deviceId: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
-				autoIncrement: true,
-				primaryKey: true
-			},
-			id: {
-				type: DataTypes.STRING,
+				primaryKey: true,
+				autoIncrement: true, // auto-increment for unique devices
 				allowNull: false,
 				unique: true
 			},
+			id: {
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4, // default to a generated UUID
+				primaryKey: true,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
+			},
 			deviceName: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: true // device name is optional
 			},
 			deviceType: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: true, // device type is optional
+				validate: {
+					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
+				}
 			},
 			os: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: true // operating system is optional
 			},
 			browser: {
 				type: DataTypes.STRING,
-				allowNull: true
+				allowNull: true // browser information is optional
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false // IP address is required
 			},
 			lastUsed: {
 				type: DataTypes.DATE,
-				allowNull: true,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW, // default to current date/time
+				allowNull: true // last used date is optional
 			},
 			isTrusted: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false
+				defaultValue: false
 			},
 			creationDate: {
-				type: DataTypes.DATE,
-				allowNull: true,
-				defaultValue: DataTypes.NOW
+				type: DataTypes.DATE, // creation date of the record, default set to current date/time
+				defaultValue: DataTypes.NOW,
+				allowNull: false // creation date is required
 			},
 			lastUpdated: {
 				type: DataTypes.DATE,
-				allowNull: true,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW, // default to current date/time
+				allowNull: true // last updated date is optional
 			}
 		},
 		{
 			sequelize,
-			tableName: 'Devices',
-			timestamps: false
+			modelName: 'Device',
+			timestamps: true // automatically manage createdAt and updatedAt fields
 		}
 	);
+
+	// define associations
+	Device.belongsTo(User, { foreignKey: 'id', as: 'user' });
 
 	return Device;
 }

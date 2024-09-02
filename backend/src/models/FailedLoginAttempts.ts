@@ -5,14 +5,15 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface FailedLoginAttemptsAttributes {
-	attemptId: string;
-	id: string;
-	ipAddress: string;
-	userAgent: string;
-	attemptDate: Date;
-	isLocked: boolean;
+	attemptId: string; // primary key for the failed login attempt record
+	id: string; // foreign key referencing the User model
+	ipAddress: string; // IP address from where the attempt was made
+	userAgent: string; // user agent string for the device used
+	attemptDate: Date; // date and time of the failed login attempt
+	isLocked: boolean; // indicates if the account is locked due to this attempt
 }
 
 class FailedLoginAttempts
@@ -22,12 +23,12 @@ class FailedLoginAttempts
 	>
 	implements FailedLoginAttemptsAttributes
 {
-	attemptId!: string;
-	id!: string;
-	ipAddress!: string;
-	userAgent!: string;
-	attemptDate!: Date;
-	isLocked!: boolean;
+	attemptId!: string; // initialized as a non-nullable string (UUID)
+	id!: string; // initialized as a non-nullable string (UUID)
+	ipAddress!: string; // initialized as a non-nullable string
+	userAgent!: string; // initialized as a non-nullable string
+	attemptDate!: Date; // initialized as a non-nullable date
+	isLocked!: boolean; // initialized as a non-nullable boolean
 }
 
 export default function createFailedLoginAttemptsModel(
@@ -36,37 +37,49 @@ export default function createFailedLoginAttemptsModel(
 	FailedLoginAttempts.init(
 		{
 			attemptId: {
-				type: DataTypes.STRING,
+				type: DataTypes.INTEGER,
+				primaryKey: true, // primary key for the failed login attempt record
+				autoIncrement: true, // auto-increment for unique attempts
 				allowNull: false,
-				primaryKey: true
+				unique: true
 			},
 			id: {
-				type: DataTypes.STRING,
-				allowNull: false
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4, // default to a generated UUID
+				allowNull: false, // non-nullable as it references the User model
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false // IP address is required
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false // user agent is required
 			},
 			attemptDate: {
 				type: DataTypes.DATE,
-				allowNull: false
+				defaultValue: DataTypes.NOW, // default to current date/time
+				allowNull: false // date and time of the attempt
 			},
 			isLocked: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false
+				defaultValue: false // account is not locked by default
 			}
 		},
 		{
 			sequelize,
-			tableName: 'FailedLoginAttempts',
-			timestamps: false
+			modelName: 'FailedLoginAttempts',
+			timestamps: true // automatically manage createdAt and updatedAt fields
 		}
 	);
+
+	// define associations
+	FailedLoginAttempts.belongsTo(User, { foreignKey: 'id', as: 'user' });
 
 	return FailedLoginAttempts;
 }

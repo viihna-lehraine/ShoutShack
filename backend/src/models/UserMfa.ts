@@ -5,6 +5,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface UserMfaAttributes {
 	id: string;
@@ -61,87 +62,117 @@ export default function createUserMfaModel(
 	UserMfa.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			isMfaEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
+				defaultValue: undefined,
 				allowNull: true
 			},
 			isEmail2faEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			isTotpl2faEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			isYubicoOtp2faEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			isU2f2faEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			isPasskeyEnabled: {
 				type: DataTypes.BOOLEAN,
+				defaultValue: false,
 				allowNull: false
 			},
 			totpSecret: {
 				type: DataTypes.STRING,
-				allowNull: true
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			yubicoOtpPublicId: {
 				type: DataTypes.STRING,
-				allowNull: true
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			yubicoOtpSecretKey: {
 				type: DataTypes.STRING,
-				allowNull: true
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			fido2CredentialId: {
 				type: DataTypes.STRING,
-				allowNull: true
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			fido2PublicKey: {
-				type: DataTypes.STRING,
+				type: DataTypes.TEXT,
+				defaultValue: undefined,
 				allowNull: true
 			},
 			fido2Counter: {
 				type: DataTypes.INTEGER,
+				defaultValue: undefined,
 				allowNull: true
 			},
 			fido2AttestationFormat: {
 				type: DataTypes.STRING,
+				defaultValue: undefined,
 				allowNull: true
 			},
 			passkeyCredentialId: {
 				type: DataTypes.STRING,
-				allowNull: true
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			passkeyPublicKey: {
-				type: DataTypes.STRING,
-				allowNull: true
+				type: DataTypes.TEXT,
+				defaultValue: undefined,
+				allowNull: true,
+				unique: true
 			},
 			passkeyCounter: {
 				type: DataTypes.INTEGER,
+				defaultValue: undefined,
 				allowNull: true
 			},
 			passkeyAttestationFormat: {
 				type: DataTypes.STRING,
+				defaultValue: undefined,
 				allowNull: true
 			}
 		},
 		{
 			sequelize,
-			tableName: 'UserMfa',
-			timestamps: false
+			modelName: 'UserMfa',
+			timestamps: true
 		}
 	);
 

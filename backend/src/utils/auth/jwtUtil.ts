@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import setupLogger from '../../config/logger';
+import { setupLogger } from '../../config/logger';
 import sops from '../sops';
 import { execSync } from 'child_process';
 

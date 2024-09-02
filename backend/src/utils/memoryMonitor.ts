@@ -1,5 +1,5 @@
 import os from 'os';
-import { Logger } from 'winston';
+import { Logger } from '../config/logger';
 
 interface MemoryStats {
 	rss: string;

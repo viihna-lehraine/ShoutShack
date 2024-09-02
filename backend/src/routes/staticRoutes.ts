@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
-import setupLogger from '../config/logger';
+import { setupLogger } from '../config/logger';
+import { environmentVariables } from 'src/config/environmentConfig';
 
 const router = express.Router();
 
@@ -10,7 +11,6 @@ interface StaticRoutesDependencies {
 	serviceName?: string;
 	isProduction?: boolean;
 	staticRootPath: string;
-	appMjsPath: string;
 	appJsPath: string;
 	secretsPath: string;
 	browserConfigXmlPath: string;
@@ -21,7 +21,6 @@ interface StaticRoutesDependencies {
 // Setup static routes
 export function setupStaticRoutes({
 	staticRootPath,
-	appMjsPath,
 	appJsPath,
 	secretsPath,
 	browserConfigXmlPath,
@@ -30,7 +29,7 @@ export function setupStaticRoutes({
 	logLevel = 'info',
 	logDirectory = './logs',
 	serviceName = 'StaticRouter',
-	isProduction = process.env.NODE_ENV === 'development' // *DEV-NOTE* change default value to production before deployment
+	isProduction = environmentVariables.nodeEnv === 'production' // *DEV-NOTE* change default value to production before deployment
 }: StaticRoutesDependencies): express.Router {
 	const logger = setupLogger({
 		logLevel,
@@ -53,9 +52,11 @@ export function setupStaticRoutes({
 		const page = req.params.page;
 		const filePath = path.join(staticRootPath, `${page}.html`);
 		res.sendFile(filePath, err => {
-			if (err) {
-				logger.error(`Failed to send ${page}.html: ${err}`);
-				res.status(404).send('Page not found');
+			if (err instanceof Error) {
+				logger.error(`Failed to send ${page}.html`, {
+					stack: err.stack
+				});
+				res.status(404).json({ error: `Page ${page}.html not found` });
 			} else {
 				logger.info(`${page}.html was accessed`);
 			}
@@ -73,25 +74,11 @@ export function setupStaticRoutes({
 	};
 
 	Object.entries(staticDirectories).forEach(([route, dirPath]) => {
-		router.use(`/${route}`, express.static(dirPath ?? './fallback'));
-	});
-
-	// serve nested HTML files
-	router.get('/*', (req: Request, res: Response) => {
-		const filePath = path.join(staticRootPath, `${req.path}.html`);
-		res.sendFile(filePath, err => {
-			if (err) {
-				logger.error(`Failed to send ${req.path}.html: ${err}`);
-				res.status(404).send('Page not found');
-			} else {
-				logger.info(`${req.path}.html was accessed`);
-			}
-		});
+		router.use(`/${route}`, express.static(dirPath));
 	});
 
 	// serve specific static files
 	const staticFiles = [
-		{ route: '/app.mjs', filePath: appMjsPath },
 		{ route: '/app.js', filePath: appJsPath },
 		{ route: '/secrets.json.gpg', filePath: secretsPath },
 		{ route: '/browserconfig.xml', filePath: browserConfigXmlPath },
@@ -100,31 +87,60 @@ export function setupStaticRoutes({
 	];
 
 	staticFiles.forEach(file => {
-		router.get(file.route, (req: Request, res: Response) => {
-			logger.info(`GET request received at ${file.route}`);
-			res.sendFile(file.filePath ?? './fallback', err => {
-				if (err) {
-					logger.error(`Failed to send ${file.route}: ${err}`);
-					res.status(404).send('File not found');
-				} else {
-					logger.info(`${file.route} was accessed`);
+		router.get(
+			file.route,
+			(_req: Request, res: Response, next: NextFunction) => {
+				logger.info(`GET request received at ${file.route}`);
+
+				if (!file.filePath) {
+					logger.error(`File path for ${file.route} is undefined.`);
+					return res
+						.status(500)
+						.json({ error: `Internal server error` });
 				}
-			});
-		});
+
+				res.sendFile(file.filePath, err => {
+					if (err) {
+						logger.error(
+							`Failed to send ${file.route}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+							err instanceof Error ? { stack: err.stack } : {}
+						);
+						return next(new Error(`File ${file.route} not found`));
+					}
+
+					logger.info(`${file.route} was accessed`);
+					return res.end();
+				});
+				logger.warn(
+					'This should not be reached. Static route returning undefined.'
+				);
+				return undefined;
+			}
+		);
 	});
 
 	// 404 handler for unmatched routes
 	router.use((req: Request, res: Response) => {
 		logger.info(`404 - ${req.url} was not found`);
-		res.status(404).sendFile(
-			path.join(staticRootPath, 'not-found.html'),
-			err => {
-				if (err) {
-					logger.error(`Failed to send not-found.html: ${err}`);
-					res.status(500).send('Internal server error');
-				}
+		const notFoundFilePath = path.join(staticRootPath, 'not-found.html');
+		res.sendFile(notFoundFilePath, err => {
+			if (err instanceof Error) {
+				logger.error(`Failed to send not-found.html`, {
+					stack: err.stack
+				});
+				res.status(500).json({ error: 'Internal server error' });
+			} else {
+				logger.info(`not-found.html was accessed for ${req.url}`);
 			}
-		);
+		});
+	});
+
+	// general error handler for uncaught errors in the router
+	router.use((err: Error, req: Request, res: Response) => {
+		logger.error(`Unexpected error: ${err.message}`, {
+			stack: err.stack
+		});
+		res.status(500).json({ error: 'Internal server error' });
 	});
 
 	return router;
@@ -136,18 +152,17 @@ export function initializeStaticRoutes(
 	staticRootPath: string
 ): void {
 	const router = setupStaticRoutes({
-		// *DEV-NOTE* refactor to use environmentVariables
 		staticRootPath,
-		appMjsPath: process.env.FRONTEND_APP_MJS_PATH!,
-		appJsPath: process.env.FRONTEND_APP_JS_PATH!,
-		secretsPath: process.env.FRONTEND_SECRETS_PATH!,
-		browserConfigXmlPath: process.env.FRONTEND_BROWSER_CONFIG_XML_PATH!,
-		humansMdPath: process.env.FRONTEND_HUMANS_MD_PATH!,
-		robotsTxtPath: process.env.FRONTEND_ROBOTS_TXT_PATH!,
-		logLevel: process.env.LOG_LEVEL!,
-		logDirectory: process.env.LOG_DIRECTORY!,
-		serviceName: process.env.SERVICE_NAME!,
-		isProduction: process.env.NODE_ENV === 'developpment' // *DEV-NOTE* change default value to production before deployment
+		appJsPath: environmentVariables.frontendAppJsPath!,
+		secretsPath: environmentVariables.frontendSecretsPath!,
+		browserConfigXmlPath:
+			environmentVariables.frontendBrowserConfigXmlPath!,
+		humansMdPath: environmentVariables.frontendHumansMdPath!,
+		robotsTxtPath: environmentVariables.frontendRobotsTxtPath!,
+		logLevel: environmentVariables.logLevel!,
+		logDirectory: environmentVariables.serverLogPath!,
+		serviceName: environmentVariables.serviceName!,
+		isProduction: environmentVariables.nodeEnv === 'production'
 	});
 	app.use('/', router);
 }

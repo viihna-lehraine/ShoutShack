@@ -6,6 +6,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface RecoveryMethodAttributes {
 	id: string;
@@ -37,22 +38,31 @@ export default function createRecoveryMethodModel(
 	RecoveryMethod.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			isRecoveryActive: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: true
+				defaultValue: false,
+				allowNull: false
 			},
 			recoveryId: {
-				type: DataTypes.STRING,
-				allowNull: false
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
+				allowNull: false,
+				unique: true
 			},
 			recoveryMethod: {
 				type: DataTypes.ENUM('email', 'backupCodes'),
-				allowNull: false
+				allowNull: true
 			},
 			backupCodes: {
 				type: DataTypes.ARRAY(DataTypes.STRING),
@@ -60,16 +70,15 @@ export default function createRecoveryMethodModel(
 			},
 			recoveryLastUpdated: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: true
 			}
 		},
 		{
 			sequelize,
-			tableName: 'RecoveryMethods',
-			timestamps: false
+			modelName: 'RecoveryMethod',
+			timestamps: true
 		}
 	);
-
 	return RecoveryMethod;
 }

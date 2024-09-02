@@ -6,6 +6,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface GuestbookEntryAttributes {
 	id: string;
@@ -37,35 +38,46 @@ export default function createGuestbookEntryModel(
 	GuestbookEntry.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			guestName: {
 				type: DataTypes.STRING,
-				allowNull: true
+				allowNull: true,
+				unique: false
 			},
 			guestEmail: {
 				type: DataTypes.STRING,
-				allowNull: true
+				allowNull: true,
+				unique: false
 			},
 			guestMessage: {
 				type: DataTypes.TEXT,
-				allowNull: false
+				allowNull: false,
+				unique: false
 			},
 			guestMessageStyles: {
 				type: DataTypes.JSON,
-				allowNull: true
+				allowNull: true,
+				unique: false
 			},
 			entryDate: {
 				type: DataTypes.DATE,
+				defaultValue: DataTypes.NOW,
 				allowNull: false,
-				defaultValue: DataTypes.NOW
+				unique: false
 			}
 		},
 		{
 			sequelize,
-			tableName: 'GuestbookEntries',
+			modelName: 'GuestbookEntry',
 			timestamps: false
 		}
 	);

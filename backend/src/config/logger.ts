@@ -1,5 +1,6 @@
-import { createLogger, format, Logger, transports } from 'winston';
+import { createLogger, format, Logger as WinstonLogger, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { environmentVariables } from './environmentConfig';
 
 const { colorize, combine, errors, json, printf, timestamp } = format;
 
@@ -14,13 +15,21 @@ export interface LoggerDependencies {
 	isProduction?: boolean | undefined;
 }
 
-function setupLogger({
-	logLevel = 'debug',
-	logDirectory = '../../data/logs/server/main',
-	serviceName = 'guestbook-service',
-	isProduction = process.env.NODE_ENV === 'development'
-}: LoggerDependencies = {}): Logger {
-	const logger = createLogger({
+// Singleton pattern to ensure only one instance of the logger is created
+let loggerInstance: WinstonLogger | null = null;
+
+export function setupLogger({
+	logLevel = environmentVariables.logLevel || 'debug',
+	logDirectory = environmentVariables.serverLogPath,
+	serviceName = environmentVariables.serviceName,
+	isProduction = environmentVariables.nodeEnv === 'development' // *DEV-NOTE* change default to production before deployment
+}: LoggerDependencies = {}): WinstonLogger {
+	// if logger instance already exists, return it
+	if (loggerInstance) {
+		return loggerInstance;
+	}
+
+	loggerInstance = createLogger({
 		level: isProduction ? 'info' : logLevel,
 		format: combine(
 			errors({ stack: true }),
@@ -47,7 +56,7 @@ function setupLogger({
 		]
 	});
 
-	return logger;
+	return loggerInstance;
 }
 
-export default setupLogger;
+export type Logger = WinstonLogger;

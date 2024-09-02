@@ -2,14 +2,14 @@ import { inRange } from 'range_check';
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { Logger } from '../config/logger';
+import { FeatureFlags } from '../config/environmentConfig';
 
 interface IpBlacklistDependencies {
-	logger: ReturnType<typeof import('../config/logger').default>;
-	featureFlags: ReturnType<
-		typeof import('../utils/featureFlags').getFeatureFlags
-	>;
+	logger: Logger;
+	featureFlags: FeatureFlags;
 	__dirname: string;
-	fsModule: typeof fs;
+	fsModule: typeof fs.promises;
 }
 
 interface IpBlacklist {
@@ -21,7 +21,7 @@ interface IpBlacklist {
 		res: Response,
 		next: NextFunction
 	) => void;
-	removeFromBlacklist: (ip: string) => void;
+	removeFromBlacklist: (ip: string) => Promise<void>;
 }
 
 let blacklist: string[] = [];
@@ -32,33 +32,45 @@ export function createIpBlacklist({
 	__dirname,
 	fsModule
 }: IpBlacklistDependencies): IpBlacklist {
-	const IP_BLACKLIST_ENABLED = featureFlags.enableIpBlacklistFlag;
-
 	const loadBlacklist = async (): Promise<void> => {
 		const filePath = path.join(__dirname, '../../data/blacklist.json');
 		try {
-			if (fsModule.existsSync(filePath)) {
-				const data = fsModule.readFileSync(filePath, 'utf8');
+			if (await fsModule.stat(filePath)) {
+				const data = await fsModule.readFile(filePath, 'utf8');
 				blacklist = JSON.parse(data);
 			}
 		} catch (err) {
-			logger.error(`Error loading blacklist: ${err}`);
+			if (err instanceof Error) {
+				logger.error(`Error loading blacklist: ${err.message}`, {
+					stack: err.stack
+				});
+			} else {
+				logger.error(`Unknown error loading blacklist: ${String(err)}`);
+			}
 		}
 	};
 
 	const saveBlacklist = async (): Promise<void> => {
-		if (IP_BLACKLIST_ENABLED) {
+		if (featureFlags.enableIpBlacklistFlag) {
 			const filePath = path.join(__dirname, '../../data/blacklist.json');
 			try {
-				fsModule.writeFileSync(filePath, JSON.stringify(blacklist));
+				await fsModule.writeFile(filePath, JSON.stringify(blacklist));
 			} catch (err) {
-				logger.error(`Error saving blacklist: ${err}`);
+				if (err instanceof Error) {
+					logger.error(`Error saving blacklist: ${err.message}`, {
+						stack: err.stack
+					});
+				} else {
+					logger.error(
+						`Unknown error saving blacklist: ${String(err)}`
+					);
+				}
 			}
 		}
 	};
 
 	const initializeBlacklist = async (): Promise<void> => {
-		if (IP_BLACKLIST_ENABLED) {
+		if (featureFlags.enableIpBlacklistFlag) {
 			logger.info(
 				'IP blacklist middleware is enabled. Initializing blacklist'
 			);
@@ -68,7 +80,18 @@ export function createIpBlacklist({
 					'Blacklist and range_check module loaded successfully'
 				);
 			} catch (err) {
-				logger.error(`Error during blacklist initialization: ${err}`);
+				if (err instanceof Error) {
+					logger.error(
+						`Error during blacklist initialization: ${err.message}`,
+						{
+							stack: err.stack
+						}
+					);
+				} else {
+					logger.error(
+						`Unknown error during blacklist initialization: ${String(err)}`
+					);
+				}
 				throw err;
 			}
 		} else {
@@ -77,16 +100,28 @@ export function createIpBlacklist({
 	};
 
 	const addToBlacklist = async (ip: string): Promise<void> => {
-		if (IP_BLACKLIST_ENABLED) {
-			logger.info('IP Blacklist is enabled. Adding IP to blacklist');
-			if (!blacklist.includes(ip)) {
-				blacklist.push(ip);
-				await saveBlacklist();
+		try {
+			if (featureFlags.enableIpBlacklistFlag) {
+				logger.info('IP Blacklist is enabled. Adding IP to blacklist');
+				if (!blacklist.includes(ip)) {
+					blacklist.push(ip);
+					await saveBlacklist();
+				} else {
+					logger.info('IP already in blacklist');
+				}
 			} else {
-				logger.info('IP already in blacklist');
+				logger.info('IP Blacklist is disabled');
 			}
-		} else {
-			logger.info('IP Blacklist is disabled');
+		} catch (err) {
+			if (err instanceof Error) {
+				logger.error(`Error adding IP to blacklist: ${err.message}`, {
+					stack: err.stack
+				});
+			} else {
+				logger.error(
+					`Unknown error adding IP to blacklist: ${String(err)}`
+				);
+			}
 		}
 	};
 
@@ -95,32 +130,64 @@ export function createIpBlacklist({
 		res: Response,
 		next: NextFunction
 	): void => {
-		if (IP_BLACKLIST_ENABLED) {
-			logger.info('IP Blacklist middleware enabled');
-			const clientIp = req.ip;
+		try {
+			if (featureFlags.enableIpBlacklistFlag) {
+				logger.info('IP Blacklist middleware enabled');
+				const clientIp = req.ip;
 
-			if (!clientIp) {
-				logger.error('Client IP not found');
-				res.status(500).json({ error: 'Bad request' });
-				return;
-			}
+				if (!clientIp) {
+					logger.error('Client IP not found');
+					res.status(500).json({ error: 'Bad request' });
+					return;
+				}
 
-			if (blacklist.some(range => inRange(clientIp, range))) {
-				logger.warn(`Blocked request from blacklisted IP: ${clientIp}`);
-				res.status(403).json({ error: 'Access denied' });
-				return;
+				if (blacklist.some(range => inRange(clientIp, range))) {
+					logger.warn(
+						`Blocked request from blacklisted IP: ${clientIp}`
+					);
+					res.status(403).json({ error: 'Access denied' });
+					return;
+				}
+			} else {
+				logger.info('IP Blacklist middleware disabled');
 			}
-		} else {
-			logger.info('IP Blacklist middleware disabled');
+		} catch (err) {
+			if (err instanceof Error) {
+				logger.error(
+					`Error in IP blacklist middleware: ${err.message}`,
+					{
+						stack: err.stack
+					}
+				);
+			} else {
+				logger.error(
+					`Unknown error in IP blacklist middleware: ${String(err)}`
+				);
+			}
 		}
 
 		next();
 	};
 
-	const removeFromBlacklist = (ip: string): void => {
-		if (IP_BLACKLIST_ENABLED) {
-			blacklist = blacklist.filter(range => range !== ip);
-			saveBlacklist();
+	const removeFromBlacklist = async (ip: string): Promise<void> => {
+		try {
+			if (featureFlags.enableIpBlacklistFlag) {
+				blacklist = blacklist.filter(range => range !== ip);
+				await saveBlacklist();
+			}
+		} catch (err) {
+			if (err instanceof Error) {
+				logger.error(
+					`Error removing IP from blacklist: ${err.message}`,
+					{
+						stack: err.stack
+					}
+				);
+			} else {
+				logger.error(
+					`Unknown error removing IP from blacklist: ${String(err)}`
+				);
+			}
 		}
 	};
 

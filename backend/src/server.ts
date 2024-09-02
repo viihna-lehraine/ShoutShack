@@ -17,10 +17,14 @@ import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp } from './config/app';
 import { getSequelizeInstance, initializeDatabase } from './config/db';
-import { environmentVariables } from './config/environmentVariables';
-import { FeatureFlags, getFeatureFlags } from './utils/featureFlags';
+import {
+	environmentVariables,
+	FeatureFlags,
+	getFeatureFlags,
+	loadEnv
+} from './config/environmentConfig';
 import { setupHttp } from './config/http';
-import setupLogger from './config/logger';
+import { setupLogger } from './config/logger';
 import configurePassport from './config/passport';
 import { getRedisClient } from './config/redis';
 import { createCsrfMiddleware } from './middleware/csrf';
@@ -41,7 +45,7 @@ const featureFlags: FeatureFlags = getFeatureFlags(logger);
 const csrfProtection = new csrf();
 const testRouter = createTestRouter({ logger });
 
-const staticRootPath = environmentVariables.STATIC_ROOT_PATH;
+const staticRootPath = environmentVariables.staticRootPath;
 
 logger.info(`Static root path defined as ${staticRootPath}`);
 
@@ -50,6 +54,10 @@ const __dirname = dirname(__filename);
 
 async function start(): Promise<void> {
 	try {
+		loadEnv({
+			logger
+		});
+
 		logger.info('Logger is working');
 
 		logger.info('Initializing database');

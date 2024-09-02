@@ -6,6 +6,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface MultiFactorAuthSetupAttributes {
 	mfaId: number;
@@ -46,15 +47,23 @@ export default function createMultiFactorAuthSetupModel(
 		{
 			mfaId: {
 				type: DataTypes.INTEGER,
+				primaryKey: true,
 				autoIncrement: true,
-				primaryKey: true
+				allowNull: false,
+				unique: true
 			},
 			id: {
-				type: DataTypes.STRING,
-				allowNull: false
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				allowNull: false,
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			userId: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
 				allowNull: false
 			},
 			method: {
@@ -72,7 +81,7 @@ export default function createMultiFactorAuthSetupModel(
 				allowNull: true
 			},
 			publicKey: {
-				type: DataTypes.STRING,
+				type: DataTypes.TEXT,
 				allowNull: true
 			},
 			counter: {
@@ -81,23 +90,23 @@ export default function createMultiFactorAuthSetupModel(
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: true
+				defaultValue: true,
+				allowNull: false
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: false
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: false
 			}
 		},
 		{
 			sequelize,
-			tableName: 'MultiFactorAuthSetups',
+			modelName: 'MultiFactorAuthSetup',
 			timestamps: true
 		}
 	);

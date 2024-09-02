@@ -1,7 +1,8 @@
 import { createClient, RedisClientType } from 'redis';
+import { Logger } from './logger';
 
 interface RedisDependencies {
-	logger: ReturnType<typeof import('./logger').default>;
+	logger: Logger;
 	getFeatureFlags: () => { enableRedisFlag: boolean };
 	createRedisClient: typeof createClient;
 	redisUrl: string;
@@ -29,9 +30,7 @@ export async function connectRedis({
 				reconnectStrategy: (retries) => {
 					logger.warn(`Redis retry attempt: ${retries}`);
 					if (retries >= 10) {
-						logger.error(
-							'Max retries reached. Could not connect to Redis.'
-						);
+						logger.error('Max retries reached. Could not connect to Redis.');
 						return new Error('Max retries reached');
 					}
 					return Math.min(retries * 100, 3000); // reconnect after increasing intervals up to 3 seconds
@@ -40,7 +39,11 @@ export async function connectRedis({
 		});
 
 		client.on('error', (err) => {
-			logger.error(`Redis client error: ${err}`);
+			if (err instanceof Error) {
+				logger.error(`Redis client error: ${err.message}`);
+			} else {
+				logger.error(`Redis client error: ${String(err)}`);
+			}
 		});
 
 		await client.connect();
@@ -49,7 +52,11 @@ export async function connectRedis({
 		redisClient = client;
 		return client;
 	} catch (err) {
-		logger.error(`Failed to connect to Redis: ${err}`);
+		if (err instanceof Error) {
+			logger.error(`Failed to connect to Redis: ${err.message}`);
+		} else {
+			logger.error(`Failed to connect to Redis: ${String(err)}`);
+		}
 		return null; // ensure no further Redis operations are attempted
 	}
 }

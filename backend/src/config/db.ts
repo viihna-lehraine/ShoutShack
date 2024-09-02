@@ -1,7 +1,7 @@
 import { Sequelize, Options } from 'sequelize';
-import { getFeatureFlags } from '../utils/featureFlags';
+import { getFeatureFlags } from './environmentConfig';
 import AppError from '../errors/AppError';
-import { Logger } from 'winston';
+import { Logger } from './logger';
 
 export interface DBSecrets {
 	DB_NAME: string;
@@ -27,17 +27,15 @@ export async function initializeDatabase({
 	const featureFlags = getFeatureFlags(logger);
 	const secrets: DBSecrets = await getSecrets();
 
-	const SEQUELIZE_LOGGING = featureFlags.sequelizeLoggingFlag;
-
 	if (!sequelize) {
 		logger.info(
-			`Sequelize logging set to ${SEQUELIZE_LOGGING}`
+			`Sequelize logging set to ${featureFlags.sequelizeLoggingFlag}`
 		);
 
 		const sequelizeOptions: Options = {
 			host: secrets.DB_HOST,
 			dialect: secrets.DB_DIALECT,
-			logging: SEQUELIZE_LOGGING ? (msg: string) => logger.info(msg) : false,
+			logging: featureFlags.sequelizeLoggingFlag ? (msg: string) => logger.info(msg) : false,
 		}
 
 		sequelize = new Sequelize(

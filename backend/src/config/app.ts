@@ -12,11 +12,10 @@ import { setupSecurityHeaders } from '../middleware/securityHeaders';
 import { initializeStaticRoutes } from '../routes/staticRoutes';
 import errorHandler from '../middleware/errorHandler';
 import { createCsrfMiddleware } from '../middleware/csrf';
-import { FeatureFlags, getFeatureFlags } from '../utils/featureFlags';
 import { getRedisClient } from '../config/redis';
 import { createIpBlacklist } from '../middleware/ipBlacklist';
-import setupLogger from './logger';
-import { createFeatureEnabler } from './setFeatureFlags';
+import { setupLogger } from './logger';
+import { createFeatureEnabler, FeatureFlags, getFeatureFlags } from './environmentConfig';
 
 const logger = setupLogger();
 const featureFlags: FeatureFlags = getFeatureFlags(logger);
@@ -77,8 +76,18 @@ export async function initializeApp({
 	logger.info('Initializing middleware');
 
 	// initialize Morgan logger
-	logger.info('Initializing Morgan logger');
-    app.use(morgan('combined', { stream: logger.stream }));
+	try {
+		logger.info('Initializing Morgan logger');
+    	app.use(morgan('combined', { stream: logger.stream }));
+	} catch (err) {
+		if (err instanceof Error) {
+			logger.error(`Error initializing Morgan logger: ${err.message}`, {
+				stack: err.stack
+			});
+		} else {
+			logger.error(`Unknown error initializing Morgan logger: ${String(err)}`);
+		}
+	}
 
 	// initialize cookie parser
 	logger.info('Initializing cookie parser');

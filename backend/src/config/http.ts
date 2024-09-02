@@ -6,7 +6,7 @@ import SopsDependencies from '../utils/sops';
 import { execSync } from 'child_process';
 import path from 'path';
 import { Logger } from 'winston';
-import { FeatureFlags } from '../utils/featureFlags';
+import { environmentVariables, FeatureFlags } from './environmentConfig';
 import { RedisClientType } from 'redis';
 import https from 'https';
 import http from 'http';
@@ -34,7 +34,7 @@ interface SSLKeys {
 
 type Options = SecureContextOptions;
 
-const SERVER_PORT = parseInt(process.env.SERVER_PORT ?? '3000', 10);
+const port = environmentVariables.serverPort;
 
 const ciphers = [
     'ECDHE-ECDSA-AES256-GCM-SHA384',
@@ -120,15 +120,15 @@ export async function setupHttp({
     let options: Options | undefined;
 
     if (featureFlags.enableSslFlag) {
-        logger.info(`SSL_FLAG is set to true, setting up HTTPS server on port ${SERVER_PORT}`);
+        logger.info(`SSL_FLAG is set to true, setting up HTTPS server on port ${port}`);
         options = await declareOptions({
             sops,
             fs: fsPromises,
             logger,
             constants,
             DECRYPT_KEYS: featureFlags.decryptKeysFlag,
-            SSL_KEY: process.env.SERVER_SSL_KEY_PATH || null,
-            SSL_CERT: process.env.SERVER_SSL_CERT_PATH || null,
+            SSL_KEY: environmentVariables.serverSslKeyPath || null,
+            SSL_CERT: environmentVariables.serverSslCertPath || null,
             ciphers
         });
     } else {
@@ -140,8 +140,8 @@ export async function setupHttp({
             ? https.createServer(options, app)
             : http.createServer(app);
 
-        server.listen(SERVER_PORT, () => {
-            logger.info(`Server running on port ${SERVER_PORT}`);
+        server.listen(port, () => {
+            logger.info(`Server running on port ${port}`);
         });
 
         gracefulShutdown(server, {

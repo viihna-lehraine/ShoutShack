@@ -1,11 +1,12 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import helmet, { HelmetOptions } from 'helmet';
-import setupLogger from '../config/logger';
+import { setupLogger } from '../config/logger';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
+import { environmentVariables } from 'src/config/environmentConfig';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;
@@ -16,7 +17,7 @@ interface SecurityHeadersDependencies {
 
 const logger = setupLogger({
 	serviceName: 'security-headers',
-	isProduction: process.env.NODE_ENV === 'development' // *DEV-NOTE* set to production before deployment
+	isProduction: environmentVariables.nodeEnv === 'production' // *DEV-NOTE* ensure this is set correctly before deployment
 });
 
 export function setupSecurityHeaders(
@@ -28,8 +29,17 @@ export function setupSecurityHeaders(
 ): void {
 	try {
 		app.use(helmet(helmetOptions));
+		logger.info('Helmet middleware applied successfully');
 	} catch (error) {
-		logger.error(`Failed to set helmet middleware ${error}`);
+		if (error instanceof Error) {
+			logger.error(`Failed to set helmet middleware: ${error.message}`, {
+				stack: error.stack
+			});
+		} else {
+			logger.error(
+				`Unknown error occurred in helmet middleware: ${String(error)}`
+			);
+		}
 	}
 
 	if (
@@ -46,10 +56,20 @@ export function setupSecurityHeaders(
 					.join(', ');
 
 				res.setHeader('Permissions-Policy', policies);
+				logger.info('Permissions-Policy header set successfully');
 			} catch (error) {
-				logger.error(
-					`Failed to set Permissions-Policy header: ${error}`
-				);
+				if (error instanceof Error) {
+					logger.error(
+						`Failed to set Permissions-Policy header: ${error.message}`,
+						{
+							stack: error.stack
+						}
+					);
+				} else {
+					logger.error(
+						`Unknown error occurred in Permissions-Policy header: ${String(error)}`
+					);
+				}
 			}
 			next();
 		});
@@ -64,16 +84,37 @@ export function setupSecurityHeaders(
 				reportOnly: false
 			})
 		);
+		logger.info('Content Security Policy applied successfully');
 	} catch (error) {
-		logger.error(`Failed to apply Content Security Policy: ${error}`);
+		if (error instanceof Error) {
+			logger.error(
+				`Failed to apply Content Security Policy: ${error.message}`,
+				{
+					stack: error.stack
+				}
+			);
+		} else {
+			logger.error(
+				`Unknown error occurred in Content Security Policy: ${String(error)}`
+			);
+		}
 	}
 
 	try {
 		app.use((req: Request, res: Response, next: NextFunction) => {
 			res.setHeader('Expect-CT', 'enforce, max-age=86400');
+			logger.info('Expect-CT header set successfully');
 			next();
 		});
 	} catch (error) {
-		logger.error(`Failed to set Expect-CT header: ${error}`);
+		if (error instanceof Error) {
+			logger.error(`Failed to set Expect-CT header: ${error.message}`, {
+				stack: error.stack
+			});
+		} else {
+			logger.error(
+				`Unknown error occurred in Expect-CT header: ${String(error)}`
+			);
+		}
 	}
 }

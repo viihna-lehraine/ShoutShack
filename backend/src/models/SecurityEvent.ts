@@ -6,6 +6,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface SecurityEventAttributes {
 	id: string;
@@ -41,17 +42,38 @@ export default function createSecurityEventModel(
 	SecurityEvent.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			eventId: {
-				type: DataTypes.STRING,
-				allowNull: false
+				type: DataTypes.INTEGER,
+				autoIncrement: true,
+				allowNull: true,
+				unique: true
 			},
 			eventType: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false,
+				validate: {
+					isIn: [
+						[
+							'login',
+							'failed-login',
+							'password-change',
+							'2fa-enabled',
+							'2fa-disabled',
+							'account-lock',
+							'other'
+						]
+					]
+				}
 			},
 			eventDescription: {
 				type: DataTypes.TEXT,
@@ -67,18 +89,19 @@ export default function createSecurityEventModel(
 			},
 			securityEventDate: {
 				type: DataTypes.DATE,
+				defaultValue: DataTypes.NOW,
 				allowNull: false
 			},
 			securityEventLastUpdated: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: false
 			}
 		},
 		{
 			sequelize,
-			tableName: 'SecurityEvents',
-			timestamps: false
+			modelName: 'SecurityEvent',
+			timestamps: true
 		}
 	);
 

@@ -1,10 +1,10 @@
-/// *DEV-NOTE* refactor to use environmentVariables
-
 import { execSync } from 'child_process';
 import path from 'path';
+import { Logger } from '../config/logger';
+import { environmentVariables } from 'src/config/environmentConfig';
 
 interface SopsDependencies {
-	logger: ReturnType<typeof import('../config/logger').default>;
+	logger: Logger;
 	execSync: typeof execSync;
 	getDirectoryPath: () => string;
 }
@@ -88,10 +88,10 @@ async function decryptDataFiles({
 }> {
 	try {
 		const filePaths = [
-			process.env.SERVER_DATA_FILE_PATH_1,
-			process.env.SERVER_DATA_FILE_PATH_2,
-			process.env.SERVER_DATA_FILE_PATH_3,
-			process.env.SERVER_DATA_FILE_PATH_4
+			environmentVariables.serverDataFilePath1,
+			environmentVariables.serverDataFilePath2,
+			environmentVariables.serverDataFilePath3,
+			environmentVariables.serverDataFilePath4
 		];
 
 		const decryptedFiles: { [key: string]: string } = {};

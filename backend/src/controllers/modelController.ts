@@ -1,13 +1,9 @@
 import { Request, Response } from 'express';
 import { Model, WhereOptions } from 'sequelize';
+import { Logger } from '../config/logger';
 
 interface ModelType extends Model {
 	id?: number | string;
-}
-
-interface Logger {
-	error: (msg: string, meta?: unknown) => void;
-	info: (msg: string, meta?: unknown) => void;
 }
 
 interface ModelControllerDependencies {
@@ -24,10 +20,17 @@ export const getEntries =
 		try {
 			const entries = await Model.findAll();
 			res.status(200).json(entries);
+			logger.info(`Fetched all entries from ${Model.name}`);
 		} catch (error) {
-			logger.error(
-				`Failed to fetch entries from ${Model.name}: ${String(error)}`
-			);
+			if (error instanceof Error) {
+				logger.error(
+					`Failed to fetch entries from ${Model.name}: ${error.message}`
+				);
+			} else {
+				logger.error(
+					`Failed to fetch entries from ${Model.name}: ${String(error)}`
+				);
+			}
 			res.status(500).json({
 				error: `Failed to fetch entries from ${Model.name} model`
 			});
@@ -44,10 +47,17 @@ export const createEntry =
 		try {
 			const newEntry = await Model.create(req.body);
 			res.status(201).json(newEntry);
+			logger.info(`Created a new entry in ${Model.name}`);
 		} catch (error) {
-			logger.error(
-				`Failed to create a new entry in ${Model.name}: ${String(error)}`
-			);
+			if (error instanceof Error) {
+				logger.error(
+					`Failed to create a new entry in ${Model.name}: ${error.message}`
+				);
+			} else {
+				logger.error(
+					`Failed to create a new entry in ${Model.name}: ${String(error)}`
+				);
+			}
 			res.status(400).json({
 				error: `Failed to create a new entry in ${Model.name}`
 			});
@@ -70,16 +80,24 @@ export const deleteEntry =
 				where: { id } as WhereOptions<T>
 			});
 			if (!deleted) {
+				logger.warn(`${Model.name} entry with id ${id} not found`);
 				res.status(404).json({
 					error: `${Model.name} entry not found`
 				});
 				return;
 			}
-			res.status(200).json({ message: `${Model.name} entry deleted ` });
+			res.status(200).json({ message: `${Model.name} entry deleted` });
+			logger.info(`Deleted ${Model.name} entry with id ${id}`);
 		} catch (error) {
-			logger.error(
-				`Failed to delete entry from ${Model.name}: ${String(error)}`
-			);
+			if (error instanceof Error) {
+				logger.error(
+					`Failed to delete entry from ${Model.name}: ${error.message}`
+				);
+			} else {
+				logger.error(
+					`Failed to delete entry from ${Model.name}: ${String(error)}`
+				);
+			}
 			res.status(500).json({
 				error: `Failed to delete entry from ${Model.name}`
 			});

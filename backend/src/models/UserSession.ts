@@ -6,6 +6,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface UserSessionAttributes {
 	id: string;
@@ -43,17 +44,25 @@ export default function createUserSessionModel(
 	UserSession.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			sessionId: {
 				type: DataTypes.INTEGER,
+				primaryKey: true,
+				autoIncrement: true,
 				allowNull: false,
-				autoIncrement: true
+				unique: true
 			},
 			userId: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
 				allowNull: false
 			},
 			ipAddress: {
@@ -66,12 +75,13 @@ export default function createUserSessionModel(
 			},
 			createdAt: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: false
 			},
 			updatedAt: {
 				type: DataTypes.DATE,
-				allowNull: true
+				allowNull: true,
+				defaultValue: undefined
 			},
 			expiresAt: {
 				type: DataTypes.DATE,
@@ -79,15 +89,23 @@ export default function createUserSessionModel(
 			},
 			isActive: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false,
 				defaultValue: true
 			}
 		},
 		{
 			sequelize,
-			tableName: 'UserSessions',
+			modelName: 'UserSession',
 			timestamps: true,
-			updatedAt: 'updatedAt'
+			hooks: {
+				beforeCreate: session => {
+					session.expiresAt = new Date(
+						(session.createdAt as Date).getTime() + 60 * 60000
+					); // default expiration time is 60 minutes after session generation
+				},
+				beforeUpdate: session => {
+					session.updatedAt = new Date(); // update the updatedAt field on every update
+				}
+			}
 		}
 	);
 

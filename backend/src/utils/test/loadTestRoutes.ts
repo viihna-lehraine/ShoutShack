@@ -1,5 +1,5 @@
 import express, { Application } from 'express';
-import { Logger } from 'winston';
+import { Logger } from '../../config/logger';
 
 interface LoadTestRoutesDependencies {
 	app: Application;

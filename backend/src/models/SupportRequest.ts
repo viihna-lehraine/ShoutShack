@@ -5,6 +5,7 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import { User } from './User';
 
 interface SupportRequestAttributes {
 	id: string;
@@ -40,9 +41,15 @@ export default function createSupportRequestModel(
 	SupportRequest.init(
 		{
 			id: {
-				type: DataTypes.STRING,
+				type: DataTypes.UUID,
+				defaultValue: DataTypes.UUIDV4,
+				primaryKey: true,
 				allowNull: false,
-				primaryKey: true
+				unique: true,
+				references: {
+					model: User,
+					key: 'id'
+				}
 			},
 			email: {
 				type: DataTypes.STRING,
@@ -50,12 +57,12 @@ export default function createSupportRequestModel(
 			},
 			supportTicketNumber: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
 				autoIncrement: true,
-				primaryKey: false // assuming the id is the primary key
+				allowNull: true,
+				unique: true
 			},
 			supportType: {
-				type: DataTypes.STRING,
+				type: DataTypes.TEXT,
 				allowNull: false
 			},
 			supportContent: {
@@ -64,23 +71,24 @@ export default function createSupportRequestModel(
 			},
 			isSupportTicketOpen: {
 				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: true
+				defaultValue: true,
+				allowNull: false
 			},
 			supportTicketOpenDate: {
 				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW,
+				allowNull: false
 			},
 			supportTicketCloseDate: {
 				type: DataTypes.DATE,
-				allowNull: true
+				allowNull: true,
+				defaultValue: undefined
 			}
 		},
 		{
 			sequelize,
-			tableName: 'SupportRequests',
-			timestamps: false
+			modelName: 'SupportRequest',
+			timestamps: true
 		}
 	);
 

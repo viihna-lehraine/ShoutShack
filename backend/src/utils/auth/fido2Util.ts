@@ -12,7 +12,7 @@ import {
 } from 'fido2-lib';
 import path from 'path';
 import sops, { SecretsMap } from '../../utils/sops';
-import setupLogger from '../../config/logger';
+import { setupLogger } from '../../config/logger';
 import { execSync } from 'child_process';
 
 let fido2: Fido2Lib | null = null;

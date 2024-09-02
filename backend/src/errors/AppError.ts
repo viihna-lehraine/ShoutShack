@@ -1,49 +1,23 @@
-interface AppErrorOptions {
-	message: string;
-	statusCode?: number;
-	isOperational?: boolean;
-	errorCode?: string;
-	details?: unknown;
+interface AppErrorDetails {
+	retryAfter?: number;
+	[key: string]: unknown;
 }
 
-interface AppErrorDependencies {
-	logger?: ReturnType<typeof import('../config/logger').default>;
-}
-
-class AppError extends Error {
-	public statusCode: number;
-	public isOperational: boolean;
-	public errorCode: string;
-	public details: unknown;
+export default class AppError extends Error {
+	public readonly statusCode: number;
+	public readonly errorCode?: string | undefined;
+	public readonly details?: AppErrorDetails | undefined;
 
 	constructor(
-		{
-			message,
-			statusCode = 500,
-			isOperational = true,
-			errorCode,
-			details
-		}: AppErrorOptions,
-		{ logger }: AppErrorDependencies = {}
+		message: string,
+		statusCode: number = 500,
+		errorCode?: string,
+		details?: AppErrorDetails
 	) {
 		super(message);
-
 		this.statusCode = statusCode;
-		this.isOperational = isOperational;
-		this.errorCode = errorCode || 'ERR_GENERIC';
+		this.errorCode = errorCode;
 		this.details = details;
-
-		if (logger) {
-			logger.error(`AppError: ${message}`, {
-				statusCode,
-				isOperational,
-				errorCode,
-				details
-			});
-		}
-
 		Error.captureStackTrace(this, this.constructor);
 	}
 }
-
-export default AppError;
