@@ -6,7 +6,6 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
-import { User } from './User';
 
 interface FeatureRequestAttributes {
 	featureRequestNumber: number; // primary key, auto-incremented
@@ -49,7 +48,7 @@ export default function createFeatureRequestModel(
 			},
 			id: {
 				type: DataTypes.STRING,
-				allowNull: false // foreign key rom the user table, should not be null
+				allowNull: true // foreign key rom the user table is optional (if false, rrequest is anonymous)
 			},
 			email: {
 				type: DataTypes.STRING,
@@ -83,13 +82,6 @@ export default function createFeatureRequestModel(
 			timestamps: true // automatically include createdAt and updatedAt timestamps
 		}
 	);
-
-	// define associations
-	FeatureRequest.belongsTo(User, {
-		foreignKey: 'id',
-		as: 'user',
-		onDelete: 'CASCADE'
-	});
 
 	return FeatureRequest;
 }

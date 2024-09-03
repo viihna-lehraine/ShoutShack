@@ -1,22 +1,29 @@
 import { config } from 'dotenv';
 import path from 'path';
 import { Logger, setupLogger } from './logger';
+import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 
 const logger = setupLogger();
 
 interface LoadEnvDependencies {
-	logger: {
-		info: (msg: string) => void;
-	};
-	envFilePath?: string; // optional, but allows overriding the default path
+	logger: Logger | Console;
+	envFilePath?: string; // allows override of default path
 }
 
 export function loadEnv({ logger, envFilePath }: LoadEnvDependencies): void {
-	const envPath =
-		envFilePath || path.join(process.cwd(), './backend.dev.env');
-	logger.info(`Loading environment variables from ${envPath}`);
+	try {
+		validateDependencies(
+			[{ name: 'logger', instance: logger }],
+			logger || console
+		);
+		const envPath =
+			envFilePath || path.join(process.cwd(), './backend.dev.env');
+		logger.info(`Loading environment variables from ${envPath}`);
 
-	config({ path: envPath });
+		config({ path: envPath });
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+	}
 }
 
 loadEnv({ logger});
@@ -53,7 +60,7 @@ interface EnvironmentVariableTypes {
 	frontendSecurityMdPath: string;
 	frontendSecretsPath: string;
 	frontendSitemapXmlPath: string;
-	loggerLevel: number;
+	loggerLevel: string;
 	logLevel: 'debug' | 'info' | 'warn' | 'error';
 	nodeEnv: 'development' | 'production';
 	serverDataFilePath1: string;
@@ -102,7 +109,7 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	frontendSecurityMdPath: process.env.FRONTEND_SECURITY_MD_PATH || '',
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH || '',
 	frontendSitemapXmlPath: process.env.FRONTEND_SITEMAP_XML_PATH || '',
-	loggerLevel: parseInt(process.env.LOGGER || '1', 10),
+	loggerLevel: process.env.LOGGER || '1',
 	logLevel: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
 	nodeEnv: process.env.NODE_ENV as 'development' | 'production',
 	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1 || '',
@@ -155,90 +162,145 @@ export interface FeatureFlags {
 
 export function parseBoolean(
 	value: string | boolean | undefined,
-	logger: Logger
+	logger: Logger | Console
 ): boolean {
-	if (value === undefined) {
-		logger.warn('Feature flag value is undefined. Defaulting to false');
+	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'value', instance: value }
+			],
+			logger
+		)
+
+		if (value === undefined) {
+			logger.warn('Feature flag value is undefined. Defaulting to false');
+			return false;
+		}
+		if (typeof value === 'string') {
+			return value.toLowerCase() === 'true';
+		}
+		return value === true;
+	} catch (error) {
+		handleGeneralError(error, logger || console);
 		return false;
 	}
-	if (typeof value === 'string') {
-		return value.toLowerCase() === 'true';
-	}
-	return value === true;
 }
 
 export function getFeatureFlags(
-	logger: Logger,
+	logger: Logger | Console,
 	env: Partial<NodeJS.ProcessEnv> = process.env
 ): FeatureFlags {
-	return {
-		apiRoutesCsrfFlag: parseBoolean(env.FEATURE_API_ROUTES_CSRF, logger),
-		dbSyncFlag: parseBoolean(env.FEATURE_DB_SYNC, logger),
-		decryptKeysFlag: parseBoolean(env.FEATURE_DECRYPT_KEYS, logger),
-		enableCsrfFlag: parseBoolean(env.FEATURE_ENABLE_CSRF, logger),
-		enableErrorHandlerFlag: parseBoolean(
-			env.FEATURE_ENABLE_ERROR_HANDLER,
-			logger
-		),
-		enableIpBlacklistFlag: parseBoolean(
-			env.FEATURE_ENABLE_IP_BLACKLIST,
-			logger
-		),
-		enableJwtAuthFlag: parseBoolean(env.FEATURE_ENABLE_JWT_AUTH, logger),
-		enableRateLimitFlag: parseBoolean(
-			env.FEATURE_ENABLE_RATE_LIMIT,
-			logger
-		),
-		enableRedisFlag: parseBoolean(env.FEATURE_ENABLE_REDIS, logger),
-		enableSslFlag: parseBoolean(env.FEATURE_ENABLE_SSL, logger),
-		httpsRedirectFlag: parseBoolean(env.FEATURE_HTTPS_REDIRECT, logger),
-		loadTestRoutesFlag: parseBoolean(env.FEATURE_LOAD_TEST_ROUTES, logger),
-		secureHeadersFlag: parseBoolean(env.FEATURE_SECURE_HEADERS, logger),
-		sequelizeLoggingFlag: parseBoolean(
-			env.FEATURE_SEQUELIZE_LOGGING,
-			logger
-		)
-	};
+	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'env', instance: env }
+			],
+			logger || console
+		);
+
+		return {
+			apiRoutesCsrfFlag: parseBoolean(env.FEATURE_API_ROUTES_CSRF, logger),
+			dbSyncFlag: parseBoolean(env.FEATURE_DB_SYNC, logger),
+			decryptKeysFlag: parseBoolean(env.FEATURE_DECRYPT_KEYS, logger),
+			enableCsrfFlag: parseBoolean(env.FEATURE_ENABLE_CSRF, logger),
+			enableErrorHandlerFlag: parseBoolean(
+				env.FEATURE_ENABLE_ERROR_HANDLER,
+				logger
+			),
+			enableIpBlacklistFlag: parseBoolean(
+				env.FEATURE_ENABLE_IP_BLACKLIST,
+				logger
+			),
+			enableJwtAuthFlag: parseBoolean(env.FEATURE_ENABLE_JWT_AUTH, logger),
+			enableRateLimitFlag: parseBoolean(
+				env.FEATURE_ENABLE_RATE_LIMIT,
+				logger
+			),
+			enableRedisFlag: parseBoolean(env.FEATURE_ENABLE_REDIS, logger),
+			enableSslFlag: parseBoolean(env.FEATURE_ENABLE_SSL, logger),
+			httpsRedirectFlag: parseBoolean(env.FEATURE_HTTPS_REDIRECT, logger),
+			loadTestRoutesFlag: parseBoolean(env.FEATURE_LOAD_TEST_ROUTES, logger),
+			secureHeadersFlag: parseBoolean(env.FEATURE_SECURE_HEADERS, logger),
+			sequelizeLoggingFlag: parseBoolean(
+				env.FEATURE_SEQUELIZE_LOGGING,
+				logger
+			)
+		}
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		logger.error(`Returning 'false' for all feature flags`);
+		return {
+			apiRoutesCsrfFlag: false,
+			dbSyncFlag: false,
+			decryptKeysFlag: false,
+			enableCsrfFlag: false,
+			enableErrorHandlerFlag: false,
+			enableIpBlacklistFlag: false,
+			enableJwtAuthFlag: false,
+			enableRateLimitFlag: false,
+			enableRedisFlag: false,
+			enableSslFlag: false,
+			httpsRedirectFlag: false,
+			loadTestRoutesFlag: false,
+			secureHeadersFlag: false,
+			sequelizeLoggingFlag: false
+		}
+	}
 }
 
 export function createFeatureEnabler(logger: Logger) {
-    return {
-        enableFeatureBasedOnFlag(
-			flag: boolean,
-			description: string,
-			callback: () => void
-		) {
-            if (flag) {
-                logger.info(
-					`Enabling ${description} (flag is ${flag})`
-				);
-                callback();
-            } else {
-                logger.info(
-					`Skipping ${description} (flag is ${flag})`
-				);
-            }
-        },
-        enableFeatureWithProdOverride(
-			flag: boolean,
-			description: string,
-			callback: () => void
-		) {
-            if (process.env.NODE_ENV === 'production') {
-                logger.info(
-					`Enabling ${description} in production regardless of flag value.`
-				);
-                callback();
-            } else if (flag) {
-                logger.info(
-					`Enabling ${description} (flag is ${flag})`
-				);
-                callback();
-            } else {
-                logger.info(
-					`Skipping ${description} (flag is ${flag})`
-				);
-            }
-        },
-    };
+	try {
+		validateDependencies(
+			[{ name: 'logger', instance: logger }],
+			logger || console
+		);
+
+    	return {
+    	    enableFeatureBasedOnFlag(
+				flag: boolean,
+				description: string,
+				callback: () => void
+			) {
+    	        if (flag) {
+    	            logger.info(
+						`Enabling ${description} (flag is ${flag})`
+					);
+    	            callback();
+    	        } else {
+    	            logger.info(
+						`Skipping ${description} (flag is ${flag})`
+					);
+    	        }
+    	    },
+    	    enableFeatureWithProdOverride(
+				flag: boolean,
+				description: string,
+				callback: () => void
+			) {
+    	        if (process.env.NODE_ENV === 'production') {
+    	            logger.info(
+						`Enabling ${description} in production regardless of flag value.`
+					);
+    	            callback();
+    	        } else if (flag) {
+    	            logger.info(
+						`Enabling ${description} (flag is ${flag})`
+					);
+    	            callback();
+    	        } else {
+    	            logger.info(
+						`Skipping ${description} (flag is ${flag})`
+					);
+    	        }
+    	    },
+    	};
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		return {
+			enableFeatureBasedOnFlag: () => {},
+			enableFeatureWithProdOverride: () => {}
+		};
+	}
 }

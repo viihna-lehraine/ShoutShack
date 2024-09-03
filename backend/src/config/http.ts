@@ -1,16 +1,18 @@
-import { Application } from 'express';
-import { Sequelize } from 'sequelize';
-import { SecureContextOptions } from 'tls';
-import { constants as cryptoConstants } from 'crypto';
-import SopsDependencies from '../utils/sops';
 import { execSync } from 'child_process';
-import path from 'path';
-import { Logger } from 'winston';
-import { environmentVariables, FeatureFlags } from './environmentConfig';
-import { RedisClientType } from 'redis';
-import https from 'https';
+import { constants as cryptoConstants } from 'crypto';
+import { Application } from 'express';
 import http from 'http';
 import gracefulShutdown from 'http-graceful-shutdown';
+import https from 'https';
+import path from 'path';
+import { Sequelize } from 'sequelize';
+import { SecureContextOptions } from 'tls';
+import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import SopsDependencies from '../utils/sops';
+import { environmentVariables, FeatureFlags } from './environmentConfig';
+import { Logger } from './logger';
+import { RedisClientType } from 'redis';
+import { validate } from 'node-cron';
 
 interface SetupHttpParams {
     app: Application;
@@ -18,7 +20,7 @@ interface SetupHttpParams {
     fs: typeof import('fs').promises;
     logger: Logger;
     constants: typeof cryptoConstants;
-    getFeatureFlags: () => FeatureFlags;
+    featureFlags: FeatureFlags;
     getRedisClient: () => RedisClientType | null;
     getSequelizeInstance: () => Sequelize;
 }
@@ -68,16 +70,30 @@ async function declareOptions({
     SSL_CERT: string | null;
     ciphers: string[];
 }): Promise<Options> {
-    let sslKeys: SSLKeys;
-
     try {
+		validateDependencies(
+			[
+				{name: 'sops', instance: sops},
+				{name: 'fs', instance: fs},
+				{name: 'logger', instance: logger },
+				{name: 'constants', instance: constants},
+				{name: 'DECRYPT_KEYS', instance: DECRYPT_KEYS},
+				{name: 'SSL_KEY', instance: SSL_KEY},
+				{name: 'SSL_CERT', instance: SSL_CERT},
+				{name: 'ciphers', instance: ciphers}
+			],
+			logger || console
+		);
+
+		let sslKeys: SSLKeys;
+
         if (DECRYPT_KEYS) {
             sslKeys = await sops.getSSLKeys({
                 logger,
                 execSync,
                 getDirectoryPath: () => path.resolve(process.cwd())
             });
-            logger.info('SSL Keys retrieved via sops.getSSLKeys()');
+            logger.info('SSL Keys retrieved');
         } else {
             if (!SSL_KEY || !SSL_CERT) {
                 throw new Error('SSL_KEY or SSL_CERT environment variable is not set');
@@ -93,98 +109,116 @@ async function declareOptions({
             key: sslKeys.key,
             cert: sslKeys.cert,
             secureOptions:
-				constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
+                constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1,
             ciphers: ciphers.join(':'),
             honorCipherOrder: true
         };
     } catch (error) {
-        logger.error(`Failed to declare SSL options: ${error}`);
+        handleGeneralError(error, logger || console);
         throw error;
     }
 }
 
-// Main function to set up HTTP or HTTPS server
+// main function to set up HTTP or HTTPS server
 export async function setupHttp({
     app,
     sops,
     fs: fsPromises,
     logger,
     constants,
-    getFeatureFlags,
+    featureFlags,
     getRedisClient,
     getSequelizeInstance
-}: SetupHttpParams): Promise<SetupHttpReturn> {
-    logger.info('setupHttp() executing');
+}: SetupHttpParams): Promise<SetupHttpReturn | undefined> {
+    try {
+        logger.info('setupHttp() executing');
 
-    const featureFlags = getFeatureFlags();
-    let options: Options | undefined;
+        validateDependencies(
+            [
+                { name: 'app', instance: app },
+                { name: 'sops', instance: sops },
+                { name: 'fs', instance: fsPromises },
+                { name: 'logger', instance: logger },
+                { name: 'constants', instance: constants },
+                { name: 'featureFlags', instance: featureFlags },
+                { name: 'getRedisClient', instance: getRedisClient },
+                { name: 'getSequelizeInstance', instance: getSequelizeInstance }
+            ],
+            logger || console
+        );
 
-    if (featureFlags.enableSslFlag) {
-        logger.info(`SSL_FLAG is set to true, setting up HTTPS server on port ${port}`);
-        options = await declareOptions({
-            sops,
-            fs: fsPromises,
-            logger,
-            constants,
-            DECRYPT_KEYS: featureFlags.decryptKeysFlag,
-            SSL_KEY: environmentVariables.serverSslKeyPath || null,
-            SSL_CERT: environmentVariables.serverSslCertPath || null,
-            ciphers
-        });
-    } else {
-        logger.info('SSL_FLAG is set to false, setting up HTTP server');
-    }
+        let options: Options | undefined;
 
-    function startServer() {
-        const server = options
-            ? https.createServer(options, app)
-            : http.createServer(app);
+        if (featureFlags.enableSslFlag) {
+            logger.info(`SSL_FLAG is set to true, setting up HTTPS server on port ${port}`);
+            options = await declareOptions({
+                sops,
+                fs: fsPromises,
+                logger,
+                constants,
+                DECRYPT_KEYS: featureFlags.decryptKeysFlag,
+                SSL_KEY: environmentVariables.serverSslKeyPath || null,
+                SSL_CERT: environmentVariables.serverSslCertPath || null,
+                ciphers
+            });
+        } else {
+            logger.info('SSL_FLAG is set to false, setting up HTTP server');
+        }
 
-        server.listen(port, () => {
-            logger.info(`Server running on port ${port}`);
-        });
+        function startServer() {
+            const server = options
+                ? https.createServer(options, app)
+                : http.createServer(app);
 
-        gracefulShutdown(server, {
-            signals: 'SIGINT SIGTERM',
-            timeout: 30000,
-            onShutdown: async () => {
-                logger.info('Cleaning up resources before shutdown');
+            server.listen(port, () => {
+                logger.info(`Server running on port ${port}`);
+            });
 
-                const sequelize: Sequelize = getSequelizeInstance();
+            gracefulShutdown(server, {
+                signals: 'SIGINT SIGTERM',
+                timeout: 30000,
+                onShutdown: async () => {
+                    logger.info('Cleaning up resources before shutdown');
 
-                try {
-                    await sequelize.close();
-                    logger.info('Database connection closed');
-                } catch (error) {
-                    logger.error(`Error closing database connection: ${error}`);
-                }
-
-                if (featureFlags.enableRedisFlag) {
-                    logger.info('REDIS_FLAG is set to true. Closing redis connection');
+                    const sequelize: Sequelize = getSequelizeInstance();
 
                     try {
-                        const redisClient = getRedisClient();
-                        if (redisClient) {
-                            await redisClient.quit();
-                            logger.info('Redis connection closed');
-                        }
+                        await sequelize.close();
+                        logger.info('Database connection closed');
                     } catch (error) {
-                        logger.error(`Error closing redis connection: ${error}`);
+                        handleGeneralError(error, logger);
+                    }
+
+                    if (featureFlags.enableRedisFlag) {
+                        logger.info('REDIS_FLAG is set to true. Closing redis connection');
+
+                        try {
+                            const redisClient = getRedisClient();
+                            if (redisClient) {
+                                await redisClient.quit();
+                                logger.info('Redis connection closed');
+                            }
+                        } catch (error) {
+                            handleGeneralError(error, logger);
+                        }
+                    }
+
+                    try {
+                        await new Promise<void>((resolve) => {
+                            logger.close();
+                            resolve();
+                        });
+                        console.log('Logger closed');
+                    } catch (error) {
+                        handleGeneralError(error, logger);
                     }
                 }
+            });
+        }
 
-                try {
-                    await new Promise<void>((resolve) => {
-                        logger.close();
-                        resolve();
-                    });
-                    console.log('Logger closed');
-                } catch (error) {
-                    logger.error(`Error closing logger: ${error}`);
-                }
-            }
-        });
+        return { startServer };
+    } catch (error) {
+        handleGeneralError(error, logger || console);
+        return undefined;
     }
-
-    return { startServer };
 }

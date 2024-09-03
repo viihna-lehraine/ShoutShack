@@ -28,28 +28,48 @@ export default async function createEmail2FAUtil({
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
-	const secrets: Secrets = await getSecrets();
+	let secrets: Secrets;
 
-	if (!secrets) {
-		throw new Error('Secrets could not be loaded');
+	try {
+		secrets = await getSecrets();
+
+		if (!secrets.EMAIL_2FA_KEY) {
+			logger.error('Missing EMAIL_2FA_KEY in secrets');
+		}
+	} catch (err) {
+		logger.error(
+			`Failed to load secrets: ${err instanceof Error ? err.message : String(err)}`
+		);
+		logger.error(
+			'Email 2FA functionality will not work. Secrets could not be loaded'
+		);
 	}
 
+	// generate a 2FA code and corresponding JWT token
 	async function generateEmail2FACode(): Promise<{
 		email2FACode: string;
 		email2FAToken: string;
 	}> {
-		const email2FACode = await bcrypt.genSalt(6); // generates a 6-character hex code
-		const email2FAToken = jwt.sign(
-			{ email2FACode },
-			secrets.EMAIL_2FA_KEY,
-			{
-				expiresIn: '30m'
-			}
-		);
-		return {
-			email2FACode, // raw 2FA code
-			email2FAToken // JWT containing the 2FA code
-		};
+		try {
+			const email2FACode = await bcrypt.genSalt(6);
+			const email2FAToken = jwt.sign(
+				{ email2FACode },
+				secrets.EMAIL_2FA_KEY,
+				{
+					expiresIn: '30m'
+				}
+			);
+
+			return {
+				email2FACode, // raw 2FA code
+				email2FAToken // JWT containing the 2FA code
+			};
+		} catch (err) {
+			logger.error(
+				`Error generating email 2FA code: ${err instanceof Error ? err.message : String(err)}`
+			);
+			throw new Error('Failed to generate email 2FA code');
+		}
 	}
 
 	async function verifyEmail2FACode(
@@ -57,15 +77,29 @@ export default async function createEmail2FAUtil({
 		email2FACode: string
 	): Promise<boolean> {
 		try {
-			const decodedEmail2FACode = jwt.verify(
+			const decoded = jwt.verify(
 				token,
 				secrets.EMAIL_2FA_KEY
 			) as JwtPayload;
 
-			// Ensure the decoded 2FA code matches the one provided
-			return decodedEmail2FACode.email2FACode === email2FACode;
+			if (!decoded || typeof decoded.email2FACode !== 'string') {
+				logger.warn(
+					'Invalid token structure during email 2FA verification'
+				);
+				return false;
+			}
+
+			// ensure the decoded 2FA code matches the one provided
+			return decoded.email2FACode === email2FACode;
 		} catch (err) {
-			logger.error(String(err));
+			if (err instanceof jwt.JsonWebTokenError) {
+				logger.warn(`
+					JWT error during email 2FA verification: ${err.message}`);
+			} else {
+				logger.error(
+					`Error verifying email 2FA code: ${err instanceof Error ? err.message : String(err)}`
+				);
+			}
 			return false;
 		}
 	}

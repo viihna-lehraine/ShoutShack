@@ -1,5 +1,9 @@
 import os from 'os';
 import { Logger } from '../config/logger';
+import {
+	validateDependencies,
+	handleGeneralError
+} from '../middleware/errorHandler';
 
 interface MemoryStats {
 	rss: string;
@@ -24,24 +28,43 @@ export function createMemoryMonitor({
 }: MemoryMonitorDependencies): {
 	startMemoryMonitor: () => NodeJS.Timeout;
 } {
-	function logMemoryUsage(): void {
-		const memoryUsage = process.memoryUsage();
-		const memoryStats: MemoryStats = {
-			rss: (memoryUsage.rss / 1024 / 1024).toFixed(2),
-			heapTotal: (memoryUsage.heapTotal / 1024 / 1024).toFixed(2),
-			heapUsed: (memoryUsage.heapUsed / 1024 / 1024).toFixed(2),
-			external: (memoryUsage.external / 1024 / 1024).toFixed(2),
-			available: (os.freemem() / 1024 / 1024).toFixed(2)
-		};
-
-		logger.info(
-			`Memory usage (MB): RSS: ${memoryStats.rss}, Heap Total: ${memoryStats.heapTotal}, Heap Used: ${memoryStats.heapUsed}, External: ${memoryStats.external}, System Available: ${memoryStats.available}`
+	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'os', instance: os },
+				{ name: 'process', instance: process },
+				{ name: 'setInterval', instance: setInterval }
+			],
+			logger
 		);
-	}
 
-	function startMemoryMonitor(): NodeJS.Timeout {
-		return setInterval(logMemoryUsage, 300000);
-	}
+		function logMemoryUsage(): void {
+			try {
+				const memoryUsage = process.memoryUsage();
+				const memoryStats: MemoryStats = {
+					rss: (memoryUsage.rss / 1024 / 1024).toFixed(2),
+					heapTotal: (memoryUsage.heapTotal / 1024 / 1024).toFixed(2),
+					heapUsed: (memoryUsage.heapUsed / 1024 / 1024).toFixed(2),
+					external: (memoryUsage.external / 1024 / 1024).toFixed(2),
+					available: (os.freemem() / 1024 / 1024).toFixed(2)
+				};
 
-	return { startMemoryMonitor };
+				logger.info(
+					`Memory usage (MB): RSS: ${memoryStats.rss}, Heap Total: ${memoryStats.heapTotal}, Heap Used: ${memoryStats.heapUsed}, External: ${memoryStats.external}, System Available: ${memoryStats.available}`
+				);
+			} catch (error) {
+				handleGeneralError(error, logger);
+			}
+		}
+
+		function startMemoryMonitor(): NodeJS.Timeout {
+			return setInterval(logMemoryUsage, 300000);
+		}
+
+		return { startMemoryMonitor };
+	} catch (error) {
+		handleGeneralError(error, logger);
+		throw error;
+	}
 }

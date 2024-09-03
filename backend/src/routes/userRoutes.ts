@@ -84,31 +84,30 @@ export default function createUserRoutes({
 }: UserRouteDependencies): Router {
 	const router = express.Router();
 
-	// Password strength checker
+	// password strength checker
 	const checkPasswordStrength = (password: string): boolean => {
 		const { score } = zxcvbn(password);
 		return score >= 3;
 	};
 
-	// Register
+	// register
 	router.post('/register', async (req: Request, res: Response) => {
 		try {
 			const { username, email, password, confirmPassword } = req.body;
 
-			// Sanitize inputs
 			const sanitizedUsername = xss(username);
 			const sanitizedEmail = xss(email);
 			const sanitizedPassword = xss(password);
 
 			if (sanitizedPassword !== confirmPassword) {
-				logger.info('Registration failure: passwords do not match');
+				logger.debug('Registration failure: passwords do not match');
 				return res.status(400).json({
 					password: 'Registration failure: passwords do not match'
 				});
 			}
 
 			if (!User.validatePassword(sanitizedPassword)) {
-				logger.info(
+				logger.debug(
 					'Registration failure: passwords do not meet complexity requirements'
 				);
 				return res.status(400).json({
@@ -118,7 +117,7 @@ export default function createUserRoutes({
 			}
 
 			if (!checkPasswordStrength(sanitizedPassword)) {
-				logger.info('Registration failure: password is too weak');
+				logger.debug('Registration failure: password is too weak');
 				return res.status(400).json({
 					password: 'Registration failure: password is too weak'
 				});
@@ -138,7 +137,7 @@ export default function createUserRoutes({
 				);
 				return res.status(400).json({
 					password:
-						'Registration warning: password has been exposed in a data breach'
+						'Warning! This password has been exposed in a data breach and should not be used. Please consider using a different password'
 				});
 			}
 
@@ -170,7 +169,7 @@ export default function createUserRoutes({
 				creationDate: new Date()
 			});
 
-			// Generate a confirmation token
+			// generate a confirmation token
 			const confirmationToken = jwt.sign(
 				{ id: newUser.id },
 				secrets.JWT_SECRET,
@@ -178,7 +177,7 @@ export default function createUserRoutes({
 			);
 			const confirmationUrl = `http://localhost:${port}/api/users/confirm/${confirmationToken}`;
 
-			// Send confirmation email
+			// send the user a confirmation email
 			const mailOptions = {
 				from: environmentVariables.emailUser,
 				to: newUser.email,
@@ -198,27 +197,28 @@ export default function createUserRoutes({
 
 			await transporter.sendMail(mailOptions);
 
-			logger.info('User registration complete');
+			logger.info(
+				`User registration for ${newUser} is complete. An account confirmation email has been sent.`
+			);
 			return res.json({
 				message:
-					'Registration successful. Please check your email to confirm your account.'
+					'Your account has been successfully registered! Please check your email to confirm your account.'
 			});
 		} catch (err) {
 			logger.error(
 				`User Registration: server error: ${err instanceof Error ? err.message : String(err)}`
 			);
-			return res
-				.status(500)
-				.json({ error: 'User registration: server error' });
+			return res.status(500).json({
+				error: 'Registration failed due to an unknown error. Please try again. If the issue persists, please contact support '
+			});
 		}
 	});
 
-	// Login
+	// login
 	router.post('/login', async (req: Request, res: Response) => {
 		try {
 			const { email, password } = req.body;
 
-			// sanitize inputs
 			const sanitizedEmail = xss(email);
 			const sanitizedPassword = xss(password);
 
@@ -227,7 +227,7 @@ export default function createUserRoutes({
 			});
 
 			if (!user) {
-				logger.info('400 - User not found');
+				logger.debug('400 - User not found');
 				return res.status(400).json({ email: 'User not found' });
 			}
 
@@ -254,11 +254,11 @@ export default function createUserRoutes({
 		}
 	});
 
-	// Password Recovery (simplified)
+	// password recovery, simplified
 	router.post('/recover-password', async (req: Request, res: Response) => {
 		const { email } = req.body;
 
-		// Sanitize inputs
+		// sanitize inputs
 		const sanitizedEmail = xss(email);
 
 		try {
@@ -267,18 +267,20 @@ export default function createUserRoutes({
 			});
 			if (!user) {
 				logger.error('Recover password: User not found');
-				return res.status(404).json({ email: 'User not found' });
+				return res.status(404).json({
+					email: 'Unable to find your user account. Please try again. If the issue persists, please contact support'
+				});
 			}
-			// Generate a token (customize this later)
+			// generate a token *DEV-NOTE* (customize this later)
 			const token = await bcrypt.genSalt(25);
 
-			// Store the token in the database (simplified for now)
+			// store token in the database // *DEV-NOTE* this has been intentionally simplified for now; this will need to be stored in a separate table which should be defined at a later time
 			user.resetPasswordToken = token;
 			user.resetPasswordExpires = new Date(Date.now() + 1800000); // 30 min
 			await user.save();
 
-			// Send password reset email
-			logger.info(`Password reset link sent to user ${user.email}`);
+			// send password reset email
+			logger.debug(`Password reset link sent to user ${user.email}`);
 			return res.json({
 				message: `Password reset link sent to ${user.email}`
 			});
@@ -286,13 +288,13 @@ export default function createUserRoutes({
 			logger.error(
 				`Password Recovery - Server error: ${err instanceof Error ? err.message : String(err)}`
 			);
-			return res
-				.status(500)
-				.json({ error: 'Password Recovery - Server error' });
+			return res.status(500).json({
+				error: 'Password recovery failed due to an unknown server error. Please try again. If the issue persists, please contact support'
+			});
 		}
 	});
 
-	// Route for TOTP secret generation
+	// route for TOTP secret generation
 	router.post('/generate-totp', async (req: Request, res: Response) => {
 		try {
 			const { base32, otpauth_url } = totpUtil.generateTOTPSecret();
@@ -302,31 +304,34 @@ export default function createUserRoutes({
 			logger.error(
 				`Error generating TOTP secret: ${err instanceof Error ? err.message : String(err)}`
 			);
-			return res.status(500).json({ error: 'Internal server error' });
+			return res.status(500).json({
+				error: 'Unable to generate TOTP secret. Please try again. If the issue persists, please contact support'
+			});
 		}
 	});
 
-	// Route to verify TOTP tokens
+	// route for TOTP token verification
 	router.post('/verify-totp', async (req: Request, res: Response) => {
 		const { token, secret } = req.body;
 
 		try {
-			// Verify TOTP token using the secret
+			// verify TOTP token using the secret
 			const isTOTPTokenValid = totpUtil.verifyTOTPToken(secret, token);
 			return res.json({ isTOTPTokenValid });
 		} catch (err) {
 			logger.error(
 				`Error verifying TOTP token: ${err instanceof Error ? err.message : String(err)}`
 			);
-			return res.status(500).json({ error: 'Internal server error' });
+			return res.status(500).json({
+				error: 'Unable to verify TOTP token. Please try again. If the issue persists, please contact support'
+			});
 		}
 	});
 
-	// Route to generate and send 2FA codes by email
+	// route to generate and send 2FA codes by email
 	router.post('/generate-2fa', async (req: Request, res: Response) => {
 		const { email } = req.body;
 
-		// Sanitize email input
 		const sanitizedEmail = xss(email);
 
 		try {
@@ -351,12 +356,12 @@ export default function createUserRoutes({
 
 			const { email2FAToken } = await email2FAUtil.generateEmail2FACode();
 
-			// Save 2FA token and expiration in user's record
+			// save 2FA token and expiration in user's record
 			user.resetPasswordToken = email2FAToken;
 			user.resetPasswordExpires = new Date(Date.now() + 30 * 60000); // 30 min
-			await user.save(); // Save user data with the new 2FA token and expiration
+			await user.save();
 
-			// Send the 2FA code to user's email
+			// send the 2FA code to user's email
 			const transporter = await getTransporter({
 				nodemailer,
 				getSecrets: () =>
@@ -381,11 +386,11 @@ export default function createUserRoutes({
 		}
 	});
 
-	// Route to verify email 2FA code
+	// route to verify email 2FA code
 	router.post('/verify-2fa', async (req: Request, res: Response) => {
 		const { email, email2FACode } = req.body;
 
-		// Sanitize inputs
+		// sanitize inputs
 		const sanitizedEmail = xss(email);
 
 		try {

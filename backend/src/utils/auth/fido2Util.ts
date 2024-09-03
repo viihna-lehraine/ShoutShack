@@ -36,30 +36,41 @@ function getDirectoryPath(): string {
 }
 
 async function initializeFido2(): Promise<void> {
-	secrets = await sops.getSecrets({
-		logger,
-		execSync,
-		getDirectoryPath
-	});
+	try {
+		secrets = await sops.getSecrets({
+			logger,
+			execSync,
+			getDirectoryPath
+		});
 
-	if (!secrets) {
-		throw new Error('Secrets could not be loaded');
+		if (!secrets) {
+			throw new Error('Secrets could not be loaded');
+		}
+
+		fido2 = new Fido2Lib({
+			timeout: 60000,
+			rpId: secrets.RP_ID,
+			rpName: secrets.RP_NAME,
+			challengeSize: secrets.FIDO_CHALLENGE_SIZE,
+			cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS,
+			authenticatorRequireResidentKey:
+				secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
+			authenticatorUserVerification:
+				secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
+		});
+
+		logger.info('Fido2Lib initialized successfully.');
+	} catch (error) {
+		logger.error(
+			`Failed to initialize Fido2Lib: ${error instanceof Error ? error.message : String(error)}`
+		);
+		throw new Error('Failed to initialize Fido2Lib');
 	}
-	fido2 = new Fido2Lib({
-		timeout: 60000,
-		rpId: secrets.RP_ID,
-		rpName: secrets.RP_NAME,
-		challengeSize: secrets.FIDO_CHALLENGE_SIZE,
-		cryptoParams: secrets.FIDO_CRYPTO_PARAMETERS,
-		authenticatorRequireResidentKey:
-			secrets.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY,
-		authenticatorUserVerification:
-			secrets.FIDO_AUTHENTICATOR_USER_VERIFICATION
-	});
 }
 
 async function ensureFido2Initialized(): Promise<void> {
 	if (!fido2) {
+		logger.debug('Fido2Lib is not initialized, initializing now.');
 		await initializeFido2();
 	}
 }
@@ -67,74 +78,94 @@ async function ensureFido2Initialized(): Promise<void> {
 async function generatePasskeyRegistrationOptions(
 	user: User
 ): Promise<PublicKeyCredentialCreationOptions> {
-	await ensureFido2Initialized();
-	const passkeyRegistrationOptions = await fido2!.attestationOptions();
+	try {
+		await ensureFido2Initialized();
+		const passkeyRegistrationOptions = await fido2!.attestationOptions();
 
-	const registrationOptions: PublicKeyCredentialCreationOptions = {
-		...passkeyRegistrationOptions,
-		user: {
-			id: Buffer.from(user.id, 'utf-8'),
-			name: user.email,
-			displayName: user.username
-		},
-		pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-		timeout: 60000,
-		attestation: 'direct',
-		authenticatorSelection: {
-			authenticatorAttachment: 'platform',
-			requireResidentKey: true,
-			userVerification: 'preferred'
-		}
-	};
-	return registrationOptions;
+		const registrationOptions: PublicKeyCredentialCreationOptions = {
+			...passkeyRegistrationOptions,
+			user: {
+				id: Buffer.from(user.id, 'utf-8'),
+				name: user.email,
+				displayName: user.username
+			},
+			pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+			timeout: 60000,
+			attestation: 'direct',
+			authenticatorSelection: {
+				authenticatorAttachment: 'platform',
+				requireResidentKey: true,
+				userVerification: 'preferred'
+			}
+		};
+		logger.info('Passkey registration options generated successfully.');
+		return registrationOptions;
+	} catch (error) {
+		logger.error(
+			`Failed to generate passkey registration options: ${error instanceof Error ? error.message : String(error)}`
+		);
+		throw new Error('Failed to generate passkey registration options');
+	}
 }
 
 async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
 	expectedChallenge: string
 ): Promise<Fido2AttestationResult> {
-	await ensureFido2Initialized();
-	secrets = await sops.getSecrets({
-		logger,
-		execSync,
-		getDirectoryPath
-	});
-	const u2fAttestationExpectations: ExpectedAttestationResult = {
-		challenge: expectedChallenge,
-		origin: secrets.RP_ORIGIN as string,
-		factor: 'either' as Factor,
-		rpId: secrets.RP_ID
-	};
+	try {
+		await ensureFido2Initialized();
 
-	const result = (await fido2!.attestationResult(
-		attestation,
-		u2fAttestationExpectations
-	)) as Fido2AttestationResult;
+		const u2fAttestationExpectations: ExpectedAttestationResult = {
+			challenge: expectedChallenge,
+			origin: secrets.RP_ORIGIN as string,
+			factor: 'either' as Factor,
+			rpId: secrets.RP_ID
+		};
 
-	return result;
+		const result = (await fido2!.attestationResult(
+			attestation,
+			u2fAttestationExpectations
+		)) as Fido2AttestationResult;
+
+		logger.info('Passkey registration verified successfully.');
+		return result;
+	} catch (error) {
+		logger.error(
+			`Failed to verify passkey registration: ${error instanceof Error ? error.message : String(error)}`
+		);
+		throw new Error('Failed to verify passkey registration');
+	}
 }
 
 async function generatePasskeyAuthenticationOptions(
 	user: User
 ): Promise<PublicKeyCredentialRequestOptions> {
-	await ensureFido2Initialized();
+	try {
+		await ensureFido2Initialized();
 
-	const userCredentials: PublicKeyCredentialDescriptor[] =
-		user.credential.map(credential => ({
-			type: 'public-key' as const,
-			id: Buffer.from(credential.credentialId, 'base64').buffer
-		}));
+		const userCredentials: PublicKeyCredentialDescriptor[] =
+			user.credential.map(credential => ({
+				type: 'public-key' as const,
+				id: Buffer.from(credential.credentialId, 'base64').buffer
+			}));
 
-	const assertionOptions = await fido2!.assertionOptions();
+		const assertionOptions = await fido2!.assertionOptions();
 
-	const authenticationOptions: PublicKeyCredentialRequestOptions = {
-		...assertionOptions,
-		allowCredentials: userCredentials,
-		userVerification: 'required', // ensure this supports passwordless login
-		timeout: 60000
-	};
+		const authenticationOptions: PublicKeyCredentialRequestOptions = {
+			...assertionOptions,
+			allowCredentials: userCredentials,
+			userVerification: 'required', // ensure this supports passwordless login
+			timeout: 60000
+		};
 
-	return authenticationOptions;
+		logger.info('Passkey authentication options generated successfully.');
+		return authenticationOptions;
+	} catch (error) {
+		logger.error(
+			`Failed to generate passkey authentication options: ${error instanceof Error ? error.message : String(error)}`
+		);
+		throw new Error('Failed to generate passkey authentication options');
+	}
 }
 
 async function verifyPasskeyAuthentication(
@@ -144,28 +175,31 @@ async function verifyPasskeyAuthentication(
 	previousCounter: number,
 	id: string
 ): Promise<Fido2AssertionResult> {
-	await ensureFido2Initialized();
-	secrets = await sops.getSecrets({
-		logger,
-		execSync,
-		getDirectoryPath
-	});
+	try {
+		await ensureFido2Initialized();
 
-	const assertionExpectations: ExpectedAssertionResult = {
-		challenge: expectedChallenge,
-		origin: secrets.RP_ORIGIN as string,
-		factor: 'either' as Factor,
-		publicKey,
-		prevCounter: previousCounter,
-		userHandle: id
-	};
+		const assertionExpectations: ExpectedAssertionResult = {
+			challenge: expectedChallenge,
+			origin: secrets.RP_ORIGIN as string,
+			factor: 'either' as Factor,
+			publicKey,
+			prevCounter: previousCounter,
+			userHandle: id
+		};
 
-	const result = (await fido2!.assertionResult(
-		assertion,
-		assertionExpectations
-	)) as Fido2AssertionResult;
+		const result = (await fido2!.assertionResult(
+			assertion,
+			assertionExpectations
+		)) as Fido2AssertionResult;
 
-	return result;
+		logger.info('Passkey authentication verified successfully.');
+		return result;
+	} catch (error) {
+		logger.error(
+			`Failed to verify passkey authentication: ${error instanceof Error ? error.message : String(error)}`
+		);
+		throw new Error('Failed to verify passkey authentication');
+	}
 }
 
 export default {

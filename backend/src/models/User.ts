@@ -16,21 +16,24 @@ import createRateLimitMiddleware, {
 } from '../middleware/rateLimit';
 import sops, { SecretsMap } from '../utils/sops';
 
+// Attributes for the User model
 interface UserAttributes {
-	id: string;
-	userid?: number;
-	username: string;
-	password: string;
-	email: string;
-	isAccountVerified: boolean;
-	resetPasswordToken?: string | null;
-	resetPasswordExpires?: Date | null;
-	isMfaEnabled: boolean;
-	creationDate: Date;
+	id: string; // UUID for the user record, primary key
+	userId: number; // auto-incremented user identifier
+	username: string; // unique username for the user
+	password: string; // hashed password for the user
+	email: string; // unique email address for the user
+	isAccountVerified: boolean; // boolean flag for account verification status
+	resetPasswordToken?: string | null; // optional reset password token
+	resetPasswordExpires?: Date | null; // optional expiry date for reset password token
+	isMfaEnabled: boolean; // boolean flag for MFA status
+	creationDate: Date; // timestamp for when the user record was created
 }
 
+// Secrets required for the User model
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 
+// Required for certain User model methods
 interface UserModelDependencies {
 	argon2: typeof import('argon2');
 	uuidv4: typeof uuidv4;
@@ -44,16 +47,16 @@ export class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
 	implements UserAttributes
 {
-	id!: string;
-	userid?: number;
-	username!: string;
-	password!: string;
-	email!: string;
-	isAccountVerified!: boolean;
-	resetPasswordToken!: string | null;
-	resetPasswordExpires!: Date | null;
-	isMfaEnabled!: boolean;
-	creationDate!: Date;
+	id!: string; // initialized as a non-nullable string (UUID)
+	userId!: number; // initialized as an optional auto-incremented integer
+	username!: string; // initialized as a non-nullable string
+	password!: string; // initialized as a non-nullable string
+	email!: string; // initialized as a non-nullable string
+	isAccountVerified!: boolean; // initialized as a non-nullable boolean
+	resetPasswordToken!: string | null; // initialized as an optional string
+	resetPasswordExpires!: Date | null; // initialized as an optional date
+	isMfaEnabled!: boolean; // initialized as a non-nullable boolean
+	creationDate!: Date; // initialized as a non-nullable date
 
 	// instance method to compare passwords
 	async comparePassword(
@@ -71,12 +74,12 @@ export class User
 				logger.error(`Error comparing passwords:`, {
 					stack: error.stack
 				});
-				throw new PasswordValidationError('Error verifying passwords.');
+				throw new PasswordValidationError('Passwords do not match');
 			} else {
 				logger.error(`Error comparing passwords:`, {
 					error
 				});
-				throw new PasswordValidationError('Error verifying passwords');
+				throw new PasswordValidationError('Passwords do not match');
 			}
 		}
 	}
@@ -101,6 +104,7 @@ export class User
 	// static method to create a new user
 	static async createUser(
 		{ uuidv4, getSecrets }: UserModelDependencies,
+		userId: number,
 		username: string,
 		password: string,
 		email: string,
@@ -121,14 +125,17 @@ export class User
 					'Password does not meet the security requirements.'
 				);
 				throw new PasswordValidationError(
-					'Password does not meet the security requirements.'
+					'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.'
 				);
 			}
+
+			logger.debug('Password is valid. Proceeding with user creation.');
 
 			const secrets = await getSecrets();
 			const hashedPassword = await hashPassword(password, secrets);
 			const newUser = await User.create({
 				id: uuidv4(),
+				userId,
 				username,
 				password: hashedPassword,
 				email,
@@ -149,16 +156,18 @@ export class User
 			}
 
 			if (error instanceof Error) {
-				logger.error(`Error creating user:`, {
+				logger.error(`Error creating new user: `, {
 					stack: error.stack
 				});
 			} else {
-				logger.error(`Unknown error creating user:`, {
+				logger.error(`Unknown error creating user: `, {
 					error
 				});
 			}
 
-			throw new PasswordValidationError('Error creating user.');
+			throw new PasswordValidationError(
+				'There was an error creating your account. Please try again. If the issue persists, please contact support.'
+			);
 		}
 	}
 
@@ -170,6 +179,7 @@ export class User
 		secrets: UserSecrets
 	): Promise<boolean> {
 		try {
+			logger.debug('Password verified successfully');
 			return await argon2.verify(
 				hashedPassword,
 				password + secrets.PEPPER
@@ -179,7 +189,7 @@ export class User
 				logger.error(`Error comparing passwords:`, {
 					stack: error.stack
 				});
-				throw new PasswordValidationError('Error verifying passwords.');
+				throw new PasswordValidationError('Error verifying password');
 			} else {
 				logger.error(`Error comparing passwords:`, {
 					error
@@ -196,19 +206,21 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 		{
 			id: {
 				type: DataTypes.STRING,
+				defaultValue: () => uuidv4(), // generate UUID for new user
 				allowNull: false,
-				primaryKey: true
+				primaryKey: true,
+				unique: true
 			},
-			userid: {
+			userId: {
 				type: DataTypes.INTEGER,
-				autoIncrement: true,
+				autoIncrement: true, // auto-increment user ID
 				allowNull: false,
 				unique: true
 			},
 			username: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true
+				unique: true // ensure username is unique
 			},
 			password: {
 				type: DataTypes.STRING,
@@ -217,12 +229,12 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 			email: {
 				type: DataTypes.STRING,
 				allowNull: false,
-				unique: true
+				unique: true // ensure email is unique
 			},
 			isAccountVerified: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false
+				defaultValue: false // default to unverified account
 			},
 			resetPasswordToken: {
 				type: DataTypes.STRING,
@@ -235,19 +247,20 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 			isMfaEnabled: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
-				defaultValue: false
+				defaultValue: false // default to false (MFA disabled)
 			},
 			creationDate: {
 				type: DataTypes.DATE,
 				allowNull: false,
-				defaultValue: DataTypes.NOW
+				defaultValue: DataTypes.NOW // set to current date/time
 			}
 		},
 		{
 			sequelize,
-			tableName: 'Users',
-			timestamps: false,
+			tableName: 'Users', // table name in database
+			timestamps: true, // automatically manage timestamps
 			hooks: {
+				// hook to hash the user's password before creating a new user
 				beforeCreate: async (user: User) => {
 					try {
 						const secrets = await sops.getSecrets({
@@ -260,6 +273,7 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 							secrets
 						);
 					} catch (error) {
+						// handle errors during password hashing
 						if (error instanceof Error) {
 							logger.error(`Error hashing password:`, {
 								stack: error.stack
@@ -278,6 +292,7 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 					}
 				},
 				afterUpdate: async (user: User) => {
+					// hook to update MFA status after updating user record
 					try {
 						if (user.changed('isMfaEnabled')) {
 							const UserMfa = await (
@@ -287,6 +302,7 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 								{ isMfaEnabled: user.isMfaEnabled },
 								{ where: { id: user.id } }
 							);
+							logger.debug('MFA status updated successfully');
 						}
 					} catch (error) {
 						if (error instanceof Error) {
@@ -294,14 +310,14 @@ export default function createUserModel(sequelize: Sequelize): typeof User {
 								stack: error.stack
 							});
 							throw new PasswordValidationError(
-								'Error updating MFA status.'
+								'Error updating multi-factor authentication status. Please try again. If the issue persists, please contact support.'
 							);
 						} else {
 							logger.error(`Unknown error updating MFA status:`, {
 								error
 							});
 							throw new PasswordValidationError(
-								'Unknown error updating MFA status'
+								'Unknown error updating multi-factor authentication status. Please try again. If the issue persists, please contact support.'
 							);
 						}
 					}

@@ -81,7 +81,10 @@ export default function createDeviceModel(sequelize: Sequelize): typeof Device {
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false // IP address is required
+				allowNull: false, // IP address is required
+				validate: {
+					isIP: true // validate IP address format
+				}
 			},
 			lastUsed: {
 				type: DataTypes.DATE,
@@ -109,9 +112,6 @@ export default function createDeviceModel(sequelize: Sequelize): typeof Device {
 			timestamps: true // automatically manage createdAt and updatedAt fields
 		}
 	);
-
-	// define associations
-	Device.belongsTo(User, { foreignKey: 'id', as: 'user' });
 
 	return Device;
 }

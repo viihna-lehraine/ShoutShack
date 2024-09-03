@@ -9,12 +9,12 @@ import {
 import { User } from './User';
 
 interface RecoveryMethodAttributes {
-	id: string;
-	isRecoveryActive: boolean;
-	recoveryId: string;
-	recoveryMethod: 'email' | 'backupCodes';
-	backupCodes?: string[] | null;
-	recoveryLastUpdated: Date;
+	id: string; // UUID for recovery method, primary key (from User model)
+	isRecoveryActive: boolean; // indicates if the recovery method is active
+	recoveryId: string; // UUID for recovery method, primary key
+	recoveryMethod?: 'email' | 'backupCodes' | null; // type of recovery method
+	backupCodes?: string[] | null; // optional array of backup codes
+	recoveryLastUpdated: Date; // date when the recovery method was last updated
 }
 
 class RecoveryMethod
@@ -24,12 +24,12 @@ class RecoveryMethod
 	>
 	implements RecoveryMethodAttributes
 {
-	id!: string;
-	isRecoveryActive!: boolean;
-	recoveryId!: string;
-	recoveryMethod!: 'email' | 'backupCodes';
-	backupCodes!: string[] | null;
-	recoveryLastUpdated!: CreationOptional<Date>;
+	id!: string; // initialized as a non-nullable string (UUID)
+	isRecoveryActive!: boolean; // initialized as a non-nullable boolean
+	recoveryId!: string; // initialized as a non-nullable string (UUID)
+	recoveryMethod?: 'email' | 'backupCodes'; // initialized as a nullable string with two possible values
+	backupCodes!: string[] | null; // nullable, may contain an array of strings or null
+	recoveryLastUpdated!: CreationOptional<Date>; // optional field, defaults to current date
 }
 
 export default function createRecoveryMethodModel(
@@ -71,7 +71,7 @@ export default function createRecoveryMethodModel(
 			recoveryLastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: true
+				allowNull: false
 			}
 		},
 		{
@@ -80,5 +80,6 @@ export default function createRecoveryMethodModel(
 			timestamps: true
 		}
 	);
+
 	return RecoveryMethod;
 }

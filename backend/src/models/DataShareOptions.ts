@@ -109,8 +109,5 @@ export default function createDataShareOptionsModel(
 		}
 	);
 
-	// define associations
-	DataShareOptions.belongsTo(User, { foreignKey: 'id', as: 'user' });
-
 	return DataShareOptions;
 }

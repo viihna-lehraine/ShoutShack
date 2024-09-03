@@ -78,8 +78,5 @@ export default function createFailedLoginAttemptsModel(
 		}
 	);
 
-	// define associations
-	FailedLoginAttempts.belongsTo(User, { foreignKey: 'id', as: 'user' });
-
 	return FailedLoginAttempts;
 }

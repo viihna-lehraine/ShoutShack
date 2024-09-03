@@ -122,8 +122,5 @@ export default function createAuditLogModel(
 		}
 	);
 
-	// define associations
-	AuditLog.belongsTo(User, { foreignKey: 'id', as: 'user' });
-
 	return AuditLog;
 }

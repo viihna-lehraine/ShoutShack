@@ -32,40 +32,89 @@ export interface Models {
 }
 
 export async function loadModels(sequelize: Sequelize): Promise<Models> {
-	const AuditLog = createAuditLogModel(sequelize);
-	const DataShareOptions = createDataShareOptionsModel(sequelize);
-	const Device = createDeviceModel(sequelize);
-	const FailedLoginAttempts = createFailedLoginAttemptsModel(sequelize);
-	const FeatureRequest = createFeatureRequestModel(sequelize);
-	const FeedbackSurvey = createFeedbackSurveyModel(sequelize);
-	const GuestbookEntry = createGuestbookEntryModel(sequelize);
-	const MultiFactorAuthSetup = createMultiFactorAuthSetupModel(sequelize);
-	const RecoveryMethod = createRecoveryMethodModel(sequelize);
-	const SecurityEvent = createSecurityEventModel(sequelize);
-	const SupportRequest = createSupportRequestModel(sequelize);
-	const UserMfa = createUserMfaModel(sequelize);
-	const User = createUserModel(sequelize);
-	const UserSession = createUserSessionModel(sequelize);
-
-	// Define model associations
-	User.hasMany(AuditLog, { foreignKey: 'id' });
-	User.hasMany(UserSession, { foreignKey: 'userId' });
-	UserSession.belongsTo(User, { foreignKey: 'userId' });
-
-	return {
-		AuditLog,
-		DataShareOptions,
-		Device,
-		FailedLoginAttempts,
-		FeatureRequest,
-		FeedbackSurvey,
-		GuestbookEntry,
-		MultiFactorAuthSetup,
-		RecoveryMethod,
-		SecurityEvent,
-		SupportRequest,
-		UserMfa,
-		User,
-		UserSession
+	// create the models
+	const models: Models = {
+		AuditLog: createAuditLogModel(sequelize),
+		DataShareOptions: createDataShareOptionsModel(sequelize),
+		Device: createDeviceModel(sequelize),
+		FailedLoginAttempts: createFailedLoginAttemptsModel(sequelize),
+		FeatureRequest: createFeatureRequestModel(sequelize),
+		FeedbackSurvey: createFeedbackSurveyModel(sequelize),
+		GuestbookEntry: createGuestbookEntryModel(sequelize),
+		MultiFactorAuthSetup: createMultiFactorAuthSetupModel(sequelize),
+		RecoveryMethod: createRecoveryMethodModel(sequelize),
+		SecurityEvent: createSecurityEventModel(sequelize),
+		SupportRequest: createSupportRequestModel(sequelize),
+		UserMfa: createUserMfaModel(sequelize),
+		User: createUserModel(sequelize),
+		UserSession: createUserSessionModel(sequelize)
 	};
+
+	// define associations
+	models.User.hasMany(models.AuditLog, { foreignKey: 'id', as: 'auditLogs' });
+	models.User.hasMany(models.FailedLoginAttempts, {
+		foreignKey: 'id',
+		as: 'failedLoginAttempts'
+	});
+	models.User.hasMany(models.GuestbookEntry, {
+		foreignKey: 'id',
+		as: 'guestbookEntries'
+	});
+	models.User.hasMany(models.RecoveryMethod, {
+		foreignKey: 'id',
+		as: 'recoveryMethods'
+	});
+	models.User.hasMany(models.SecurityEvent, {
+		foreignKey: 'id',
+		as: 'securityEvents'
+	});
+	models.User.hasMany(models.SupportRequest, {
+		foreignKey: 'id',
+		as: 'supportRequests'
+	});
+	models.User.hasMany(models.UserSession, {
+		foreignKey: 'id',
+		as: 'sessions'
+	});
+
+	models.User.hasOne(models.UserMfa, { foreignKey: 'id', as: 'user' });
+
+	models.AuditLog.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
+	models.DataShareOptions.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.Device.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
+	models.FailedLoginAttempts.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.FeatureRequest.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.GuestbookEntry.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.MultiFactorAuthSetup.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.RecoveryMethod.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.SecurityEvent.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.SupportRequest.belongsTo(models.User, {
+		foreignKey: 'id',
+		as: 'user'
+	});
+	models.UserMfa.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
+	models.UserSession.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
+
+	return models;
 }

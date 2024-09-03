@@ -7,7 +7,7 @@ import {
 } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Logger } from './logger';
-
+import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 import createUserModel from '../models/User';
 
 export interface UserInstance {
@@ -41,6 +41,17 @@ export default async function configurePassport({
 	argon2
 }: PassportDependencies): Promise<void> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'passport', instance: passport },
+				{ name: 'logger', instance: logger },
+				{ name: 'getSecrets', instance: getSecrets },
+				{ name: 'UserModel', instance: UserModel },
+				{ name: 'argon2', instance: argon2 }
+			],
+			logger || console
+		);
+
 		const secrets = await getSecrets();
 
 		const opts: StrategyOptions = {
@@ -52,6 +63,14 @@ export default async function configurePassport({
 		passport.use(
 			new JwtStrategy(opts, async (jwtPayload, done: VerifiedCallback) => {
 				try {
+					validateDependencies(
+						[
+							{ name: 'jwtPayload', instance: jwtPayload },
+							{ name: 'jwtPayload', instance: jwtPayload },
+							{ name: 'done', instance: done }
+						],
+						logger || console
+					);
 					const user = await UserModel.findByPk(jwtPayload.id);
 					if (user) {
 						logger.info(`JWT authentication successful for user: ${user.username}`);
@@ -61,9 +80,8 @@ export default async function configurePassport({
 						return done(null, false, { message: 'User not found' });
 					}
 				} catch (err) {
-					const errorMsg = err instanceof Error ? err.message : String(err);
-					logger.error(`JWT authentication error: ${errorMsg}`);
-					return done(new Error(errorMsg), false);
+					handleGeneralError(err, logger || console);
+					return done(new Error(err instanceof Error ? err.message : String(err)), false);
 				}
 			})
 		);
@@ -72,13 +90,21 @@ export default async function configurePassport({
 		passport.use(
 			new LocalStrategy(async (username, password, done) => {
 				try {
+					validateDependencies(
+						[
+							{ name: 'username', instance: username },
+							{ name: 'password', instance: password },
+							{ name: 'done', instance: done }
+						],
+						logger || console
+					);
+
 					const user = await UserModel.findOne({ where: { username } });
 					if (!user) {
 						logger.warn(`Local authentication failed: User not found: ${username}`);
 						return done(null, false, { message: 'User not found' });
 					}
 
-					// use the comparePassword method with all necessary dependencies
 					const isMatch = await user.comparePassword(password, argon2, secrets);
 
 					if (isMatch) {
@@ -89,17 +115,15 @@ export default async function configurePassport({
 						return done(null, false, { message: 'Incorrect password' });
 					}
 				} catch (err) {
-					const errorMsg = err instanceof Error ? err.message : String(err);
-					logger.error(`Local authentication error for user ${username}: ${errorMsg}`);
-					return done(new Error(errorMsg));
+					handleGeneralError(err, logger || console);
+					return done(new Error(err instanceof Error ? err.message : String(err)));
 				}
 			})
 		);
 
 		logger.info('Passport configured successfully');
 	} catch (error) {
-		const errorMsg = error instanceof Error ? error.message : String(error);
-		logger.error(`Error configuring passport: ${errorMsg}`);
-		throw new Error(errorMsg);
+		handleGeneralError(error, logger || console);
+		throw new Error(error instanceof Error ? error.message : String(error));
 	}
 }

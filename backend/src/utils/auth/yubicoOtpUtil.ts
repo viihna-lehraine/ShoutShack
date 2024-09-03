@@ -2,7 +2,7 @@ import yub from 'yub';
 import '../../../types/custom/yub.d.ts';
 import getSecrets, { SecretsMap } from '../sops.js';
 import { execSync } from 'child_process';
-import { Logger } from 'winston';
+import { Logger } from '../../config/logger';
 
 interface YubClient {
 	verify(
@@ -41,47 +41,104 @@ export default function createYubicoOtpUtil({
 	validateYubicoOTP: (otp: string) => Promise<boolean>;
 	generateYubicoOtpOptions: () => YubicoOtpOptions;
 } {
-	let secrets: SecretsMap;
+	let secrets: SecretsMap | null = null;
 	let yubClient: YubClient | undefined;
 
 	async function initializeYubicoOtpUtil(): Promise<void> {
-		secrets = await getSecrets({ logger, execSync, getDirectoryPath });
-		yubClient = yub.init(
-			secrets.YUBICO_CLIENT_ID.toString(),
-			secrets.YUBICO_SECRET_KEY
-		) as YubClient;
+		try {
+			logger.info('Initializing Yubico OTP Utility.');
+			secrets = await getSecrets({ logger, execSync, getDirectoryPath });
+
+			if (!secrets) {
+				throw new Error('Secrets could not be loaded');
+			}
+
+			yubClient = yub.init(
+				secrets.YUBICO_CLIENT_ID.toString(),
+				secrets.YUBICO_SECRET_KEY
+			) as YubClient;
+
+			logger.info('Yubico OTP Utility initialized successfully.');
+		} catch (error) {
+			logger.error(
+				'Failed to initialize Yubico OTP Utility.',
+				error instanceof Error ? { stack: error.stack } : {}
+			);
+			throw new Error(
+				`Failed to initialize Yubico OTP Utility: ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		}
 	}
 
 	async function validateYubicoOTP(otp: string): Promise<boolean> {
-		if (!yubClient) {
-			await initializeYubicoOtpUtil();
-		}
+		try {
+			if (!yubClient) {
+				logger.warn('Yubico client not initialized, initializing now.');
+				await initializeYubicoOtpUtil();
+			}
 
-		return new Promise((resolve, reject) => {
-			yubClient!.verify(otp, (err: Error | null, data: YubResponse) => {
-				if (err) {
-					return reject(err);
-				}
+			return new Promise((resolve, reject) => {
+				yubClient!.verify(
+					otp,
+					(error: Error | null, data: YubResponse) => {
+						if (error) {
+							logger.error(
+								'Error during Yubico OTP validation.',
+								error instanceof Error
+									? { stack: error.stack }
+									: {}
+							);
+							return reject(error);
+						}
 
-				if (data && data.status === 'OK') {
-					resolve(true);
-				} else {
-					resolve(false);
-				}
+						if (data && data.status === 'OK') {
+							logger.info('Yubico OTP validation successful.');
+							resolve(true);
+						} else {
+							logger.info('Yubico OTP validation failed.');
+							resolve(false);
+						}
+					}
+				);
 			});
-		});
+		} catch (error) {
+			logger.error(
+				'Failed to validate Yubico OTP.',
+				error instanceof Error ? { stack: error.stack } : {}
+			);
+			throw new Error(
+				`Failed to validate Yubico OTP: ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		}
 	}
 
 	function generateYubicoOtpOptions(): YubicoOtpOptions {
-		if (!secrets) {
-			throw new Error('Secrets have not been initialized');
-		}
+		try {
+			if (!secrets) {
+				throw new Error('Secrets have not been initialized');
+			}
 
-		return {
-			clientId: secrets.YUBICO_CLIENT_ID as number,
-			apiKey: secrets.YUBICO_SECRET_KEY as string,
-			apiUrl: secrets.YUBICO_API_URL as string
-		};
+			logger.info('Generating Yubico OTP options.');
+			return {
+				clientId: secrets.YUBICO_CLIENT_ID as number,
+				apiKey: secrets.YUBICO_SECRET_KEY as string,
+				apiUrl: secrets.YUBICO_API_URL as string
+			};
+		} catch (error) {
+			logger.error(
+				'Failed to generate Yubico OTP options.',
+				error instanceof Error ? { stack: error.stack } : {}
+			);
+			throw new Error(
+				`Failed to generate Yubico OTP options: ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		}
 	}
 
 	return {

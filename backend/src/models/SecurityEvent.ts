@@ -9,14 +9,14 @@ import {
 import { User } from './User';
 
 interface SecurityEventAttributes {
-	id: string;
-	eventId: string;
-	eventType: string;
-	eventDescription?: string | null;
-	ipAddress: string;
-	userAgent: string;
-	securityEventDate: Date;
-	securityEventLastUpdated: Date;
+	id: string; // UUID for security event, primary key
+	eventId: string; // unique event ID, auto-incremented
+	eventType: string; // type of security event
+	eventDescription?: string | null; // optional description of the security event
+	ipAddress: string; // IP address associated with the security event
+	userAgent: string; // user agent associated with the security event
+	securityEventDate: Date; // date of the security event
+	securityEventLastUpdated: Date; // date when the security event was last updated
 }
 
 class SecurityEvent
@@ -26,14 +26,14 @@ class SecurityEvent
 	>
 	implements SecurityEventAttributes
 {
-	id!: string;
-	eventId!: string;
-	eventType!: string;
-	eventDescription!: string | null;
-	ipAddress!: string;
-	userAgent!: string;
-	securityEventDate!: Date;
-	securityEventLastUpdated!: CreationOptional<Date>;
+	id!: string; // initialized as a non-nullable string (UUID)
+	eventId!: string; // initialized as a non-nullable string (UUID)
+	eventType!: string; // initialized as a non-nullable string
+	eventDescription!: string | null; // nullable, may contain string or null
+	ipAddress!: string; // initialized as a non-nullable string that will be validated as an IP address
+	userAgent!: string; // initialized as a non-nullable string
+	securityEventDate!: Date; // initialized as a non-nullable date
+	securityEventLastUpdated!: CreationOptional<Date>; // optional field, defaults to current date
 }
 
 export default function createSecurityEventModel(
@@ -55,7 +55,7 @@ export default function createSecurityEventModel(
 			eventId: {
 				type: DataTypes.INTEGER,
 				autoIncrement: true,
-				allowNull: true,
+				allowNull: false, // event ID is required
 				unique: true
 			},
 			eventType: {
@@ -77,31 +77,34 @@ export default function createSecurityEventModel(
 			},
 			eventDescription: {
 				type: DataTypes.TEXT,
-				allowNull: true
+				allowNull: true // event description is optional
 			},
 			ipAddress: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false, // IP address is required
+				validate: {
+					isIP: true
+				}
 			},
 			userAgent: {
 				type: DataTypes.STRING,
-				allowNull: false
+				allowNull: false // user agent is required
 			},
 			securityEventDate: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false
+				allowNull: false // security event date is required
 			},
 			securityEventLastUpdated: {
 				type: DataTypes.DATE,
 				defaultValue: DataTypes.NOW,
-				allowNull: false
+				allowNull: false // security event last updated date is required
 			}
 		},
 		{
 			sequelize,
 			modelName: 'SecurityEvent',
-			timestamps: true
+			timestamps: true // automatically manage createdAt and updatedAt fields
 		}
 	);
 

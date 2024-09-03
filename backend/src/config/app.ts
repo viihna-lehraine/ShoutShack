@@ -4,25 +4,19 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import hpp from 'hpp';
-import path from 'path';
 import passport from 'passport';
 import RedisStore from 'connect-redis';
 import { randomBytes } from 'crypto';
+import { createCsrfMiddleware } from '../middleware/csrf';
+import { expressErrorHandler, handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 import { setupSecurityHeaders } from '../middleware/securityHeaders';
 import { initializeStaticRoutes } from '../routes/staticRoutes';
-import errorHandler from '../middleware/errorHandler';
-import { createCsrfMiddleware } from '../middleware/csrf';
-import { getRedisClient } from '../config/redis';
 import { createIpBlacklist } from '../middleware/ipBlacklist';
+import { FeatureFlags } from './environmentConfig';
 import { setupLogger } from './logger';
-import { createFeatureEnabler, FeatureFlags, getFeatureFlags } from './environmentConfig';
+import { getRedisClient } from './redis';
 
 const logger = setupLogger();
-const featureFlags: FeatureFlags = getFeatureFlags(logger);
-const {
-	enableFeatureBasedOnFlag,
-	enableFeatureWithProdOverride
-} = createFeatureEnabler(logger);
 
 interface AppDependencies {
     express: typeof express;
@@ -33,11 +27,9 @@ interface AppDependencies {
     morgan: typeof morgan;
     passport: typeof passport;
     randomBytes: typeof randomBytes;
-    path: typeof path;
     RedisStore: typeof RedisStore;
     initializeStaticRoutes: typeof initializeStaticRoutes;
     csrfMiddleware: ReturnType<typeof createCsrfMiddleware>;
-    errorHandler: typeof errorHandler;
     getRedisClient: typeof getRedisClient;
     ipBlacklistMiddleware: ReturnType<typeof createIpBlacklist>['ipBlacklistMiddleware'];
     createTestRouter: (app: Application) => void;
@@ -46,6 +38,9 @@ interface AppDependencies {
     startMemoryMonitor: () => void;
     logger: any;
     staticRootPath: string;
+	featureFlags: FeatureFlags;
+	expressErrorHandler: typeof expressErrorHandler;
+	handleGeneralError: typeof handleGeneralError;
 }
 
 export async function initializeApp({
@@ -57,11 +52,9 @@ export async function initializeApp({
     morgan,
     passport,
     randomBytes,
-    path,
     RedisStore,
     initializeStaticRoutes,
     csrfMiddleware,
-    errorHandler,
     getRedisClient,
     ipBlacklistMiddleware,
     createTestRouter,
@@ -69,119 +62,147 @@ export async function initializeApp({
     setupSecurityHeaders,
     startMemoryMonitor,
     logger,
-    staticRootPath
-}: AppDependencies): Promise<Application> {
-    const app = express();
-
-	logger.info('Initializing middleware');
-
-	// initialize Morgan logger
+    staticRootPath,
+	featureFlags,
+	expressErrorHandler,
+	handleGeneralError
+}: AppDependencies): Promise<Application | undefined> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'express', instance: express },
+				{ name: 'session', instance: session },
+				{ name: 'cookieParser', instance: cookieParser },
+				{ name: 'cors', instance: cors },
+				{ name: 'hpp', instance: hpp },
+				{ name: 'morgan', instance: morgan },
+				{ name: 'passport', instance: passport },
+				{ name: 'randomBytes', instance: randomBytes },
+				{ name: 'RedisStore', instance: RedisStore },
+				{ name: 'initializeStaticRoutes', instance: initializeStaticRoutes },
+				{ name: 'csrfMiddleware', instance: csrfMiddleware },
+				{ name: 'getRedisClient', instance: getRedisClient },
+				{ name: 'ipBlacklistMiddleware', instance: ipBlacklistMiddleware },
+				{ name: 'createTestRouter', instance: createTestRouter },
+				{ name: 'rateLimitMiddleware', instance: rateLimitMiddleware },
+				{ name: 'setupSecurityHeaders', instance: setupSecurityHeaders },
+				{ name: 'startMemoryMonitor', instance: startMemoryMonitor },
+				{ name: 'logger', instance: logger },
+				{ name: 'staticRootPath', instance: staticRootPath },
+				{ name: 'featureFlags', instance: featureFlags },
+				{ name: 'expressErrorHandler', instance: expressErrorHandler },
+				{ name: 'handleGeneralError', instance: handleGeneralError }
+			],
+			logger || console
+		);
+
+    	const app = express();
+
+		logger.info('Initializing middleware');
+
+		// initialize Morgan logger
 		logger.info('Initializing Morgan logger');
     	app.use(morgan('combined', { stream: logger.stream }));
-	} catch (err) {
-		if (err instanceof Error) {
-			logger.error(`Error initializing Morgan logger: ${err.message}`, {
-				stack: err.stack
-			});
+
+		// initialize cookie parser
+		logger.info('Initializing cookie parser');
+    	app.use(cookieParser());
+
+		// initialize CORS
+		logger.info('Initializing CORS');
+    	app.use(cors());
+
+		// initialize HPP
+		logger.info('Initializing HPP');
+    	app.use(hpp());
+
+		// initialize body parser
+		logger.info('Initializing body parser');
+    	app.use(express.json());
+    	app.use(express.urlencoded({ extended: true }));
+
+    	app.use(session({
+    	    secret: randomBytes(32).toString('hex'),
+    	    resave: false,
+    	    saveUninitialized: true,
+    	    store:
+				featureFlags.enableRedisFlag ? new RedisStore({
+					client: getRedisClient()
+				}) : undefined,
+    	    cookie: {
+				secure: featureFlags.enableSslFlag,
+				httpOnly: true,
+				sameSite: 'strict'
+			}
+    	}));
+
+		// initialize passport
+		logger.info('Initializing Passport and Passport session');
+    	app.use(passport.initialize());
+    	app.use(passport.session());
+
+		// initialize security headers
+		if (featureFlags.secureHeadersFlag) {
+			logger.debug('Secure headers middleware is enabled. Initializing secure headers middleware');
+			setupSecurityHeaders(app, {
+    		        helmetOptions: {},
+    		        permissionsPolicyOptions: {},
+    		    }
+			);
 		} else {
-			logger.error(`Unknown error initializing Morgan logger: ${String(err)}`);
+			logger.debug('Secure headers middleware is disabled. Skipping secure headers middleware initialization');
 		}
-	}
 
-	// initialize cookie parser
-	logger.info('Initializing cookie parser');
-    app.use(cookieParser());
+		// initialize static routes
+    	initializeStaticRoutes(app, staticRootPath);
 
-	// initialize CORS
-	logger.info('Initializing CORS');
-    app.use(cors());
-
-	// initialize HPP
-	logger.info('Initializing HPP');
-    app.use(hpp());
-
-	// initialize body parser
-	logger.info('Initializing body parser');
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-
-    app.use(session({
-        secret: randomBytes(32).toString('hex'),
-        resave: false,
-        saveUninitialized: true,
-        store:
-			featureFlags.enableRedisFlag ? new RedisStore({
-				client: getRedisClient()
-			}) : undefined,
-        cookie: {
-			secure: featureFlags.enableSslFlag,
-			httpOnly: true,
-			sameSite: 'strict'
+		// initialize CSRF middlware
+		if (featureFlags.enableCsrfFlag) {
+			logger.debug('CSRF middleware is enabled. Initializing CSRF middleware');
+			app.use(csrfMiddleware);
+		} else {
+			logger.debug('CSRF middleware is disabled. Skipping CSRF middleware initialization');
 		}
-    }));
 
-	// initialize passport
-	logger.info('Initializing Passport and Passport session');
-    app.use(passport.initialize());
-    app.use(passport.session());
+		// initialize rate limit middleware
+		if (featureFlags.enableRateLimitFlag) {
+			logger.debug('Rate limiter is enabled. Initializing rate limit middleware');
+			app.use(rateLimitMiddleware)
+		} else {
+			logger.debug('Rate limiter is disable. Skipping rate limit middleware initialization');
+		}
 
-	// initialize security headers
-	enableFeatureWithProdOverride(
-		featureFlags.secureHeadersFlag,
-		'security headers',
-		() => {
-        setupSecurityHeaders(app, {
-            helmetOptions: {},
-            permissionsPolicyOptions: {},
-        });
-    });
+		// initialize IP blacklist middleware
+		if (featureFlags.enableIpBlacklistFlag) {
+			logger.debug('IP blacklist middleware is enabled. Initializing IP blacklist middleware');
+			app.use(ipBlacklistMiddleware);
+		} else {
+			logger.debug('IP blacklist middleware is disabled. Skipping IP blacklist middleware initialization');
+		}
 
-	// initialize static routes
-    initializeStaticRoutes(app, staticRootPath);
+		// initialize test router
+		if (featureFlags.loadTestRoutesFlag) {
+			logger.debug('Test router is enabled. Initializing test router');
+			createTestRouter(app);
+		} else {
+			logger.debug('Test router is disabled. Skipping test router initialization');
+		}
 
-	// initialize CSRF middlware
-	enableFeatureWithProdOverride(
-		featureFlags.enableCsrfFlag,
-		'CSRF middleware',
-		() => app.use(csrfMiddleware)
-	);
+		// initialize memory monitor or Redis session, dependant on flag value
+		if (!featureFlags.enableRedisFlag) {
+			logger.debug('Redis is disabled. Initializing memory monitor');
+			startMemoryMonitor();
+		} else {
+			logger.debug('Redis is enabled. Skipping memory monitor initialization');
+		}
 
-	// initialize rate limit middleware
-	enableFeatureBasedOnFlag(
-		featureFlags.enableRateLimitFlag,
-		'rate limit middleware',
-		() => app.use(rateLimitMiddleware)
-	);
+		// initialize error handler
+		logger.info('Initializing error handler');
+		app.use(expressErrorHandler({ logger, featureFlags }));
 
-	// initialize IP blacklist middleware
-	enableFeatureBasedOnFlag(
-		featureFlags.enableIpBlacklistFlag,
-		'IP blacklist middleware',
-		() => app.use(ipBlacklistMiddleware)
-	);
-
-	// initialize test router
-	enableFeatureBasedOnFlag(featureFlags.loadTestRoutesFlag,
-		'test router',
-		() => createTestRouter(app)
-	);
-
-	// initialize memory monitor or Redis session, dependant on flag value
-	if (!featureFlags.enableRedisFlag) {
-        logger.info('Initializing memory monitor');
-        startMemoryMonitor();
-    } else {
-		logger.info(
-			'Redis session is enabled, skipping memory monitor initialization'
-		);
+    	return app;
+	} catch (error) {
+		handleGeneralError(error as Error, logger || console);
+		return undefined;
 	}
-
-	// initialize error handler
-	enableFeatureBasedOnFlag(featureFlags.enableErrorHandlerFlag,
-		'error handler',
-		() => app.use(errorHandler)
-	);
-
-    return app;
 }

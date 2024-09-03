@@ -18,8 +18,12 @@ export default function createValidationRoutes(): Router {
 		registrationValidationRules,
 		async (req: Request, res: Response, next: NextFunction) => {
 			const errors = validationResult(req);
+
+			// check for validation errors
 			if (!errors.isEmpty()) {
-				logger.error('Validation failed', { errors: errors.array() });
+				logger.error('Validation failed during registration', {
+					errors: errors.array()
+				});
 				return res.status(400).json({ errors: errors.array() });
 			}
 

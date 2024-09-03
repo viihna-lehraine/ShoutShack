@@ -2,6 +2,10 @@ import { execSync } from 'child_process';
 import path from 'path';
 import { Logger } from '../config/logger';
 import { environmentVariables } from 'src/config/environmentConfig';
+import {
+	validateDependencies,
+	handleGeneralError
+} from '../middleware/errorHandler';
 
 interface SopsDependencies {
 	logger: Logger;
@@ -50,6 +54,15 @@ async function getSecrets({
 	getDirectoryPath
 }: SopsDependencies): Promise<SecretsMap> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'execSync', instance: execSync },
+				{ name: 'getDirectoryPath', instance: getDirectoryPath }
+			],
+			logger
+		);
+
 		const secretsPath = path.join(
 			getDirectoryPath(),
 			'./config/secrets.json.gpg'
@@ -59,9 +72,9 @@ async function getSecrets({
 			`sops -d --output-type json ${secretsPath}`
 		).toString();
 		return JSON.parse(decryptedSecrets);
-	} catch (err) {
-		logger.info(`Error retrieving secrets from SOPS: ${err}`);
-		throw err;
+	} catch (error) {
+		handleGeneralError(error, logger);
+		throw error;
 	}
 }
 
@@ -70,13 +83,21 @@ async function decryptKey(
 	encryptedFilePath: string
 ): Promise<string> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'execSync', instance: execSync }
+			],
+			logger
+		);
+
 		const decryptedKey = execSync(
 			`sops -d --output-type string ${encryptedFilePath}`
 		).toString('utf-8');
 		return decryptedKey;
-	} catch (err) {
-		logger.error(`Error decrypting key: ${err}`);
-		throw err;
+	} catch (error) {
+		handleGeneralError(error, logger);
+		throw error;
 	}
 }
 
@@ -87,6 +108,14 @@ async function decryptDataFiles({
 	[key: string]: string;
 }> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'execSync', instance: execSync }
+			],
+			logger
+		);
+
 		const filePaths = [
 			environmentVariables.serverDataFilePath1,
 			environmentVariables.serverDataFilePath2,
@@ -109,39 +138,52 @@ async function decryptDataFiles({
 		}
 
 		return decryptedFiles;
-	} catch (err) {
-		logger.error(
-			`Error decrypting data files from backend data folder: ${err}`
-		);
-		throw err;
+	} catch (error) {
+		handleGeneralError(error, logger);
+		throw error;
 	}
 }
 
 async function getSSLKeys(
 	dependencies: SopsDependencies
 ): Promise<{ key: string; cert: string }> {
-	const { logger, execSync, getDirectoryPath } = dependencies;
 	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: dependencies.logger },
+				{ name: 'execSync', instance: dependencies.execSync },
+				{
+					name: 'getDirectoryPath',
+					instance: dependencies.getDirectoryPath
+				}
+			],
+			dependencies.logger
+		);
+
 		const keyPath = path.join(
-			getDirectoryPath(),
+			dependencies.getDirectoryPath(),
 			'./keys/ssl/guestbook_key.pem.gpg'
 		);
 		const certPath = path.join(
-			getDirectoryPath(),
+			dependencies.getDirectoryPath(),
 			'./keys/ssl/guestbook_cert.pem.gpg'
 		);
-		const decryptedKey = await decryptKey({ logger, execSync }, keyPath);
-		const decryptedCert = await decryptKey({ logger, execSync }, certPath);
+		const decryptedKey = await decryptKey(
+			{ logger: dependencies.logger, execSync: dependencies.execSync },
+			keyPath
+		);
+		const decryptedCert = await decryptKey(
+			{ logger: dependencies.logger, execSync: dependencies.execSync },
+			certPath
+		);
 
 		return {
 			key: decryptedKey,
 			cert: decryptedCert
 		};
-	} catch (err) {
-		logger.error(
-			`Error decrypting SSL keys from backend keys folder: ${err}`
-		);
-		throw err;
+	} catch (error) {
+		handleGeneralError(error, dependencies.logger);
+		throw error;
 	}
 }
 

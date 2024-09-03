@@ -62,7 +62,7 @@ The project stack includes the following
 
     * At every stage of development and maintenance, a strong focus is to be placed on the application's security. Argon2id has been chosen for all hashing functionality with the application of user salts and a pepper which will be rotated on a regular basis, which will help encrypt user passwords at rest inside the database.
     
-    I still plan to encrypt more data stored on the database at rest while keeping their encryption keys stored offline. More 
+    * I plan to encrypt more data stored on the database at rest while keeping encryption keys stored offline in a secure manner. 
 
 
 <br>

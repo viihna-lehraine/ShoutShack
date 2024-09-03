@@ -34,30 +34,44 @@ export default function createBackupCodeService({
 		backupCodes: BackupCode[]
 	) => Promise<void>;
 } {
-	// Generate Backup Codes
+	// generate backup codes
 	async function generateBackupCodes(id: string): Promise<string[]> {
-		const backupCodes: BackupCode[] = [];
-		for (let i = 0; i < 16; i++) {
-			const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
-			const hashedCode = await bcrypt.hash(code, 10);
-			backupCodes.push({ code: hashedCode, used: false });
+		try {
+			const backupCodes: BackupCode[] = [];
+			for (let i = 0; i < 16; i++) {
+				const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
+				const hashedCode = await bcrypt.hash(code, 10);
+				backupCodes.push({ code: hashedCode, used: false });
+			}
+
+			await saveBackupCodesToDatabase(id, backupCodes);
+
+			return backupCodes.map(backupCode => backupCode.code);
+		} catch (err) {
+			logger.error(
+				`Error generating backup codes for user ${id}: ${
+					err instanceof Error ? err.message : String(err)
+				}`
+			);
+			throw new Error(
+				`Failed to generate backup codes. Please try again.`
+			);
 		}
-
-		// Store backup codes in the database associated with the user's id
-		await saveBackupCodesToDatabase(id, backupCodes);
-
-		// Return only the plain codes as strings
-		return backupCodes.map(backupCode => backupCode.code);
 	}
 
-	// Verify a Backup Code
+	// verify a backup code
 	async function verifyBackupCode(
 		id: string,
 		inputCode: string
 	): Promise<boolean> {
-		const storedCodes = await getBackupCodesFromDatabase(id);
+		try {
+			const storedCodes = await getBackupCodesFromDatabase(id);
 
-		if (storedCodes) {
+			if (!storedCodes) {
+				logger.warn(`No backup codes found for user ${id}`);
+				return false;
+			}
+
 			for (let i = 0; i < storedCodes.length; i++) {
 				const match = await bcrypt.compare(
 					inputCode,
@@ -65,86 +79,120 @@ export default function createBackupCodeService({
 				);
 				if (match && !storedCodes[i].used) {
 					storedCodes[i].used = true;
-					await updateBackupCodesInDatabase(id, storedCodes); // Mark the code as used
-					return true; // Successful verification
+					await updateBackupCodesInDatabase(id, storedCodes); // mark the code as used
+					return true;
 				}
 			}
-		} else {
-			logger.error('No backup codes found for user');
-			return false; // No backup codes found
-		}
 
-		return false; // Verification failed
+			logger.warn(`Backup code verification failed for user ${id}`);
+			return false;
+		} catch (err) {
+			logger.error(
+				`Error verifying backup code for user ${id}: ${
+					err instanceof Error ? err.message : String(err)
+				}`
+			);
+			throw new Error('Failed to verify backup code. Please try again.');
+		}
 	}
 
-	// Save backup codes to the database
+	// save backup codes to the database
 	async function saveBackupCodesToDatabase(
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
 		try {
-			const user = (await UserMfa.findByPk(id)) as UserMfaInstance | null; // Find user by primary key
-			if (!user) throw new Error('User not found');
+			const user = await UserMfa.findByPk(id);
 
-			// Map the codes element of backupCodes to an array of strings
+			if (!user) {
+				logger.error(`User with ID ${id} not found.`);
+				throw new Error('User not found');
+			}
+
+			// map the codes element of backupCodes to an array of strings
 			const backupCodesAsStrings = backupCodes.map(
 				codeObj => codeObj.code
 			);
 
-			// Assign the array of strings to user.backupCodes
 			user.backupCodes = backupCodesAsStrings;
 			await user.save();
 		} catch (err) {
-			logger.error('Error saving backup codes to database: ', err);
-			throw new Error('Failed to save backup codes to database');
+			logger.error(
+				`Error saving backup codes to database for user ${id}: ${
+					err instanceof Error ? err.message : String(err)
+				}`
+			);
+			throw new Error(
+				`Failed to save backup codes. Please try again later.`
+			);
 		}
 	}
 
-	// Get backup codes from the database
+	// get backup codes from the database
 	async function getBackupCodesFromDatabase(
 		id: string
 	): Promise<BackupCode[] | undefined> {
 		try {
-			const user = (await UserMfa.findByPk(id)) as UserMfaInstance | null; // Find user by primary key
-			if (!user) throw new Error('User not found');
+			const user = await UserMfa.findByPk(id);
 
-			// Assume user.backupCodes is a string[] or null, convert it to BackupCode[] or undefined
-			const backupCodes = user.backupCodes;
-
-			if (backupCodes === null) {
-				return undefined; // Handle this scenario as necessary
+			if (!user) {
+				logger.error(`User with ID ${id} not found.`);
+				return undefined;
 			}
 
-			// Convert string[] to BackupCode[]
+			// assume user.backupCodes is a string[] or null, convert it to BackupCode[] or undefined
+			const backupCodes = user.backupCodes;
+
+			if (!backupCodes) {
+				logger.warn(`No backup codes found for user ${id}`);
+				return undefined;
+			}
+
+			// convert string[] to BackupCode[]
 			return backupCodes.map(
 				code => ({ code, used: false }) as BackupCode
 			);
 		} catch (err) {
-			logger.error('Error fetching backup codes from database: ', err);
-			throw new Error('Failed to retrieve backup codes from database');
+			logger.error(
+				`Error fetching backup codes from database for user ${id}: ${
+					err instanceof Error ? err.message : String(err)
+				}`
+			);
+			throw new Error(
+				`Failed to retrieve backup codes. Please try again later.`
+			);
 		}
 	}
 
-	// Update backup codes in the database
+	// update backup codes in the database
 	async function updateBackupCodesInDatabase(
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
 		try {
-			const user = (await UserMfa.findByPk(id)) as UserMfaInstance | null; // Find user by primary key
-			if (!user) throw new Error('User not found');
+			const user = await UserMfa.findByPk(id);
 
-			// Map the codes element of backupCodes to an array of strings
+			if (!user) {
+				logger.error(`User with ID ${id} not found.`);
+				throw new Error('User not found');
+			}
+
+			// map the codes element of backupCodes to an array of strings
 			const backupCodesAsStrings = backupCodes.map(
 				codeObj => codeObj.code
 			);
 
-			// Assign the array of strings to user.backupCodes
 			user.backupCodes = backupCodesAsStrings;
 			await user.save();
 		} catch (err) {
-			logger.error('Error updating backup codes in database: ', err);
-			throw new Error('Failed to update backup codes in database');
+			logger.error(
+				`Error updating backup codes in database for user ${id}: ${
+					err instanceof Error ? err.message : String(err)
+				}`
+			);
+			throw new Error(
+				`Failed to update backup codes. Please try again later.`
+			);
 		}
 	}
 
