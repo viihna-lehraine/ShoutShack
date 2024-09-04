@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
-import { Logger } from '../config/logger';
 import { FeatureFlags } from '../config/environmentConfig';
+import { Logger } from '../config/logger';
+import {
+	validateDependencies,
+	handleGeneralError
+} from '../middleware/errorHandler';
 
 interface JwtAuthMiddlewareDependencies {
 	logger: Logger;
@@ -13,48 +17,56 @@ export const createJwtAuthMiddleWare = ({
 	featureFlags,
 	verifyJwToken
 }: JwtAuthMiddlewareDependencies) => {
+	validateDependencies(
+		[
+			{ name: 'logger', instance: logger },
+			{ name: 'featureFlags', instance: featureFlags },
+			{ name: 'verifyJwToken', instance: verifyJwToken }
+		],
+		logger || console
+	);
+
 	return async (
 		req: Request,
 		res: Response,
 		next: NextFunction
 	): Promise<void> => {
-		if (featureFlags.enableJwtAuthFlag) {
-			logger.info('JWT Auth is enabled');
-			const authHeader = req.headers.authorization;
-			const token = authHeader?.split(' ')[1];
+		try {
+			if (featureFlags.enableJwtAuthFlag) {
+				logger.info('JWT Auth is enabled');
+				const authHeader = req.headers.authorization;
+				const token = authHeader?.split(' ')[1];
 
-			if (!token) {
-				logger.warn('No JWT token found in the authorization header');
-				res.sendStatus(403); // forbidden
-				return;
-			}
-
-			try {
-				const user = await verifyJwToken(token);
-
-				if (!user) {
-					logger.warn('Invalid JWT token');
-					res.sendStatus(403); // forbidden
+				if (!token) {
+					logger.warn(
+						'No JWT token found in the authorization header'
+					);
+					res.sendStatus(403);
 					return;
 				}
 
-				req.user = user;
-				next();
-			} catch (err) {
-				if (err instanceof Error) {
-					logger.error(`Error verifying JWT token: ${err.message}`, {
-						stack: err.stack
-					});
-				} else {
-					logger.error(
-						`Unknown error verifying JWT token: ${String(err)}`
-					);
+				try {
+					const user = await verifyJwToken(token);
+
+					if (!user) {
+						logger.warn('Invalid JWT token');
+						res.sendStatus(403);
+						return;
+					}
+
+					req.user = user;
+					next();
+				} catch (err) {
+					handleGeneralError(err, logger || console, req);
+					res.sendStatus(500);
 				}
-				res.sendStatus(500); // Internal Server Error
+			} else {
+				logger.info('JWT Auth is disabled');
+				next();
 			}
-		} else {
-			logger.info('JWT Auth is disabled');
-			next();
+		} catch (error) {
+			handleGeneralError(error, logger || console, req);
+			next(error);
 		}
 	};
 };

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import AppError from '../errors/AppError';
 import { FeatureFlags } from '../config/environmentConfig';
 import { Logger } from '../config/logger';
+import { AppError } from '../config/errorClasses';
 
 interface ErrorHandlerDependencies {
 	logger: Logger;
@@ -13,18 +13,28 @@ interface Dependency {
 	instance: unknown;
 }
 
-// Dependency validation function
+function isLogger(logger: Logger | Console | undefined): logger is Logger {
+	return (
+		logger !== undefined &&
+		logger !== null &&
+		typeof logger.error === 'function' &&
+		typeof logger.warn === 'function' &&
+		typeof logger.debug === 'function' &&
+		typeof logger.info === 'function'
+	);
+}
+
 export function validateDependencies(
 	dependencies: Dependency[],
-	logger: Logger | Console
+	logger: Logger | Console = console
 ): void {
-	if (!dependencies || !logger) {
-		(logger.error || console.error)(
-			'Unable to validate dependencies as the validateDependencies function was called without the required arguments'
-		);
-		throw new Error(
-			'Unable to validate dependencies as the validateDependencies function was called without the required arguments'
-		);
+	const logInfo = isLogger(logger) ? logger.info : console.info;
+	const logWarn = isLogger(logger) ? logger.warn : console.warn;
+	const logError = isLogger(logger) ? logger.error : console.error;
+
+	if (!dependencies || dependencies.length === 0) {
+		logWarn('No dependencies provided for validation');
+		throw new Error('No dependencies provided for validation');
 	}
 
 	try {
@@ -36,30 +46,31 @@ export function validateDependencies(
 			const missingNames = missingDependencies
 				.map(({ name }) => name)
 				.join(', ');
-			(logger.error || console.error)(
-				`Missing dependencies: ${missingNames}`
-			);
+			logError(`Missing dependencies: ${missingNames}`);
 			throw new Error(`Missing dependencies: ${missingNames}`);
 		}
 
-		(logger.info || console.log)(
+		logInfo(
 			`All dependencies are valid: ${dependencies
 				.map(({ name }) => name)
 				.join(', ')}`
 		);
 	} catch (error) {
-		(logger.error || console.error)(
-			'An error occurred during dependency validation',
-			{
+		if (isLogger(logger)) {
+			logger.error('An error occurred during dependency validation', {
 				stack: error instanceof Error ? error.stack : undefined,
 				message: error instanceof Error ? error.message : String(error)
-			}
-		);
+			});
+		} else {
+			console.error('An error occurred during dependency validation', {
+				stack: error instanceof Error ? error.stack : undefined,
+				message: error instanceof Error ? error.message : String
+			});
+		}
 		throw error;
 	}
 }
 
-// Core error handling function
 export function handleGeneralError(
 	error: unknown,
 	logger: Logger | Console,
@@ -78,19 +89,27 @@ export function handleGeneralError(
 		);
 
 		if (error instanceof Error || error instanceof AppError) {
-			logger.error(`Error occurred: ${error.message}`, {
-				stack: error.stack,
-				method: req?.method,
-				url: req?.url,
-				ip: req?.ip
-			});
+			if (isLogger(logger)) {
+				logger.error(`Error occurred: ${error.message}`, {
+					stack: error.stack,
+					method: req?.method,
+					url: req?.url,
+					ip: req?.ip
+				});
+			} else {
+				fallbackLogger.error('Error occurred:', error);
+			}
 		} else {
-			logger.error('An unknown error occurred', {
-				error: String(error),
-				method: req?.method,
-				url: req?.url,
-				ip: req?.ip
-			});
+			if (isLogger(logger)) {
+				logger.error('An unknown error occurred', {
+					error: String(error),
+					method: req?.method,
+					url: req?.url,
+					ip: req?.ip
+				});
+			} else {
+				fallbackLogger.error('An unknown error occurred:', error);
+			}
 		}
 	} catch (loggingError) {
 		fallbackLogger.error('Failed to log the original error', {
@@ -103,7 +122,6 @@ export function handleGeneralError(
 	}
 }
 
-// Express-specific error handler middleware
 export function expressErrorHandler({
 	logger,
 	featureFlags

@@ -6,16 +6,21 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
+import { Logger } from '../config/logger';
 
 interface FeatureRequestAttributes {
-	featureRequestNumber: number; // primary key, auto-incremented
-	id: string; // foreign key referencing a user (if applicable)
-	email?: string | null; // optional email of the user submitting the request
-	featureRequestType: string; // type of feature request
-	featureRequestContent: string; // detailed content of the feature request
-	canFollowUpFeatureRequest: boolean; // indicates if follow-up is allowed
-	featureRequestOpenDate: Date; // date when the request was opened
-	featureRequestCloseDate?: Date | null; // optional date when the request was closed
+	featureRequestNumber: number;
+	id: string;
+	email?: string | null;
+	featureRequestType: string;
+	featureRequestContent: string;
+	canFollowUpFeatureRequest: boolean;
+	featureRequestOpenDate: Date;
+	featureRequestCloseDate?: Date | null;
 }
 
 class FeatureRequest
@@ -25,63 +30,78 @@ class FeatureRequest
 	>
 	implements FeatureRequestAttributes
 {
-	featureRequestNumber!: number; // initialized as a non-nullable number, auto-incremented
-	id!: string; // initialized as a non-nullable string (UUID)
-	email!: string | null; // initialized as a nullable string
-	featureRequestType!: string; // initialized as a non-nullable string
-	featureRequestContent!: string; // initialized as a non-nullable string
-	canFollowUpFeatureRequest!: boolean; // initialized as a non-nullable boolean
-	featureRequestOpenDate!: CreationOptional<Date>; // initialized as a non-nullable date
-	featureRequestCloseDate!: Date | null; // initialized as a nullable date
+	featureRequestNumber!: number;
+	id!: string;
+	email!: string | null;
+	featureRequestType!: string;
+	featureRequestContent!: string;
+	canFollowUpFeatureRequest!: boolean;
+	featureRequestOpenDate!: CreationOptional<Date>;
+	featureRequestCloseDate!: Date | null;
 }
 
 export default function createFeatureRequestModel(
-	sequelize: Sequelize
+	sequelize: Sequelize,
+	logger: Logger
 ): typeof FeatureRequest {
-	FeatureRequest.init(
-		{
-			featureRequestNumber: {
-				type: DataTypes.INTEGER,
-				allowNull: false, // feature request number is required
-				primaryKey: true, // primary key for the feature request record
-				autoIncrement: true // auto-increment for unique feature requests
-			},
-			id: {
-				type: DataTypes.STRING,
-				allowNull: true // foreign key rom the user table is optional (if false, rrequest is anonymous)
-			},
-			email: {
-				type: DataTypes.STRING,
-				allowNull: true // email is optional
-			},
-			featureRequestType: {
-				type: DataTypes.STRING,
-				allowNull: false // feature request type is required
-			},
-			featureRequestContent: {
-				type: DataTypes.TEXT,
-				allowNull: false // detailed content of the feature request is required
-			},
-			canFollowUpFeatureRequest: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false // whether follow-up is allowed must be explicitly defined by user
-			},
-			featureRequestOpenDate: {
-				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW // defaults to current date/time
-			},
-			featureRequestCloseDate: {
-				type: DataTypes.DATE,
-				allowNull: true // close date for the feature request is optional, but should be set to true if closed
-			}
-		},
-		{
-			sequelize,
-			tableName: 'FeatureRequests',
-			timestamps: true // automatically include createdAt and updatedAt timestamps
-		}
-	);
+	try {
+		validateDependencies(
+			[
+				{ name: 'sequelize', instance: sequelize },
+				{ name: 'logger', instance: logger }
+			],
+			logger || console
+		);
 
-	return FeatureRequest;
+		FeatureRequest.init(
+			{
+				featureRequestNumber: {
+					type: DataTypes.INTEGER,
+					allowNull: false,
+					primaryKey: true,
+					autoIncrement: true
+				},
+				id: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				email: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				featureRequestType: {
+					type: DataTypes.STRING,
+					allowNull: false
+				},
+				featureRequestContent: {
+					type: DataTypes.TEXT,
+					allowNull: false
+				},
+				canFollowUpFeatureRequest: {
+					type: DataTypes.BOOLEAN,
+					allowNull: false
+				},
+				featureRequestOpenDate: {
+					type: DataTypes.DATE,
+					allowNull: false,
+					defaultValue: DataTypes.NOW
+				},
+				featureRequestCloseDate: {
+					type: DataTypes.DATE,
+					allowNull: true
+				}
+			},
+			{
+				sequelize,
+				tableName: 'FeatureRequests',
+				timestamps: true
+			}
+		);
+
+		logger.info('FeatureRequest model initialized successfully');
+		return FeatureRequest;
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		throw error;
+	}
 }

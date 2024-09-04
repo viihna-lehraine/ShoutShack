@@ -1,5 +1,5 @@
 import argon2 from 'argon2';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 import { SecretsMap } from '../utils/sops';
 
@@ -8,7 +8,7 @@ type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 interface HashPasswordDependencies {
 	password: string;
 	secrets: UserSecrets;
-	logger: Logger | Console;
+	logger: Logger;
 }
 
 export const hashConfig = {

@@ -1,5 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 
 export interface MailerSecrets {

@@ -2,7 +2,7 @@ import { Request } from 'express';
 import multer, { FileFilterCallback, Multer } from 'multer';
 import path from 'path';
 import { validateDependencies, handleGeneralError } from '../middleware/errorHandler';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 
 export interface MulterDependencies {
 	readonly multer: typeof multer;

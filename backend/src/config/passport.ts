@@ -105,7 +105,7 @@ export default async function configurePassport({
 						return done(null, false, { message: 'User not found' });
 					}
 
-					const isMatch = await user.comparePassword(password, argon2, secrets);
+					const isMatch = await user.comparePassword(password, argon2, secrets, logger);
 
 					if (isMatch) {
 						logger.info(`Local authentication successful for user: ${username}`);

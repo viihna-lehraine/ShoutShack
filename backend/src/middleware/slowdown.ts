@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
 import { Logger } from '../config/logger';
-import '../../types/custom/express-session';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 interface SlowdownConfig {
 	slowdownThreshold: number;
@@ -13,64 +16,72 @@ interface SlowdownSession extends Session {
 }
 
 export function createSlowdownMiddleware({
-	slowdownThreshold = 100, // default threshold in ms, can be customized
+	slowdownThreshold = 100, // in ms
 	logger
 }: SlowdownConfig) {
-	return function slowdownMiddleware(
-		req: Request & { session: SlowdownSession },
-		res: Response,
-		next: NextFunction
-	): void {
-		const requestTime = Date.now();
+	try {
+		validateDependencies(
+			[
+				{ name: 'slowdownThreshold', instance: slowdownThreshold },
+				{ name: 'logger', instance: logger }
+			],
+			logger || console
+		);
 
-		// if session handling fails or doesn't exist, proceed without slowdown
-		if (!req.session) {
-			logger.warn('Session is undefined; proceeding without slowdown');
-			next();
-			return;
-		}
+		return function slowdownMiddleware(
+			req: Request & { session: SlowdownSession },
+			res: Response,
+			next: NextFunction
+		): void {
+			const requestTime = Date.now();
 
-		// Log when there is no previous request time, indicating first request
-		try {
-			if (!req.session.lastRequestTime) {
-				logger.info(
-					`First request from IP: ${req.ip}, proceeding without delay`
+			if (!req.session) {
+				logger.warn(
+					'Session is undefined; proceeding without slowdown'
 				);
-				req.session.lastRequestTime = requestTime;
 				next();
-			} else {
-				const timeDiff = requestTime - req.session.lastRequestTime;
+				return;
+			}
 
-				if (timeDiff < slowdownThreshold) {
-					const waitTime = slowdownThreshold - timeDiff;
-					logger.warn(
-						`Rapid request detected from IP: ${req.ip}. Delaying response by ${waitTime} ms`
-					);
-					setTimeout(() => {
-						req.session.lastRequestTime = requestTime;
-						logger.info(
-							`Resuming delayed request from IP: ${req.ip}`
-						);
-						next();
-					}, waitTime);
-				} else {
+			try {
+				if (!req.session.lastRequestTime) {
 					logger.info(
-						`Request from IP: ${req.ip} within acceptable time frame. Proceeding`
+						`First request from IP: ${req.ip}, proceeding without delay`
 					);
 					req.session.lastRequestTime = requestTime;
 					next();
+				} else {
+					const timeDiff = requestTime - req.session.lastRequestTime;
+
+					if (timeDiff < slowdownThreshold) {
+						const waitTime = slowdownThreshold - timeDiff;
+						logger.warn(
+							`Rapid request detected from IP: ${req.ip}. Delaying response by ${waitTime} ms`
+						);
+						setTimeout(() => {
+							req.session.lastRequestTime = requestTime;
+							logger.info(
+								`Resuming delayed request from IP: ${req.ip}`
+							);
+							next();
+						}, waitTime);
+					} else {
+						logger.info(
+							`Request from IP: ${req.ip} within acceptable time frame. Proceeding`
+						);
+						req.session.lastRequestTime = requestTime;
+						next();
+					}
 				}
+			} catch (err) {
+				handleGeneralError(err, logger || console, req);
+				next(err);
 			}
-		} catch (err) {
-			if (err instanceof Error) {
-				logger.error(`Error occurred: ${err.message}`, {
-					stack: err.stack
-				});
-			} else {
-				logger.error(`Unknown error occurred: ${String(err)}`);
-			}
-		}
-	};
+		};
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		throw error;
+	}
 }
 
 export default createSlowdownMiddleware;

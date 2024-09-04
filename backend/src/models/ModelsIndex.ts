@@ -1,8 +1,12 @@
 import { Sequelize } from 'sequelize';
+import { AppError } from '../config/errorClasses';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 import { loadModels, Models } from './loadModels';
 import { environmentVariables } from '../config/environmentConfig';
 import { Logger, setupLogger } from '../config/logger';
-import AppError from '../errors/AppError';
 
 const logger: Logger = setupLogger({
 	logLevel: environmentVariables.nodeEnv === 'production' ? 'info' : 'debug'
@@ -10,40 +14,52 @@ const logger: Logger = setupLogger({
 
 let models: Models | null = null;
 
-export async function initializeModels(sequelize: Sequelize): Promise<Models> {
+let sequelize: Sequelize;
+
+export async function initializeModels(
+	sequelize: Sequelize,
+	logger: Logger
+): Promise<Models> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'sequelize', instance: sequelize },
+				{ name: 'logger', instance: logger }
+			],
+			logger || console
+		);
+
 		if (!models) {
 			logger.info('Loading models');
-			models = await loadModels(sequelize);
+			models = await loadModels(sequelize, logger);
+			logger.info('Models loaded');
 		}
 		return models as Models;
 	} catch (error) {
-		if (error instanceof Error) {
-			logger.error(`Error initializing models: `, {
-				stack: error.stack
-			});
-		} else {
-			logger.error('An unknown error occurred while initializing models');
-		}
+		handleGeneralError(error, logger || console);
 		throw new AppError('Internal Server Error', 500);
 	}
 }
 
-export function getModels(): Models {
+export async function getModels(): Promise<Models> {
 	try {
 		if (!models) {
 			logger.error('Models have not been initialized');
-			throw new Error('Models have not been initialized');
+			try {
+				logger.info('Attempting to load models');
+				models = await initializeModels(sequelize, logger);
+				if (models) {
+					logger.info('Models loaded');
+					return models;
+				}
+			} catch (error) {
+				handleGeneralError(error, logger || console);
+				throw new AppError('Internal Server Error', 500);
+			}
 		}
-		return models;
+		return models as Models;
 	} catch (error) {
-		if (error instanceof Error) {
-			logger.error(`Error getting models:`, {
-				stack: error.stack
-			});
-		} else {
-			logger.error('An unknown error occurred while getting models');
-		}
+		handleGeneralError(error, logger || console);
 		throw new AppError('Internal Server Error', 500);
 	}
 }

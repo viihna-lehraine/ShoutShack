@@ -1,8 +1,8 @@
 import { Sequelize, Options } from 'sequelize';
+import { AppError } from '../config/errorClasses';
 import { FeatureFlags } from './environmentConfig';
-import AppError from '../errors/AppError';
-import { handleGeneralError, validateDependencies } from 'src/middleware/errorHandler';
 import { Logger } from './logger';
+import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 
 export interface DBSecrets {
 	DB_NAME: string;

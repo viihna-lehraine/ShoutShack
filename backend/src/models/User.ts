@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { Request, Response } from 'express';
 import {
+	CreationOptional,
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
@@ -9,117 +10,144 @@ import {
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword } from '../config/hashConfig';
-import { Logger, setupLogger } from '../config/logger';
-import { PasswordValidationError } from '../errors/PasswordError';
+import { Logger } from '../config/logger';
+import { PasswordValidationError } from '../config/errorClasses';
 import createRateLimitMiddleware, {
 	RateLimitMiddlewareDependencies
 } from '../middleware/rateLimit';
 import sops, { SecretsMap } from '../utils/sops';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
-// Attributes for the User model
 interface UserAttributes {
-	id: string; // UUID for the user record, primary key
-	userId: number; // auto-incremented user identifier
-	username: string; // unique username for the user
-	password: string; // hashed password for the user
-	email: string; // unique email address for the user
-	isAccountVerified: boolean; // boolean flag for account verification status
-	resetPasswordToken?: string | null; // optional reset password token
-	resetPasswordExpires?: Date | null; // optional expiry date for reset password token
-	isMfaEnabled: boolean; // boolean flag for MFA status
-	creationDate: Date; // timestamp for when the user record was created
+	id: string;
+	userId: number;
+	username: string;
+	password: string;
+	email: string;
+	isAccountVerified: boolean;
+	resetPasswordToken?: string | null;
+	resetPasswordExpires?: Date | null;
+	isMfaEnabled: boolean;
+	creationDate: Date;
 }
 
-// Secrets required for the User model
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 
-// Required for certain User model methods
 interface UserModelDependencies {
 	argon2: typeof import('argon2');
 	uuidv4: typeof uuidv4;
 	getSecrets: () => Promise<UserSecrets>;
 }
 
-const logger: Logger = setupLogger();
-
-// User model definition including attributes and static methods
 export class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
 	implements UserAttributes
 {
-	id!: string; // initialized as a non-nullable string (UUID)
-	userId!: number; // initialized as an optional auto-incremented integer
-	username!: string; // initialized as a non-nullable string
-	password!: string; // initialized as a non-nullable string
-	email!: string; // initialized as a non-nullable string
-	isAccountVerified!: boolean; // initialized as a non-nullable boolean
-	resetPasswordToken!: string | null; // initialized as an optional string
-	resetPasswordExpires!: Date | null; // initialized as an optional date
-	isMfaEnabled!: boolean; // initialized as a non-nullable boolean
-	creationDate!: Date; // initialized as a non-nullable date
+	id!: string;
+	userId!: number;
+	username!: string;
+	password!: string;
+	email!: string;
+	isAccountVerified!: boolean;
+	resetPasswordToken!: string | null;
+	resetPasswordExpires!: Date | null;
+	isMfaEnabled!: boolean;
+	creationDate!: CreationOptional<Date>;
 
-	// instance method to compare passwords
 	async comparePassword(
 		password: string,
 		argon2: typeof import('argon2'),
-		secrets: UserSecrets
+		secrets: UserSecrets,
+		logger: Logger
 	): Promise<boolean> {
 		try {
+			validateDependencies(
+				[
+					{ name: 'password', instance: password },
+					{ name: 'argon2', instance: argon2 },
+					{ name: 'secrets', instance: secrets },
+					{ name: 'logger', instance: logger }
+				],
+				logger || console
+			);
+
 			return await argon2.verify(
 				this.password,
 				password + secrets.PEPPER
 			);
 		} catch (error) {
-			if (error instanceof Error) {
-				logger.error(`Error comparing passwords:`, {
-					stack: error.stack
-				});
-				throw new PasswordValidationError('Passwords do not match');
-			} else {
-				logger.error(`Error comparing passwords:`, {
-					error
-				});
-				throw new PasswordValidationError('Passwords do not match');
-			}
+			handleGeneralError(error, logger || console);
+			throw new PasswordValidationError('Passwords do not match');
 		}
 	}
 
-	// static method to validate passwords
-	static validatePassword(password: string): boolean {
-		const isValidLength = password.length >= 8 && password.length <= 128;
-		const hasUpperCase = /[A-Z]/.test(password);
-		const hasLowerCase = /[a-z]/.test(password);
-		const hasNumber = /\d/.test(password);
-		const hasSpecial = /[^\dA-Za-z]/.test(password);
+	static validatePassword(password: string, logger: Logger): boolean {
+		try {
+			validateDependencies(
+				[
+					{ name: 'password', instance: password },
+					{ name: 'logger', instance: logger }
+				],
+				logger || console
+			);
 
-		return (
-			isValidLength &&
-			hasUpperCase &&
-			hasLowerCase &&
-			hasNumber &&
-			hasSpecial
-		);
+			const isValidLength =
+				password.length >= 8 && password.length <= 128;
+			const hasUpperCase = /[A-Z]/.test(password);
+			const hasLowerCase = /[a-z]/.test(password);
+			const hasNumber = /\d/.test(password);
+			const hasSpecial = /[^\dA-Za-z]/.test(password);
+
+			return (
+				isValidLength &&
+				hasUpperCase &&
+				hasLowerCase &&
+				hasNumber &&
+				hasSpecial
+			);
+		} catch (error) {
+			handleGeneralError(error, logger || console);
+			return false;
+		}
 	}
 
-	// static method to create a new user
 	static async createUser(
 		{ uuidv4, getSecrets }: UserModelDependencies,
 		userId: number,
 		username: string,
 		password: string,
 		email: string,
-		rateLimitDependencies: RateLimitMiddlewareDependencies
+		rateLimitDependencies: RateLimitMiddlewareDependencies,
+		logger: Logger
 	): Promise<User> {
-		const rateLimiter = createRateLimitMiddleware(rateLimitDependencies);
-		const req = { ip: email } as unknown as Request;
-		const res = {} as unknown as Response;
-
 		try {
+			validateDependencies(
+				[
+					{ name: 'uuidv4', instance: uuidv4 },
+					{ name: 'getSecrets', instance: getSecrets },
+					{
+						name: 'rateLimitDependencies',
+						instance: rateLimitDependencies
+					},
+					{ name: 'logger', instance: logger }
+				],
+				logger || console
+			);
+
+			const rateLimiter = createRateLimitMiddleware(
+				rateLimitDependencies
+			);
+			const req = { ip: email } as unknown as Request;
+			const res = {} as unknown as Response;
+
 			await new Promise<void>((resolve, reject) => {
 				rateLimiter(req, res, err => (err ? reject(err) : resolve()));
 			});
 
-			const isValidPassword = User.validatePassword(password);
+			const isValidPassword = User.validatePassword(password, logger);
 			if (!isValidPassword) {
 				logger.warn(
 					'Password does not meet the security requirements.'
@@ -132,7 +160,11 @@ export class User
 			logger.debug('Password is valid. Proceeding with user creation.');
 
 			const secrets = await getSecrets();
-			const hashedPassword = await hashPassword(password, secrets);
+			const hashedPassword = await hashPassword({
+				password,
+				secrets,
+				logger
+			});
 			const newUser = await User.create({
 				id: uuidv4(),
 				userId,
@@ -148,21 +180,10 @@ export class User
 
 			return newUser;
 		} catch (error) {
-			if (error instanceof PasswordValidationError) {
-				logger.warn(
-					`Validation error during user creation: ${error.message}`
-				);
-				throw error;
-			}
+			handleGeneralError(error, logger || console);
 
-			if (error instanceof Error) {
-				logger.error(`Error creating new user: `, {
-					stack: error.stack
-				});
-			} else {
-				logger.error(`Unknown error creating user: `, {
-					error
-				});
+			if (error instanceof PasswordValidationError) {
+				throw error;
 			}
 
 			throw new PasswordValidationError(
@@ -171,160 +192,158 @@ export class User
 		}
 	}
 
-	// static method to compare hashed passwords with dependencies
-	static async comparePasswordWithDependencies(
+	static async comparePasswords(
 		hashedPassword: string,
 		password: string,
 		argon2: typeof import('argon2'),
-		secrets: UserSecrets
+		secrets: UserSecrets,
+		logger: Logger
 	): Promise<boolean> {
 		try {
-			logger.debug('Password verified successfully');
-			return await argon2.verify(
+			validateDependencies(
+				[
+					{ name: 'argon2', instance: argon2 },
+					{ name: 'secrets', instance: secrets },
+					{ name: 'logger', instance: logger }
+				],
+				logger || console
+			);
+
+			const isValid = await argon2.verify(
 				hashedPassword,
 				password + secrets.PEPPER
 			);
+
+			logger.debug('Password verified successfully');
+			return isValid;
 		} catch (error) {
+			handleGeneralError(error, logger || console);
+
 			if (error instanceof Error) {
-				logger.error(`Error comparing passwords:`, {
-					stack: error.stack
-				});
 				throw new PasswordValidationError('Error verifying password');
 			} else {
-				logger.error(`Error comparing passwords:`, {
-					error
-				});
-				throw new PasswordValidationError('Error verifying password');
+				throw new PasswordValidationError(
+					'Unknown error verifying password'
+				);
 			}
 		}
 	}
 }
 
-// User model initialization function
-export default function createUserModel(sequelize: Sequelize): typeof User {
-	User.init(
-		{
-			id: {
-				type: DataTypes.STRING,
-				defaultValue: () => uuidv4(), // generate UUID for new user
-				allowNull: false,
-				primaryKey: true,
-				unique: true
-			},
-			userId: {
-				type: DataTypes.INTEGER,
-				autoIncrement: true, // auto-increment user ID
-				allowNull: false,
-				unique: true
-			},
-			username: {
-				type: DataTypes.STRING,
-				allowNull: false,
-				unique: true // ensure username is unique
-			},
-			password: {
-				type: DataTypes.STRING,
-				allowNull: false
-			},
-			email: {
-				type: DataTypes.STRING,
-				allowNull: false,
-				unique: true // ensure email is unique
-			},
-			isAccountVerified: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false // default to unverified account
-			},
-			resetPasswordToken: {
-				type: DataTypes.STRING,
-				allowNull: true
-			},
-			resetPasswordExpires: {
-				type: DataTypes.DATE,
-				allowNull: true
-			},
-			isMfaEnabled: {
-				type: DataTypes.BOOLEAN,
-				allowNull: false,
-				defaultValue: false // default to false (MFA disabled)
-			},
-			creationDate: {
-				type: DataTypes.DATE,
-				allowNull: false,
-				defaultValue: DataTypes.NOW // set to current date/time
-			}
-		},
-		{
-			sequelize,
-			tableName: 'Users', // table name in database
-			timestamps: true, // automatically manage timestamps
-			hooks: {
-				// hook to hash the user's password before creating a new user
-				beforeCreate: async (user: User) => {
-					try {
-						const secrets = await sops.getSecrets({
-							logger,
-							execSync,
-							getDirectoryPath: () => process.cwd()
-						});
-						user.password = await hashPassword(
-							user.password,
-							secrets
-						);
-					} catch (error) {
-						// handle errors during password hashing
-						if (error instanceof Error) {
-							logger.error(`Error hashing password:`, {
-								stack: error.stack
-							});
-							throw new PasswordValidationError(
-								'Error hashing password.'
-							);
-						} else {
-							logger.error(`Unknown error hashing password:`, {
-								error
-							});
-							throw new PasswordValidationError(
-								'Unknown error hashing password'
-							);
-						}
-					}
-				},
-				afterUpdate: async (user: User) => {
-					// hook to update MFA status after updating user record
-					try {
-						if (user.changed('isMfaEnabled')) {
-							const UserMfa = await (
-								await import('./UserMfa')
-							).default(sequelize);
-							await UserMfa.update(
-								{ isMfaEnabled: user.isMfaEnabled },
-								{ where: { id: user.id } }
-							);
-							logger.debug('MFA status updated successfully');
-						}
-					} catch (error) {
-						if (error instanceof Error) {
-							logger.error(`Error updating MFA status:`, {
-								stack: error.stack
-							});
-							throw new PasswordValidationError(
-								'Error updating multi-factor authentication status. Please try again. If the issue persists, please contact support.'
-							);
-						} else {
-							logger.error(`Unknown error updating MFA status:`, {
-								error
-							});
-							throw new PasswordValidationError(
-								'Unknown error updating multi-factor authentication status. Please try again. If the issue persists, please contact support.'
-							);
-						}
-					}
-				}
-			}
-		}
-	);
+export default function createUserModel(
+	sequelize: Sequelize,
+	logger: Logger
+): typeof User {
+	try {
+		validateDependencies(
+			[
+				{ name: 'sequelize', instance: sequelize },
+				{ name: 'logger', instance: logger }
+			],
+			logger || console
+		);
 
-	return User;
+		User.init(
+			{
+				id: {
+					type: DataTypes.STRING,
+					defaultValue: () => uuidv4(),
+					allowNull: false,
+					primaryKey: true,
+					unique: true
+				},
+				userId: {
+					type: DataTypes.INTEGER,
+					autoIncrement: true,
+					allowNull: false,
+					unique: true
+				},
+				username: {
+					type: DataTypes.STRING,
+					allowNull: false,
+					unique: true
+				},
+				password: {
+					type: DataTypes.STRING,
+					allowNull: false
+				},
+				email: {
+					type: DataTypes.STRING,
+					allowNull: false,
+					unique: true
+				},
+				isAccountVerified: {
+					type: DataTypes.BOOLEAN,
+					allowNull: false,
+					defaultValue: false
+				},
+				resetPasswordToken: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				resetPasswordExpires: {
+					type: DataTypes.DATE,
+					allowNull: true
+				},
+				isMfaEnabled: {
+					type: DataTypes.BOOLEAN,
+					allowNull: false,
+					defaultValue: false
+				},
+				creationDate: {
+					type: DataTypes.DATE,
+					allowNull: false,
+					defaultValue: DataTypes.NOW
+				}
+			},
+			{
+				sequelize,
+				tableName: 'Users',
+				timestamps: true
+			}
+		);
+
+		User.addHook('beforeCreate', async (user: User) => {
+			try {
+				const secrets = await sops.getSecrets({
+					logger,
+					execSync,
+					getDirectoryPath: () => process.cwd()
+				});
+				user.password = await hashPassword({
+					password: user.password,
+					secrets,
+					logger
+				});
+			} catch (error) {
+				handleGeneralError(error, logger || console);
+				throw new PasswordValidationError('Error hashing password.');
+			}
+		});
+
+		User.addHook('afterUpdate', async (user: User) => {
+			try {
+				if (user.changed('isMfaEnabled')) {
+					const UserMfa = await (
+						await import('./UserMfa')
+					).default(sequelize, logger);
+					await UserMfa.update(
+						{ isMfaEnabled: user.isMfaEnabled },
+						{ where: { id: user.id } }
+					);
+					logger.debug('MFA status updated successfully');
+				}
+			} catch (error) {
+				handleGeneralError(error, logger || console);
+				throw new PasswordValidationError(
+					'Error updating multi-factor authentication status.'
+				);
+			}
+		});
+
+		return User;
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		throw error;
+	}
 }

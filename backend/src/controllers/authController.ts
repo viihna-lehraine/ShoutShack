@@ -5,6 +5,10 @@ import createUserModel from '../models/User';
 import argon2 from 'argon2';
 import sops from '../utils/sops';
 import { execSync } from 'child_process';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 interface AuthDependencies {
 	logger: Logger;
@@ -21,6 +25,15 @@ export function login({
 }: AuthDependencies) {
 	return async (req: Request, res: Response): Promise<Response | void> => {
 		try {
+			validateDependencies(
+				[
+					{ name: 'logger', instance: logger },
+					{ name: 'UserModel', instance: UserModel },
+					{ name: 'jwtUtil', instance: jwtUtil },
+					{ name: 'argon2', instance: argon2 }
+				],
+				logger || console
+			);
 			const { username, password } = req.body;
 
 			// find user by username
@@ -43,7 +56,8 @@ export function login({
 			const isPasswordValid = await user.comparePassword(
 				password,
 				argon2,
-				secrets
+				secrets,
+				logger
 			);
 			if (!isPasswordValid) {
 				logger.warn(
@@ -57,14 +71,8 @@ export function login({
 			logger.info(`User logged in successfully: ${username}`);
 			return res.json({ token });
 		} catch (err) {
-			if (err instanceof Error) {
-				logger.error(`Login error: ${err.message}`, {
-					stack: err.stack
-				});
-			} else {
-				logger.error(`Login error: ${String(err)}`);
-			}
-			return res.status(500).json({ msg: 'Server error' });
+			handleGeneralError(err, logger || console);
+			throw err;
 		}
 	};
 }

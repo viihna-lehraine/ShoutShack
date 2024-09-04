@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 import { Logger } from '../config/logger';
-import AppError from '../errors/AppError';
+import { AppError } from '../config/errorClasses';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 export interface RateLimitMiddlewareDependencies {
 	logger: Logger;
@@ -11,9 +15,18 @@ export interface RateLimitMiddlewareDependencies {
 
 export const createRateLimitMiddleware = ({
 	logger,
-	points = 10, // default to 10 requests
-	duration = 1 // default to 1 second per IP
+	points = 10, // 10 requests
+	duration = 1 // 1 second per IP
 }: RateLimitMiddlewareDependencies) => {
+	validateDependencies(
+		[
+			{ name: 'logger', instance: logger },
+			{ name: 'points', instance: points },
+			{ name: 'duration', instance: duration }
+		],
+		logger || console
+	);
+
 	const rateLimiter = new RateLimiterMemory({
 		points,
 		duration
@@ -35,7 +48,6 @@ export const createRateLimitMiddleware = ({
 					`Rate limit exceeded for IP: ${ip} - Remaining points: ${err.remainingPoints}`
 				);
 
-				// passes an AppError to the error-handling middleware with retryAfter details
 				next(
 					new AppError(
 						'Too Many Requests',
@@ -47,9 +59,7 @@ export const createRateLimitMiddleware = ({
 					)
 				);
 			} else {
-				logger.error(`Unexpected error during rate limiting:`, {
-					error: err
-				});
+				handleGeneralError(err, logger || console, req);
 				next(new AppError('Internal Server Error', 500));
 			}
 		}

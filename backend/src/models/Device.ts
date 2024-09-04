@@ -1,117 +1,140 @@
 import {
-	Model,
-	InferAttributes,
-	InferCreationAttributes,
 	CreationOptional,
 	DataTypes,
+	InferAttributes,
+	InferCreationAttributes,
+	Model,
 	Sequelize
 } from 'sequelize';
 import { User } from './User';
+import { Logger } from '../config/logger';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 interface DeviceAttributes {
 	deviceId: number; // primary key, auto-incremented
 	id: string; // foreign key to the User model
-	deviceName: string; // name of the device
-	deviceType: string; // type of the device (e.g., desktop, laptop, etc.)
-	os: string; // pperating system of the device
-	browser?: string | null; // optional browser information
-	ipAddress: string; // IP address associated with the device
-	lastUsed: Date; // date when the device was last used
-	isTrusted: boolean; // whether the device is trusted
-	creationDate: Date; // date of creation of the record
-	lastUpdated: Date; // date when the record was last updated
+	deviceName: string;
+	deviceType: string;
+	os: string;
+	browser?: string | null;
+	ipAddress: string;
+	lastUsed: Date;
+	isTrusted: boolean;
+	creationDate: Date;
+	lastUpdated: Date;
 }
 
 class Device
 	extends Model<InferAttributes<Device>, InferCreationAttributes<Device>>
 	implements DeviceAttributes
 {
-	deviceId!: number; // initialized as a non-nullable integer
-	id!: string; // initialized as a non-nullable string (UUID)
-	deviceName!: string; // initialized as a non-nullable string
-	deviceType!: string; // initialized as a non-nullable string
-	os!: string; // initialized as a non-nullable string
-	browser!: string | null; // nullable, may contain string or null
-	ipAddress!: string; // initialized as a non-nullable string
-	lastUsed!: CreationOptional<Date>; // optional field, defaults to current date
-	isTrusted!: boolean; // initialized as a non-nullable boolean
-	creationDate!: CreationOptional<Date>; // optional field, defaults to current date
-	lastUpdated!: CreationOptional<Date>; // optional field, defaults to current date
+	deviceId!: number;
+	id!: string;
+	deviceName!: string;
+	deviceType!: string;
+	os!: string;
+	browser!: string | null;
+	ipAddress!: string;
+	lastUsed!: CreationOptional<Date>;
+	isTrusted!: boolean;
+	creationDate!: CreationOptional<Date>;
+	lastUpdated!: CreationOptional<Date>;
 }
 
-export default function createDeviceModel(sequelize: Sequelize): typeof Device {
-	Device.init(
-		{
-			deviceId: {
-				type: DataTypes.INTEGER,
-				primaryKey: true,
-				autoIncrement: true, // auto-increment for unique devices
-				allowNull: false,
-				unique: true
-			},
-			id: {
-				type: DataTypes.UUID,
-				defaultValue: DataTypes.UUIDV4, // default to a generated UUID
-				primaryKey: true,
-				allowNull: false,
-				unique: true,
-				references: {
-					model: User,
-					key: 'id'
-				}
-			},
-			deviceName: {
-				type: DataTypes.STRING,
-				allowNull: true // device name is optional
-			},
-			deviceType: {
-				type: DataTypes.STRING,
-				allowNull: true, // device type is optional
-				validate: {
-					isIn: [['desktop', 'laptop', 'tablet', 'mobile', 'other']]
-				}
-			},
-			os: {
-				type: DataTypes.STRING,
-				allowNull: true // operating system is optional
-			},
-			browser: {
-				type: DataTypes.STRING,
-				allowNull: true // browser information is optional
-			},
-			ipAddress: {
-				type: DataTypes.STRING,
-				allowNull: false, // IP address is required
-				validate: {
-					isIP: true // validate IP address format
-				}
-			},
-			lastUsed: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW, // default to current date/time
-				allowNull: true // last used date is optional
-			},
-			isTrusted: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: false
-			},
-			creationDate: {
-				type: DataTypes.DATE, // creation date of the record, default set to current date/time
-				defaultValue: DataTypes.NOW,
-				allowNull: false // creation date is required
-			},
-			lastUpdated: {
-				type: DataTypes.DATE,
-				defaultValue: DataTypes.NOW, // default to current date/time
-				allowNull: true // last updated date is optional
-			}
-		},
-		{
-			sequelize,
-			modelName: 'Device',
-			timestamps: true // automatically manage createdAt and updatedAt fields
-		}
-	);
+export default function createDeviceModel(
+	sequelize: Sequelize,
+	logger: Logger
+): typeof Device {
+	try {
+		validateDependencies(
+			[
+				{ name: 'sequelize', instance: sequelize },
+				{ name: 'logger', instance: logger }
+			],
+			logger || console
+		);
 
-	return Device;
+		Device.init(
+			{
+				deviceId: {
+					type: DataTypes.INTEGER,
+					primaryKey: true,
+					autoIncrement: true,
+					allowNull: false,
+					unique: true
+				},
+				id: {
+					type: DataTypes.UUID,
+					defaultValue: DataTypes.UUIDV4,
+					allowNull: false,
+					references: {
+						model: User,
+						key: 'id'
+					}
+				},
+				deviceName: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				deviceType: {
+					type: DataTypes.STRING,
+					allowNull: true,
+					validate: {
+						isIn: [
+							['desktop', 'laptop', 'tablet', 'mobile', 'other']
+						]
+					}
+				},
+				os: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				browser: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				ipAddress: {
+					type: DataTypes.STRING,
+					allowNull: false,
+					validate: {
+						isIP: true
+					}
+				},
+				lastUsed: {
+					type: DataTypes.DATE,
+					defaultValue: DataTypes.NOW,
+					allowNull: true
+				},
+				isTrusted: {
+					type: DataTypes.BOOLEAN,
+					defaultValue: false
+				},
+				creationDate: {
+					type: DataTypes.DATE,
+					defaultValue: DataTypes.NOW,
+					allowNull: false
+				},
+				lastUpdated: {
+					type: DataTypes.DATE,
+					defaultValue: DataTypes.NOW,
+					allowNull: true
+				}
+			},
+			{
+				sequelize,
+				modelName: 'Device',
+				timestamps: true,
+				updatedAt: 'lastUpdated'
+			}
+		);
+
+		logger.info('Device model initialized successfully');
+		return Device;
+	} catch (error) {
+		handleGeneralError(error, logger || console);
+		throw error;
+	}
 }

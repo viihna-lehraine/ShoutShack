@@ -1,12 +1,16 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import helmet, { HelmetOptions } from 'helmet';
+import { environmentVariables } from '../config/environmentConfig';
 import { setupLogger } from '../config/logger';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
-import { environmentVariables } from 'src/config/environmentConfig';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;
@@ -17,7 +21,7 @@ interface SecurityHeadersDependencies {
 
 const logger = setupLogger({
 	serviceName: 'security-headers',
-	isProduction: environmentVariables.nodeEnv === 'production' // *DEV-NOTE* ensure this is set correctly before deployment
+	isProduction: environmentVariables.nodeEnv === 'production'
 });
 
 export function setupSecurityHeaders(
@@ -28,18 +32,22 @@ export function setupSecurityHeaders(
 	}: SecurityHeadersDependencies
 ): void {
 	try {
+		validateDependencies(
+			[
+				{ name: 'app', instance: app },
+				{ name: 'helmetOptions', instance: helmetOptions },
+				{
+					name: 'permissionsPolicyOptions',
+					instance: permissionsPolicyOptions
+				}
+			],
+			logger
+		);
+
 		app.use(helmet(helmetOptions));
 		logger.info('Helmet middleware applied successfully');
 	} catch (error) {
-		if (error instanceof Error) {
-			logger.error(`Failed to set helmet middleware: ${error.message}`, {
-				stack: error.stack
-			});
-		} else {
-			logger.error(
-				`Unknown error occurred in helmet middleware: ${String(error)}`
-			);
-		}
+		handleGeneralError(error, logger);
 	}
 
 	if (
@@ -58,18 +66,7 @@ export function setupSecurityHeaders(
 				res.setHeader('Permissions-Policy', policies);
 				logger.info('Permissions-Policy header set successfully');
 			} catch (error) {
-				if (error instanceof Error) {
-					logger.error(
-						`Failed to set Permissions-Policy header: ${error.message}`,
-						{
-							stack: error.stack
-						}
-					);
-				} else {
-					logger.error(
-						`Unknown error occurred in Permissions-Policy header: ${String(error)}`
-					);
-				}
+				handleGeneralError(error, logger, req);
 			}
 			next();
 		});
@@ -86,18 +83,7 @@ export function setupSecurityHeaders(
 		);
 		logger.info('Content Security Policy applied successfully');
 	} catch (error) {
-		if (error instanceof Error) {
-			logger.error(
-				`Failed to apply Content Security Policy: ${error.message}`,
-				{
-					stack: error.stack
-				}
-			);
-		} else {
-			logger.error(
-				`Unknown error occurred in Content Security Policy: ${String(error)}`
-			);
-		}
+		handleGeneralError(error, logger);
 	}
 
 	try {
@@ -107,14 +93,6 @@ export function setupSecurityHeaders(
 			next();
 		});
 	} catch (error) {
-		if (error instanceof Error) {
-			logger.error(`Failed to set Expect-CT header: ${error.message}`, {
-				stack: error.stack
-			});
-		} else {
-			logger.error(
-				`Unknown error occurred in Expect-CT header: ${String(error)}`
-			);
-		}
+		handleGeneralError(error, logger);
 	}
 }

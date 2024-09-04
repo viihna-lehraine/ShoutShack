@@ -14,6 +14,7 @@ export interface LoggerDependencies {
 	logDirectory?: string | undefined;
 	serviceName?: string | undefined;
 	isProduction?: boolean | undefined;
+	console?: typeof console;
 }
 
 let loggerInstance: WinstonLogger | null = null;
@@ -22,7 +23,7 @@ export function setupLogger({
 	logLevel = environmentVariables.logLevel || 'debug',
 	logDirectory = environmentVariables.serverLogPath,
 	serviceName = environmentVariables.serviceName,
-	isProduction = environmentVariables.nodeEnv === 'production'
+	isProduction = environmentVariables.nodeEnv === 'production',
 }: LoggerDependencies = {}): WinstonLogger {
 	try {
 		validateDependencies(
