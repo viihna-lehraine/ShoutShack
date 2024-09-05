@@ -1,13 +1,15 @@
 import express, { Request, Response, NextFunction, Router } from 'express';
 import { validationResult } from 'express-validator';
+import { Logger } from '../config/logger';
 import { createValidatorMiddleware } from '../middleware/validator';
-import { Logger, setupLogger } from '../config/logger';
-
-const logger: Logger = setupLogger();
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../middleware/errorHandler';
 
 const { registrationValidationRules } = createValidatorMiddleware({
-	validator: (await import('validator')).default,
-	logger
+	logger: Logger,
+	validator: (await import('validator')).default
 });
 
 export default function createValidationRoutes(): Router {

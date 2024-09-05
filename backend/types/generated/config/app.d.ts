@@ -8,12 +8,12 @@ import path from 'path';
 import passport from 'passport';
 import RedisStore from 'connect-redis';
 import { randomBytes } from 'crypto';
-import { setupSecurityHeaders } from '../middleware/securityHeaders';
-import { initializeStaticRoutes } from '../routes/staticRoutes';
-import errorHandler from '../middleware/errorHandler';
-import { createCsrfMiddleware } from '../middleware/csrf';
-import { getRedisClient } from '../config/redis';
-import { createIpBlacklist } from '../middleware/ipBlacklist';
+import { setupSecurityHeaders } from './middleware/securityHeaders';
+import { initializeStaticRoutes } from './routes/staticRoutes';
+import errorHandler from './middleware/errorHandler';
+import { createCsrfMiddleware } from './middleware/csrf';
+import { getRedisClient } from './config/redis';
+import { createIpBlacklist } from './middleware/ipBlacklist';
 interface AppDependencies {
     express: typeof express;
     session: typeof session;

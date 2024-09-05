@@ -56,15 +56,19 @@ export function validateDependencies(
 				.join(', ')}`
 		);
 	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown error';
+		const stack = error instanceof Error ? error.stack : 'No stack trace';
+
 		if (isLogger(logger)) {
 			logger.error('An error occurred during dependency validation', {
-				stack: error instanceof Error ? error.stack : undefined,
-				message: error instanceof Error ? error.message : String(error)
+				stack: stack ?? 'No stack trace',
+				message: message ?? 'Unknown error'
 			});
 		} else {
 			console.error('An error occurred during dependency validation', {
-				stack: error instanceof Error ? error.stack : undefined,
-				message: error instanceof Error ? error.message : String
+				stack: stack ?? 'No stack trace',
+				message: message ?? 'Unknown error'
 			});
 		}
 		throw error;
@@ -85,31 +89,38 @@ export function handleGeneralError(
 				{ name: req ? 'req' : 'undefined', instance: req },
 				{ name: 'fallbackLogger', instance: fallbackLogger }
 			],
-			logger
+			logger || console
 		);
 
-		if (error instanceof Error || error instanceof AppError) {
-			if (isLogger(logger)) {
-				logger.error(`Error occurred: ${error.message}`, {
-					stack: error.stack,
-					method: req?.method,
-					url: req?.url,
-					ip: req?.ip
-				});
-			} else {
-				fallbackLogger.error('Error occurred:', error);
-			}
+		const isErrorInstance =
+			error instanceof Error || error instanceof AppError;
+
+		const message = isErrorInstance
+			? error.message
+			: `An unknown error occurred: ${String(error) ?? 'Unknown error'}`;
+
+		const stack = isErrorInstance
+			? error.stack
+			: 'No stack trace available';
+
+		const method = req?.method ?? 'Unknown method';
+		const url = req?.url ?? 'Unknown URL';
+		const ip = req?.ip ?? 'Unknown IP';
+
+		if (isLogger(logger)) {
+			logger.error(`Error occurred: ${message}`, {
+				stack,
+				method,
+				url,
+				ip
+			});
 		} else {
-			if (isLogger(logger)) {
-				logger.error('An unknown error occurred', {
-					error: String(error),
-					method: req?.method,
-					url: req?.url,
-					ip: req?.ip
-				});
-			} else {
-				fallbackLogger.error('An unknown error occurred:', error);
-			}
+			fallbackLogger.error(`Error occurred: ${message}`, {
+				stack,
+				method,
+				url,
+				ip
+			});
 		}
 	} catch (loggingError) {
 		fallbackLogger.error('Failed to log the original error', {
@@ -117,7 +128,7 @@ export function handleGeneralError(
 			loggingError:
 				loggingError instanceof Error
 					? loggingError.stack
-					: loggingError
+					: String(loggingError)
 		});
 	}
 }
@@ -148,8 +159,8 @@ export function expressErrorHandler({
 				if (err instanceof AppError) {
 					const responsePayload: Record<string, unknown> = {
 						status: 'error',
-						message: err.message,
-						code: err.errorCode || 'ERR_GENERIC'
+						message: err.message ?? 'An error occurred',
+						code: err.errorCode ?? 'ERR_GENERIC'
 					};
 
 					if (err.details) {
@@ -162,11 +173,11 @@ export function expressErrorHandler({
 						}
 					}
 
-					res.status(err.statusCode).json(responsePayload);
+					res.status(err.statusCode ?? 500).json(responsePayload);
 				} else {
 					res.status(500).json({
 						status: 'error',
-						message: 'Internal server error'
+						message: err.message ?? 'Internal server error'
 					});
 				}
 			} else {

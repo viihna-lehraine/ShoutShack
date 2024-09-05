@@ -15,7 +15,7 @@ import passport from 'passport';
 import os from 'os';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { initializeApp } from './config/app';
+import { initializeApp } from './app';
 import { getSequelizeInstance, initializeDatabase } from './config/db';
 import {
 	environmentVariables,
@@ -58,12 +58,24 @@ async function start(): Promise<void> {
 			logger
 		});
 
-		logger.info('Logger is working');
+		try {
+			logger.info('Logger is working');
+		} catch (error) {
+			console.warn(`Logger is not working! ${error}`);
+		}
+
+		if (environmentVariables.nodeEnv === 'development') {
+			console.log('This is a test log');
+			console.info('This is a test info log');
+			console.warn('This is a test warning');
+			console.error('This is a test error');
+			console.debug('This is a test debug log');
+		}
 
 		logger.info('Initializing database');
 		const sequelize = await initializeDatabase({
 			logger,
-			getFeatureFlags,
+			featureFlags,
 			getSecrets: () =>
 				sops.getSecrets({
 					logger,
@@ -73,10 +85,10 @@ async function start(): Promise<void> {
 		});
 
 		logger.info('Initializing models');
-		initializeModels(sequelize);
+		initializeModels(sequelize, logger);
 
 		logger.info('Initializing passport');
-		const UserModel = createUserModel(sequelize);
+		const UserModel = createUserModel(sequelize, logger);
 		await configurePassport({
 			passport,
 			logger,

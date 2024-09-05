@@ -1,7 +1,8 @@
+import * as fs from 'fs';
 import { createLogger, format, Logger as WinstonLogger, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { environmentVariables } from './environmentConfig';
-import { validateDependencies, handleGeneralError } from '../middleware/errorHandler';
+import { validateDependencies } from '../middleware/errorHandler';
 
 const { colorize, combine, errors, json, printf, timestamp } = format;
 
@@ -20,7 +21,7 @@ export interface LoggerDependencies {
 let loggerInstance: WinstonLogger | null = null;
 
 export function setupLogger({
-	logLevel = environmentVariables.logLevel || 'debug',
+	logLevel = environmentVariables.logLevel || 'info',
 	logDirectory = environmentVariables.serverLogPath,
 	serviceName = environmentVariables.serviceName,
 	isProduction = environmentVariables.nodeEnv === 'production',
@@ -37,7 +38,24 @@ export function setupLogger({
 		);
 
 		if (loggerInstance) {
+			console.log('Logger instance already exists. Returning the existing instance.');
 			return loggerInstance;
+		}
+
+		if (!fs.existsSync(logDirectory)) {
+			console.error('Log directory does not exist. Attempting to create it...');
+			try {
+				fs.mkdirSync(logDirectory, { recursive: true });
+				console.log(`Log directory ${logDirectory} created successfully.`);
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(`Failed to create log directory: ${error.message}`);
+					throw new Error(`Failed to create log directory: ${error.message}`);
+				} else {
+					console.error(`Failed to create log directory: ${String(error)}`);
+					throw new Error(`Failed to create log directory: ${String(error)}`);
+				}
+			}
 		}
 
 		loggerInstance = createLogger({
@@ -67,10 +85,46 @@ export function setupLogger({
 			]
 		});
 
-		return loggerInstance;
+		console.log = (...args) => {
+			loggerInstance?.info(args.join(' '));
+		};
+		console.info = (...args) => {
+			loggerInstance?.info(args.join(' '));
+		}
+		console.warn = (...args) => {
+			loggerInstance?.warn(args.join(' '));
+		}
+		console.error = (...args) => {
+			loggerInstance?.error(args.join(' '));
+		}
+		console.debug = (...args) => {
+			loggerInstance?.debug(args.join(' '));
+		}
+
+		return Object.assign(loggerInstance, {
+			stream: {
+				write: (message: string) => {
+					loggerInstance?.info(message.trim());
+				}
+			}
+		});
 	} catch (error) {
-		handleGeneralError(error, console);
-		throw error;
+		console.error(`Failed to initialize logger: ${error}`);
+		return Object.assign(createLogger({
+			level: 'error',
+			format: combine(timestamp(), logFormat),
+			transports: [
+				new transports.Console({
+					format: combine(colorize(), logFormat)
+				})
+			]
+		}), {
+			stream: {
+				write: (message: string) => {
+					console.error(message.trim());
+				}
+			}
+		});
 	}
 }
 
