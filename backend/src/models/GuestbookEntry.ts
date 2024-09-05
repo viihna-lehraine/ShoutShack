@@ -6,10 +6,8 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { Logger } from '../config/logger';
 import { User } from './User';
 
@@ -104,7 +102,7 @@ export default function createGuestbookEntryModel(
 		logger.info('GuestbookEntry model initialized successfully');
 		return GuestbookEntry;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

@@ -1,11 +1,8 @@
 import { Request, Response } from 'express';
 import { Model, WhereOptions } from 'sequelize';
+import { Logger } from '../config/logger';
 interface ModelType extends Model {
     id?: number | string;
-}
-interface Logger {
-    error: (msg: string, meta?: unknown) => void;
-    info: (msg: string, meta?: unknown) => void;
 }
 interface ModelControllerDependencies {
     logger: Logger;

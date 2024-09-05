@@ -23,27 +23,22 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import { constants, randomBytes } from 'crypto';
 import RedisStore from 'connect-redis';
-import {
-	initializeIpBlacklistDependencies,
-	ipBlacklistMiddleware
-} from './middleware/ipBlacklist';
-import createRateLimitMiddleware from './middleware/rateLimit';
-import { setupSecurityHeaders } from './middleware/securityHeaders';
-import {
-	expressErrorHandler,
-	handleGeneralError,
-	validateDependencies
-} from './middleware/errorHandler';
+import { ipBlacklistMiddleware } from './middleware/ipBlacklist';
+import { initializeRateLimitMiddleware } from './middleware/rateLimit';
+import { initializeSecurityHeaders } from './middleware/securityHeaders';
+import { expressErrorHandler } from './middleware/expressErrorHandler';
 import { getRedisClient } from './config/redis';
-import { createCsrfMiddleware } from './middleware/csrf';
-import { createMemoryMonitor } from './utils/memoryMonitor';
+import { initializeCsrfMiddleware } from './middleware/csrf';
+import { createMemoryMonitor } from './middleware/memoryMonitor';
 import os from 'os';
 import process from 'process';
 import { initializeRoutes } from './setupRoutes';
+import { initializeValidatorMiddleware } from './middleware/validator';
+import { initializeSlowdownMiddleware } from './middleware/slowdown';
+import { processError } from './utils/processError';
+import { validateDependencies } from './utils/validateDependencies';
 
 let logger: Logger;
-
-const featureFlags = {} as FeatureFlags;
 
 async function start(): Promise<void> {
 	try {
@@ -54,7 +49,8 @@ async function start(): Promise<void> {
 		logger = setupLogger();
 		logger.info('Logger successfully initialized');
 
-		// Memory monitor setup
+		const featureFlags = {} as FeatureFlags;
+
 		const memoryMonitor = createMemoryMonitor({
 			logger,
 			os,
@@ -62,7 +58,12 @@ async function start(): Promise<void> {
 			setInterval
 		});
 
-		// Dependency validation
+		const secrets = await sops.getSecrets({
+			logger,
+			execSync,
+			getDirectoryPath: () => process.cwd()
+		});
+
 		validateDependencies(
 			[
 				{ name: 'logger', instance: logger },
@@ -72,7 +73,7 @@ async function start(): Promise<void> {
 			logger
 		);
 
-		// Test logger module writing functions in development
+		// test logger module writing functions in development
 		if (environmentVariables.nodeEnv === 'development') {
 			logger.debug('Testing logger levels...');
 			console.log('Test log');
@@ -82,15 +83,7 @@ async function start(): Promise<void> {
 			console.debug('Test debug log');
 		}
 
-		// Initialize IP blacklist dependencies
-		initializeIpBlacklistDependencies({
-			logger,
-			featureFlags,
-			__dirname,
-			fsModule: fsPromises
-		});
-
-		// Database initialization
+		// database initialization
 		logger.info('Initializing database');
 		const sequelize = await initializeDatabase({
 			logger,
@@ -103,11 +96,11 @@ async function start(): Promise<void> {
 				})
 		});
 
-		// Models initialization
+		// models initialization
 		logger.info('Initializing models');
 		initializeModels(sequelize, logger);
 
-		// Passport initialization
+		// passport initialization
 		logger.info('Initializing passport');
 		const UserModel = createUserModel(sequelize, logger);
 		await configurePassport({
@@ -123,7 +116,7 @@ async function start(): Promise<void> {
 			argon2
 		});
 
-		// Middleware initialization
+		// middleware initialization
 		logger.info('Initializing middleware');
 		const app = await initializeMiddleware({
 			express,
@@ -135,29 +128,48 @@ async function start(): Promise<void> {
 			passport,
 			randomBytes,
 			RedisStore,
-			createCsrfMiddleware,
+			initializeCsrfMiddleware,
 			getRedisClient,
-			initializeIpBlacklistDependencies,
 			ipBlacklistMiddleware,
-			createRateLimitMiddleware,
-			setupSecurityHeaders,
+			initializeRateLimitMiddleware,
+			initializeSecurityHeaders,
 			createMemoryMonitor: memoryMonitor.startMemoryMonitor,
 			logger,
 			staticRootPath,
 			featureFlags,
 			expressErrorHandler,
-			handleGeneralError
+			processError,
+			secrets,
+			verifyJwt: passport.authenticate('jwt', { session: false }),
+			initializeJwtAuthMiddleware: () =>
+				passport.authenticate('jwt', { session: false }),
+			initializePassportAuthMiddleware: () =>
+				passport.authenticate('local'),
+			authenticateOptions: { session: false },
+			initializeValidatorMiddleware,
+			initializeSlowdownMiddleware
 		});
 
-		// Sync database if flag is enabled
+		// initialize routes
+		logger.info('Initializing routes');
+		initializeRoutes({
+			app,
+			logger,
+			featureFlags,
+			staticRootPath
+		});
+
+		// sync database if flag is enabled
 		const dbSyncFlag = featureFlags?.dbSyncFlag ?? false;
-		if (dbSyncFlag) {
+		if (environmentVariables.nodeEnv === 'production' || dbSyncFlag) {
 			logger.info('Syncing database models');
 			await sequelize.sync();
 			logger.info('Database and tables created!');
 		}
 
-		// Setup HTTP/HTTPS server
+		const redisClient = await getRedisClient();
+
+		// set up HTTP/HTTPS server
 		await setupHttpServer({
 			app,
 			sops,
@@ -165,24 +177,23 @@ async function start(): Promise<void> {
 			logger,
 			constants,
 			featureFlags,
-			getRedisClient,
+			getRedisClient: () => redisClient,
 			getSequelizeInstance: () => getSequelizeInstance({ logger })
 		});
 	} catch (error) {
-		// Fallback in case logger isn't set up
 		if (!logger) {
 			console.error(
 				`Critical error before logger setup: ${error instanceof Error ? error.stack : error}`
 			);
+			processError(error, console);
+			process.exit(1);
+		} else {
+			logger.error(
+				`Critical error before logger setup: ${error instanceof Error ? error.stack : error}`
+			);
+			processError(error, logger);
 			process.exit(1);
 		}
-
-		// Handle general errors with the logger
-		logger.error(
-			`Unhandled error during server initialization: ${error instanceof Error ? error.stack : error}`
-		);
-		handleGeneralError(error, logger);
-		process.exit(1);
 	}
 }
 

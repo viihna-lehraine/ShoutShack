@@ -1,18 +1,15 @@
 import express from 'express';
+import { Logger } from '../config/logger';
 interface StaticRoutesDependencies {
-    logLevel?: string;
-    logDirectory?: string;
-    serviceName?: string;
-    isProduction?: boolean;
+    logger: Logger;
     staticRootPath: string;
-    appMjsPath: string;
     appJsPath: string;
     secretsPath: string;
     browserConfigXmlPath: string;
     humansMdPath: string;
     robotsTxtPath: string;
 }
-export declare function setupStaticRoutes({ staticRootPath, appMjsPath, appJsPath, secretsPath, browserConfigXmlPath, humansMdPath, robotsTxtPath, logLevel, logDirectory, serviceName, isProduction }: StaticRoutesDependencies): express.Router;
-export declare function initializeStaticRoutes(app: express.Application, staticRootPath: string): void;
+export declare function setupStaticRoutes({ logger, staticRootPath, appJsPath, secretsPath, browserConfigXmlPath, humansMdPath, robotsTxtPath }: StaticRoutesDependencies): express.Router;
+export declare function initializeStaticRoutes(app: express.Application, staticRootPath: string, logger: Logger): void;
 export {};
 //# sourceMappingURL=staticRoutes.d.ts.map

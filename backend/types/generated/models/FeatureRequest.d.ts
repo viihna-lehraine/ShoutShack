@@ -1,4 +1,5 @@
 import { Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from 'sequelize';
+import { Logger } from '../config/logger';
 interface FeatureRequestAttributes {
     featureRequestNumber: number;
     id: string;
@@ -19,6 +20,6 @@ declare class FeatureRequest extends Model<InferAttributes<FeatureRequest>, Infe
     featureRequestOpenDate: CreationOptional<Date>;
     featureRequestCloseDate: Date | null;
 }
-export default function createFeatureRequestModel(sequelize: Sequelize): typeof FeatureRequest;
-export {};
+export default function createFeatureRequestModel(sequelize: Sequelize, logger: Logger): typeof FeatureRequest;
+export { FeatureRequest };
 //# sourceMappingURL=FeatureRequest.d.ts.map

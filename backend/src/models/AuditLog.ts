@@ -6,10 +6,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { User } from './User';
 
 interface AuditLogAttributes {
@@ -140,7 +138,7 @@ export default function createAuditLogModel(
 		logger.info('AuditLog model initialized successfully');
 		return AuditLog;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

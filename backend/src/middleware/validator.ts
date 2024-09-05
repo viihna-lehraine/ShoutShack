@@ -1,10 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import validator from 'validator';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface ValidatorDependencies {
 	validator: typeof validator;
@@ -139,7 +137,7 @@ export function initializeValidatorMiddleware({
 				logger.info('Validation passed for registration');
 				next();
 			} catch (err) {
-				handleGeneralError(err, logger || console, req);
+				processError(err, logger || console, req);
 				res.status(500).json({ error: 'Internal Server Error' });
 			}
 		};
@@ -149,7 +147,7 @@ export function initializeValidatorMiddleware({
 			registrationValidationRules
 		};
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

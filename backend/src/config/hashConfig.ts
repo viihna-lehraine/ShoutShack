@@ -1,6 +1,7 @@
 import argon2 from 'argon2';
 import { Logger } from './logger';
-import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import { processError } from '../utils/processError'
+import { validateDependencies } from '../utils/validateDependencies';
 import { SecretsMap } from '../utils/sops';
 
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
@@ -33,7 +34,7 @@ export async function hashPassword({
 		);
 		return await argon2.hash(password + secrets.PEPPER, hashConfig);
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		return '';
 	}
 }

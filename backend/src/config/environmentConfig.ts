@@ -1,4 +1,5 @@
-import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 import { config } from 'dotenv';
 import path from 'path';
 import { Logger } from './logger';
@@ -11,7 +12,7 @@ export function loadEnv(): void {
 
 		config({ path: envPath });
 	} catch (error) {
-		handleGeneralError(error, console);
+		processError(error, console);
 	}
 }
 
@@ -23,7 +24,6 @@ interface EnvironmentVariableTypes {
 	featureApiRoutesCsrf: boolean;
 	featureDbSync: boolean;
 	featureDecryptKeys: boolean;
-	featureEnableCsrf: boolean;
 	featureEnableErrorHandler: boolean;
 	featureEnableIpBlacklist: boolean;
 	featureEnableJwtAuth: boolean;
@@ -33,7 +33,6 @@ interface EnvironmentVariableTypes {
 	featureEnableSsl: boolean;
 	featureHttpsRedirect: boolean;
 	featureLoadTestRoutes: boolean;
-	featureSecureHeaders: boolean;
 	featureSequelizeLogging: boolean;
 	frontendAppJsPath: string;
 	frontendBrowserConfigXmlPath: string;
@@ -49,9 +48,10 @@ interface EnvironmentVariableTypes {
 	frontendSecurityMdPath: string;
 	frontendSecretsPath: string;
 	frontendSitemapXmlPath: string;
+	ipBlacklistPath: string;
 	loggerLevel: string;
 	logLevel: 'debug' | 'info' | 'warn' | 'error';
-	nodeEnv: 'development' | 'production';
+	nodeEnv: 'development' | 'testing' | 'production';
 	serverDataFilePath1: string;
 	serverDataFilePath2: string;
 	serverDataFilePath3: string;
@@ -72,7 +72,6 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
 	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
 	featureDecryptKeys: process.env.FEATURE_DECRYPT_KEYS === 'true',
-	featureEnableCsrf: process.env.FEATURE_ENABLE_CSRF === 'true',
 	featureEnableErrorHandler: process.env.FEATURE_ENABLE_ERROR_HANDLER === 'true',
 	featureEnableIpBlacklist: process.env.FEATURE_ENABLE_IP_BLACKLIST === 'true',
 	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
@@ -82,7 +81,6 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	featureEnableSsl: process.env.FEATURE_ENABLE_SSL === 'true',
 	featureHttpsRedirect: process.env.FEATURE_HTTPS_REDIRECT === 'true',
 	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES === 'true',
-	featureSecureHeaders: process.env.FEATURE_SECURE_HEADERS === 'true',
 	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING === 'true',
 	frontendAppJsPath: process.env.FRONTEND_APP_JS_PATH || '',
 	frontendBrowserConfigXmlPath: process.env.FRONTEND_BROWSER_CONFIG_XML_PATH || '',
@@ -98,9 +96,10 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	frontendSecurityMdPath: process.env.FRONTEND_SECURITY_MD_PATH || '',
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH || '',
 	frontendSitemapXmlPath: process.env.FRONTEND_SITEMAP_XML_PATH || '',
+	ipBlacklistPath: process.env.IP_BLACKLIST_PATH || '',
 	loggerLevel: process.env.LOGGER || '1',
 	logLevel: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
-	nodeEnv: process.env.NODE_ENV as 'development' | 'production',
+	nodeEnv: process.env.NODE_ENV as 'development' | 'testing' | 'production',
 	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1 || '',
 	serverDataFilePath2: process.env.SERVER_DATA_FILE_PATH_2 || '',
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3 || '',
@@ -136,7 +135,6 @@ export interface FeatureFlags {
 	apiRoutesCsrfFlag: boolean;
 	dbSyncFlag: boolean;
 	decryptKeysFlag: boolean;
-	enableCsrfFlag: boolean;
 	enableErrorHandlerFlag: boolean;
 	enableIpBlacklistFlag: boolean;
 	enableJwtAuthFlag: boolean;
@@ -145,7 +143,6 @@ export interface FeatureFlags {
 	enableSslFlag: boolean;
 	httpsRedirectFlag: boolean;
 	loadTestRoutesFlag: boolean;
-	secureHeadersFlag: boolean;
 	sequelizeLoggingFlag: boolean;
 }
 
@@ -171,7 +168,7 @@ export function parseBoolean(
 		}
 		return value === true;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		return false;
 	}
 }
@@ -193,7 +190,6 @@ export function getFeatureFlags(
 			apiRoutesCsrfFlag: parseBoolean(env.FEATURE_API_ROUTES_CSRF, logger),
 			dbSyncFlag: parseBoolean(env.FEATURE_DB_SYNC, logger),
 			decryptKeysFlag: parseBoolean(env.FEATURE_DECRYPT_KEYS, logger),
-			enableCsrfFlag: parseBoolean(env.FEATURE_ENABLE_CSRF, logger),
 			enableErrorHandlerFlag: parseBoolean(
 				env.FEATURE_ENABLE_ERROR_HANDLER,
 				logger
@@ -211,20 +207,18 @@ export function getFeatureFlags(
 			enableSslFlag: parseBoolean(env.FEATURE_ENABLE_SSL, logger),
 			httpsRedirectFlag: parseBoolean(env.FEATURE_HTTPS_REDIRECT, logger),
 			loadTestRoutesFlag: parseBoolean(env.FEATURE_LOAD_TEST_ROUTES, logger),
-			secureHeadersFlag: parseBoolean(env.FEATURE_SECURE_HEADERS, logger),
 			sequelizeLoggingFlag: parseBoolean(
 				env.FEATURE_SEQUELIZE_LOGGING,
 				logger
 			)
 		}
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		logger.error(`Returning 'false' for all feature flags`);
 		return {
 			apiRoutesCsrfFlag: false,
 			dbSyncFlag: false,
 			decryptKeysFlag: false,
-			enableCsrfFlag: false,
 			enableErrorHandlerFlag: false,
 			enableIpBlacklistFlag: false,
 			enableJwtAuthFlag: false,
@@ -233,7 +227,6 @@ export function getFeatureFlags(
 			enableSslFlag: false,
 			httpsRedirectFlag: false,
 			loadTestRoutesFlag: false,
-			secureHeadersFlag: false,
 			sequelizeLoggingFlag: false
 		}
 	}
@@ -286,7 +279,7 @@ export function createFeatureEnabler(logger: Logger) {
     	    },
     	};
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		return {
 			enableFeatureBasedOnFlag: () => {},
 			enableFeatureWithProdOverride: () => {}

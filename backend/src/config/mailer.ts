@@ -1,6 +1,7 @@
 import nodemailer, { Transporter } from 'nodemailer';
 import { Logger } from './logger';
-import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 export interface MailerSecrets {
 	readonly EMAIL_HOST: string;
@@ -46,7 +47,7 @@ async function createTransporter({
 			}
 		});
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }
@@ -70,7 +71,7 @@ export async function getTransporter(deps: MailerDependencies): Promise<Transpor
 		}
 		return transporter;
 	} catch (error) {
-		handleGeneralError(error, deps.logger || console);
+		processError(error, deps.logger || console);
 		throw error;
 	}
 }

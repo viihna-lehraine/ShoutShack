@@ -5,16 +5,16 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import { Logger } from 'winston';
-import createTOTPUtil from '../utils/auth/totpUtil';
-import generateConfirmationEmailTemplate from '../utils/emailTemplates/confirmationEmailTemplate';
+import { Logger } from '../config/logger';
+import createTOTPUtil from '../auth/totpUtil';
+import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
 import { getTransporter } from '../config/mailer';
-interface UserSecrets {
+export interface UserSecrets {
     JWT_SECRET: string;
     PEPPER: string;
 }
-interface UserModel {
-    validatePassword: (password: string) => boolean;
+export interface UserRoutesModel {
+    validatePassword: (password: string, logger: Logger) => boolean;
     findOne: (criteria: object) => Promise<UserInstance | null>;
     create: (user: Partial<UserInstance>) => Promise<UserInstance>;
 }
@@ -35,7 +35,7 @@ interface UserInstance {
 interface UserRouteDependencies {
     logger: Logger;
     secrets: UserSecrets;
-    User: UserModel;
+    UserRoutes: UserRoutesModel;
     argon2: typeof argon2;
     jwt: typeof jwt;
     axios: typeof axios;
@@ -46,6 +46,6 @@ interface UserRouteDependencies {
     getTransporter: typeof getTransporter;
     totpUtil: ReturnType<typeof createTOTPUtil>;
 }
-export default function createUserRoutes({ logger, secrets, User, argon2, jwt, axios, bcrypt, uuidv4, xss, generateConfirmationEmailTemplate, getTransporter, totpUtil }: UserRouteDependencies): Router;
+export default function initializeUserRoutes({ logger, secrets, UserRoutes, argon2, jwt, axios, bcrypt, uuidv4, xss, generateConfirmationEmailTemplate, getTransporter, totpUtil }: UserRouteDependencies): Router;
 export {};
 //# sourceMappingURL=userRoutes.d.ts.map

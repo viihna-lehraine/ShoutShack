@@ -2,10 +2,8 @@ import express, { Request, Response, NextFunction, Router } from 'express';
 import { validationResult } from 'express-validator';
 import { Logger } from '../config/logger';
 import { initializeValidatorMiddleware } from '../middleware/validator';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface ValidationRouteDependencies {
 	logger: Logger;
@@ -48,7 +46,7 @@ export default function initializeValidationRoutes({
 
 					return next();
 				} catch (error) {
-					handleGeneralError(error as Error, logger, req);
+					processError(error as Error, logger, req);
 					return res.status(500).json({
 						error: 'Internal server error during validation'
 					});
@@ -56,7 +54,7 @@ export default function initializeValidationRoutes({
 			}
 		);
 	} catch (error) {
-		handleGeneralError(error as Error, logger);
+		processError(error as Error, logger);
 		throw error;
 	}
 

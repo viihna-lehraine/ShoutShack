@@ -1,10 +1,8 @@
 import { Application, Request, Response, NextFunction, Router } from 'express';
 import { Logger } from '../config/logger';
 import { FeatureFlags } from '../config/environmentConfig';
-import {
-	validateDependencies,
-	handleGeneralError
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface TestRouteDependencies {
 	app: Application;
@@ -50,7 +48,7 @@ export function initializeTestRoutes({
 						logger.info('Test route accessed.');
 						res.send('Test route is working!');
 					} catch (error) {
-						handleGeneralError(error as Error, logger, req);
+						processError(error as Error, logger, req);
 						next(new Error('Internal server error on test route'));
 					}
 				}
@@ -60,13 +58,13 @@ export function initializeTestRoutes({
 		router.use((error: unknown, req: Request, res: Response) => {
 			if (error instanceof Error) {
 				logger.error(`Unexpected error on test route: ${error.stack}`);
-				handleGeneralError(error, logger, req);
+				processError(error, logger, req);
 			} else {
 				logger.error(
 					'Unexpected non-error thrown on test route',
 					error
 				);
-				handleGeneralError(
+				processError(
 					new Error('Unexpected test route error'),
 					logger,
 					req
@@ -75,18 +73,14 @@ export function initializeTestRoutes({
 			res.status(500).json({
 				error: 'Internal server error on test route'
 			});
-			handleGeneralError(
-				new Error('Unexpected test route error'),
-				logger,
-				req
-			);
+			processError(new Error('Unexpected test route error'), logger, req);
 		});
 
 		app.use('/test', router);
 		logger.info('Test routes loaded successfully.');
 		return router;
 	} catch (error) {
-		handleGeneralError(error as Error, logger);
+		processError(error as Error, logger);
 		throw new Error(
 			`Failed to initialize test routes: ${error instanceof Error ? error.message : String(error)}`
 		);

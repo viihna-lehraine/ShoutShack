@@ -1,10 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface SlowdownConfig {
 	slowdownThreshold: number;
@@ -15,7 +13,7 @@ interface SlowdownSession extends Session {
 	lastRequestTime?: number;
 }
 
-export function createSlowdownMiddleware({
+export function initializeSlowdownMiddleware({
 	slowdownThreshold = 100, // in ms
 	logger
 }: SlowdownConfig) {
@@ -74,14 +72,12 @@ export function createSlowdownMiddleware({
 					}
 				}
 			} catch (err) {
-				handleGeneralError(err, logger || console, req);
+				processError(err, logger || console, req);
 				next(err);
 			}
 		};
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }
-
-export default createSlowdownMiddleware;

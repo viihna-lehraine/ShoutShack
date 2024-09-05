@@ -1,7 +1,8 @@
 import { Request } from 'express';
 import multer, { FileFilterCallback, Multer } from 'multer';
 import path from 'path';
-import { validateDependencies, handleGeneralError } from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { Logger } from './logger';
 
 export interface MulterDependencies {
@@ -73,7 +74,7 @@ export function createMulterUpload({
 			limits: multerLimits
 		});
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

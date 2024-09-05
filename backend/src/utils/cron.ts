@@ -4,10 +4,8 @@ import path from 'path';
 import compressing from 'compressing';
 import { exec, ExecException } from 'child_process';
 import { Logger } from '../config/logger';
-import {
-	validateDependencies,
-	handleGeneralError
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface CronDependencies {
 	logger: Logger;
@@ -69,7 +67,7 @@ export function createCronJobs({
 				logger.info(`${logFileName} successfully compressed`);
 				return outputFilePath;
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 				throw new Error(
 					`Error compressing log files: ${
 						error instanceof Error ? error.message : String(error)
@@ -130,7 +128,7 @@ export function createCronJobs({
 				try {
 					fs.mkdirSync(exportDir, { recursive: true });
 				} catch (error) {
-					handleGeneralError(error, logger);
+					processError(error, logger);
 					throw new Error(
 						`Error creating export directory: ${
 							error instanceof Error
@@ -166,7 +164,7 @@ export function createCronJobs({
 					'Logs have been successfully compressed and exported.'
 				);
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 				throw new Error(
 					`Error exporting logs: ${
 						error instanceof Error ? error.message : String(error)
@@ -195,7 +193,7 @@ export function createCronJobs({
 				await runCommandAndLog('npm update --verbose', logFilePath);
 				logger.info('npm update completed successfully.');
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 			}
 		};
 
@@ -236,22 +234,18 @@ export function createCronJobs({
 
 			if (schedule) {
 				cron.schedule(schedule, () => {
-					exportLogs().catch(error =>
-						handleGeneralError(error, logger)
-					);
+					exportLogs().catch(error => processError(error, logger));
 				});
 			}
 
 			cron.schedule('0 * * * *', () => {
-				performNpmTasks().catch(error =>
-					handleGeneralError(error, logger)
-				);
+				performNpmTasks().catch(error => processError(error, logger));
 			});
 		};
 
 		scheduleLogJobs();
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw new Error(
 			`Failed to create cron jobs: ${
 				error instanceof Error ? error.message : String(error)

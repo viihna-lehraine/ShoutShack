@@ -8,10 +8,8 @@ import {
 } from 'sequelize';
 import { User } from './User';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface UserSessionAttributes {
 	id: string; // UUID for the session record, primary key (from User model)
@@ -120,7 +118,7 @@ export default function createUserSessionModel(
 								'Session expiration time set to 60 minutes'
 							);
 						} catch (error) {
-							handleGeneralError(error, logger || console);
+							processError(error, logger || console);
 							throw error;
 						}
 					},
@@ -129,7 +127,7 @@ export default function createUserSessionModel(
 							session.updatedAt = new Date();
 							logger.debug('Session updatedAt field updated');
 						} catch (error) {
-							handleGeneralError(error, logger || console);
+							processError(error, logger || console);
 							throw error;
 						}
 					}
@@ -139,7 +137,7 @@ export default function createUserSessionModel(
 
 		return UserSession;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

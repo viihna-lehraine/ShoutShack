@@ -1,6 +1,7 @@
-import { Model, InferAttributes, InferCreationAttributes, Sequelize } from 'sequelize';
+import { CreationOptional, Model, InferAttributes, InferCreationAttributes, Sequelize } from 'sequelize';
+import { Logger } from '../config/logger';
 interface FeedbackSurveyAttributes {
-    surveyId: string;
+    surveyId: number;
     questionGeneralApproval?: number | null;
     questionServiceQuality?: number | null;
     questionEaseOfUse?: number | null;
@@ -21,10 +22,10 @@ interface FeedbackSurveyAttributes {
     questionFinalThoughts?: string | null;
     hasOptedInForFollowUp?: boolean | null;
     email?: string | null;
-    surveyDate: Date;
+    surveyDate?: CreationOptional<Date>;
 }
 declare class FeedbackSurvey extends Model<InferAttributes<FeedbackSurvey>, InferCreationAttributes<FeedbackSurvey>> implements FeedbackSurveyAttributes {
-    surveyId: string;
+    surveyId: number;
     questionGeneralApproval?: number | null;
     questionServiceQuality?: number | null;
     questionEaseOfUse?: number | null;
@@ -45,8 +46,8 @@ declare class FeedbackSurvey extends Model<InferAttributes<FeedbackSurvey>, Infe
     questionFinalThoughts?: string | null;
     hasOptedInForFollowUp?: boolean | null;
     email?: string | null;
-    surveyDate: Date;
+    surveyDate: CreationOptional<Date>;
 }
-export default function createFeedbackSurveyModel(sequelize: Sequelize): typeof FeedbackSurvey;
-export {};
+export default function createFeedbackSurveyModel(sequelize: Sequelize, logger: Logger): typeof FeedbackSurvey;
+export { FeedbackSurvey };
 //# sourceMappingURL=FeedbackSurvey.d.ts.map

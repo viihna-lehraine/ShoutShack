@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
 import { Model, WhereOptions } from 'sequelize';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface ModelType extends Model {
 	id?: number | string;
@@ -30,7 +28,7 @@ export const getEntries =
 			res.status(200).json(entries);
 			logger.info(`Fetched all entries from ${Model.name}`);
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			processError(error, logger || console);
 			throw error;
 		}
 	};
@@ -47,7 +45,7 @@ export const createEntry =
 			res.status(201).json(newEntry);
 			logger.info(`Created a new entry in ${Model.name}`);
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			processError(error, logger || console);
 			throw error;
 		}
 	};
@@ -77,6 +75,6 @@ export const deleteEntry =
 			res.status(200).json({ message: `${Model.name} entry deleted` });
 			logger.info(`Deleted ${Model.name} entry with id ${id}`);
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			processError(error, logger || console);
 		}
 	};

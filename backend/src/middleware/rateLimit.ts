@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 import { Logger } from '../config/logger';
-import { AppError } from '../config/errorClasses';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { AppError, errorClasses } from '../config/errorClasses';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
+
+const { RateLimitError } = errorClasses;
 
 export interface RateLimitMiddlewareDependencies {
 	logger: Logger;
@@ -13,7 +13,7 @@ export interface RateLimitMiddlewareDependencies {
 	duration?: number;
 }
 
-export const createRateLimitMiddleware = ({
+export const initializeRateLimitMiddleware = ({
 	logger,
 	points = 10, // 10 requests
 	duration = 1 // 1 second per IP
@@ -49,21 +49,15 @@ export const createRateLimitMiddleware = ({
 				);
 
 				next(
-					new AppError(
+					new RateLimitError(
 						'Too Many Requests',
-						429,
-						'ERR_TOO_MANY_REQUESTS',
-						{
-							retryAfter: Math.ceil(err.msBeforeNext / 1000)
-						}
+						Math.ceil(err.msBeforeNext / 1000)
 					)
 				);
 			} else {
-				handleGeneralError(err, logger || console, req);
+				processError(err, logger || console, req);
 				next(new AppError('Internal Server Error', 500));
 			}
 		}
 	};
 };
-
-export default createRateLimitMiddleware;

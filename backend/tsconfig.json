@@ -20,6 +20,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "isolatedModules": true,
+		"lib": ["ES2022"],
     "module": "ES2022",
     "moduleDetection": "auto",
     "moduleResolution": "node",

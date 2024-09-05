@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Logger } from 'winston';
 import { ModelStatic } from 'sequelize';
-import { UserMfaInstance } from '../../models/UserMfa';
+import { UserMfaInstance } from '../models/UserMfa';
 interface BackupCode {
     code: string;
     used: boolean;

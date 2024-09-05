@@ -6,6 +6,6 @@ interface SecurityHeadersDependencies {
         [key: string]: string[];
     };
 }
-export declare function setupSecurityHeaders(app: Application, { helmetOptions, permissionsPolicyOptions }: SecurityHeadersDependencies): void;
+export declare function initializeSecurityHeaders(app: Application, { helmetOptions, permissionsPolicyOptions }: SecurityHeadersDependencies): void;
 export {};
 //# sourceMappingURL=securityHeaders.d.ts.map

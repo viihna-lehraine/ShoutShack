@@ -11,15 +11,13 @@ import xss from 'xss';
 import { Logger } from '../config/logger';
 import nodemailer from 'nodemailer';
 import sops from '../utils/sops';
-import createEmail2FAUtil from '../utils/auth/email2FAUtil';
-import createTOTPUtil from '../utils/auth/totpUtil';
-import generateConfirmationEmailTemplate from '../utils/emailTemplates/confirmationEmailTemplate';
+import createEmail2FAUtil from '../auth/email2FAUtil';
+import createTOTPUtil from '../auth/totpUtil';
+import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
 import { getTransporter } from '../config/mailer';
 import { environmentVariables } from '../config/environmentConfig';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { hashPassword } from '../config/hashConfig';
 
 export interface UserSecrets {
@@ -109,7 +107,7 @@ export default function initializeUserRoutes({
 			logger
 		);
 	} catch (error) {
-		handleGeneralError(error as Error, logger || console);
+		processError(error as Error, logger || console);
 		throw error;
 	}
 
@@ -237,7 +235,7 @@ export default function initializeUserRoutes({
 				message: 'Account registered! Please confirm via email.'
 			});
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res
 				.status(500)
 				.json({ error: 'Registration failed. Please try again.' });
@@ -277,7 +275,7 @@ export default function initializeUserRoutes({
 				return res.status(400).json({ password: 'Incorrect password' });
 			}
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({ error: 'Login - Server error' });
 		}
 	});
@@ -324,7 +322,7 @@ export default function initializeUserRoutes({
 				message: `Password reset link sent to ${user.email}`
 			});
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({
 				error: 'Password recovery failed due to an unknown error. Please try again.'
 			});
@@ -338,7 +336,7 @@ export default function initializeUserRoutes({
 			const qrCodeUrl = await totpUtil.generateQRCode(otpauth_url);
 			return res.json({ secret: base32, qrCodeUrl });
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({
 				error: 'Unable to generate TOTP secret. Please try again.'
 			});
@@ -353,7 +351,7 @@ export default function initializeUserRoutes({
 			const isTOTPTokenValid = totpUtil.verifyTOTPToken(secret, token);
 			return res.json({ isTOTPTokenValid });
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({
 				error: 'Unable to verify TOTP token. Please try again.'
 			});
@@ -408,7 +406,7 @@ export default function initializeUserRoutes({
 
 			return res.json({ message: '2FA code sent to email' });
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({
 				error: 'Generate 2FA: internal server error'
 			});
@@ -456,7 +454,7 @@ export default function initializeUserRoutes({
 
 			return res.json({ message: '2FA code verified successfully' });
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			return res.status(500).json({ error: 'Internal server error' });
 		}
 	});

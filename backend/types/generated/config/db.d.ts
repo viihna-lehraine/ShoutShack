@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
-import { getFeatureFlags } from '../utils/featureFlags';
-import { Logger } from 'winston';
+import { FeatureFlags } from './environmentConfig';
+import { Logger } from './logger';
 export interface DBSecrets {
     DB_NAME: string;
     DB_USER: string;
@@ -10,9 +10,9 @@ export interface DBSecrets {
 }
 export interface DBDependencies {
     logger: Logger;
-    getFeatureFlags: (logger: any) => ReturnType<typeof getFeatureFlags>;
+    featureFlags: FeatureFlags;
     getSecrets: () => Promise<DBSecrets>;
 }
-export declare function initializeDatabase({ logger, getFeatureFlags, getSecrets }: DBDependencies): Promise<Sequelize>;
+export declare function initializeDatabase({ logger, featureFlags, getSecrets }: DBDependencies): Promise<Sequelize>;
 export declare function getSequelizeInstance({ logger }: Pick<DBDependencies, 'logger'>): Sequelize;
 //# sourceMappingURL=db.d.ts.map

@@ -1,9 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { AppError } from '../config/errorClasses';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { loadModels, Models } from './loadModels';
 import { environmentVariables } from '../config/environmentConfig';
 import { Logger, setupLogger } from '../config/logger';
@@ -36,7 +34,7 @@ export async function initializeModels(
 		}
 		return models as Models;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw new AppError('Internal Server Error', 500);
 	}
 }
@@ -53,13 +51,13 @@ export async function getModels(): Promise<Models> {
 					return models;
 				}
 			} catch (error) {
-				handleGeneralError(error, logger || console);
+				processError(error, logger || console);
 				throw new AppError('Internal Server Error', 500);
 			}
 		}
 		return models as Models;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw new AppError('Internal Server Error', 500);
 	}
 }

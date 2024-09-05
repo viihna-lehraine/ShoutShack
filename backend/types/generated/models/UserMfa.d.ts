@@ -1,10 +1,11 @@
 import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
+import { Logger } from '../config/logger';
 interface UserMfaAttributes {
     id: string;
     isMfaEnabled: boolean;
-    backupCodes: string[] | null;
+    backupCodes?: string[] | null;
     isEmail2faEnabled: boolean;
-    isTotpl2faEnabled: boolean;
+    isTotp2faEnabled: boolean;
     isYubicoOtp2faEnabled: boolean;
     isU2f2faEnabled: boolean;
     isPasskeyEnabled: boolean;
@@ -25,7 +26,7 @@ declare class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttri
     isMfaEnabled: boolean;
     backupCodes: string[] | null;
     isEmail2faEnabled: boolean;
-    isTotpl2faEnabled: boolean;
+    isTotp2faEnabled: boolean;
     isYubicoOtp2faEnabled: boolean;
     isU2f2faEnabled: boolean;
     isPasskeyEnabled: boolean;
@@ -41,7 +42,6 @@ declare class UserMfa extends Model<InferAttributes<UserMfa>, InferCreationAttri
     passkeyCounter: number | null;
     passkeyAttestationFormat: string | null;
 }
-export type UserMfaInstance = InstanceType<typeof UserMfa>;
-export default function createUserMfaModel(sequelize: Sequelize): typeof UserMfa;
-export {};
+export default function createUserMfaModel(sequelize: Sequelize, logger: Logger): typeof UserMfa;
+export { UserMfa };
 //# sourceMappingURL=UserMfa.d.ts.map

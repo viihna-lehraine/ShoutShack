@@ -1,6 +1,6 @@
 import yub from 'yub';
 import '../../../types/custom/yub.d.ts';
-import getSecrets from '../sops.js';
+import getSecrets from '../utils/sops.js';
 import { execSync } from 'child_process';
 import { Logger } from 'winston';
 interface YubicoOtpOptions {

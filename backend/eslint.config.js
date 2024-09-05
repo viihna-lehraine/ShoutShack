@@ -54,6 +54,7 @@ export default [
 			'nodemon.json',
 			'eslint.config.js',
 			'config/.babelrc',
+			'dist/**/*.mjs',
 			'src/config/*.*'
 		],
 	},

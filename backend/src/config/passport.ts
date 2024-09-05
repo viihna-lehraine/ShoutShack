@@ -7,7 +7,8 @@ import {
 } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Logger } from './logger';
-import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import createUserModel from '../models/User';
 
 export interface UserInstance {
@@ -80,7 +81,7 @@ export default async function configurePassport({
 						return done(null, false, { message: 'User not found' });
 					}
 				} catch (err) {
-					handleGeneralError(err, logger || console);
+					processError(err, logger || console);
 					return done(new Error(err instanceof Error ? err.message : String(err)), false);
 				}
 			})
@@ -115,7 +116,7 @@ export default async function configurePassport({
 						return done(null, false, { message: 'Incorrect password' });
 					}
 				} catch (err) {
-					handleGeneralError(err, logger || console);
+					processError(err, logger || console);
 					return done(new Error(err instanceof Error ? err.message : String(err)));
 				}
 			})
@@ -123,7 +124,7 @@ export default async function configurePassport({
 
 		logger.info('Passport configured successfully');
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw new Error(error instanceof Error ? error.message : String(error));
 	}
 }

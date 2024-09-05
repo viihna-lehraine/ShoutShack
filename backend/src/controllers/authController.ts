@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
 import { Logger } from '../config/logger';
-import createJwtUtil from '../utils/auth/jwtUtil';
+import createJwtUtil from '../auth/jwtUtil';
 import createUserModel from '../models/User';
 import argon2 from 'argon2';
 import sops from '../utils/sops';
 import { execSync } from 'child_process';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface AuthDependencies {
 	logger: Logger;
@@ -67,11 +65,11 @@ export function login({
 			}
 
 			// generate JWT token and use it to respond
-			const token = await jwtUtil.generateJwtToken(user);
+			const token = await jwtUtil.generateJwt(user);
 			logger.info(`User logged in successfully: ${username}`);
 			return res.json({ token });
 		} catch (err) {
-			handleGeneralError(err, logger || console);
+			processError(err, logger || console);
 			throw err;
 		}
 	};

@@ -2,7 +2,7 @@ import fs from 'fs';
 import { createLogger, format, Logger as WinstonLogger, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { environmentVariables } from './environmentConfig';
-import { validateDependencies } from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
 
 const { colorize, combine, errors, json, printf, timestamp } = format;
 
@@ -126,6 +126,17 @@ export function setupLogger({
 			}
 		});
 	}
+}
+
+export function isLogger(logger: Logger | Console | undefined): logger is Logger {
+	return (
+		logger !== undefined &&
+		logger !== null &&
+		typeof logger.error === 'function' &&
+		typeof logger.warn === 'function' &&
+		typeof logger.debug === 'function' &&
+		typeof logger.info === 'function'
+	);
 }
 
 export type Logger = WinstonLogger;

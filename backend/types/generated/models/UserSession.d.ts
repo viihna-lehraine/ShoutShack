@@ -1,8 +1,8 @@
 import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
+import { Logger } from '../config/logger';
 interface UserSessionAttributes {
     id: string;
     sessionId: number;
-    userId: string;
     ipAddress: string;
     userAgent: string;
     createdAt: Date;
@@ -13,7 +13,6 @@ interface UserSessionAttributes {
 declare class UserSession extends Model<InferAttributes<UserSession>, InferCreationAttributes<UserSession>> implements UserSessionAttributes {
     id: string;
     sessionId: number;
-    userId: string;
     ipAddress: string;
     userAgent: string;
     createdAt: CreationOptional<Date>;
@@ -21,6 +20,6 @@ declare class UserSession extends Model<InferAttributes<UserSession>, InferCreat
     expiresAt: Date;
     isActive: boolean;
 }
-export default function createUserSessionModel(sequelize: Sequelize): typeof UserSession;
-export {};
+export default function createUserSessionModel(sequelize: Sequelize, logger: Logger): typeof UserSession;
+export { UserSession };
 //# sourceMappingURL=UserSession.d.ts.map

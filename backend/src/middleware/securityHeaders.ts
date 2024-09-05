@@ -7,10 +7,8 @@ import {
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;
@@ -24,7 +22,7 @@ const logger = setupLogger({
 	isProduction: environmentVariables.nodeEnv === 'production'
 });
 
-export function setupSecurityHeaders(
+export function initializeSecurityHeaders(
 	app: Application,
 	{
 		helmetOptions = defaultHelmetOptions,
@@ -47,7 +45,7 @@ export function setupSecurityHeaders(
 		app.use(helmet(helmetOptions));
 		logger.info('Helmet middleware applied successfully');
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 	}
 
 	if (
@@ -66,7 +64,7 @@ export function setupSecurityHeaders(
 				res.setHeader('Permissions-Policy', policies);
 				logger.info('Permissions-Policy header set successfully');
 			} catch (error) {
-				handleGeneralError(error, logger, req);
+				processError(error, logger, req);
 			}
 			next();
 		});
@@ -83,7 +81,7 @@ export function setupSecurityHeaders(
 		);
 		logger.info('Content Security Policy applied successfully');
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 	}
 
 	try {
@@ -93,6 +91,6 @@ export function setupSecurityHeaders(
 			next();
 		});
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 	}
 }

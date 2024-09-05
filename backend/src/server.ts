@@ -7,14 +7,14 @@ import path from 'path';
 import gracefulShutdown from 'http-graceful-shutdown';
 import { Sequelize } from 'sequelize';
 import { SecureContextOptions } from 'tls';
-import {
-	handleGeneralError,
-	validateDependencies
-} from './middleware/errorHandler';
+import { validateDependencies } from './utils/validateDependencies';
+import { processError } from './utils/processError';
 import SopsDependencies from './utils/sops';
 import { environmentVariables, FeatureFlags } from './config/environmentConfig';
 import { Logger } from './config/logger';
 import { RedisClientType } from 'redis';
+import net from 'net';
+import { getRedisClient } from './config/redis';
 
 interface SetupHttpServerParams {
 	app: Application;
@@ -117,8 +117,31 @@ async function declareOptions({
 			honorCipherOrder: true
 		};
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
+	}
+}
+
+async function flushInMemoryCache(
+	logger: Logger,
+	featureFlags: FeatureFlags
+): Promise<void> {
+	logger.info('Flushing in-memory cache');
+	const redisClient = await getRedisClient();
+
+	if (featureFlags.enableRedisFlag) {
+		if (redisClient) {
+			try {
+				await redisClient.flushAll(); // Use the Redis client instance
+				logger.info('In-memory cache flushed');
+			} catch (error) {
+				logger.error('Error flushing Redis cache', error);
+			}
+		} else {
+			logger.warn('Redis client is not available for cache flush');
+		}
+	} else {
+		logger.info('No cache to flush (Redis is disabled)');
 	}
 }
 
@@ -170,12 +193,30 @@ export async function setupHttpServer({
 		}
 
 		async function startServer(): Promise<void> {
+			let shuttingDown = false;
+			const connections: Set<net.Socket> = new Set();
+
 			const server = options
 				? https.createServer(options, app)
 				: http.createServer(app);
 
+			server.on('connection', conn => {
+				connections.add(conn);
+				conn.on('close', () => {
+					connections.delete(conn);
+				});
+			});
+
 			server.listen(port, () => {
 				logger.info(`Server running on port ${port}`);
+			});
+
+			app.use((req, res, next) => {
+				if (shuttingDown) {
+					res.setHeader('Connection', 'close');
+					return res.status(503).send('Server is shutting down.');
+				}
+				return next();
 			});
 
 			gracefulShutdown(server, {
@@ -183,6 +224,12 @@ export async function setupHttpServer({
 				timeout: 30000,
 				onShutdown: async () => {
 					logger.info('Cleaning up resources before shutdown');
+					shuttingDown = true;
+
+					await flushInMemoryCache(logger, featureFlags);
+
+					logger.info('Pre-shutdown tasks complete');
+					server.keepAliveTimeout = 1;
 
 					const sequelize: Sequelize = getSequelizeInstance();
 
@@ -190,19 +237,19 @@ export async function setupHttpServer({
 						await sequelize.close();
 						logger.info('Database connection closed');
 					} catch (error) {
-						handleGeneralError(error, logger);
+						processError(error, logger);
 					}
 
 					if (featureFlags.enableRedisFlag) {
 						logger.info('Closing Redis connection');
 						try {
-							const redisClient = getRedisClient();
+							const redisClient = await getRedisClient();
 							if (redisClient) {
 								await redisClient.quit();
 								logger.info('Redis connection closed');
 							}
 						} catch (error) {
-							handleGeneralError(error, logger);
+							processError(error, logger);
 						}
 					}
 
@@ -213,15 +260,43 @@ export async function setupHttpServer({
 						});
 						logger.info('Logger closed');
 					} catch (error) {
-						handleGeneralError(error, logger);
+						processError(error, logger);
 					}
+				},
+				finally: async () => {
+					logger.info('Waiting for all connections to close...');
+
+					const waitForConnectionsToClose = new Promise<void>(
+						resolve => {
+							const timeout = setTimeout(() => {
+								logger.warn(
+									'Forcing shutdown: some connections did not close in time'
+								);
+								connections.forEach(con => con.destroy());
+								resolve();
+							}, 30000); // 30s timeout
+
+							const checkConnections = setInterval(() => {
+								if (connections.size === 0) {
+									clearInterval(checkConnections);
+									clearTimeout(timeout);
+									resolve();
+								}
+							}, 100);
+						}
+					);
+
+					await waitForConnectionsToClose;
+					logger.info(
+						'All connections closed. Shutting down server.'
+					);
 				}
 			});
 		}
 
 		return { startServer };
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw new Error(
 			`Error occurred in setupHttpServer(): ${error instanceof Error ? error.message : error}`
 		);

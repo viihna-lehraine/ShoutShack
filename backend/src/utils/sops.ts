@@ -2,10 +2,8 @@ import { execSync } from 'child_process';
 import path from 'path';
 import { Logger } from '../config/logger';
 import { environmentVariables } from 'src/config/environmentConfig';
-import {
-	validateDependencies,
-	handleGeneralError
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface SopsDependencies {
 	logger: Logger;
@@ -43,6 +41,7 @@ export interface SecretsMap extends Secrets {
 	RP_ID: string;
 	RP_NAME: string;
 	RP_ICON: string;
+	SESSION_SECRET: string;
 	SMTP_TOKEN: string;
 	YUBICO_CLIENT_ID: number;
 	YUBICO_SECRET_KEY: string;
@@ -73,7 +72,7 @@ async function getSecrets({
 		).toString();
 		return JSON.parse(decryptedSecrets);
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw new Error(`
 			Failed to get secrets: ${error instanceof Error ? error.message : String(error)}`);
 	}
@@ -102,7 +101,7 @@ async function decryptKey(
 		} else {
 			logger.error(`An unknown error occurred: ${String(error)}`);
 		}
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw new Error(
 			`Failed to decrypt key: ${error instanceof Error ? error.message : String(error)}`
 		);
@@ -158,7 +157,7 @@ async function decryptDataFiles({
 
 		return decryptedFiles;
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw new Error(
 			`Unable to decrypt data files: ${error instanceof Error ? error.message : String(error)}`
 		);
@@ -206,7 +205,7 @@ async function getSSLKeys(
 			cert: decryptedCert
 		};
 	} catch (error) {
-		handleGeneralError(error, dependencies.logger);
+		processError(error, dependencies.logger);
 		throw new Error(
 			`Unable to retrieve SSL keys: ${error instanceof Error ? error.message : String(error)}`
 		);

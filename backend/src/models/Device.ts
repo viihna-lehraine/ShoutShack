@@ -8,10 +8,8 @@ import {
 } from 'sequelize';
 import { User } from './User';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface DeviceAttributes {
 	deviceId: number; // primary key, auto-incremented
@@ -134,7 +132,7 @@ export default function createDeviceModel(
 		logger.info('Device model initialized successfully');
 		return Device;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

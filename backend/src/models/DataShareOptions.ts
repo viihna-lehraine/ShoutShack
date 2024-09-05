@@ -7,10 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { User } from './User';
 
 interface DataShareOptionsAttributes {
@@ -127,7 +125,7 @@ export default function createDataShareOptionsModel(
 		logger.info('DataShareOptions model initialized successfully');
 		return DataShareOptions;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

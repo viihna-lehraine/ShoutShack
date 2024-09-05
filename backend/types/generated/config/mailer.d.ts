@@ -1,14 +1,16 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { Logger } from './logger';
 export interface MailerSecrets {
-    EMAIL_HOST: string;
-    EMAIL_PORT: number;
-    EMAIL_SECURE: boolean;
-    SMTP_TOKEN: string;
+    readonly EMAIL_HOST: string;
+    readonly EMAIL_PORT: number;
+    readonly EMAIL_SECURE: boolean;
+    readonly SMTP_TOKEN: string;
 }
 export interface MailerDependencies {
-    nodemailer: typeof nodemailer;
-    getSecrets: () => Promise<MailerSecrets>;
-    emailUser: string;
+    readonly nodemailer: typeof nodemailer;
+    readonly getSecrets: () => Promise<MailerSecrets>;
+    readonly emailUser: string;
+    readonly logger: Logger;
 }
 export declare function getTransporter(deps: MailerDependencies): Promise<Transporter>;
 //# sourceMappingURL=mailer.d.ts.map

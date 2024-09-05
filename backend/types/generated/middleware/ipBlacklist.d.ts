@@ -1,19 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
+import { Logger } from '../config/logger';
+import { environmentVariables, FeatureFlags } from '../config/environmentConfig';
 interface IpBlacklistDependencies {
-    logger: ReturnType<typeof import('../config/logger').default>;
-    featureFlags: ReturnType<typeof import('../utils/featureFlags').getFeatureFlags>;
-    __dirname: string;
-    fsModule: typeof fs;
+    logger: Logger;
+    featureFlags: FeatureFlags;
+    environmentVariables: typeof environmentVariables;
+    fsModule: typeof fs.promises;
 }
-interface IpBlacklist {
-    initializeBlacklist: () => Promise<void>;
-    loadBlacklist: () => Promise<void>;
-    addToBlacklist: (ip: string) => Promise<void>;
-    ipBlacklistMiddleware: (req: Request, res: Response, next: NextFunction) => void;
-    removeFromBlacklist: (ip: string) => void;
-}
-export declare function createIpBlacklist({ logger, featureFlags, __dirname, fsModule }: IpBlacklistDependencies): IpBlacklist;
-export declare const initializeIpBlacklist: typeof createIpBlacklist;
+export declare const loadBlacklist: ({ logger, fsModule, environmentVariables }: IpBlacklistDependencies) => Promise<void>;
+export declare const initializeBlacklist: (deps: IpBlacklistDependencies) => Promise<void>;
+export declare const addToBlacklist: (ip: string, deps: IpBlacklistDependencies) => Promise<void>;
+export declare const removeFromBlacklist: (ip: string, deps: IpBlacklistDependencies) => Promise<void>;
+export declare const ipBlacklistMiddleware: (deps: IpBlacklistDependencies) => (req: Request, res: Response, next: NextFunction) => void;
 export {};
 //# sourceMappingURL=ipBlacklist.d.ts.map

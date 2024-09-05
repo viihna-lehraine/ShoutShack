@@ -6,10 +6,8 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { Logger } from '../config/logger';
 
 interface FeatureRequestAttributes {
@@ -101,7 +99,7 @@ export default function createFeatureRequestModel(
 		logger.info('FeatureRequest model initialized successfully');
 		return FeatureRequest;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

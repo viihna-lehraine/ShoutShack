@@ -1,9 +1,11 @@
-import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import { Logger } from '../config/logger';
+import { RateLimitMiddlewareDependencies } from '../middleware/rateLimit';
 import { SecretsMap } from '../utils/sops';
 interface UserAttributes {
     id: string;
-    userid?: number;
+    userId: number;
     username: string;
     password: string;
     email: string;
@@ -21,7 +23,7 @@ interface UserModelDependencies {
 }
 declare class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> implements UserAttributes {
     id: string;
-    userid?: number;
+    userId: number;
     username: string;
     password: string;
     email: string;
@@ -29,12 +31,12 @@ declare class User extends Model<InferAttributes<User>, InferCreationAttributes<
     resetPasswordToken: string | null;
     resetPasswordExpires: Date | null;
     isMfaEnabled: boolean;
-    creationDate: Date;
-    comparePassword(password: string, argon2: typeof import('argon2'), secrets: UserSecrets): Promise<boolean>;
-    static comparePasswordWithDependencies(hashedPassword: string, password: string, argon2: typeof import('argon2'), secrets: UserSecrets): Promise<boolean>;
-    static validatePassword(password: string): boolean;
-    static createUser({ argon2, uuidv4, getSecrets }: UserModelDependencies, username: string, password: string, email: string): Promise<User>;
+    creationDate: CreationOptional<Date>;
+    comparePassword(password: string, argon2: typeof import('argon2'), secrets: UserSecrets, logger: Logger): Promise<boolean>;
+    static validatePassword(password: string, logger: Logger): boolean;
+    static createUser({ uuidv4, getSecrets }: UserModelDependencies, userId: number, username: string, password: string, email: string, rateLimitDependencies: RateLimitMiddlewareDependencies, logger: Logger): Promise<User>;
+    static comparePasswords(hashedPassword: string, password: string, argon2: typeof import('argon2'), secrets: UserSecrets, logger: Logger): Promise<boolean>;
 }
-export default function createUserModel(sequelize: Sequelize): typeof User;
-export {};
+export default function createUserModel(sequelize: Sequelize, logger: Logger): typeof User;
+export { User };
 //# sourceMappingURL=User.d.ts.map

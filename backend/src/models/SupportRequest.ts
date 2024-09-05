@@ -7,11 +7,9 @@ import {
 	CreationOptional
 } from 'sequelize';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
 import { User } from './User';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface SupportRequestAttributes {
 	id: string; // UUID for support request, primary key (from user model)
@@ -106,7 +104,7 @@ export default function createSupportRequestModel(
 
 		return SupportRequest;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

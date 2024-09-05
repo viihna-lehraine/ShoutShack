@@ -1,9 +1,12 @@
-import { Router } from 'express';
+import { Application, Router } from 'express';
+import { Logger } from '../config/logger';
+import { FeatureFlags } from '../config/environmentConfig';
 interface TestRouteDependencies {
-    logger: {
-        info: (msg: string) => void;
-    };
+    app: Application;
+    logger: Logger;
+    featureFlags: FeatureFlags;
+    environmentVariables: typeof import('../config/environmentConfig').environmentVariables;
 }
-export default function createTestRouter(deps: TestRouteDependencies): Router;
+export declare function initializeTestRoutes({ app, logger, featureFlags, environmentVariables }: TestRouteDependencies): Router;
 export {};
 //# sourceMappingURL=testRoutes.d.ts.map

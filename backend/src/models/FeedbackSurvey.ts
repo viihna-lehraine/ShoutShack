@@ -6,10 +6,8 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import { Logger } from '../config/logger';
 
 interface FeedbackSurveyAttributes {
@@ -229,7 +227,7 @@ export default function createFeedbackSurveyModel(
 		logger.info('FeedbackSurvey model initialized successfully');
 		return FeedbackSurvey;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import compressing from 'compressing';
 import { exec } from 'child_process';
-import { Logger } from 'winston';
+import { Logger } from '../config/logger';
 interface CronDependencies {
     logger: Logger;
     compressing: typeof compressing;

@@ -2,10 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { environmentVariables } from '../config/environmentConfig';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 const router = express.Router();
 
@@ -47,13 +45,13 @@ function serveStaticFile(
 
 		res.sendFile(filePath, err => {
 			if (err) {
-				handleGeneralError(err, logger || console, undefined, console);
+				processError(err, logger || console, undefined, console);
 				return next(new Error(`File ${route} not found`));
 			}
 			logger.debug(`${route} was accessed`);
 		});
 	} catch (error) {
-		handleGeneralError(error as Error, logger || console);
+		processError(error as Error, logger || console);
 		next(error);
 	}
 }
@@ -112,7 +110,7 @@ export function setupStaticRoutes({
 
 				next();
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 				next(error);
 			}
 		});
@@ -147,7 +145,7 @@ export function setupStaticRoutes({
 						logger
 					);
 				} catch (error) {
-					handleGeneralError(error as Error, logger, req);
+					processError(error as Error, logger, req);
 					next(error);
 				}
 			}
@@ -202,7 +200,7 @@ export function setupStaticRoutes({
 							logger
 						);
 					} catch (error) {
-						handleGeneralError(error as Error, logger);
+						processError(error as Error, logger);
 						next(error);
 					}
 				}
@@ -233,7 +231,7 @@ export function setupStaticRoutes({
 				// attempt to send the 404 file
 				res.sendFile(notFoundFilePath, err => {
 					if (err) {
-						handleGeneralError(err, logger, req);
+						processError(err, logger, req);
 						res.status(500).json({
 							error: 'Internal server error'
 						});
@@ -246,14 +244,14 @@ export function setupStaticRoutes({
 					}
 				});
 			} catch (error) {
-				handleGeneralError(error as Error, logger, req);
+				processError(error as Error, logger, req);
 				next(error);
 			}
 		});
 
 		return router;
 	} catch (error) {
-		handleGeneralError(error as Error, logger);
+		processError(error as Error, logger);
 		throw error;
 	}
 }
@@ -287,7 +285,7 @@ export function initializeStaticRoutes(
 
 		app.use('/', router);
 	} catch (error) {
-		handleGeneralError(error as Error, logger);
+		processError(error as Error, logger);
 		throw error;
 	}
 }

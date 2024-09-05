@@ -4,10 +4,8 @@ import { initializeTestRoutes } from './routes/testRoutes';
 import { initializeStaticRoutes } from './routes/staticRoutes';
 import { FeatureFlags } from './config/environmentConfig';
 import { environmentVariables } from './config/environmentConfig';
-import {
-	handleGeneralError,
-	validateDependencies
-} from './middleware/errorHandler';
+import { validateDependencies } from './utils/validateDependencies';
+import { processError } from './utils/processError';
 import initializeUserRoutes, { UserRoutesModel } from './routes/userRoutes';
 import initializeValidationRoutes from './routes/validationRoutes';
 import argon2 from 'argon2';
@@ -16,9 +14,9 @@ import axios from 'axios';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import generateConfirmationEmailTemplate from './utils/emailTemplates/confirmationEmailTemplate';
+import generateConfirmationEmailTemplate from './templates/confirmationEmailTemplate';
 import { getTransporter } from './config/mailer';
-import totpUtil from './utils/auth/totpUtil';
+import totpUtil from './auth/totpUtil';
 import sops from './utils/sops';
 import { execSync } from 'child_process';
 import speakeasy from 'speakeasy';
@@ -109,7 +107,7 @@ export async function initializeRoutes({
 		logger.error(
 			`FATAL EXCEPTION: Failed to initialize routes: ${error instanceof Error ? error.message : error}`
 		);
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw new Error(
 			`Failed to initialize routes: ${error instanceof Error ? error.message : error}`
 		);

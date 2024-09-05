@@ -7,10 +7,8 @@ import {
 } from 'sequelize';
 import { User } from './User';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface UserMfaAttributes {
 	id: string; // UUID for the MFA record and primary key (from User model)
@@ -173,7 +171,7 @@ export default function createUserMfaModel(
 
 		return UserMfa;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

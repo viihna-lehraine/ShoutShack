@@ -1,4 +1,5 @@
-import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
+import { InferAttributes, InferCreationAttributes, Model, Sequelize, CreationOptional } from 'sequelize';
+import { Logger } from '../config/logger';
 interface SupportRequestAttributes {
     id: string;
     email: string;
@@ -6,7 +7,7 @@ interface SupportRequestAttributes {
     supportType: string;
     supportContent: string;
     isSupportTicketOpen: boolean;
-    supportTicketOpenDate: Date;
+    supportTicketOpenDate: CreationOptional<Date>;
     supportTicketCloseDate?: Date | null;
 }
 declare class SupportRequest extends Model<InferAttributes<SupportRequest>, InferCreationAttributes<SupportRequest>> implements SupportRequestAttributes {
@@ -19,6 +20,6 @@ declare class SupportRequest extends Model<InferAttributes<SupportRequest>, Infe
     supportTicketOpenDate: Date;
     supportTicketCloseDate?: Date | null;
 }
-export default function createSupportRequestModel(sequelize: Sequelize): typeof SupportRequest;
-export {};
+export default function createSupportRequestModel(sequelize: Sequelize, logger: Logger): typeof SupportRequest;
+export { SupportRequest };
 //# sourceMappingURL=SupportRequest.d.ts.map

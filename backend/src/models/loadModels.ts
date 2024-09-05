@@ -1,9 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { Logger } from '../config/logger';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 import createAuditLogModel from './AuditLog';
 import createDataShareOptionsModel from './DataShareOptions';
 import createDeviceModel from './Device';
@@ -147,7 +145,7 @@ export async function loadModels(
 
 		return models;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		processError(error, logger || console);
 		throw error;
 	}
 }

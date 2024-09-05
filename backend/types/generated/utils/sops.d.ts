@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
+import { Logger } from '../config/logger';
 interface SopsDependencies {
-    logger: ReturnType<typeof import('../config/logger').default>;
+    logger: Logger;
     execSync: typeof execSync;
     getDirectoryPath: () => string;
 }
@@ -30,6 +31,7 @@ export interface SecretsMap extends Secrets {
     RP_ID: string;
     RP_NAME: string;
     RP_ICON: string;
+    SESSION_SECRET: string;
     SMTP_TOKEN: string;
     YUBICO_CLIENT_ID: number;
     YUBICO_SECRET_KEY: string;

@@ -12,14 +12,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { hashPassword } from '../config/hashConfig';
 import { Logger } from '../config/logger';
 import { PasswordValidationError } from '../config/errorClasses';
-import createRateLimitMiddleware, {
+import {
+	initializeRateLimitMiddleware,
 	RateLimitMiddlewareDependencies
 } from '../middleware/rateLimit';
 import sops, { SecretsMap } from '../utils/sops';
-import {
-	handleGeneralError,
-	validateDependencies
-} from '../middleware/errorHandler';
+import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError';
 
 interface UserAttributes {
 	id: string;
@@ -79,7 +78,7 @@ class User
 				password + secrets.PEPPER
 			);
 		} catch (error) {
-			handleGeneralError(error, logger);
+			processError(error, logger);
 			throw new PasswordValidationError('Passwords do not match');
 		}
 	}
@@ -109,7 +108,7 @@ class User
 				hasSpecial
 			);
 		} catch (error) {
-			handleGeneralError(error, logger);
+			processError(error, logger);
 			return false;
 		}
 	}
@@ -137,7 +136,7 @@ class User
 				logger
 			);
 
-			const rateLimiter = createRateLimitMiddleware(
+			const rateLimiter = initializeRateLimitMiddleware(
 				rateLimitDependencies
 			);
 			const req = { ip: email } as unknown as Request;
@@ -179,7 +178,7 @@ class User
 
 			return newUser;
 		} catch (error) {
-			handleGeneralError(error, logger);
+			processError(error, logger);
 
 			if (error instanceof PasswordValidationError) {
 				throw error;
@@ -216,7 +215,7 @@ class User
 			logger.debug('Password verified successfully');
 			return isValid;
 		} catch (error) {
-			handleGeneralError(error, logger);
+			processError(error, logger);
 			throw new PasswordValidationError('Error verifying password');
 		}
 	}
@@ -308,7 +307,7 @@ export default function createUserModel(
 					logger
 				});
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 				throw new PasswordValidationError('Error hashing password.');
 			}
 		});
@@ -328,7 +327,7 @@ export default function createUserModel(
 					logger.debug('MFA status updated successfully');
 				}
 			} catch (error) {
-				handleGeneralError(error, logger);
+				processError(error, logger);
 				throw new PasswordValidationError(
 					'Error updating multi-factor authentication status.'
 				);
@@ -337,7 +336,7 @@ export default function createUserModel(
 
 		return User;
 	} catch (error) {
-		handleGeneralError(error, logger);
+		processError(error, logger);
 		throw error;
 	}
 }
