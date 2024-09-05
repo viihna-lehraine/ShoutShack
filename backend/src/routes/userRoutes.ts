@@ -22,13 +22,13 @@ import {
 } from '../middleware/errorHandler';
 import { hashPassword } from '../config/hashConfig';
 
-interface UserSecrets {
+export interface UserSecrets {
 	JWT_SECRET: string;
 	PEPPER: string;
 }
 
-interface UserModel {
-	validatePassword: (password: string) => boolean;
+export interface UserRoutesModel {
+	validatePassword: (password: string, logger: Logger) => boolean;
 	findOne: (criteria: object) => Promise<UserInstance | null>;
 	create: (user: Partial<UserInstance>) => Promise<UserInstance>;
 }
@@ -55,7 +55,7 @@ interface UserInstance {
 interface UserRouteDependencies {
 	logger: Logger;
 	secrets: UserSecrets;
-	User: UserModel;
+	UserRoutes: UserRoutesModel;
 	argon2: typeof argon2;
 	jwt: typeof jwt;
 	axios: typeof axios;
@@ -73,10 +73,10 @@ function getDirectoryPath(): string {
 	return path.resolve(process.cwd());
 }
 
-export default function createUserRoutes({
+export default function initializeUserRoutes({
 	logger,
 	secrets,
-	User,
+	UserRoutes,
 	argon2,
 	jwt,
 	axios,
@@ -92,7 +92,7 @@ export default function createUserRoutes({
 			[
 				{ name: 'logger', instance: logger },
 				{ name: 'secrets', instance: secrets },
-				{ name: 'User', instance: User },
+				{ name: 'UserRoutes', instance: UserRoutes },
 				{ name: 'argon2', instance: argon2 },
 				{ name: 'jwt', instance: jwt },
 				{ name: 'axios', instance: axios },
@@ -136,7 +136,7 @@ export default function createUserRoutes({
 				});
 			}
 
-			if (!User.validatePassword(sanitizedPassword)) {
+			if (!UserRoutes.validatePassword(sanitizedPassword, logger)) {
 				logger.debug(
 					'Registration failure: passwords do not meet complexity requirements'
 				);
@@ -172,7 +172,7 @@ export default function createUserRoutes({
 				});
 			}
 
-			const existingUser = await User.findOne({
+			const existingUser = await UserRoutes.findOne({
 				where: { email: sanitizedEmail }
 			});
 
@@ -189,7 +189,7 @@ export default function createUserRoutes({
 				logger
 			});
 
-			const newUser = await User.create({
+			const newUser = await UserRoutes.create({
 				id: uuidv4(),
 				username: sanitizedUsername,
 				password: hashedPassword,
@@ -215,7 +215,8 @@ export default function createUserRoutes({
 				subject: 'Guestbook - Account Confirmation',
 				html: generateConfirmationEmailTemplate(
 					newUser.username,
-					confirmationUrl
+					confirmationUrl,
+					logger
 				)
 			};
 
@@ -251,7 +252,7 @@ export default function createUserRoutes({
 			const sanitizedEmail = xss(email);
 			const sanitizedPassword = xss(password);
 
-			const user = await User.findOne({
+			const user = await UserRoutes.findOne({
 				where: { email: sanitizedEmail }
 			});
 
@@ -288,7 +289,7 @@ export default function createUserRoutes({
 		const sanitizedEmail = xss(email);
 
 		try {
-			const user = await User.findOne({
+			const user = await UserRoutes.findOne({
 				where: { email: sanitizedEmail }
 			});
 			if (!user) {
@@ -366,7 +367,7 @@ export default function createUserRoutes({
 		const sanitizedEmail = xss(email);
 
 		try {
-			const user = await User.findOne({
+			const user = await UserRoutes.findOne({
 				where: { email: sanitizedEmail }
 			});
 
@@ -421,7 +422,7 @@ export default function createUserRoutes({
 		const sanitizedEmail = xss(email);
 
 		try {
-			const user = await User.findOne({
+			const user = await UserRoutes.findOne({
 				where: { email: sanitizedEmail }
 			});
 			if (!user) {

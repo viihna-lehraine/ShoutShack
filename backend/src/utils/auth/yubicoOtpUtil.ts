@@ -3,6 +3,10 @@ import '../../../types/custom/yub.d.ts';
 import getSecrets, { SecretsMap } from '../sops.js';
 import { execSync } from 'child_process';
 import { Logger } from '../../config/logger';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../../middleware/errorHandler';
 
 interface YubClient {
 	verify(
@@ -44,6 +48,17 @@ export default function createYubicoOtpUtil({
 	let secrets: SecretsMap | null = null;
 	let yubClient: YubClient | undefined;
 
+	validateDependencies(
+		[
+			{ name: 'yub', instance: yub },
+			{ name: 'getSecrets', instance: getSecrets },
+			{ name: 'logger', instance: logger },
+			{ name: 'execSync', instance: execSync },
+			{ name: 'getDirectoryPath', instance: getDirectoryPath }
+		],
+		logger
+	);
+
 	async function initializeYubicoOtpUtil(): Promise<void> {
 		try {
 			logger.info('Initializing Yubico OTP Utility.');
@@ -60,10 +75,7 @@ export default function createYubicoOtpUtil({
 
 			logger.info('Yubico OTP Utility initialized successfully.');
 		} catch (error) {
-			logger.error(
-				'Failed to initialize Yubico OTP Utility.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
 				`Failed to initialize Yubico OTP Utility: ${
 					error instanceof Error ? error.message : String(error)
@@ -84,12 +96,7 @@ export default function createYubicoOtpUtil({
 					otp,
 					(error: Error | null, data: YubResponse) => {
 						if (error) {
-							logger.error(
-								'Error during Yubico OTP validation.',
-								error instanceof Error
-									? { stack: error.stack }
-									: {}
-							);
+							handleGeneralError(error, logger);
 							return reject(error);
 						}
 
@@ -104,10 +111,7 @@ export default function createYubicoOtpUtil({
 				);
 			});
 		} catch (error) {
-			logger.error(
-				'Failed to validate Yubico OTP.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
 				`Failed to validate Yubico OTP: ${
 					error instanceof Error ? error.message : String(error)
@@ -129,10 +133,7 @@ export default function createYubicoOtpUtil({
 				apiUrl: secrets.YUBICO_API_URL as string
 			};
 		} catch (error) {
-			logger.error(
-				'Failed to generate Yubico OTP options.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
 				`Failed to generate Yubico OTP options: ${
 					error instanceof Error ? error.message : String(error)

@@ -67,7 +67,7 @@ export function login({
 			}
 
 			// generate JWT token and use it to respond
-			const token = await jwtUtil.generateToken(user);
+			const token = await jwtUtil.generateJwtToken(user);
 			logger.info(`User logged in successfully: ${username}`);
 			return res.json({ token });
 		} catch (err) {

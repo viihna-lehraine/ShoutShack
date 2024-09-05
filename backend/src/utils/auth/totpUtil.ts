@@ -1,5 +1,9 @@
 import QRCode from 'qrcode';
-import { Logger, setupLogger } from '../../config/logger';
+import { Logger } from '../../config/logger';
+import {
+	validateDependencies,
+	handleGeneralError
+} from '../../middleware/errorHandler';
 
 interface TOTPSecret {
 	ascii: string;
@@ -11,18 +15,26 @@ interface TOTPSecret {
 interface TOTPUtilDependencies {
 	speakeasy: typeof import('speakeasy');
 	QRCode: typeof QRCode;
+	logger: Logger;
 }
 
 export default function createTOTPUtil({
 	speakeasy,
-	QRCode
+	QRCode,
+	logger
 }: TOTPUtilDependencies): {
 	generateTOTPSecret: () => TOTPSecret;
 	generateTOTPToken: (secret: string) => string;
 	verifyTOTPToken: (secret: string, token: string) => boolean;
 	generateQRCode: (otpauth_url: string) => Promise<string>;
 } {
-	const logger: Logger = setupLogger();
+	validateDependencies(
+		[
+			{ name: 'speakeasy', instance: speakeasy },
+			{ name: 'QRCode', instance: QRCode }
+		],
+		logger
+	);
 
 	function generateTOTPSecret(): TOTPSecret {
 		try {
@@ -36,14 +48,9 @@ export default function createTOTPUtil({
 				otpauth_url: totpSecret.otpauth_url || ''
 			};
 		} catch (error) {
-			logger.error(
-				'Failed to generate TOTP secret.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
-				`Failed to generate TOTP secret: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+				`Failed to generate TOTP secret: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	}
@@ -58,14 +65,9 @@ export default function createTOTPUtil({
 			logger.debug('TOTP token generated successfully.');
 			return totpToken;
 		} catch (error) {
-			logger.debug(
-				'Failed to generate TOTP token.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
-				`Failed to generate TOTP token: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+				`Failed to generate TOTP token: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	}
@@ -77,23 +79,16 @@ export default function createTOTPUtil({
 				secret,
 				encoding: 'base32',
 				token,
-				window: 1 // gives leeway for clock drift
+				window: 1 // leeway for clock drift
 			});
 			logger.debug(
-				`TOTP token verification ${
-					isTOTPTokenValid ? 'succeeded' : 'failed'
-				}.`
+				`TOTP token verification ${isTOTPTokenValid ? 'succeeded' : 'failed'}.`
 			);
 			return isTOTPTokenValid;
 		} catch (error) {
-			logger.debug(
-				'Failed to verify TOTP token.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
-				`Failed to verify TOTP token: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+				`Failed to verify TOTP token: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	}
@@ -105,14 +100,9 @@ export default function createTOTPUtil({
 			logger.debug('QR code generated successfully.');
 			return qrCode;
 		} catch (error) {
-			logger.error(
-				'Failed to generate QR code.',
-				error instanceof Error ? { stack: error.stack } : {}
-			);
+			handleGeneralError(error, logger);
 			throw new Error(
-				`Failed to generate QR code: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+				`Failed to generate QR code: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	}

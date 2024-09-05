@@ -31,14 +31,14 @@ class SecurityEvent
 	>
 	implements SecurityEventAttributes
 {
-	id!: string;
-	eventId!: string;
-	eventType!: string;
-	eventDescription!: string | null;
-	ipAddress!: string;
-	userAgent!: string;
-	securityEventDate!: Date;
-	securityEventLastUpdated!: CreationOptional<Date>;
+	public id!: string;
+	public eventId!: string;
+	public eventType!: string;
+	public eventDescription!: string | null;
+	public ipAddress!: string;
+	public userAgent!: string;
+	public securityEventDate!: Date;
+	public securityEventLastUpdated!: CreationOptional<Date>;
 }
 
 export default function createSecurityEventModel(
@@ -126,3 +126,5 @@ export default function createSecurityEventModel(
 		throw error;
 	}
 }
+
+export { SecurityEvent };

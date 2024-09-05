@@ -30,14 +30,14 @@ class FeatureRequest
 	>
 	implements FeatureRequestAttributes
 {
-	featureRequestNumber!: number;
-	id!: string;
-	email!: string | null;
-	featureRequestType!: string;
-	featureRequestContent!: string;
-	canFollowUpFeatureRequest!: boolean;
-	featureRequestOpenDate!: CreationOptional<Date>;
-	featureRequestCloseDate!: Date | null;
+	public featureRequestNumber!: number;
+	public id!: string;
+	public email!: string | null;
+	public featureRequestType!: string;
+	public featureRequestContent!: string;
+	public canFollowUpFeatureRequest!: boolean;
+	public featureRequestOpenDate!: CreationOptional<Date>;
+	public featureRequestCloseDate!: Date | null;
 }
 
 export default function createFeatureRequestModel(
@@ -105,3 +105,5 @@ export default function createFeatureRequestModel(
 		throw error;
 	}
 }
+
+export { FeatureRequest };

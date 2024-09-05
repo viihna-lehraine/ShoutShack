@@ -44,28 +44,28 @@ class FeedbackSurvey
 	>
 	implements FeedbackSurveyAttributes
 {
-	surveyId!: number;
-	questionGeneralApproval?: number | null;
-	questionServiceQuality?: number | null;
-	questionEaseOfUse?: number | null;
-	questionUserSupport?: number | null;
-	questionHelpGuides?: number | null;
-	questionIsPremiumUser?: boolean | null;
-	questionPremiumValue?: number | null;
-	questionLikelihoodToRecommend?: number | null;
-	questionUsefulFeaturesAndAspects?: object | null;
-	questionFeaturesThatNeedImprovement?: object | null;
-	questionOpenEndedLikeTheMost?: string | null;
-	questionOpenEndedWhatCanWeImprove?: string | null;
-	questionDemoHeardAboutUs?: number | null;
-	questionDemoAgeGroup?: number | null;
-	questionDemoGender?: string | null;
-	questionDemoRegion?: string | null;
-	questionDemoLangPref?: string | null;
-	questionFinalThoughts?: string | null;
-	hasOptedInForFollowUp?: boolean | null;
-	email?: string | null;
-	surveyDate!: CreationOptional<Date>;
+	public surveyId!: number;
+	public questionGeneralApproval?: number | null;
+	public questionServiceQuality?: number | null;
+	public questionEaseOfUse?: number | null;
+	public questionUserSupport?: number | null;
+	public questionHelpGuides?: number | null;
+	public questionIsPremiumUser?: boolean | null;
+	public questionPremiumValue?: number | null;
+	public questionLikelihoodToRecommend?: number | null;
+	public questionUsefulFeaturesAndAspects?: object | null;
+	public questionFeaturesThatNeedImprovement?: object | null;
+	public questionOpenEndedLikeTheMost?: string | null;
+	public questionOpenEndedWhatCanWeImprove?: string | null;
+	public questionDemoHeardAboutUs?: number | null;
+	public questionDemoAgeGroup?: number | null;
+	public questionDemoGender?: string | null;
+	public questionDemoRegion?: string | null;
+	public questionDemoLangPref?: string | null;
+	public questionFinalThoughts?: string | null;
+	public hasOptedInForFollowUp?: boolean | null;
+	public email?: string | null;
+	public surveyDate!: CreationOptional<Date>;
 }
 
 export default function createFeedbackSurveyModel(
@@ -233,3 +233,5 @@ export default function createFeedbackSurveyModel(
 		throw error;
 	}
 }
+
+export { FeedbackSurvey };

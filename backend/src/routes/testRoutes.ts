@@ -1,81 +1,94 @@
-import express, { Request, Response, Router, NextFunction } from 'express';
-import { AppError } from '../config/errorClasses';
+import { Application, Request, Response, NextFunction, Router } from 'express';
 import { Logger } from '../config/logger';
+import { FeatureFlags } from '../config/environmentConfig';
 import {
-	handleGeneralError,
-	validateDependencies
+	validateDependencies,
+	handleGeneralError
 } from '../middleware/errorHandler';
 
 interface TestRouteDependencies {
+	app: Application;
 	logger: Logger;
+	featureFlags: FeatureFlags;
 	environmentVariables: typeof import('../config/environmentConfig').environmentVariables;
 }
 
-export default function createTestRouter(deps: TestRouteDependencies): Router {
-	const router = express.Router();
-	const { logger, environmentVariables } = deps;
+export function initializeTestRoutes({
+	app,
+	logger,
+	featureFlags,
+	environmentVariables
+}: TestRouteDependencies): Router {
+	const router = Router();
 
 	try {
 		validateDependencies(
 			[
+				{ name: 'app', instance: app },
 				{ name: 'logger', instance: logger },
+				{ name: 'featureFlags', instance: featureFlags },
 				{ name: 'environmentVariables', instance: environmentVariables }
 			],
 			logger
 		);
-	} catch (error) {
-		handleGeneralError(error as Error, logger || console);
-		throw error;
-	}
 
-	// check if we are in a non-production environment
-	if (environmentVariables.nodeEnv === 'production') {
-		router.use((_req: Request, res: Response) => {
-			res.status(404).json({
-				message: 'Test routes are not available in production.'
+		if (!featureFlags.loadTestRoutesFlag) {
+			logger.info('Test routes not loaded; feature flag is disabled.');
+		}
+
+		if (environmentVariables.nodeEnv === 'production') {
+			router.use((_req: Request, res: Response) => {
+				res.status(404).json({
+					message: 'Test routes are not available in production.'
+				});
 			});
-		});
-		return router;
-	}
+		} else {
+			router.get(
+				'/test',
+				(req: Request, res: Response, next: NextFunction) => {
+					try {
+						logger.info('Test route accessed.');
+						res.send('Test route is working!');
+					} catch (error) {
+						handleGeneralError(error as Error, logger, req);
+						next(new Error('Internal server error on test route'));
+					}
+				}
+			);
+		}
 
-	// define test routes only if not in production
-	router.get('/test', (req: Request, res: Response, next: NextFunction) => {
-		try {
-			logger.info('Test route was accessed.');
-			res.send('Test route is working!');
-		} catch (error) {
+		router.use((error: unknown, req: Request, res: Response) => {
+			if (error instanceof Error) {
+				logger.error(`Unexpected error on test route: ${error.stack}`);
+				handleGeneralError(error, logger, req);
+			} else {
+				logger.error(
+					'Unexpected non-error thrown on test route',
+					error
+				);
+				handleGeneralError(
+					new Error('Unexpected test route error'),
+					logger,
+					req
+				);
+			}
+			res.status(500).json({
+				error: 'Internal server error on test route'
+			});
 			handleGeneralError(
-				(error as Error) || (error as AppError),
+				new Error('Unexpected test route error'),
 				logger,
 				req
 			);
-			next(new Error('Internal server error on test route'));
-		}
-	});
+		});
 
-	// general error handler for uncaught errors in the router
-	router.use(
-		(error: unknown, req: Request, res: Response, next: NextFunction) => {
-			try {
-				if (error instanceof Error) {
-					logger.error(`Unexpected error on test route: `, {
-						stack: error.stack
-					});
-				} else {
-					logger.error(
-						'Unexpected non-error thrown on test route',
-						error
-					);
-				}
-				res.status(500).json({
-					error: 'Internal server error on test route'
-				});
-			} catch (error) {
-				handleGeneralError(error as Error, logger, req);
-				next(error);
-			}
-		}
-	);
-
-	return router;
+		app.use('/test', router);
+		logger.info('Test routes loaded successfully.');
+		return router;
+	} catch (error) {
+		handleGeneralError(error as Error, logger);
+		throw new Error(
+			`Failed to initialize test routes: ${error instanceof Error ? error.message : String(error)}`
+		);
+	}
 }

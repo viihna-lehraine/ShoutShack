@@ -6,11 +6,11 @@ import {
 } from '../middleware/errorHandler';
 
 interface MemoryStats {
-	rss: string;
-	heapTotal: string;
-	heapUsed: string;
-	external: string;
-	available: string;
+	rss: string; // MB
+	heapTotal: string; // MB
+	heapUsed: string; // MB
+	external: string; // MB
+	available: string; // MB
 }
 
 interface MemoryMonitorDependencies {
@@ -43,7 +43,7 @@ export function createMemoryMonitor({
 			try {
 				const memoryUsage = process.memoryUsage();
 				const memoryStats: MemoryStats = {
-					rss: (memoryUsage.rss / 1024 / 1024).toFixed(2),
+					rss: (memoryUsage.rss / 1024 / 1024).toFixed(2), // convert bytes to MB
 					heapTotal: (memoryUsage.heapTotal / 1024 / 1024).toFixed(2),
 					heapUsed: (memoryUsage.heapUsed / 1024 / 1024).toFixed(2),
 					external: (memoryUsage.external / 1024 / 1024).toFixed(2),
@@ -59,12 +59,17 @@ export function createMemoryMonitor({
 		}
 
 		function startMemoryMonitor(): NodeJS.Timeout {
+			// start monitoring memory usage every 5 minutes (300000 ms)
 			return setInterval(logMemoryUsage, 300000);
 		}
 
 		return { startMemoryMonitor };
 	} catch (error) {
 		handleGeneralError(error, logger);
-		throw error;
+		throw new Error(
+			`Failed to create and start memory monitor: ${
+				error instanceof Error ? error.message : String(error)
+			}`
+		);
 	}
 }

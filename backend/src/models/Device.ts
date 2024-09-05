@@ -31,17 +31,17 @@ class Device
 	extends Model<InferAttributes<Device>, InferCreationAttributes<Device>>
 	implements DeviceAttributes
 {
-	deviceId!: number;
-	id!: string;
-	deviceName!: string;
-	deviceType!: string;
-	os!: string;
-	browser!: string | null;
-	ipAddress!: string;
-	lastUsed!: CreationOptional<Date>;
-	isTrusted!: boolean;
-	creationDate!: CreationOptional<Date>;
-	lastUpdated!: CreationOptional<Date>;
+	public deviceId!: number;
+	public id!: string;
+	public deviceName!: string;
+	public deviceType!: string;
+	public os!: string;
+	public browser!: string | null;
+	public ipAddress!: string;
+	public lastUsed!: CreationOptional<Date>;
+	public isTrusted!: boolean;
+	public creationDate!: CreationOptional<Date>;
+	public lastUpdated!: CreationOptional<Date>;
 }
 
 export default function createDeviceModel(
@@ -138,3 +138,5 @@ export default function createDeviceModel(
 		throw error;
 	}
 }
+
+export { Device };

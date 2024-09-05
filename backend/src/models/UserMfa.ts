@@ -15,7 +15,7 @@ import {
 interface UserMfaAttributes {
 	id: string; // UUID for the MFA record and primary key (from User model)
 	isMfaEnabled: boolean;
-	backupCodes: string[] | null;
+	backupCodes?: string[] | null;
 	isEmail2faEnabled: boolean;
 	isTotp2faEnabled: boolean;
 	isYubicoOtp2faEnabled: boolean;
@@ -38,25 +38,25 @@ class UserMfa
 	extends Model<InferAttributes<UserMfa>, InferCreationAttributes<UserMfa>>
 	implements UserMfaAttributes
 {
-	id!: string;
-	isMfaEnabled!: boolean;
-	backupCodes!: string[] | null;
-	isEmail2faEnabled!: boolean;
-	isTotp2faEnabled!: boolean;
-	isYubicoOtp2faEnabled!: boolean;
-	isU2f2faEnabled!: boolean;
-	isPasskeyEnabled!: boolean;
-	totpSecret!: string | null;
-	yubicoOtpPublicId!: string | null;
-	yubicoOtpSecretKey!: string | null;
-	fido2CredentialId!: string | null;
-	fido2PublicKey!: string | null;
-	fido2Counter!: number | null;
-	fido2AttestationFormat!: string | null;
-	passkeyCredentialId!: string | null;
-	passkeyPublicKey!: string | null;
-	passkeyCounter!: number | null;
-	passkeyAttestationFormat!: string | null;
+	public id!: string;
+	public isMfaEnabled!: boolean;
+	public backupCodes!: string[] | null;
+	public isEmail2faEnabled!: boolean;
+	public isTotp2faEnabled!: boolean;
+	public isYubicoOtp2faEnabled!: boolean;
+	public isU2f2faEnabled!: boolean;
+	public isPasskeyEnabled!: boolean;
+	public totpSecret!: string | null;
+	public yubicoOtpPublicId!: string | null;
+	public yubicoOtpSecretKey!: string | null;
+	public fido2CredentialId!: string | null;
+	public fido2PublicKey!: string | null;
+	public fido2Counter!: number | null;
+	public fido2AttestationFormat!: string | null;
+	public passkeyCredentialId!: string | null;
+	public passkeyPublicKey!: string | null;
+	public passkeyCounter!: number | null;
+	public passkeyAttestationFormat!: string | null;
 }
 
 export default function createUserMfaModel(
@@ -177,3 +177,5 @@ export default function createUserMfaModel(
 		throw error;
 	}
 }
+
+export { UserMfa };

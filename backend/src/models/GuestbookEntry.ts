@@ -29,12 +29,12 @@ class GuestbookEntry
 	>
 	implements GuestbookEntryAttributes
 {
-	id!: string;
-	guestName!: string | null;
-	guestEmail!: string | null;
-	guestMessage!: string;
-	guestMessageStyles!: object | null;
-	entryDate!: CreationOptional<Date>;
+	public id!: string;
+	public guestName!: string | null;
+	public guestEmail!: string | null;
+	public guestMessage!: string;
+	public guestMessageStyles!: object | null;
+	public entryDate!: CreationOptional<Date>;
 }
 
 export default function createGuestbookEntryModel(
@@ -108,3 +108,5 @@ export default function createGuestbookEntryModel(
 		throw error;
 	}
 }
+
+export { GuestbookEntry };

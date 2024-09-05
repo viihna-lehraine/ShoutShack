@@ -12,7 +12,11 @@ import {
 } from 'fido2-lib';
 import path from 'path';
 import sops, { SecretsMap } from '../../utils/sops';
-import { setupLogger } from '../../config/logger';
+import { Logger } from '../../config/logger';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../../middleware/errorHandler';
 import { execSync } from 'child_process';
 
 let fido2: Fido2Lib | null = null;
@@ -27,26 +31,42 @@ interface User {
 	}[];
 }
 
-type Factor = 'first' | 'second' | 'either';
-
-const logger = setupLogger();
-
 function getDirectoryPath(): string {
 	return path.resolve(process.cwd());
 }
 
-async function initializeFido2(): Promise<void> {
+type Factor = 'first' | 'second' | 'either';
+
+async function initializeFido2(logger: Logger): Promise<void> {
 	try {
+		validateDependencies(
+			[
+				{ name: 'logger', instance: logger },
+				{ name: 'execSync', instance: execSync },
+				{ name: 'getDirectoryPath', instance: getDirectoryPath }
+			],
+			logger
+		);
+
 		secrets = await sops.getSecrets({
 			logger,
 			execSync,
 			getDirectoryPath
 		});
 
-		if (!secrets) {
-			throw new Error('Secrets could not be loaded');
-		}
+		validateDependencies(
+			[
+				{ name: 'secrets.RP_ID', instance: secrets.RP_ID },
+				{ name: 'secrets.RP_NAME', instance: secrets.RP_NAME },
+				{
+					name: 'secrets.FIDO_CHALLENGE_SIZE',
+					instance: secrets.FIDO_CHALLENGE_SIZE
+				}
+			],
+			logger
+		);
 
+		// Initialize Fido2Lib instance
 		fido2 = new Fido2Lib({
 			timeout: 60000,
 			rpId: secrets.RP_ID,
@@ -61,25 +81,35 @@ async function initializeFido2(): Promise<void> {
 
 		logger.info('Fido2Lib initialized successfully.');
 	} catch (error) {
-		logger.error(
-			`Failed to initialize Fido2Lib: ${error instanceof Error ? error.message : String(error)}`
-		);
+		handleGeneralError(error, logger);
 		throw new Error('Failed to initialize Fido2Lib');
 	}
 }
 
-async function ensureFido2Initialized(): Promise<void> {
+async function ensureFido2Initialized(logger: Logger): Promise<void> {
+	validateDependencies([{ name: 'logger', instance: logger }], logger);
+
 	if (!fido2) {
 		logger.debug('Fido2Lib is not initialized, initializing now.');
-		await initializeFido2();
+		await initializeFido2(logger);
 	}
 }
 
 async function generatePasskeyRegistrationOptions(
-	user: User
+	user: User,
+	logger: Logger
 ): Promise<PublicKeyCredentialCreationOptions> {
 	try {
-		await ensureFido2Initialized();
+		validateDependencies(
+			[
+				{ name: 'user', instance: user },
+				{ name: 'logger', instance: logger }
+			],
+			logger
+		);
+
+		await ensureFido2Initialized(logger);
+
 		const passkeyRegistrationOptions = await fido2!.attestationOptions();
 
 		const registrationOptions: PublicKeyCredentialCreationOptions = {
@@ -101,19 +131,27 @@ async function generatePasskeyRegistrationOptions(
 		logger.info('Passkey registration options generated successfully.');
 		return registrationOptions;
 	} catch (error) {
-		logger.error(
-			`Failed to generate passkey registration options: ${error instanceof Error ? error.message : String(error)}`
-		);
+		handleGeneralError(error, logger);
 		throw new Error('Failed to generate passkey registration options');
 	}
 }
 
 async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
-	expectedChallenge: string
+	expectedChallenge: string,
+	logger: Logger
 ): Promise<Fido2AttestationResult> {
 	try {
-		await ensureFido2Initialized();
+		validateDependencies(
+			[
+				{ name: 'attestation', instance: attestation },
+				{ name: 'expectedChallenge', instance: expectedChallenge },
+				{ name: 'logger', instance: logger }
+			],
+			logger
+		);
+
+		await ensureFido2Initialized(logger);
 
 		const u2fAttestationExpectations: ExpectedAttestationResult = {
 			challenge: expectedChallenge,
@@ -130,18 +168,25 @@ async function verifyPasskeyRegistration(
 		logger.info('Passkey registration verified successfully.');
 		return result;
 	} catch (error) {
-		logger.error(
-			`Failed to verify passkey registration: ${error instanceof Error ? error.message : String(error)}`
-		);
+		handleGeneralError(error, logger);
 		throw new Error('Failed to verify passkey registration');
 	}
 }
 
 async function generatePasskeyAuthenticationOptions(
-	user: User
+	user: User,
+	logger: Logger
 ): Promise<PublicKeyCredentialRequestOptions> {
 	try {
-		await ensureFido2Initialized();
+		validateDependencies(
+			[
+				{ name: 'user', instance: user },
+				{ name: 'logger', instance: logger }
+			],
+			logger
+		);
+
+		await ensureFido2Initialized(logger);
 
 		const userCredentials: PublicKeyCredentialDescriptor[] =
 			user.credential.map(credential => ({
@@ -154,16 +199,14 @@ async function generatePasskeyAuthenticationOptions(
 		const authenticationOptions: PublicKeyCredentialRequestOptions = {
 			...assertionOptions,
 			allowCredentials: userCredentials,
-			userVerification: 'required', // ensure this supports passwordless login
+			userVerification: 'required', // ensure passwordless login
 			timeout: 60000
 		};
 
 		logger.info('Passkey authentication options generated successfully.');
 		return authenticationOptions;
 	} catch (error) {
-		logger.error(
-			`Failed to generate passkey authentication options: ${error instanceof Error ? error.message : String(error)}`
-		);
+		handleGeneralError(error, logger);
 		throw new Error('Failed to generate passkey authentication options');
 	}
 }
@@ -173,10 +216,23 @@ async function verifyPasskeyAuthentication(
 	expectedChallenge: string,
 	publicKey: string,
 	previousCounter: number,
-	id: string
+	id: string,
+	logger: Logger
 ): Promise<Fido2AssertionResult> {
 	try {
-		await ensureFido2Initialized();
+		validateDependencies(
+			[
+				{ name: 'assertion', instance: assertion },
+				{ name: 'expectedChallenge', instance: expectedChallenge },
+				{ name: 'publicKey', instance: publicKey },
+				{ name: 'previousCounter', instance: previousCounter },
+				{ name: 'id', instance: id },
+				{ name: 'logger', instance: logger }
+			],
+			logger
+		);
+
+		await ensureFido2Initialized(logger);
 
 		const assertionExpectations: ExpectedAssertionResult = {
 			challenge: expectedChallenge,
@@ -195,9 +251,7 @@ async function verifyPasskeyAuthentication(
 		logger.info('Passkey authentication verified successfully.');
 		return result;
 	} catch (error) {
-		logger.error(
-			`Failed to verify passkey authentication: ${error instanceof Error ? error.message : String(error)}`
-		);
+		handleGeneralError(error, logger);
 		throw new Error('Failed to verify passkey authentication');
 	}
 }

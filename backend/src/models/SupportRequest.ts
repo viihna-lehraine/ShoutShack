@@ -31,14 +31,14 @@ class SupportRequest
 	>
 	implements SupportRequestAttributes
 {
-	id!: string;
-	email!: string;
-	supportTicketNumber!: number;
-	supportType!: string;
-	supportContent!: string;
-	isSupportTicketOpen!: boolean;
-	supportTicketOpenDate!: Date;
-	supportTicketCloseDate?: Date | null;
+	public id!: string;
+	public email!: string;
+	public supportTicketNumber!: number;
+	public supportType!: string;
+	public supportContent!: string;
+	public isSupportTicketOpen!: boolean;
+	public supportTicketOpenDate!: Date;
+	public supportTicketCloseDate?: Date | null;
 }
 
 export default function createSupportRequestModel(
@@ -110,3 +110,5 @@ export default function createSupportRequestModel(
 		throw error;
 	}
 }
+
+export { SupportRequest };

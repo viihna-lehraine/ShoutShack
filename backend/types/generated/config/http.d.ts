@@ -1,9 +1,9 @@
 import { Application } from 'express';
 import { Sequelize } from 'sequelize';
 import { constants as cryptoConstants } from 'crypto';
-import SopsDependencies from '../utils/sops';
+import SopsDependencies from './utils/sops';
 import { Logger } from 'winston';
-import { FeatureFlags } from '../utils/featureFlags';
+import { FeatureFlags } from './utils/featureFlags';
 import { RedisClientType } from 'redis';
 interface SetupHttpParams {
     app: Application;

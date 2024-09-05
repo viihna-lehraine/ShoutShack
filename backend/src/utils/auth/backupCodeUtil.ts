@@ -1,8 +1,11 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { Logger } from 'winston';
-import { ModelStatic } from 'sequelize';
-import UserMfaInstance from '../../models/UserMfa';
+import { Logger } from '../../config/logger';
+import { UserMfa } from '../../models/UserMfa';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../../middleware/errorHandler';
 
 interface BackupCode {
 	code: string;
@@ -11,14 +14,16 @@ interface BackupCode {
 
 interface BackupCodeServiceDependencies {
 	logger: Logger;
-	UserMfa: ModelStatic<UserMfaInstance>;
+	UserMfa: typeof UserMfa;
 	crypto: typeof crypto;
 	bcrypt: typeof bcrypt;
 }
 
 export default function createBackupCodeService({
 	logger,
-	UserMfa
+	UserMfa,
+	bcrypt,
+	crypto
 }: BackupCodeServiceDependencies): {
 	generateBackupCodes: (id: string) => Promise<string[]>;
 	verifyBackupCode: (id: string, inputCode: string) => Promise<boolean>;
@@ -34,13 +39,25 @@ export default function createBackupCodeService({
 		backupCodes: BackupCode[]
 	) => Promise<void>;
 } {
-	// generate backup codes
+	validateDependencies(
+		[
+			{ name: 'logger', instance: logger },
+			{ name: 'UserMfa', instance: UserMfa },
+			{ name: 'bcrypt', instance: bcrypt },
+			{ name: 'crypto', instance: crypto }
+		],
+		logger
+	);
+
+	// generate backup codes for a given user ID
 	async function generateBackupCodes(id: string): Promise<string[]> {
 		try {
+			validateDependencies([{ name: 'id', instance: id }], logger);
+
 			const backupCodes: BackupCode[] = [];
 			for (let i = 0; i < 16; i++) {
-				const code = crypto.randomBytes(4).toString('hex'); // 8-character hex code
-				const hashedCode = await bcrypt.hash(code, 10);
+				const code = crypto.randomBytes(4).toString('hex'); // Generate 8-character hex code
+				const hashedCode = await bcrypt.hash(code, 10); // Hashing the backup code
 				backupCodes.push({ code: hashedCode, used: false });
 			}
 
@@ -48,23 +65,27 @@ export default function createBackupCodeService({
 
 			return backupCodes.map(backupCode => backupCode.code);
 		} catch (err) {
-			logger.error(
-				`Error generating backup codes for user ${id}: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error(
-				`Failed to generate backup codes. Please try again.`
+				'Failed to generate backup codes. Please try again.'
 			);
 		}
 	}
 
-	// verify a backup code
+	// verify a backup code for a given user
 	async function verifyBackupCode(
 		id: string,
 		inputCode: string
 	): Promise<boolean> {
 		try {
+			validateDependencies(
+				[
+					{ name: 'id', instance: id },
+					{ name: 'inputCode', instance: inputCode }
+				],
+				logger
+			);
+
 			const storedCodes = await getBackupCodesFromDatabase(id);
 
 			if (!storedCodes) {
@@ -72,14 +93,11 @@ export default function createBackupCodeService({
 				return false;
 			}
 
-			for (let i = 0; i < storedCodes.length; i++) {
-				const match = await bcrypt.compare(
-					inputCode,
-					storedCodes[i].code
-				);
-				if (match && !storedCodes[i].used) {
-					storedCodes[i].used = true;
-					await updateBackupCodesInDatabase(id, storedCodes); // mark the code as used
+			for (const storedCode of storedCodes) {
+				const match = await bcrypt.compare(inputCode, storedCode.code); // Verify hashed code
+				if (match && !storedCode.used) {
+					storedCode.used = true; // Mark the code as used
+					await updateBackupCodesInDatabase(id, storedCodes);
 					return true;
 				}
 			}
@@ -87,21 +105,25 @@ export default function createBackupCodeService({
 			logger.warn(`Backup code verification failed for user ${id}`);
 			return false;
 		} catch (err) {
-			logger.error(
-				`Error verifying backup code for user ${id}: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error('Failed to verify backup code. Please try again.');
 		}
 	}
 
-	// save backup codes to the database
+	// save generated backup codes to the database
 	async function saveBackupCodesToDatabase(
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
 		try {
+			validateDependencies(
+				[
+					{ name: 'id', instance: id },
+					{ name: 'backupCodes', instance: backupCodes }
+				],
+				logger
+			);
+
 			const user = await UserMfa.findByPk(id);
 
 			if (!user) {
@@ -109,29 +131,26 @@ export default function createBackupCodeService({
 				throw new Error('User not found');
 			}
 
-			// map the codes element of backupCodes to an array of strings
 			const backupCodesAsStrings = backupCodes.map(
 				codeObj => codeObj.code
-			);
-
+			); // Extract code strings
 			user.backupCodes = backupCodesAsStrings;
 			await user.save();
 		} catch (err) {
-			logger.error(
-				`Error saving backup codes to database for user ${id}: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error(
-				`Failed to save backup codes. Please try again later.`
+				'Failed to save backup codes. Please try again later.'
 			);
 		}
 	}
 
+	// retrieve backup codes from the database
 	async function getBackupCodesFromDatabase(
 		id: string
 	): Promise<BackupCode[] | undefined> {
 		try {
+			validateDependencies([{ name: 'id', instance: id }], logger);
+
 			const user = await UserMfa.findByPk(id);
 
 			if (!user) {
@@ -139,36 +158,37 @@ export default function createBackupCodeService({
 				return undefined;
 			}
 
-			// assume user.backupCodes is a string[] or null, convert it to BackupCode[] or undefined
 			const backupCodes = user.backupCodes;
-
 			if (!backupCodes) {
 				logger.warn(`No backup codes found for user ${id}`);
 				return undefined;
 			}
 
-			// convert string[] to BackupCode[]
+			// convert string array to BackupCode array
 			return backupCodes.map(
-				code => ({ code, used: false }) as BackupCode
+				(code: string) => ({ code, used: false }) as BackupCode
 			);
 		} catch (err) {
-			logger.error(
-				`Error fetching backup codes from database for user ${id}: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error(
-				`Failed to retrieve backup codes. Please try again later.`
+				'Failed to retrieve backup codes. Please try again later.'
 			);
 		}
 	}
 
-	// update backup codes in the database
 	async function updateBackupCodesInDatabase(
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
 		try {
+			validateDependencies(
+				[
+					{ name: 'id', instance: id },
+					{ name: 'backupCodes', instance: backupCodes }
+				],
+				logger
+			);
+
 			const user = await UserMfa.findByPk(id);
 
 			if (!user) {
@@ -176,21 +196,15 @@ export default function createBackupCodeService({
 				throw new Error('User not found');
 			}
 
-			// map the codes element of backupCodes to an array of strings
 			const backupCodesAsStrings = backupCodes.map(
 				codeObj => codeObj.code
 			);
-
 			user.backupCodes = backupCodesAsStrings;
 			await user.save();
 		} catch (err) {
-			logger.error(
-				`Error updating backup codes in database for user ${id}: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error(
-				`Failed to update backup codes. Please try again later.`
+				'Failed to update backup codes. Please try again later.'
 			);
 		}
 	}

@@ -31,14 +31,14 @@ class UserSession
 	>
 	implements UserSessionAttributes
 {
-	id!: string;
-	sessionId!: number;
-	ipAddress!: string;
-	userAgent!: string;
-	createdAt!: CreationOptional<Date>;
-	updatedAt!: Date | null;
-	expiresAt!: Date;
-	isActive!: boolean;
+	public id!: string;
+	public sessionId!: number;
+	public ipAddress!: string;
+	public userAgent!: string;
+	public createdAt!: CreationOptional<Date>;
+	public updatedAt!: Date | null;
+	public expiresAt!: Date;
+	public isActive!: boolean;
 }
 
 export default function createUserSessionModel(
@@ -143,3 +143,5 @@ export default function createUserSessionModel(
 		throw error;
 	}
 }
+
+export { UserSession };

@@ -29,12 +29,12 @@ class RecoveryMethod
 	>
 	implements RecoveryMethodAttributes
 {
-	id!: string;
-	isRecoveryActive!: boolean;
-	recoveryId!: string;
-	recoveryMethod?: 'email' | 'backupCodes' | null;
-	backupCodes!: string[] | null;
-	recoveryLastUpdated!: CreationOptional<Date>;
+	public id!: string;
+	public isRecoveryActive!: boolean;
+	public recoveryId!: string;
+	public recoveryMethod?: 'email' | 'backupCodes' | null;
+	public backupCodes!: string[] | null;
+	public recoveryLastUpdated!: CreationOptional<Date>;
 }
 
 export default function createRecoveryMethodModel(
@@ -99,3 +99,5 @@ export default function createRecoveryMethodModel(
 		throw error;
 	}
 }
+
+export { RecoveryMethod };

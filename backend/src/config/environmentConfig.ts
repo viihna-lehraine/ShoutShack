@@ -1,32 +1,21 @@
+import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
 import { config } from 'dotenv';
 import path from 'path';
-import { Logger, setupLogger } from './logger';
-import { handleGeneralError, validateDependencies } from '../middleware/errorHandler';
+import { Logger } from './logger';
 
-const logger = setupLogger();
-
-interface LoadEnvDependencies {
-	logger: Logger | Console;
-	envFilePath?: string; // allows override of default path
-}
-
-export function loadEnv({ logger, envFilePath }: LoadEnvDependencies): void {
+export function loadEnv(): void {
 	try {
-		validateDependencies(
-			[{ name: 'logger', instance: logger }],
-			logger || console
-		);
 		const envPath =
-			envFilePath || path.join(process.cwd(), './backend.dev.env');
-		logger.info(`Loading environment variables from ${envPath}`);
+			path.join(process.cwd(), './backend.dev.env');
+		console.log(`Loading environment variables from ${envPath}`);
 
 		config({ path: envPath });
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		handleGeneralError(error, console);
 	}
 }
 
-loadEnv({ logger});
+loadEnv();
 
 interface EnvironmentVariableTypes {
 	backendLogExportPath: string;

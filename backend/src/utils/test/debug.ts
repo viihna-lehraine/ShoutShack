@@ -1,10 +1,19 @@
 import debug, { Debugger } from 'debug';
+import { Logger } from '../../config/logger';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../../middleware/errorHandler';
 
 interface DebugUtilDependencies {
 	debug: typeof debug;
+	logger: Logger;
 }
 
-export default function createDebugUtil({ debug }: DebugUtilDependencies): {
+export default function createDebugUtil({
+	debug,
+	logger
+}: DebugUtilDependencies): {
 	log: Debugger;
 	dbLog: Debugger;
 	logError: (message: string, error: Error) => void;
@@ -12,32 +21,93 @@ export default function createDebugUtil({ debug }: DebugUtilDependencies): {
 	logWarning: (message: string) => void;
 	logVerbose: (message: string) => void;
 } {
-	const log = debug('app:server');
-	const dbLog = debug('app:db');
-	const verboseLog = debug('app:verbose');
+	try {
+		validateDependencies(
+			[
+				{ name: 'debug', instance: debug },
+				{ name: 'logger', instance: logger }
+			],
+			logger
+		);
 
-	function logError(message: string, error: Error): void {
-		log(`ERROR: ${message}:`, error.stack ? error.stack : error.message);
+		const log = debug('app:server');
+		const dbLog = debug('app:db');
+		const verboseLog = debug('app:verbose');
+
+		function logError(message: string, error: Error): void {
+			try {
+				validateDependencies(
+					[
+						{ name: 'message', instance: message },
+						{ name: 'error', instance: error }
+					],
+					logger
+				);
+				log(`ERROR: ${message}:`, error.stack || error.message);
+			} catch (err) {
+				handleGeneralError(err, logger);
+				throw new Error('Failed to log error message');
+			}
+		}
+
+		function logInfo(message: string): void {
+			try {
+				validateDependencies(
+					[{ name: 'message', instance: message }],
+					logger
+				);
+				log(`INFO: ${message}`);
+			} catch (err) {
+				handleGeneralError(err, logger);
+				throw new Error('Failed to log info message');
+			}
+		}
+
+		function logWarning(message: string): void {
+			try {
+				validateDependencies(
+					[{ name: 'message', instance: message }],
+					logger
+				);
+				log(`WARNING: ${message}`);
+			} catch (err) {
+				handleGeneralError(err, logger);
+				throw new Error('Failed to log warning message');
+			}
+		}
+
+		function logVerbose(message: string): void {
+			try {
+				validateDependencies(
+					[
+						{
+							name: 'message',
+							instance: message
+						}
+					],
+					logger
+				);
+				verboseLog(`VERBOSE: ${message}`);
+			} catch (err) {
+				handleGeneralError(err, logger);
+				throw new Error('Failed to log verbose message');
+			}
+		}
+
+		return {
+			log,
+			dbLog,
+			logError,
+			logInfo,
+			logWarning,
+			logVerbose
+		};
+	} catch (error) {
+		handleGeneralError(error, logger);
+		throw new Error(
+			`Failed to create debug utility: ${
+				error instanceof Error ? error.message : String(error)
+			}`
+		);
 	}
-
-	function logInfo(message: string): void {
-		log(`INFO: ${message}`);
-	}
-
-	function logWarning(message: string): void {
-		log(`WARNING: ${message}`);
-	}
-
-	function logVerbose(message: string): void {
-		verboseLog(`VERBOSE: ${message}`);
-	}
-
-	return {
-		log,
-		dbLog,
-		logError,
-		logInfo,
-		logWarning,
-		logVerbose
-	};
 }

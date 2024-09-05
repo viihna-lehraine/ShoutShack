@@ -11,7 +11,7 @@ interface ValidatorDependencies {
 	logger: Logger;
 }
 
-export function createValidatorMiddleware({
+export function initializeValidatorMiddleware({
 	validator,
 	logger
 }: ValidatorDependencies): {

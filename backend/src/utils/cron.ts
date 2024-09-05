@@ -43,6 +43,14 @@ export function createCronJobs({
 			logger
 		);
 
+		if (
+			!processEnv.SERVER_LOG_PATH ||
+			!processEnv.SERVER_NPM_LOG_PATH ||
+			!processEnv.BACKEND_LOGGER_EXPORT_PATH
+		) {
+			throw new Error(`Required environment variables are missing`);
+		}
+
 		const compressAndExportLogs = async (
 			sourceDir: string,
 			exportDir: string,
@@ -63,7 +71,9 @@ export function createCronJobs({
 			} catch (error) {
 				handleGeneralError(error, logger);
 				throw new Error(
-					`Error compressing log files: ${(error as Error).message}`
+					`Error compressing log files: ${
+						error instanceof Error ? error.message : String(error)
+					}`
 				);
 			}
 		};
@@ -116,13 +126,23 @@ export function createCronJobs({
 				processEnv.BACKEND_LOGGER_EXPORT_PATH!
 			);
 
-			// Ensure the export directory exists
 			if (!fs.existsSync(exportDir)) {
-				fs.mkdirSync(exportDir, { recursive: true });
+				try {
+					fs.mkdirSync(exportDir, { recursive: true });
+				} catch (error) {
+					handleGeneralError(error, logger);
+					throw new Error(
+						`Error creating export directory: ${
+							error instanceof Error
+								? error.message
+								: String(error)
+						}`
+					);
+				}
 			}
 
 			try {
-				// Compress and export server logs
+				// compress and export server logs
 				const serverLogFiles = fs
 					.readdirSync(serverLogDir)
 					.filter(file => file.endsWith('.log'));
@@ -134,7 +154,7 @@ export function createCronJobs({
 					);
 				}
 
-				// Compress and export npm logs
+				// compress and export npm logs
 				const npmLogFiles = fs
 					.readdirSync(npmLogDir)
 					.filter(file => file.endsWith('.logs'));
@@ -147,6 +167,11 @@ export function createCronJobs({
 				);
 			} catch (error) {
 				handleGeneralError(error, logger);
+				throw new Error(
+					`Error exporting logs: ${
+						error instanceof Error ? error.message : String(error)
+					}`
+				);
 			}
 		};
 
@@ -210,13 +235,27 @@ export function createCronJobs({
 			}
 
 			if (schedule) {
-				cron.schedule(schedule, exportLogs);
+				cron.schedule(schedule, () => {
+					exportLogs().catch(error =>
+						handleGeneralError(error, logger)
+					);
+				});
 			}
-			cron.schedule('0 * * * *', performNpmTasks);
+
+			cron.schedule('0 * * * *', () => {
+				performNpmTasks().catch(error =>
+					handleGeneralError(error, logger)
+				);
+			});
 		};
 
 		scheduleLogJobs();
 	} catch (error) {
 		handleGeneralError(error, logger);
+		throw new Error(
+			`Failed to create cron jobs: ${
+				error instanceof Error ? error.message : String(error)
+			}`
+		);
 	}
 }

@@ -1,5 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { setupLogger } from '../../config/logger';
+import { Logger } from 'winston';
+import {
+	handleGeneralError,
+	validateDependencies
+} from '../../middleware/errorHandler';
 import sops from '../sops';
 import { execSync } from 'child_process';
 
@@ -12,60 +16,70 @@ interface User {
 	username: string;
 }
 
-const logger = setupLogger();
-
-async function loadSecrets(): Promise<Secrets> {
-	try {
-		const secrets = await sops.getSecrets({
-			logger,
-			execSync,
-			getDirectoryPath: () => process.cwd()
-		});
-
-		if (!secrets.JWT_SECRET) {
-			throw new Error('JWT_SECRET is not defined in secrets.');
-		}
-
-		return secrets as Secrets;
-	} catch (error) {
-		logger.error(
-			`Failed to load secrets: ${error instanceof Error ? error.message : String(error)}`
-		);
-		throw new Error('Failed to load secrets');
-	}
-}
-
-export function createJwtUtil(): {
-	generateToken: (user: User) => Promise<string>;
+export function createJwtUtil(logger: Logger): {
+	generateJwtToken: (user: User) => Promise<string>;
 	verifyJwtToken: (token: string) => Promise<string | object | null>;
 } {
 	let secrets: Secrets;
 
-	const loadAndCacheSecrets = async (): Promise<void> => {
-		if (!secrets) {
-			logger.info('Secrets not found. Loading secrets...');
-			secrets = await loadSecrets();
+	const loadSecrets = async (): Promise<Secrets> => {
+		try {
+			validateDependencies(
+				[
+					{ name: 'logger', instance: logger },
+					{ name: 'execSync', instance: execSync }
+				],
+				logger
+			);
+
+			const secrets = await sops.getSecrets({
+				logger,
+				execSync,
+				getDirectoryPath: () => process.cwd()
+			});
+
+			validateDependencies(
+				[{ name: 'secrets.JWT_SECRET', instance: secrets.JWT_SECRET }],
+				logger
+			);
+
+			return secrets;
+		} catch (error) {
+			handleGeneralError(error, logger);
+			throw new Error('Failed to load secrets');
 		}
 	};
 
-	const generateToken = async (user: User): Promise<string> => {
-		await loadAndCacheSecrets();
-
-		if (!secrets.JWT_SECRET) {
-			logger.error('JWT_SECRET is not available.');
-			throw new Error('JWT_SECRET is not available.');
+	const loadAndCacheSecrets = async (): Promise<void> => {
+		if (!secrets) {
+			logger.info('Secrets not found. Loading secrets...');
+			try {
+				secrets = await loadSecrets();
+			} catch (error) {
+				handleGeneralError(error, logger);
+				throw new Error('Failed to load and cache secrets');
+			}
 		}
+	};
 
+	const generateJwtToken = async (user: User): Promise<string> => {
 		try {
+			validateDependencies([{ name: 'user', instance: user }], logger);
+
+			await loadAndCacheSecrets();
+
+			if (!secrets.JWT_SECRET) {
+				logger.error('JWT_SECRET is not available.');
+				throw new Error('JWT_SECRET is not available.');
+			}
+
 			return jwt.sign(
 				{ id: user.id, username: user.username },
 				secrets.JWT_SECRET,
 				{ expiresIn: '1h' }
 			);
 		} catch (error) {
-			logger.error(
-				`Failed to generate JWT token: ${error instanceof Error ? error.message : String(error)}`
-			);
+			handleGeneralError(error, logger);
 			throw new Error('Failed to generate JWT token');
 		}
 	};
@@ -73,25 +87,34 @@ export function createJwtUtil(): {
 	const verifyJwtToken = async (
 		token: string
 	): Promise<string | object | null> => {
-		await loadAndCacheSecrets();
-
-		if (!secrets.JWT_SECRET) {
-			logger.error('JWT_SECRET is not available.');
-			throw new Error('JWT_SECRET is not available.');
-		}
-
 		try {
+			validateDependencies([{ name: 'token', instance: token }], logger);
+
+			await loadAndCacheSecrets();
+
+			if (!secrets.JWT_SECRET) {
+				logger.error('JWT_SECRET is not available.');
+				throw new Error('JWT_SECRET is not available.');
+			}
+
 			return jwt.verify(token, secrets.JWT_SECRET);
 		} catch (error) {
-			logger.error(
-				`Failed to verify JWT token: ${error instanceof Error ? error.message : String(error)}`
-			);
-			return null;
+			if (error instanceof jwt.JsonWebTokenError) {
+				logger.warn(`JWT verification error: ${error.message}`, {
+					name: error.name,
+					message: error.message,
+					stack: error.stack
+				});
+				return null;
+			} else {
+				handleGeneralError(error, logger);
+				throw new Error('Failed to verify JWT token');
+			}
 		}
 	};
 
 	return {
-		generateToken,
+		generateJwtToken,
 		verifyJwtToken
 	};
 }

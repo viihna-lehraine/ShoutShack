@@ -32,15 +32,15 @@ class MultiFactorAuthSetup
 	>
 	implements MultiFactorAuthSetupAttributes
 {
-	mfaId!: number;
-	id!: string;
-	method!: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
-	secret?: string | null;
-	publicKey!: string | null;
-	counter!: number | null;
-	isActive!: boolean;
-	createdAt!: CreationOptional<Date>;
-	updatedAt!: CreationOptional<Date>;
+	public mfaId!: number;
+	public id!: string;
+	public method!: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
+	public secret?: string | null;
+	public publicKey!: string | null;
+	public counter!: number | null;
+	public isActive!: boolean;
+	public createdAt!: CreationOptional<Date>;
+	public updatedAt!: CreationOptional<Date>;
 }
 
 export default function createMultiFactorAuthSetupModel(
@@ -126,3 +126,5 @@ export default function createMultiFactorAuthSetupModel(
 		throw error;
 	}
 }
+
+export { MultiFactorAuthSetup };

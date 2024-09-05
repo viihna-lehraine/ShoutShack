@@ -28,12 +28,12 @@ class FailedLoginAttempts
 	>
 	implements FailedLoginAttemptsAttributes
 {
-	attemptId!: string;
-	id!: string;
-	ipAddress!: string;
-	userAgent!: string;
-	attemptDate!: Date;
-	isLocked!: boolean;
+	public attemptId!: string;
+	public id!: string;
+	public ipAddress!: string;
+	public userAgent!: string;
+	public attemptDate!: Date;
+	public isLocked!: boolean;
 }
 
 export default function createFailedLoginAttemptsModel(
@@ -100,3 +100,5 @@ export default function createFailedLoginAttemptsModel(
 		throw error;
 	}
 }
+
+export { FailedLoginAttempts };

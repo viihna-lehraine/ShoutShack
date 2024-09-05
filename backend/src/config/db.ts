@@ -24,7 +24,7 @@ export async function initializeDatabase({
 	logger,
 	featureFlags,
 	getSecrets
-}: DBDependencies): Promise<Sequelize | undefined> {
+}: DBDependencies): Promise<Sequelize> {
 	try {
 		validateDependencies(
 			[
@@ -62,7 +62,11 @@ export async function initializeDatabase({
 		return sequelize;
 	} catch (error) {
 		handleGeneralError(error as Error, logger || console);
-		return undefined;
+		throw new AppError(
+			'Failed to initialize the database. Please check your configuration.',
+			500,
+			'DATABASE_INITIALIZATION_ERROR'
+		);
 	}
 }
 

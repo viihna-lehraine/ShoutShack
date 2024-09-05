@@ -33,16 +33,16 @@ class DataShareOptions
 	>
 	implements DataShareOptionsAttributes
 {
-	id!: string;
-	trackingPixelOption!: boolean;
-	featureUsageOption!: boolean;
-	pageViewsOption!: boolean;
-	interactionDataOption!: boolean;
-	deviceTypeOption!: boolean;
-	browserInfoOption!: boolean;
-	operatingSystemOption!: boolean;
-	randomAnonSurveyOption!: boolean;
-	lastUpdated!: CreationOptional<Date>;
+	public id!: string;
+	public trackingPixelOption!: boolean;
+	public featureUsageOption!: boolean;
+	public pageViewsOption!: boolean;
+	public interactionDataOption!: boolean;
+	public deviceTypeOption!: boolean;
+	public browserInfoOption!: boolean;
+	public operatingSystemOption!: boolean;
+	public randomAnonSurveyOption!: boolean;
+	public lastUpdated!: CreationOptional<Date>;
 }
 
 export default function createDataShareOptionsModel(
@@ -131,3 +131,5 @@ export default function createDataShareOptionsModel(
 		throw error;
 	}
 }
+
+export { DataShareOptions };

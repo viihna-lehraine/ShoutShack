@@ -30,17 +30,17 @@ class AuditLog
 	extends Model<InferAttributes<AuditLog>, InferCreationAttributes<AuditLog>>
 	implements AuditLogAttributes
 {
-	auditId!: string;
-	id?: string | null;
-	actionType!: string;
-	actionDescription!: string | null;
-	affectedResource!: string | null;
-	previousValue!: string | null;
-	newValue!: string | null;
-	ipAddress!: string;
-	userAgent!: string;
-	auditLogDate!: Date;
-	auditLogUpdateDate?: Date | null;
+	public auditId!: string;
+	public id?: string | null;
+	public actionType!: string;
+	public actionDescription!: string | null;
+	public affectedResource!: string | null;
+	public previousValue!: string | null;
+	public newValue!: string | null;
+	public ipAddress!: string;
+	public userAgent!: string;
+	public auditLogDate!: Date;
+	public auditLogUpdateDate?: Date | null;
 }
 
 export default function createAuditLogModel(
@@ -144,3 +144,5 @@ export default function createAuditLogModel(
 		throw error;
 	}
 }
+
+export { AuditLog };

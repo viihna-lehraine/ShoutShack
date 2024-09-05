@@ -42,20 +42,20 @@ interface UserModelDependencies {
 	getSecrets: () => Promise<UserSecrets>;
 }
 
-export class User
+class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
 	implements UserAttributes
 {
-	id!: string;
-	userId!: number;
-	username!: string;
-	password!: string;
-	email!: string;
-	isAccountVerified!: boolean;
-	resetPasswordToken!: string | null;
-	resetPasswordExpires!: Date | null;
-	isMfaEnabled!: boolean;
-	creationDate!: CreationOptional<Date>;
+	public id!: string;
+	public userId!: number;
+	public username!: string;
+	public password!: string;
+	public email!: string;
+	public isAccountVerified!: boolean;
+	public resetPasswordToken!: string | null;
+	public resetPasswordExpires!: Date | null;
+	public isMfaEnabled!: boolean;
+	public creationDate!: CreationOptional<Date>;
 
 	async comparePassword(
 		password: string,
@@ -71,7 +71,7 @@ export class User
 					{ name: 'secrets', instance: secrets },
 					{ name: 'logger', instance: logger }
 				],
-				logger || console
+				logger
 			);
 
 			return await argon2.verify(
@@ -79,7 +79,7 @@ export class User
 				password + secrets.PEPPER
 			);
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			handleGeneralError(error, logger);
 			throw new PasswordValidationError('Passwords do not match');
 		}
 	}
@@ -91,7 +91,7 @@ export class User
 					{ name: 'password', instance: password },
 					{ name: 'logger', instance: logger }
 				],
-				logger || console
+				logger
 			);
 
 			const isValidLength =
@@ -109,7 +109,7 @@ export class User
 				hasSpecial
 			);
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			handleGeneralError(error, logger);
 			return false;
 		}
 	}
@@ -134,7 +134,7 @@ export class User
 					},
 					{ name: 'logger', instance: logger }
 				],
-				logger || console
+				logger
 			);
 
 			const rateLimiter = createRateLimitMiddleware(
@@ -157,14 +157,13 @@ export class User
 				);
 			}
 
-			logger.debug('Password is valid. Proceeding with user creation.');
-
 			const secrets = await getSecrets();
 			const hashedPassword = await hashPassword({
 				password,
 				secrets,
 				logger
 			});
+
 			const newUser = await User.create({
 				id: uuidv4(),
 				userId,
@@ -180,7 +179,7 @@ export class User
 
 			return newUser;
 		} catch (error) {
-			handleGeneralError(error, logger || console);
+			handleGeneralError(error, logger);
 
 			if (error instanceof PasswordValidationError) {
 				throw error;
@@ -206,7 +205,7 @@ export class User
 					{ name: 'secrets', instance: secrets },
 					{ name: 'logger', instance: logger }
 				],
-				logger || console
+				logger
 			);
 
 			const isValid = await argon2.verify(
@@ -217,15 +216,8 @@ export class User
 			logger.debug('Password verified successfully');
 			return isValid;
 		} catch (error) {
-			handleGeneralError(error, logger || console);
-
-			if (error instanceof Error) {
-				throw new PasswordValidationError('Error verifying password');
-			} else {
-				throw new PasswordValidationError(
-					'Unknown error verifying password'
-				);
-			}
+			handleGeneralError(error, logger);
+			throw new PasswordValidationError('Error verifying password');
 		}
 	}
 }
@@ -240,7 +232,7 @@ export default function createUserModel(
 				{ name: 'sequelize', instance: sequelize },
 				{ name: 'logger', instance: logger }
 			],
-			logger || console
+			logger
 		);
 
 		User.init(
@@ -316,7 +308,7 @@ export default function createUserModel(
 					logger
 				});
 			} catch (error) {
-				handleGeneralError(error, logger || console);
+				handleGeneralError(error, logger);
 				throw new PasswordValidationError('Error hashing password.');
 			}
 		});
@@ -327,14 +319,16 @@ export default function createUserModel(
 					const UserMfa = await (
 						await import('./UserMfa')
 					).default(sequelize, logger);
+
 					await UserMfa.update(
 						{ isMfaEnabled: user.isMfaEnabled },
 						{ where: { id: user.id } }
 					);
+
 					logger.debug('MFA status updated successfully');
 				}
 			} catch (error) {
-				handleGeneralError(error, logger || console);
+				handleGeneralError(error, logger);
 				throw new PasswordValidationError(
 					'Error updating multi-factor authentication status.'
 				);
@@ -343,7 +337,9 @@ export default function createUserModel(
 
 		return User;
 	} catch (error) {
-		handleGeneralError(error, logger || console);
+		handleGeneralError(error, logger);
 		throw error;
 	}
 }
+
+export { User };

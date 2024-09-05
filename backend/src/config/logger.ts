@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import { createLogger, format, Logger as WinstonLogger, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { environmentVariables } from './environmentConfig';

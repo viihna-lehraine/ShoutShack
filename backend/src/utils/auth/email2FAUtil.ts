@@ -1,6 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import { Logger } from 'winston';
+import { Logger } from '../../config/logger';
+import {
+	validateDependencies,
+	handleGeneralError
+} from '../../middleware/errorHandler';
 
 interface Secrets {
 	EMAIL_2FA_KEY: string;
@@ -28,30 +32,40 @@ export default async function createEmail2FAUtil({
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
+	validateDependencies(
+		[
+			{ name: 'logger', instance: logger },
+			{ name: 'getSecrets', instance: getSecrets },
+			{ name: 'bcrypt', instance: bcrypt },
+			{ name: 'jwt', instance: jwt }
+		],
+		logger
+	);
+
 	let secrets: Secrets;
 
 	try {
 		secrets = await getSecrets();
 
 		if (!secrets.EMAIL_2FA_KEY) {
-			logger.error('Missing EMAIL_2FA_KEY in secrets');
+			const error = new Error('Missing EMAIL_2FA_KEY in secrets');
+			handleGeneralError(error, logger);
+			throw error;
 		}
 	} catch (err) {
+		handleGeneralError(err, logger);
 		logger.error(
-			`Failed to load secrets: ${err instanceof Error ? err.message : String(err)}`
+			'Email 2FA functionality will not work. Secrets could not be loaded.'
 		);
-		logger.error(
-			'Email 2FA functionality will not work. Secrets could not be loaded'
-		);
+		throw new Error('Failed to load secrets for email 2FA');
 	}
 
-	// generate a 2FA code and corresponding JWT token
 	async function generateEmail2FACode(): Promise<{
 		email2FACode: string;
 		email2FAToken: string;
 	}> {
 		try {
-			const email2FACode = await bcrypt.genSalt(6);
+			const email2FACode = await bcrypt.genSalt(6); // generates a 6-character salt (2FA code)
 			const email2FAToken = jwt.sign(
 				{ email2FACode },
 				secrets.EMAIL_2FA_KEY,
@@ -65,9 +79,7 @@ export default async function createEmail2FAUtil({
 				email2FAToken // JWT containing the 2FA code
 			};
 		} catch (err) {
-			logger.error(
-				`Error generating email 2FA code: ${err instanceof Error ? err.message : String(err)}`
-			);
+			handleGeneralError(err, logger);
 			throw new Error('Failed to generate email 2FA code');
 		}
 	}
@@ -89,16 +101,15 @@ export default async function createEmail2FAUtil({
 				return false;
 			}
 
-			// ensure the decoded 2FA code matches the one provided
+			// ensure the decoded 2FA code matches the provided 2FA code
 			return decoded.email2FACode === email2FACode;
 		} catch (err) {
 			if (err instanceof jwt.JsonWebTokenError) {
-				logger.warn(`
-					JWT error during email 2FA verification: ${err.message}`);
-			} else {
-				logger.error(
-					`Error verifying email 2FA code: ${err instanceof Error ? err.message : String(err)}`
+				logger.warn(
+					`JWT error during email 2FA verification: ${err.message}`
 				);
+			} else {
+				handleGeneralError(err, logger);
 			}
 			return false;
 		}
