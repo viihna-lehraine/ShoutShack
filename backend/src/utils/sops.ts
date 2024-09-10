@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { Logger } from '../config/logger';
-import { environmentVariables } from 'src/config/environmentConfig';
+import { environmentVariables } from '../config/environmentConfig';
 import { validateDependencies } from '../utils/validateDependencies';
 import { processError } from '../utils/processError';
 

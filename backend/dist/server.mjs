@@ -3,10 +3,10 @@ import http from 'http';
 import https from 'https';
 import path from 'path';
 import gracefulShutdown from 'http-graceful-shutdown';
-import { validateDependencies } from './utils/validateDependencies';
-import { processError } from './utils/processError';
-import { environmentVariables } from './config/environmentConfig';
-import { getRedisClient } from './config/redis';
+import { validateDependencies } from './utils/validateDependencies.mjs';
+import { processError } from './utils/processError.mjs';
+import { environmentVariables } from './config/environmentConfig.mjs';
+import { getRedisClient } from './config/redis.mjs';
 const port = environmentVariables.serverPort;
 const ciphers = [
 	'ECDHE-ECDSA-AES256-GCM-SHA384',

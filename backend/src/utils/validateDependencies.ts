@@ -19,6 +19,10 @@ export function validateDependencies(
 	}
 
 	try {
+		logInfo(
+			`Validating the following dependencies: ${dependencies.map(dep => `${dep.name}: ${dep.instance}`).join(', ')}`
+		);
+
 		const missingDependencies = dependencies.filter(
 			({ instance }) => instance === undefined || instance === null
 		);

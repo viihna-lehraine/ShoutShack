@@ -1,6 +1,6 @@
 import argon2 from 'argon2';
-import { processError } from '../utils/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from '../utils/processError.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
 export const hashConfig = {
 	type: argon2.argon2id,
 	memoryCost: 48640, // 47.5 MiB memory

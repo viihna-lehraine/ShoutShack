@@ -1,7 +1,7 @@
-import sops from '../utils/sops';
+import sops from '../utils/sops.mjs';
 import { execSync } from 'child_process';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 export function login({ logger, UserModel, jwtUtil, argon2 }) {
 	return async (req, res) => {
 		try {

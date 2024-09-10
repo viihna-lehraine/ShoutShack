@@ -1,6 +1,6 @@
 import '../../types/custom/yub.js';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 export default function createYubicoOtpUtil({
 	yub,
 	getSecrets,

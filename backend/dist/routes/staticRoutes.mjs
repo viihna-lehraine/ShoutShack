@@ -1,8 +1,8 @@
 import express from 'express';
 import path from 'path';
-import { environmentVariables } from '../config/environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { environmentVariables } from '../config/environmentConfig.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 const router = express.Router();
 // Helper function to serve static files and handle errors
 function serveStaticFile(filePath, route, res, next, logger) {

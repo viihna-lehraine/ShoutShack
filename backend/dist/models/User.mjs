@@ -1,12 +1,12 @@
 import { execSync } from 'child_process';
 import { DataTypes, Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { hashPassword } from '../config/hashConfig';
-import { PasswordValidationError } from '../config/errorClasses';
-import { initializeRateLimitMiddleware } from '../middleware/rateLimit';
-import sops from '../utils/sops';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { hashPassword } from '../config/hashConfig.mjs';
+import { PasswordValidationError } from '../config/errorClasses.mjs';
+import { initializeRateLimitMiddleware } from '../middleware/rateLimit.mjs';
+import sops from '../utils/sops.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 class User extends Model {
 	id;
 	userId;

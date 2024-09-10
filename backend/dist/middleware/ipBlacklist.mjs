@@ -1,6 +1,6 @@
 import { inRange } from 'range_check';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 let blacklist = [];
 export const loadBlacklist = async ({
 	logger,

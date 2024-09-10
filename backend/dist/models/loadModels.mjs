@@ -1,19 +1,19 @@
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import createAuditLogModel from './AuditLog';
-import createDataShareOptionsModel from './DataShareOptions';
-import createDeviceModel from './Device';
-import createFailedLoginAttemptsModel from './FailedLoginAttempts';
-import createFeatureRequestModel from './FeatureRequest';
-import createFeedbackSurveyModel from './FeedbackSurvey';
-import createGuestbookEntryModel from './GuestbookEntry';
-import createMultiFactorAuthSetupModel from './MultiFactorAuthSetup';
-import createRecoveryMethodModel from './RecoveryMethod';
-import createSecurityEventModel from './SecurityEvent';
-import createSupportRequestModel from './SupportRequest';
-import createUserMfaModel from './UserMfa';
-import createUserModel from './User';
-import createUserSessionModel from './UserSession';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
+import createAuditLogModel from './AuditLog.mjs';
+import createDataShareOptionsModel from './DataShareOptions.mjs';
+import createDeviceModel from './Device.mjs';
+import createFailedLoginAttemptsModel from './FailedLoginAttempts.mjs';
+import createFeatureRequestModel from './FeatureRequest.mjs';
+import createFeedbackSurveyModel from './FeedbackSurvey.mjs';
+import createGuestbookEntryModel from './GuestbookEntry.mjs';
+import createMultiFactorAuthSetupModel from './MultiFactorAuthSetup.mjs';
+import createRecoveryMethodModel from './RecoveryMethod.mjs';
+import createSecurityEventModel from './SecurityEvent.mjs';
+import createSupportRequestModel from './SupportRequest.mjs';
+import createUserMfaModel from './UserMfa.mjs';
+import createUserModel from './User.mjs';
+import createUserSessionModel from './UserSession.mjs';
 export async function loadModels(sequelize, logger) {
 	validateDependencies(
 		[

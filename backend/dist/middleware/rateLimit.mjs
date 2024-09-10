@@ -1,7 +1,7 @@
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
-import { AppError, errorClasses } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { AppError, errorClasses } from '../config/errorClasses.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 const { RateLimitError } = errorClasses;
 export const initializeRateLimitMiddleware = ({
 	logger,

@@ -2,18 +2,19 @@ interface AppErrorDetails {
     retryAfter?: number | undefined;
     [key: string]: unknown;
 }
-export declare enum ErrorSeverity {
-    FATAL = "fatal",
-    RECOVERABLE = "recoverable",
-    WARNING = "warning",
-    INFO = "info"
-}
+export declare const ErrorSeverity: {
+    readonly FATAL: "fatal";
+    readonly RECOVERABLE: "recoverable";
+    readonly WARNING: "warning";
+    readonly INFO: "info";
+};
+export type ErrorSeverityType = typeof ErrorSeverity[keyof typeof ErrorSeverity];
 export declare class AppError extends Error {
     readonly statusCode: number;
     readonly errorCode?: string | undefined;
     readonly details?: AppErrorDetails | undefined;
-    readonly severity: ErrorSeverity;
-    constructor(message: string, statusCode?: number, severity?: ErrorSeverity, errorCode?: string, details?: AppErrorDetails);
+    readonly severity: ErrorSeverityType;
+    constructor(message: string, statusCode?: number, severity?: ErrorSeverityType, errorCode?: string, details?: AppErrorDetails);
 }
 export declare class AuthenticationError extends AppError {
     constructor(message: string, details?: AppErrorDetails);

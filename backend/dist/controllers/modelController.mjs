@@ -1,5 +1,5 @@
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 // Retrieve all entries for any model
 export const getEntries =
 	(Model, { logger }) =>

@@ -1,4 +1,4 @@
-import { isLogger } from '../config/logger';
+import { isLogger } from '../config/logger.mjs';
 export function validateDependencies(dependencies, logger = console) {
 	const logInfo = isLogger(logger) ? logger.info : console.info;
 	const logWarn = isLogger(logger) ? logger.warn : console.warn;

@@ -1,0 +1,92 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    container_name: guestbook-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - NODE_ENV=development
+      - DB_URL=${DB_URL}
+      - REDIS_URL=${REDIS_URL}
+    env_file:
+      - ./backend.env
+    volumes: 
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: guestbook-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports: 
+      - "${DB_PORT}"
+    volumes:
+      - pgdata:/home/viihna/viihnaFolders/database/guestbook/data
+      - ./database/postgresql.conf
+      - ./database/pg_hba.conf
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: guestbook-frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+    expose:
+      - "8080"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    
+  nginx:
+    build: ./nginx
+    container_name: guestbook-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./nginx/ssl/:/etc/nginx/ssl/
+    depends_on:
+      - frontend
+      - backend
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: guestbook-redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - ./redis/data:/data
+      - ./redis/redis.conf
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis-data:

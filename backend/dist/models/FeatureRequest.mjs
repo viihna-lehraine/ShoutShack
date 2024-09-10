@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 class FeatureRequest extends Model {
 	featureRequestNumber;
 	id;

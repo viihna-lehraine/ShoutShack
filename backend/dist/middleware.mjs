@@ -1,10 +1,10 @@
-import sops from './utils/sops';
+import sops from './utils/sops.mjs';
 import { execSync } from 'child_process';
 import compression from 'compression';
 import responseTime from 'response-time';
 import validator from 'validator';
-import { initializeSlowdownMiddleware } from './middleware/slowdown';
-import { validateDependencies } from './utils/validateDependencies';
+import { initializeSlowdownMiddleware } from './middleware/slowdown.mjs';
+import { validateDependencies } from './utils/validateDependencies.mjs';
 export async function initializeMiddleware({
 	express,
 	session,

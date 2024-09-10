@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 const start = Date.now();
 
 try {
-	execSync('npm run build:original', { stdio: 'inherit' });
+	execSync('npm run buildOG', { stdio: 'inherit' });
 } catch (error) {
 	console.error('Build process failed:', error);
 	process.exit(1);

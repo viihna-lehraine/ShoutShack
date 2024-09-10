@@ -3,12 +3,12 @@ import { execSync } from 'child_process';
 import path from 'path';
 import zxcvbn from 'zxcvbn';
 import nodemailer from 'nodemailer';
-import sops from '../utils/sops';
-import createEmail2FAUtil from '../auth/email2FAUtil';
-import { environmentVariables } from '../config/environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import { hashPassword } from '../config/hashConfig';
+import sops from '../utils/sops.mjs';
+import createEmail2FAUtil from '../auth/email2FAUtil.mjs';
+import { environmentVariables } from '../config/environmentConfig.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
+import { hashPassword } from '../config/hashConfig.mjs';
 const port = environmentVariables.serverPort;
 function getDirectoryPath() {
 	return path.resolve(process.cwd());

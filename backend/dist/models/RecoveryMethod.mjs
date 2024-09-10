@@ -1,7 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import { User } from './User';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
+import { User } from './User.mjs';
 class RecoveryMethod extends Model {
 	id;
 	isRecoveryActive;

@@ -48,13 +48,11 @@ const backupsDir = path.join(__dirname, '../../data/dist-backups');
 			const timestampFileName = `timestamp-${backupNumber}.txt`;
 			const timestamp = new Date().toISOString();
 
-			// Create timestamp file
 			await fs.writeFile(
 				path.join(distDir, timestampFileName),
 				`backup created on ${timestamp}\n`
 			);
 
-			// Create tarball including the timestamp file
 			await tar.c(
 				{
 					gzip: true,
@@ -66,7 +64,6 @@ const backupsDir = path.join(__dirname, '../../data/dist-backups');
 
 			console.log(`Backup ${backupFileName} created successfully.`);
 
-			// Clean up timestamp file after backup
 			await fs.unlink(path.join(distDir, timestampFileName));
 		};
 
@@ -78,7 +75,7 @@ const backupsDir = path.join(__dirname, '../../data/dist-backups');
 			);
 
 			if (tarballs.length >= maxTarballs) {
-				const bundleNumber = await getBundleNumber(); // Get the correct bundle number
+				const bundleNumber = await getBundleNumber();
 				const bundleName = `distBackupBundle${bundleNumber}.tar.gz`;
 				const bundlePath = path.join(backupsDir, bundleName);
 

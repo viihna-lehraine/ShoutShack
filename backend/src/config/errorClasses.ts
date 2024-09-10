@@ -5,23 +5,25 @@ interface AppErrorDetails {
 	[key: string]: unknown;
 }
 
-export enum ErrorSeverity {
-	FATAL = 'fatal',
-	RECOVERABLE = 'recoverable',
-	WARNING = 'warning',
-	INFO = 'info'
-}
+export const ErrorSeverity = {
+	FATAL: 'fatal',
+	RECOVERABLE: 'recoverable',
+	WARNING: 'warning',
+	INFO: 'info'
+} as const;
+
+export type ErrorSeverityType = typeof ErrorSeverity[keyof typeof ErrorSeverity];
 
 export class AppError extends Error {
 	public readonly statusCode: number;
 	public readonly errorCode?: string | undefined;
 	public readonly details?: AppErrorDetails | undefined;
-	public readonly severity: ErrorSeverity;
+	public readonly severity: ErrorSeverityType;
 
 	constructor(
 		message: string,
 		statusCode: number = 500,
-		severity: ErrorSeverity = ErrorSeverity.RECOVERABLE,
+		severity: ErrorSeverityType = ErrorSeverity.RECOVERABLE,
 		errorCode?: string,
 		details?: AppErrorDetails
 	) {

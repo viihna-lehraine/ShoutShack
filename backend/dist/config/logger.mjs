@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { createLogger, format, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { environmentVariables } from './environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
+import { environmentVariables } from './environmentConfig.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
 const { colorize, combine, errors, json, printf, timestamp } = format;
 const logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp} ${level}: ${stack || message}`;

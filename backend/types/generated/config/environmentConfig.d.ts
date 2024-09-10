@@ -48,22 +48,24 @@ interface EnvironmentVariableTypes {
     yubicoApiUrl: string;
 }
 export declare const environmentVariables: EnvironmentVariableTypes;
-export declare enum FeatureFlagNames {
-    API_ROUTES_CSRF = "FEATURE_API_ROUTES_CSRF",
-    DB_SYNC = "FEATURE_DB_SYNC",
-    DECRYPT_KEYS = "FEATURE_DECRYPT_KEYS",
-    ENABLE_CSRF = "FEATURE_ENABLE_CSRF",
-    ENABLE_ERROR_HANDLER = "FEATURE_ENABLE_ERROR_HANDLER",
-    ENABLE_IP_BLACKLIST = "FEATURE_ENABLE_IP_BLACKLIST",
-    ENABLE_JWT_AUTH = "FEATURE_ENABLE_JWT_AUTH",
-    ENABLE_RATE_LIMIT = "FEATURE_ENABLE_RATE_LIMIT",
-    ENABLE_REDIS = "FEATURE_ENABLE_REDIS",
-    ENABLE_SSL = "FEATURE_ENABLE_SSL",
-    HTTPS_REDIRECT = "FEATURE_HTTPS_REDIRECT",
-    LOAD_TEST_ROUTES = "FEATURE_LOAD_TEST_ROUTES",
-    SECURE_HEADERS = "FEATURE_SECURE_HEADERS",
-    SEQUELIZE_LOGGING = "FEATURE_SEQUELIZE_LOGGING"
-}
+export declare const FeatureFlagNames: {
+    readonly API_ROUTES_CSR: "FEATURE_API_ROUTES_CSRF";
+    readonly DB_SYNC: "FEATURE_DB_SYNC";
+    readonly DECRYPT_KEYS: "FEATURE_DECRYPT_KEYS";
+    readonly ENABLE_CSRF: "FEATURE_ENABLE_CSRF";
+    readonly ENABLE_ERROR_HANDLER: "FEATURE_ENABLE_ERROR_HANDLER";
+    readonly ENABLE_IP_BLACKLIST: "FEATURE_ENABLE_IP_BLACKLIST";
+    readonly ENABLE_JWT_AUTH: "FEATURE_ENABLE_JWT_AUTH";
+    readonly ENABLE_RATE_LIMIT: "FEATURE_ENABLE_RATE_LIMIT";
+    readonly ENABLE_REDIS: "FEATURE_ENABLE_REDIS";
+    readonly ENABLE_SSL: "FEATURE_ENABLE_SSL";
+    readonly HTTPS_REDIRECT: "FEATURE_HTTPS_REDIRECT";
+    readonly LOAD_TEST_ROUTES: "FEATURE_LOAD_TEST_ROUTES";
+    readonly SECURE_HEADERS: "FEATURE_SECURE_HEADERS";
+    readonly SEQUELIZE_LOGGING: "FEATURE_SEQUELIZE_LOGGING";
+};
+export type FeatureFlagNamesType = keyof typeof FeatureFlagNames;
+export type FeatureFlagValueType = typeof FeatureFlagNames[FeatureFlagNamesType];
 export interface FeatureFlags {
     apiRoutesCsrfFlag: boolean;
     dbSyncFlag: boolean;

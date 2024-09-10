@@ -7,7 +7,7 @@ const __dirname = dirname(__filename);
 
 const mjsDir = resolve(__dirname, '../../dist');
 
-console.log(`Looking for files in: ${mjsDir}`);
+console.log('mjsExtensions script has started.');
 
 async function findMjsFiles(dir) {
 	const results = [];
@@ -26,31 +26,23 @@ async function findMjsFiles(dir) {
 }
 
 async function fixImportStatements(filePath) {
-	console.log(`Processing file: ${filePath}`);
-
 	let fileContent = await fs.readFile(filePath, 'utf8');
 	let modified = false;
 
 	fileContent = fileContent.replace(
 		/import\s+([\s\S]*?)\s+from\s+['"](\.{1,2}\/[^'"]+?)(\.js|\.mjs)?['"]/g,
 		(fullMatch, imports, path) => {
-			console.log(`Original import: ${fullMatch}`);
-
-			// Remove any existing .js or .mjs extension
 			const updatedPath = `import ${imports.trim()} from '${path}.mjs'`;
-			console.log(`Updated import: ${updatedPath}`);
+			console.log(
+				`Updated import in ${filePath}: ${fullMatch} -> ${updatedPath}`
+			);
 			modified = true;
 			return updatedPath;
 		}
 	);
 
-	if (!modified) {
-		console.log(`No changes made in: ${filePath}`);
-	}
-
 	if (modified) {
 		await fs.writeFile(filePath, fileContent, 'utf8');
-		console.log(`Updated and wrote back file: ${filePath}`);
 	}
 }
 
@@ -61,11 +53,10 @@ async function processFiles() {
 		if (files.length === 0) {
 			console.log('No .mjs files found.');
 		} else {
-			console.log(`Found .mjs files: ${files}`);
 			await Promise.all(files.map(file => fixImportStatements(file)));
 		}
 
-		console.log('Processed import statements.');
+		console.log('mjsExtensions script has completed.');
 	} catch (err) {
 		console.error('Error processing files:', err);
 	}

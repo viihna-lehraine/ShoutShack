@@ -1,9 +1,9 @@
-import { AppError } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import { loadModels } from './loadModels';
-import { environmentVariables } from '../config/environmentConfig';
-import { setupLogger } from '../config/logger';
+import { AppError } from '../config/errorClasses.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
+import { loadModels } from './loadModels.mjs';
+import { environmentVariables } from '../config/environmentConfig.mjs';
+import { setupLogger } from '../config/logger.mjs';
 const logger = setupLogger({
 	logLevel: environmentVariables.nodeEnv === 'production' ? 'info' : 'debug'
 });

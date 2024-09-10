@@ -1,5 +1,5 @@
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 // Create a transporter instance
 async function createTransporter({
 	nodemailer,

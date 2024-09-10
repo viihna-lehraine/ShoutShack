@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
-import { errorClasses, ErrorSeverity } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { errorClasses, ErrorSeverity } from '../config/errorClasses.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 const { AppError, DatabaseError, InvalidConfigurationError, DependencyError } =
 	errorClasses;
 let sequelize = null;

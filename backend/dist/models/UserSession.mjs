@@ -1,7 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
-import { User } from './User';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { User } from './User.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 class UserSession extends Model {
 	id;
 	sessionId;

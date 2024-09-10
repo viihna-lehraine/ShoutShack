@@ -1,8 +1,8 @@
 import express from 'express';
 import { validationResult } from 'express-validator';
-import { initializeValidatorMiddleware } from '../middleware/validator';
-import { processError } from '../utils/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { initializeValidatorMiddleware } from '../middleware/validator.mjs';
+import { processError } from '../utils/processError.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
 export default function initializeValidationRoutes({ logger, validator }) {
 	const router = express.Router();
 	try {

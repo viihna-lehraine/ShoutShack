@@ -1,5 +1,5 @@
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 let redisClient = null;
 export async function connectRedis({
 	logger,

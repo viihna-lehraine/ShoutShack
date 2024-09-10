@@ -1,8 +1,8 @@
 import { Fido2Lib } from 'fido2-lib';
 import path from 'path';
-import sops from '../utils/sops';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import sops from '../utils/sops.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 import { execSync } from 'child_process';
 let fido2 = null;
 let secrets;

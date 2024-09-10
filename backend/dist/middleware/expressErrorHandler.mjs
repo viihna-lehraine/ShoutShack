@@ -1,6 +1,6 @@
-import { AppError } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+import { AppError } from '../config/errorClasses.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 export function expressErrorHandler({ logger, featureFlags }) {
 	return function errorHandler(err, req, res, _next) {
 		try {

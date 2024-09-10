@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import sops from '../utils/sops';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
+import sops from '../utils/sops.mjs';
 import { execSync } from 'child_process';
 export function createJwtUtil(logger) {
 	let secrets;

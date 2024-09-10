@@ -1,13 +1,13 @@
 import helmet from 'helmet';
-import { environmentVariables } from '../config/environmentConfig';
-import { setupLogger } from '../config/logger';
+import { environmentVariables } from '../config/environmentConfig.mjs';
+import { setupLogger } from '../config/logger.mjs';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
-} from '../config/securityOptions';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
+} from '../config/securityOptions.mjs';
+import { validateDependencies } from '../utils/validateDependencies.mjs';
+import { processError } from '../utils/processError.mjs';
 const logger = setupLogger({
 	serviceName: 'security-headers',
 	isProduction: environmentVariables.nodeEnv === 'production'

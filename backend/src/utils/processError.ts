@@ -1,7 +1,12 @@
 import { validateDependencies } from './validateDependencies';
 import { isLogger, Logger } from '../config/logger';
 import { Request } from 'express';
-import { AppError, errorClasses, ErrorSeverity } from '../config/errorClasses';
+import {
+	AppError,
+	errorClasses,
+	ErrorSeverity,
+	ErrorSeverityType
+} from '../config/errorClasses';
 
 const {
 	AuthenticationError,
@@ -56,7 +61,7 @@ export function processError(
 
 		let message: string;
 		let stack: string | undefined;
-		let severity: ErrorSeverity = ErrorSeverity.RECOVERABLE;
+		let severity: ErrorSeverityType = ErrorSeverity.RECOVERABLE;
 
 		const isErrorInstance = error instanceof AppError;
 
