@@ -13,6 +13,9 @@ services:
       - NODE_ENV=development
       - DB_URL=${DB_URL}
       - REDIS_URL=${REDIS_URL}
+    env_file:
+      - docker.env
+      - backend.dev.env
     volumes: 
       - ./backend:/app
       - /app/node_modules
@@ -34,6 +37,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - docker.env
     ports: 
       - "5685:5685"
     volumes:
@@ -50,6 +55,8 @@ services:
     build: ./frontend
     container_name: guestbook-frontend
     restart: unless-stopped
+    env_file:
+      - docker.env
     volumes:
       - ./frontend:/app
     expose:
@@ -70,6 +77,8 @@ services:
     build: ./nginx
     container_name: guestbook-nginx
     restart: unless-stopped
+    env_file:
+      - docker.env
     ports:
       - "80:80"
       - "443:443"

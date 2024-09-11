@@ -17,9 +17,11 @@ fi
 
 echo "Secrets decrypted successfully."
 
-# set environment variables using decrypted secrets
-DOCKER_ENV_VARS=$(echo "$DECRYPTED_SECRETS" | jq -r 'to_entries[] | .key + "=" + (.value | tostring)')
-export $(echo "$DOCKER_ENV_VARS")
+# export environment variables dynamically from the decrypted secrets
+# loop through the JSON and export each key-value pair
+while IFS="=" read -r key value; do
+  export "$key"="$value"
+done < <(echo "$DECRYPTED_SECRETS" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 
 # create Docker network if missing
 echo "Ensuring Docker network exists..."
@@ -41,8 +43,4 @@ echo "Docker Compose started successfully."
 docker-compose ps
 
 # show Docker Compose logs
-docker-compose logs backend
-docker-compose logs db
-docker-compose logs frontend
-docker-compose logs nginx
-docker-compose logs redis
+docker-compose logs --tail=100

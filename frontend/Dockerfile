@@ -1,18 +1,16 @@
-FROM node:22.3.0 AS build
+FROM node:22.3.0
 
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm install
 
 COPY . .
-
 RUN npm run build
 
 FROM nginx:alpine
 
-COPY --from=build /app/public/dist /usr/share/nginx/html
+COPY --from=0 /app/public/dist /usr/share/nginx/html
 
 LABEL maintainer="Viihna Lehraine"
 LABEL version="1.0"

@@ -28,7 +28,7 @@ function findJsFiles(dir) {
     return results;
 }
 
-// Process all found .js files
+// process all found .js files
 let files = findJsFiles(jsDir);
 
 if (files.length === 0) {
@@ -41,7 +41,7 @@ if (files.length === 0) {
 // Ensures all import statements have exactly 1 instance of the .js extension
 function addJsExtension(filePath) {
     console.log(`Processing file: ${filePath}`);
-    
+
     let fileContent = fs.readFileSync(filePath, 'utf8');
 
     // Update imports without extensions
@@ -58,7 +58,7 @@ function addJsExtension(filePath) {
         }
     );
 
-    // Handle special cases where `index` files are imported
+    // handle special cases where `index` files are imported
     updatedContent = updatedContent.replace(
         /import\s+(.+?)\s+from\s+['"](.*?\/index)['"]/g,
         (fullMatch, imports, path) => {
@@ -69,7 +69,7 @@ function addJsExtension(filePath) {
         }
     );
 
-    // Write updated content back to the JS file if there are changes
+    // write updated content back to the JS file if there are changes
     if (fileContent !== updatedContent) {
         fs.writeFileSync(filePath, updatedContent, 'utf8');
         console.log(`Updated and wrote back file: ${filePath}`);
