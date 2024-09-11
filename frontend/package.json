@@ -7,12 +7,13 @@
   "type": "module",
   "scripts": {
     "addJsFileExt": "node ./.config/ts/postBuild.mjs",
-    "build:webpack": "webpack serve --mode development",
+    "build": "webpack --mode production",
     "clean": "rimraf ./public/js/*",
     "compile": "npm run clean && npm run compile:ts && npm run addJsFileExt",
-    "compile:ts": "tsc --target ES6 --project ./.config/ts/tsconfig.json",
+    "compile:ts": "tsc --target ES2022 --project ./.config/ts/tsconfig.json",
     "format": "prettier --write '**/*.js'",
     "lint": "eslint .",
+    "preinstall": "npx npm-force-resolutions",
     "sass": "sass public/scss/main.scss public/css/main.css",
     "sass:watch": "sass --watch public/scss:public/css",
     "start": "webpack serve --mode development"
@@ -22,7 +23,9 @@
   "dependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.24.8",
     "chokidar": "^3.6.0",
+    "core-js": "^3.38.1",
     "eslint": "^9.9.0",
+    "express": "^5.0.0",
     "express-validator": "^7.1.0",
     "html-webpack-plugin": "^5.6.0",
     "sass": "^1.77.8",
@@ -30,7 +33,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-env": "^7.25.4",
     "@types/node": "^22.4.0",
     "@types/zxcvbn": "^4.4.4",
     "@typescript-eslint/eslint-plugin": "^8.1.0",
@@ -39,11 +42,12 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "esm": "^3.2.25",
+    "npm-force-resolutions": "^0.0.10",
     "rimraf": "^6.0.1",
     "tsc-alias": "^1.8.10",
     "typescript": "^5.5.4",
     "webpack": "^5.93.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.0.4"
+    "webpack-dev-server": "^5.1.0"
   }
 }

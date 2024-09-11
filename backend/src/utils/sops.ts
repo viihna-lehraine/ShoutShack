@@ -18,8 +18,6 @@ interface Secrets {
 export interface SecretsMap extends Secrets {
 	APP_SSL_KEY: string;
 	APP_SSL_CERT: string;
-	DB_SSL_KEY: string;
-	DB_SSL_CERT: string;
 	DB_NAME: string;
 	DB_USER: string;
 	DB_PASSWORD: string;

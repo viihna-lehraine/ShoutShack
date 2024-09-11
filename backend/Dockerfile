@@ -1,6 +1,8 @@
-FROM NODE:22.3.0
+FROM node:22.3.0
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y sops
 
 COPY package*.json ./
 
@@ -10,12 +12,9 @@ COPY . .
 
 EXPOSE 3000
 
-ENV NODE_ENV=DEVELOPMENT
+ENV NODE_ENV=development
 
 CMD ["npm", "start"]
-
-HEALTHCHECK --interval=30s --timeout=10s \
-	CMD curl -f https://localhost:3000/health || exit 1
 
 LABEL maintainer="Viihna Lehraine"
 LABEL version="1.0"
