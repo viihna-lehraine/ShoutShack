@@ -15,10 +15,11 @@ services:
       - REDIS_URL=${REDIS_URL}
     env_file:
       - docker.env
-      - backend.dev.env
     volumes: 
       - ./backend:/app
-      - /app/node_modules
+      - guestbook-backend-node-modules:/app/node_modules
+      - ~/.gnupg:/root/.gnupg
+      - /run/user/1000/gnupg/S.gpg-agent:/root/.gnupg/S.gpg-agent
     networks:
       - app-network
     healthcheck:
@@ -31,23 +32,27 @@ services:
   db:
     image: postgres:15-alpine
     container_name: guestbook-db
-    user: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    env_file:
-      - docker.env
-    ports: 
-      - "5685:5685"
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5685:5432"
     volumes:
-      - dbdata:/var/lib/pgsql/data
-      - ./database/postgresql.conf:/var/lib/pgsql/data/postgresql.conf
-      - ./database/pg_hba.conf:/var/lib/pgsql/data/pg_hba.conf
-      - ./database/ssl/pg-server.crt:/var/lib/pgsql/data/pg-server.crt
-      - ./database/ssl/pg-server.key:/var/lib/pgsql/data/pg-server.key
-    command: bash -c "chown postgres:postgres /var/lib/pgsql/data/pg-server.* && chmod 0600 /var/lib/pgsql/data/pg-server.* && postgres -c 'config_file=/var/lib/pgsql/data/postgresql.conf'"
+      - ./database/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./database/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./database/ssl/pg-server.crt:/etc/ssl/certs/pg-server.crt
+      - ./database/ssl/pg-server.key:/etc/ssl/private/pg-server.key
+    command: >
+      /bin/sh -c "
+        apk add --no-cache bash findutils musl-locales &&
+        export LANG=en_US.UTF-8 &&
+        find /var/lib/postgresql/data -mindepth 1 \
+        ! -name 'pg-server.crt' ! -name 'pg-server.key' \
+        ! -name 'pg_hba.conf' ! -name 'postgresql.conf' \
+        -exec rm -rf {} \; &&
+        docker-entrypoint.sh postgres"
     networks:
       - app-network
 
@@ -59,11 +64,11 @@ services:
       - docker.env
     volumes:
       - ./frontend:/app
+      - guestbook-frontend-node-modules:/app/node_modules
     expose:
       - "8080"
     depends_on:
       - backend
-    command: npm run build
     networks:
       - app-network
     healthcheck:
@@ -84,9 +89,12 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./nginx/conf.d/:/app/nginx/conf.d/
       - ./nginx/ssl/:/etc/nginx/ssl/
+      - ./nginx/mime.types:/etc/nginx/mime.types
       - guestbook-nginx-logs:/app/nginx/logs/
+      - ~/.gnupg:/root/.gnupg
+      - /run/user/1000/gnupg/S.gpg-agent:/root/.gnupg/S.gpg-agent
     depends_on:
       - frontend
       - backend
@@ -106,10 +114,11 @@ services:
     command: redis-server /usr/local/etc/redis/redis.conf
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    env_file:
+      - docker.env
     volumes:
-      - ./redis/data:/data
+      - redis-data:/data
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-      - ./redis/logs:/usr/local/etc/redis/logs
     ports:
       - "6969:6969"
     networks:
@@ -121,6 +130,7 @@ networks:
 
 volumes:
   pgdata:
-  dbdata:
   redis-data:
+  guestbook-backend-node-modules:
+  guestbook-frontend-node-modules:
   guestbook-nginx-logs:

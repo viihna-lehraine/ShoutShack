@@ -11,16 +11,16 @@ export default [
 			parserOptions: {
 				project: './tsconfig.json',
 				ecmaVersion: 12,
-				sourceType: 'module',
+				sourceType: 'module'
 			},
 			globals: {
 				browser: 'readonly',
-				es6: 'readonly',
-			},
+				es6: 'readonly'
+			}
 		},
 		plugins: {
 			'@typescript-eslint': tsPlugin,
-			prettier: prettierPlugin,
+			prettier: prettierPlugin
 		},
 		rules: {
 			...tsPlugin.configs.recommended.rules,
@@ -29,8 +29,8 @@ export default [
 			indent: ['error', 'tab'],
 			'linebreak-style': ['error', 'unix'],
 			quotes: ['error', 'single'],
-			semi: ['error', 'always'],
-		},
+			semi: ['error', 'always']
+		}
 	},
 	{
 		files: ['**/*.js', 'public/**/*.js'],
@@ -39,11 +39,11 @@ export default [
 			sourceType: 'module',
 			globals: {
 				browser: true,
-				es2021: true,
-			},
+				es2021: true
+			}
 		},
 		plugins: {
-			prettier: prettierPlugin,
+			prettier: prettierPlugin
 		},
 		rules: {
 			...prettierConfig.rules,
@@ -51,12 +51,12 @@ export default [
 			indent: ['error', 'tab'],
 			'linebreak-style': ['error', 'unix'],
 			quotes: ['error', 'single'],
-			semi: ['error', 'always'],
-		},
+			semi: ['error', 'always']
+		}
 	},
 	{
 		rules: {
-			all: 'off',
-		},
-	},
+			all: 'off'
+		}
+	}
 ];

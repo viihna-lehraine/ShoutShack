@@ -1,0 +1,13 @@
+.dev/
+.scripts/
+.editorconfig
+.git
+.sops.yaml
+docker-compose.yaml
+docker.env.template.txt
+Dockerfile
+jsconfig.json
+README.md
+clean.sh
+deep-clean.sh
+start.sh
