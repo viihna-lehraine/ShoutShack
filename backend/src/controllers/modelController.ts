@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Model, WhereOptions } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 import { processError } from '../utils/processError';
 

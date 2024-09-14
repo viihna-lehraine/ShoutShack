@@ -1,14 +1,14 @@
 import {
+	DataTypes,
 	Model,
 	InferAttributes,
 	InferCreationAttributes,
 	CreationOptional,
-	DataTypes,
 	Sequelize
 } from 'sequelize';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-import { Logger } from '../config/logger';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface FeatureRequestAttributes {
 	featureRequestNumber: number;

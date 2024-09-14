@@ -1,6 +1,6 @@
 import multer, { Multer } from 'multer';
 import path from 'path';
-import { Logger } from './logger';
+import { Logger } from '../utils/logger';
 export interface MulterDependencies {
     readonly multer: typeof multer;
     readonly path: typeof path;

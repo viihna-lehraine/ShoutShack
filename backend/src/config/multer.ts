@@ -1,9 +1,9 @@
 import { Request } from 'express';
 import multer, { FileFilterCallback, Multer } from 'multer';
 import path from 'path';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 import { processError } from '../utils/processError';
-import { Logger } from './logger';
 
 export interface MulterDependencies {
 	readonly multer: typeof multer;

@@ -1,6 +1,6 @@
 FROM node:22.3.0 AS build
 
-WORKDIR /app
+WORKDIR /frontend
 
 # copy package.json and package-lock.json first to leverage Docker caching
 COPY package*.json ./
@@ -14,11 +14,8 @@ COPY . .
 # build the frontend assets
 RUN npm run build
 
-# use Nginx as the final image
-FROM nginx:alpine
-
-# copy the built assets from the build stage
-COPY --from=build /app/public/dist /usr/share/nginx/html
+# ensure the public directory exists
+RUN mkdir -p /app/public
 
 # expose port 8080
 EXPOSE 8080

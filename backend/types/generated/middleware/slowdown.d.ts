@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface SlowdownConfig {
     slowdownThreshold: number;
     logger: Logger;

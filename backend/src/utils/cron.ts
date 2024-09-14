@@ -1,11 +1,11 @@
-import cron from 'node-cron';
-import fs from 'fs';
-import path from 'path';
-import compressing from 'compressing';
 import { exec, ExecException } from 'child_process';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import compressing from 'compressing';
+import fs from 'fs';
+import cron from 'node-cron';
+import path from 'path';
+import { Logger } from './logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface CronDependencies {
 	logger: Logger;

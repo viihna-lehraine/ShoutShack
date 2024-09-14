@@ -1,15 +1,15 @@
 import {
+	CreationOptional,
+	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
 	Model,
-	DataTypes,
-	Sequelize,
-	CreationOptional
+	Sequelize
 } from 'sequelize';
-import { Logger } from '../config/logger';
-import { User } from './User';
-import { validateDependencies } from '../utils/validateDependencies';
+import { User } from './UserModelFile';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface SupportRequestAttributes {
 	id: string; // UUID for support request, primary key (from user model)

@@ -1,8 +1,8 @@
 import argon2 from 'argon2';
-import { Logger } from './logger';
-import { processError } from '../utils/processError'
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
+import { processError } from '../utils/processError';
 import { SecretsMap } from '../utils/sops';
+import { validateDependencies } from '../utils/validateDependencies';
 
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 

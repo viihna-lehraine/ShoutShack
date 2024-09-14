@@ -1,22 +1,29 @@
+import { config } from 'dotenv';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
-import { config } from 'dotenv';
-import path from 'path';
-import { Logger } from './logger';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function loadEnv(): void {
 	try {
-		const envPath =
-			path.join(process.cwd(), './backend.dev.env');
-		console.log(`Loading environment variables from ${envPath}`);
+		const masterEnvPath: string = path.join(__dirname, '../../config/env/backend.master.env');
+		config({ path: masterEnvPath });
+
+		const envType = process.env.ENV_TYPE || 'dev';
+		console.log(`envType = ${envType}`)
+		const envFile = envType === 'docker' ? 'backend.docker-dev.env' : 'backend.dev.env';
+		const envPath = path.join(process.cwd(), `./config/env/${envFile}`);
+		console.log(`Loading environment variables from ${envFile}`);
 
 		config({ path: envPath });
 	} catch (error) {
 		processError(error, console);
 	}
 }
-
-loadEnv();
 
 interface EnvironmentVariableTypes {
 	backendLogExportPath: string;
@@ -34,21 +41,7 @@ interface EnvironmentVariableTypes {
 	featureHttpsRedirect: boolean;
 	featureLoadTestRoutes: boolean;
 	featureSequelizeLogging: boolean;
-	frontendAppJsPath: string;
-	frontendBrowserConfigXmlPath: string;
-	frontendCssPath: string;
-	frontendFontsPath: string;
-	frontendHumansMdPath: string;
-	frontendIconsPath: string;
-	frontendImagesPath: string;
-	frontendJsPath: string;
-	frontendKeysPath: string;
-	frontendLogosPath: string;
-	frontendRobotsTxtPath: string;
-	frontendSecurityMdPath: string;
 	frontendSecretsPath: string;
-	frontendSitemapXmlPath: string;
-	ipBlacklistPath: string;
 	loggerLevel: string;
 	logLevel: 'debug' | 'info' | 'warn' | 'error';
 	nodeEnv: 'development' | 'testing' | 'production';
@@ -82,21 +75,7 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	featureHttpsRedirect: process.env.FEATURE_HTTPS_REDIRECT === 'true',
 	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES === 'true',
 	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING === 'true',
-	frontendAppJsPath: process.env.FRONTEND_APP_JS_PATH || '',
-	frontendBrowserConfigXmlPath: process.env.FRONTEND_BROWSER_CONFIG_XML_PATH || '',
-	frontendCssPath: process.env.FRONTEND_CSS_PATH || '',
-	frontendFontsPath: process.env.FRONTEND_FONTS_PATH || '',
-	frontendHumansMdPath: process.env.FRONTEND_HUMANS_MD_PATH || '',
-	frontendIconsPath: process.env.FRONTEND_ICONS_PATH || '',
-	frontendImagesPath: process.env.FRONTEND_IMAGES_PATH || '',
-	frontendJsPath: process.env.FRONTEND_JS_PATH || '',
-	frontendKeysPath: process.env.FRONTEND_KEYS_PATH || '',
-	frontendLogosPath: process.env.FRONTEND_LOGOS_PATH || '',
-	frontendRobotsTxtPath: process.env.FRONTEND_ROBOTS_TXT_PATH || '',
-	frontendSecurityMdPath: process.env.FRONTEND_SECURITY_MD_PATH || '',
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH || '',
-	frontendSitemapXmlPath: process.env.FRONTEND_SITEMAP_XML_PATH || '',
-	ipBlacklistPath: process.env.IP_BLACKLIST_PATH || '',
 	loggerLevel: process.env.LOGGER || '1',
 	logLevel: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
 	nodeEnv: process.env.NODE_ENV as 'development' | 'testing' | 'production',

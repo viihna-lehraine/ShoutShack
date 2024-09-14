@@ -5,10 +5,10 @@ import {
 	DataTypes,
 	Sequelize
 } from 'sequelize';
-import { User } from './User';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { User } from './UserModelFile';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface UserMfaAttributes {
 	id: string; // UUID for the MFA record and primary key (from User model)

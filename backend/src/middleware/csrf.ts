@@ -1,8 +1,8 @@
 import csrf from 'csrf';
-import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { NextFunction, Request, Response } from 'express';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface CsrfDependencies {
 	logger: Logger;
@@ -27,9 +27,9 @@ export function initializeCsrfMiddleware({
 		next: NextFunction
 	): void {
 		try {
-			logger.info('CSRF middleware enabled');
 			try {
-				// generate and set a CSRF token in the response locals
+				logger.info('CSRF middleware enabled');
+
 				const sessionID = req.sessionID || '';
 				const csrfToken = csrfProtection.create(sessionID);
 				res.locals.csrfToken = csrfToken;

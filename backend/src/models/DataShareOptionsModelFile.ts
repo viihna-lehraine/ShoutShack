@@ -6,10 +6,10 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { User } from './UserModelFile';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-import { User } from './User';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface DataShareOptionsAttributes {
 	id: string;

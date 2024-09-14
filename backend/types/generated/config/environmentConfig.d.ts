@@ -1,4 +1,4 @@
-import { Logger } from './logger';
+import { Logger } from '../utils/logger';
 export declare function loadEnv(): void;
 interface EnvironmentVariableTypes {
     backendLogExportPath: string;
@@ -16,21 +16,7 @@ interface EnvironmentVariableTypes {
     featureHttpsRedirect: boolean;
     featureLoadTestRoutes: boolean;
     featureSequelizeLogging: boolean;
-    frontendAppJsPath: string;
-    frontendBrowserConfigXmlPath: string;
-    frontendCssPath: string;
-    frontendFontsPath: string;
-    frontendHumansMdPath: string;
-    frontendIconsPath: string;
-    frontendImagesPath: string;
-    frontendJsPath: string;
-    frontendKeysPath: string;
-    frontendLogosPath: string;
-    frontendRobotsTxtPath: string;
-    frontendSecurityMdPath: string;
     frontendSecretsPath: string;
-    frontendSitemapXmlPath: string;
-    ipBlacklistPath: string;
     loggerLevel: string;
     logLevel: 'debug' | 'info' | 'warn' | 'error';
     nodeEnv: 'development' | 'testing' | 'production';

@@ -1,6 +1,6 @@
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 const generateAccountDeletionStartedEmailTemplate = (
 	username: string,

@@ -1,7 +1,7 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import helmet, { HelmetOptions } from 'helmet';
 import { environmentVariables } from '../config/environmentConfig';
-import { setupLogger } from '../config/logger';
+import { setupLogger } from '../utils/logger';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,

@@ -1,12 +1,12 @@
-import { Request, Response } from 'express';
-import { Logger } from '../config/logger';
-import createJwtUtil from '../auth/jwtUtil';
-import createUserModel from '../models/User';
 import argon2 from 'argon2';
-import sops from '../utils/sops';
 import { execSync } from 'child_process';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Request, Response } from 'express';
+import createJwtUtil from '../auth/jwtUtil';
+import { Logger } from '../utils/logger';
+import createUserModel from '../models/UserModelFile';
+import sops from '../utils/sops';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface AuthDependencies {
 	logger: Logger;

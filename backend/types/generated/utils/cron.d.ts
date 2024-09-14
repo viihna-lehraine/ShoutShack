@@ -1,8 +1,8 @@
+import { exec } from 'child_process';
+import compressing from 'compressing';
 import fs from 'fs';
 import path from 'path';
-import compressing from 'compressing';
-import { exec } from 'child_process';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 interface CronDependencies {
     logger: Logger;
     compressing: typeof compressing;

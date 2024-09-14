@@ -1,6 +1,6 @@
 import { createClient, RedisClientType } from 'redis';
 import { FeatureFlags } from './environmentConfig';
-import { Logger } from './logger';
+import { Logger } from '../utils/logger';
 interface RedisDependencies {
     logger: Logger;
     featureFlags: FeatureFlags;

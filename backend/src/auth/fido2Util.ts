@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import {
 	ExpectedAssertionResult,
 	ExpectedAttestationResult,
@@ -11,11 +12,10 @@ import {
 	AssertionResult
 } from 'fido2-lib';
 import path from 'path';
-import sops, { SecretsMap } from '../utils/sops';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-import { execSync } from 'child_process';
+import sops, { SecretsMap } from '../utils/sops';
+import { validateDependencies } from '../utils/validateDependencies';
 
 let fido2: Fido2Lib | null = null;
 let secrets: SecretsMap;

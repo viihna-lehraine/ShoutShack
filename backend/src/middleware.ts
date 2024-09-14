@@ -1,34 +1,53 @@
-import express, { Application } from 'express';
-import session from 'express-session';
-import morgan, { StreamOptions } from 'morgan';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import hpp from 'hpp';
-import passport, { AuthenticateOptions } from 'passport';
 import RedisStore from 'connect-redis';
-import { randomBytes } from 'crypto';
-import { initializeCsrfMiddleware } from './middleware/csrf';
-import { expressErrorHandler } from './middleware/expressErrorHandler';
-import { initializeSecurityHeaders } from './middleware/securityHeaders';
-import { ipBlacklistMiddleware } from './middleware/ipBlacklist';
-import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';
-import { initializeRateLimitMiddleware } from './middleware/rateLimit';
-import { FeatureFlags } from './config/environmentConfig';
-import { Logger } from './config/logger';
-import { getRedisClient } from './config/redis';
-import sops, { SecretsMap } from './utils/sops';
+import cookieParser from 'cookie-parser';
 import { execSync } from 'child_process';
 import compression from 'compression';
+import cors from 'cors';
+import csrf from 'csrf';
+import { randomBytes } from 'crypto';
+import express, {
+	Application,
+	NextFunction,
+	RequestHandler,
+	Response
+} from 'express';
+import session from 'express-session';
+import { promises as fs } from 'fs';
+import hpp from 'hpp';
+import morgan, { StreamOptions } from 'morgan';
+import passport, { AuthenticateOptions } from 'passport';
 import responseTime from 'response-time';
-import { initializePassportAuthMiddleware } from './middleware/passportAuth';
-import { initializeValidatorMiddleware } from './middleware/validator';
 import validator from 'validator';
-import { initializeSlowdownMiddleware } from './middleware/slowdown';
-import { validateDependencies } from './utils/validateDependencies';
+import {
+	helmetOptions,
+	permissionsPolicyOptions
+} from './config/securityOptions';
+import { environmentVariables, FeatureFlags } from './config/environmentConfig';
+import { errorClasses, ErrorSeverity } from './errors/errorClasses';
+import { handleErrorResponse } from './errors/errorHandler';
+import { ErrorLogger } from './utils/errorLogger';
+import { Logger } from './utils/logger';
+import { getRedisClient } from './config/redis';
+import sops, { SecretsMap } from './utils/sops';
+import { initializeCsrfMiddleware } from './middleware/csrf';
+import { expressErrorHandler } from './middleware/expressErrorHandler';
+import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
+import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';
+import { initializePassportAuthMiddleware } from './middleware/passportAuth';
+import { initializeRateLimitMiddleware } from './middleware/rateLimit';
+import { initializeSecurityHeaders } from './middleware/securityHeaders';
+import {
+	initializeSlowdownMiddleware,
+	slowdownThreshold
+} from './middleware/slowdown';
+import { initializeValidatorMiddleware } from './middleware/validator';
 import { processError } from './utils/processError';
+import { validateDependencies } from './utils/validateDependencies';
 
-interface MiddlewareDependencies {
+export interface MiddlewareDependencies {
 	express: typeof express;
+	res: Response;
+	next: NextFunction;
 	session: typeof session;
 	cookieParser: typeof cookieParser;
 	cors: typeof cors;
@@ -37,9 +56,10 @@ interface MiddlewareDependencies {
 	passport: typeof passport;
 	randomBytes: typeof randomBytes;
 	RedisStore: typeof RedisStore;
+	redisClient: typeof getRedisClient;
 	initializeCsrfMiddleware: typeof initializeCsrfMiddleware;
 	getRedisClient: typeof getRedisClient;
-	ipBlacklistMiddleware: typeof ipBlacklistMiddleware;
+	initializeIpBlacklistMiddleware: typeof initializeIpBlacklistMiddleware;
 	initializeRateLimitMiddleware: typeof initializeRateLimitMiddleware;
 	initializeSecurityHeaders: typeof initializeSecurityHeaders;
 	createMemoryMonitor: () => void;
@@ -57,8 +77,35 @@ interface MiddlewareDependencies {
 	initializeSlowdownMiddleware: typeof initializeSlowdownMiddleware;
 }
 
-export async function initializeMiddleware({
+function initializeExpressMiddleware(
+	app: Application,
+	middleware: RequestHandler,
+	middlewareName: string,
+	logger: Logger,
+	res: Response,
+	next: NextFunction
+): void {
+	try {
+		logger.info(`Initializing standard middleware: ${middlewareName}`);
+		app.use(middleware);
+	} catch (error) {
+		const appError = new errorClasses.DependencyError(
+			`${middlewareName} initialization failed`,
+			{
+				originalError: error,
+				severity: ErrorSeverity.FATAL
+			}
+		);
+		ErrorLogger.log(appError);
+		handleErrorResponse(appError, res, logger);
+		next(appError);
+	}
+}
+
+export async function initializeAllMiddleware({
 	express,
+	res,
+	next,
 	session,
 	cookieParser,
 	cors,
@@ -67,9 +114,9 @@ export async function initializeMiddleware({
 	passport,
 	randomBytes,
 	RedisStore,
+	redisClient,
 	initializeCsrfMiddleware,
-	getRedisClient,
-	ipBlacklistMiddleware,
+	initializeIpBlacklistMiddleware,
 	initializeRateLimitMiddleware,
 	initializeSecurityHeaders,
 	createMemoryMonitor,
@@ -104,8 +151,8 @@ export async function initializeMiddleware({
 				},
 				{ name: 'getRedisClient', instance: getRedisClient },
 				{
-					name: 'ipBlacklistMiddleware',
-					instance: ipBlacklistMiddleware
+					name: 'initializeIpBlacklistMiddleware',
+					instance: initializeIpBlacklistMiddleware
 				},
 				{
 					name: 'initializeRateLimitMiddleware',
@@ -125,108 +172,297 @@ export async function initializeMiddleware({
 			logger || console
 		);
 
-		const secrets = await sops.getSecrets({
+		// fetch secrets securely
+		let secrets: SecretsMap;
+		try {
+			secrets = await sops.getSecrets({
+				logger,
+				execSync,
+				getDirectoryPath: () => process.cwd()
+			});
+		} catch (error) {
+			throw new errorClasses.ConfigurationErrorFatal(
+				'Failed to retrieve secrets',
+				{
+					originalError: error,
+					errorSeverity: ErrorSeverity.FATAL
+				}
+			);
+		}
+
+		// initialize body parser middlewares
+		initializeExpressMiddleware(
+			app,
+			express.json(),
+			'express.json',
 			logger,
-			execSync,
-			getDirectoryPath: () => process.cwd()
-		});
-
-		const redisClient = await getRedisClient();
-
-		// initialize body parser
-		app.use(express.json());
-		app.use(express.urlencoded({ extended: true }));
+			res,
+			next
+		);
+		initializeExpressMiddleware(
+			app,
+			express.urlencoded({ extended: true }),
+			'express.urlencoded',
+			logger,
+			res,
+			next
+		);
 
 		// initialize cookie parser
-		app.use(cookieParser());
+		initializeExpressMiddleware(
+			app,
+			cookieParser(),
+			'Cookie Parser',
+			logger,
+			res,
+			next
+		);
 
 		// initialize morgan logger
 		const stream: StreamOptions = {
 			write: (message: string) => logger.info(message.trim())
 		};
-		app.use(morgan('combined', { stream }));
+		try {
+			app.use(morgan('combined', { stream }));
+		} catch (error) {
+			throw new errorClasses.ConfigurationError(
+				'Failed to initialize morgan logger',
+				{
+					originalError: error,
+					severity: ErrorSeverity.RECOVERABLE
+				}
+			);
+		}
 
 		// initialize CORS
-		app.use(cors());
+		initializeExpressMiddleware(app, cors(), 'CORS', logger, res, next);
 
 		// initialize HPP
-		app.use(hpp());
+		initializeExpressMiddleware(app, hpp(), 'HPP', logger, res, next);
 
 		// initialize session with Redis store
-		app.use(
-			session({
-				secret: secrets.SESSION_SECRET,
-				resave: false,
-				saveUninitialized: true,
-				store:
-					featureFlags.enableRedisFlag && redisClient
-						? new RedisStore({ client: redisClient })
-						: undefined,
-				cookie: {
-					secure: featureFlags.enableSslFlag,
-					httpOnly: true,
-					sameSite: 'strict'
-				}
-			})
-		);
+		if (featureFlags.enableRedisFlag && !redisClient) {
+			try {
+				app.use(
+					session({
+						secret: secrets.SESSION_SECRET,
+						resave: false,
+						saveUninitialized: true,
+						store:
+							featureFlags.enableRedisFlag && redisClient
+								? new RedisStore({ client: redisClient })
+								: undefined,
+						cookie: {
+							secure: featureFlags.enableSslFlag,
+							httpOnly: true,
+							sameSite: 'strict'
+						}
+					})
+				);
+			} catch (error) {
+				throw new errorClasses.DependencyError(
+					'Session initialization failed',
+					{
+						originalError: error,
+						severity: ErrorSeverity.FATAL
+					}
+				);
+			}
+		}
 
 		// initialize passport
-		app.use(passport.initialize());
-		app.use(passport.session());
+		initializeExpressMiddleware(
+			app,
+			passport.initialize(),
+			'Passport',
+			logger,
+			res,
+			next
+		);
+		initializeExpressMiddleware(
+			app,
+			passport.session(),
+			'Passport Session',
+			logger,
+			res,
+			next
+		);
 
 		// initialize compression
-		app.use(compression());
+		initializeExpressMiddleware(
+			app,
+			compression(),
+			'Compression',
+			logger,
+			res,
+			next
+		);
 
 		// initialize response time
-		app.use(responseTime());
+		initializeExpressMiddleware(
+			app,
+			responseTime(),
+			'Response Time',
+			logger,
+			res,
+			next
+		);
 
 		// set e-tag header for client-side caching
 		app.set('etag', 'strong');
 
 		// initialize security headers
-		initializeSecurityHeaders(app, {
-			helmetOptions: {},
-			permissionsPolicyOptions: {}
-		});
+		try {
+			initializeSecurityHeaders(app, {
+				helmetOptions,
+				permissionsPolicyOptions
+			});
+		} catch (error) {
+			throw new errorClasses.ConfigurationError(
+				'Failed to initialize security headers',
+				{
+					originalError: error,
+					severity: ErrorSeverity.RECOVERABLE
+				}
+			);
+		}
+
+		const csrfProtection = new csrf();
 
 		// initialize CSRF middleware
-		app.use(initializeCsrfMiddleware);
+		try {
+			app.use(initializeCsrfMiddleware({ logger, csrfProtection }));
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize CSRF middleware',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		// initialize validator middleware
-		initializeValidatorMiddleware({ validator, logger });
+		try {
+			initializeValidatorMiddleware({ validator, logger });
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize validator middleware',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		// initialize memory monitor or Redis session based on flag
 		if (!featureFlags.enableRedisFlag) {
-			createMemoryMonitor();
+			try {
+				createMemoryMonitor();
+			} catch (error) {
+				throw new errorClasses.DependencyError(
+					'Failed to initialize memory monitor',
+					{
+						originalError: error,
+						severity: ErrorSeverity.FATAL
+					}
+				);
+			}
 		}
 
 		// initialize rate limiter
 		if (featureFlags.enableRateLimitFlag) {
-			app.use(initializeRateLimitMiddleware);
+			try {
+				initializeRateLimitMiddleware({ logger });
+			} catch (error) {
+				throw new errorClasses.DependencyError(
+					'Failed to initialize rate limit middleware',
+					{
+						originalError: error,
+						severity: ErrorSeverity.FATAL
+					}
+				);
+			}
 		}
 
 		// initialize slowdown middleware
-		initializeSlowdownMiddleware({ slowdownThreshold: 100, logger });
+		try {
+			initializeSlowdownMiddleware({ slowdownThreshold, logger });
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize slowdown middleware',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		// initialize IP blacklist middleware
 		if (featureFlags.enableIpBlacklistFlag) {
-			app.use(ipBlacklistMiddleware);
+			try {
+				initializeIpBlacklistMiddleware({
+					logger,
+					featureFlags,
+					environmentVariables,
+					fsModule: fs
+				});
+			} catch (error) {
+				throw new errorClasses.DependencyError(
+					'Failed to initialize IP blacklist middleware',
+					{
+						originalError: error,
+						severity: ErrorSeverity.FATAL
+					}
+				);
+			}
 		}
 
 		// initialize JWT authentication middleware
-		app.use(initializeJwtAuthMiddleware({ logger, verifyJwt }));
+		try {
+			await initializeJwtAuthMiddleware({
+				logger,
+				verifyJwt
+			});
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize JWT authentication middleware',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		// initialize passport authentication middleware
-		app.use(
+		try {
 			initializePassportAuthMiddleware({
+				logger,
 				passport,
-				authenticateOptions,
-				logger
-			})
-		);
+				authenticateOptions
+			});
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize Passport authentication middleware',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		// initialize error handler
-		app.use(expressErrorHandler({ logger, featureFlags }));
+		try {
+			app.use(expressErrorHandler({ logger, featureFlags }));
+		} catch (error) {
+			throw new errorClasses.DependencyError(
+				'Failed to initialize Express error handler',
+				{
+					originalError: error,
+					severity: ErrorSeverity.FATAL
+				}
+			);
+		}
 
 		return app;
 	} catch (error) {

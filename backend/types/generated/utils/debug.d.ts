@@ -1,5 +1,5 @@
 import debug, { Debugger } from 'debug';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 interface DebugUtilDependencies {
     debug: typeof debug;
     logger: Logger;

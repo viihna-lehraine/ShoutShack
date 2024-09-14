@@ -1,6 +1,6 @@
 import csrf from 'csrf';
 import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface CsrfDependencies {
     logger: Logger;
     csrfProtection: csrf;

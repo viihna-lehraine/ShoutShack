@@ -1,8 +1,18 @@
-import { isLogger, Logger } from '../config/logger';
+import { isLogger, Logger } from './logger';
 
 interface Dependency {
 	name: string;
 	instance: unknown;
+}
+
+function getCallerInfo(): string {
+	const stack = new Error().stack;
+	if (stack) {
+		const stackLines = stack.split('\n');
+		const callerLine = stackLines[3]?.trim();
+		return callerLine || 'Unknown caller';
+	}
+	return 'No stack trace available';
 }
 
 export function validateDependencies(
@@ -13,6 +23,8 @@ export function validateDependencies(
 	const logWarn = isLogger(logger) ? logger.warn : console.warn;
 	const logError = isLogger(logger) ? logger.error : console.error;
 
+	const callerInfo = getCallerInfo();
+
 	if (!dependencies || dependencies.length === 0) {
 		logWarn('No dependencies provided for validation');
 		throw new Error('No dependencies provided for validation');
@@ -20,7 +32,7 @@ export function validateDependencies(
 
 	try {
 		logInfo(
-			`Validating the following dependencies: ${dependencies.map(dep => `${dep.name}: ${dep.instance}`).join(', ')}`
+			`Validating the following dependencies (called from: ${callerInfo}): ${dependencies.map(dep => `${dep.name}: ${dep.instance}`).join(', ')}`
 		);
 
 		const missingDependencies = dependencies.filter(
@@ -31,12 +43,13 @@ export function validateDependencies(
 			const missingNames = missingDependencies
 				.map(({ name }) => name)
 				.join(', ');
-			logError(`Missing dependencies: ${missingNames}`);
+			logError(`
+				Missing dependencies (called from ${callerInfo}): ${missingNames}`);
 			throw new Error(`Missing dependencies: ${missingNames}`);
 		}
 
 		logInfo(
-			`All dependencies are valid: ${dependencies
+			`All dependencies are valid (called from: ${callerInfo}): ${dependencies
 				.map(({ name }) => name)
 				.join(', ')}`
 		);

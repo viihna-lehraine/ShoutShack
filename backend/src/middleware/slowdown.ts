@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
+
+export const slowdownThreshold = 100; // in ms
 
 interface SlowdownConfig {
 	slowdownThreshold: number;
@@ -14,7 +16,7 @@ interface SlowdownSession extends Session {
 }
 
 export function initializeSlowdownMiddleware({
-	slowdownThreshold = 100, // in ms
+	slowdownThreshold,
 	logger
 }: SlowdownConfig) {
 	try {

@@ -1,5 +1,5 @@
-import { InferAttributes, InferCreationAttributes, Model, Sequelize, CreationOptional } from 'sequelize';
-import { Logger } from '../config/logger';
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
+import { Logger } from '../utils/logger';
 interface SupportRequestAttributes {
     id: string;
     email: string;

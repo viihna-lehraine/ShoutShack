@@ -1,5 +1,5 @@
 import { PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions, Fido2AttestationResult, Fido2AssertionResult, AttestationResult, AssertionResult } from 'fido2-lib';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface User {
     id: string;
     email: string;

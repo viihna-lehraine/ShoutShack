@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import validator from 'validator';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface ValidatorDependencies {
     validator: typeof validator;
     logger: Logger;

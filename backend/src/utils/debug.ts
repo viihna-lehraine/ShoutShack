@@ -1,7 +1,7 @@
 import debug, { Debugger } from 'debug';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from './logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface DebugUtilDependencies {
 	debug: typeof debug;

@@ -4,7 +4,7 @@ import commonConfig from './webpack.common.js';
 export default merge(commonConfig, {
 	mode: 'production',
 	output: {
-		filename: 'bundle.[contenthash].js',
+		filename: 'bundle.[contenthash].js'
 	},
 	optimization: {
 		minimize: true

@@ -1,16 +1,9 @@
-import { Sequelize, Options } from 'sequelize';
-import { errorClasses, ErrorSeverity } from '../config/errorClasses';
+import { Options, Sequelize } from 'sequelize';
 import { FeatureFlags } from './environmentConfig';
-import { Logger } from './logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-
-const {
-	AppError,
-	DatabaseError,
-	InvalidConfigurationError,
-	DependencyError
-} = errorClasses;
+import { validateDependencies } from '../utils/validateDependencies';
 
 export interface DBSecrets {
 	DB_NAME: string;
@@ -46,7 +39,7 @@ export async function initializeDatabase({
 		const secrets: DBSecrets = await getSecrets();
 
 		if (!secrets.DB_NAME || !secrets.DB_USER || !secrets.DB_PASSWORD || !secrets.DB_HOST || !secrets.DB_DIALECT) {
-			throw new InvalidConfigurationError(
+			throw new errorClasses.ConfigurationError(
 				'Database credentials are missing. Check DB_NAME, DB_USER, and DB_PASSWORD in your configuration.',
 				{ DB_NAME: secrets.DB_NAME, DB_USER: secrets.DB_USER }
 			);
@@ -75,7 +68,7 @@ export async function initializeDatabase({
 				logger.info('Connection has been established successfully.');
 			} catch (dbError: unknown) {
 				const errorMessage = (dbError instanceof Error) ? dbError.message : 'Unknown error';
-				throw new DatabaseError(
+				throw new errorClasses.DatabaseErrorFatal(
 					`Failed to authenticate database connection: ${errorMessage}`,
 					{ DB_HOST: secrets.DB_HOST, DB_DIALECT: secrets.DB_DIALECT }
 				)
@@ -88,7 +81,7 @@ export async function initializeDatabase({
 		if (error instanceof AppError) {
 			throw error;
 		} else {
-			throw new DependencyError(
+			throw new errorClasses.DependencyError(
 				'Database initialization failed due to a dependency issue.',
 				{ originalError: error }
 			);
@@ -102,8 +95,9 @@ export function getSequelizeInstance({
     logger.info('getSequelizeInstance() executing');
 
     if (!sequelize) {
+		logger.error(`Sequelize instance is not initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.`);
 		const error = new AppError(
-			'Sequelize instance is not initialized. Call initializeDatabase() before attempting to retrieve the Sequelize instance.',
+			'Internal server error',
 			500,
 			ErrorSeverity.FATAL,
 			'SEQUELIZE_NOT_INITIALIZED'

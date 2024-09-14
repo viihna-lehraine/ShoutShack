@@ -1,10 +1,10 @@
+import { execSync } from 'child_process';
 import yub from 'yub';
 import '../../types/custom/yub.js';
-import getSecrets, { SecretsMap } from '../utils/sops.js';
-import { execSync } from 'child_process';
-import { Logger } from '../config/logger.js';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger.js';
 import { processError } from '../utils/processError';
+import getSecrets, { SecretsMap } from '../utils/sops.js';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface YubClient {
 	verify(

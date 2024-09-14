@@ -1,6 +1,6 @@
 import express from 'express';
-import { Logger } from './config/logger';
 import { FeatureFlags } from './config/environmentConfig';
+import { Logger } from './utils/logger';
 interface RouteDependencies {
     app: express.Application;
     logger: Logger;

@@ -1,6 +1,6 @@
 import { PassportStatic } from 'passport';
-import { Logger } from './logger';
-import createUserModel from '../models/User';
+import { Logger } from '../utils/logger';
+import createUserModel from '../models/UserModelFile';
 export interface UserInstance {
     id: string;
     username: string;

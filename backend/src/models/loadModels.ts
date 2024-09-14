@@ -1,26 +1,28 @@
 import { Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
-import createAuditLogModel from './AuditLog';
-import createDataShareOptionsModel from './DataShareOptions';
-import createDeviceModel from './Device';
-import createFailedLoginAttemptsModel from './FailedLoginAttempts';
-import createFeatureRequestModel from './FeatureRequest';
-import createFeedbackSurveyModel from './FeedbackSurvey';
-import createGuestbookEntryModel from './GuestbookEntry';
-import createMultiFactorAuthSetupModel from './MultiFactorAuthSetup';
-import createRecoveryMethodModel from './RecoveryMethod';
-import createSecurityEventModel from './SecurityEvent';
-import createSupportRequestModel from './SupportRequest';
-import createUserMfaModel from './UserMfa';
-import createUserModel from './User';
+import createAuditLogModel from './AuditLogModelFile';
+import createDataShareOptionsModel from './DataShareOptionsModelFile';
+import createDeviceModel from './DeviceModelFile';
+import { createErrorLogModel } from './ErrorLogModelFile';
+import createFailedLoginAttemptsModel from './FailedLoginAttemptsModelFile';
+import createFeatureRequestModel from './FeatureRequestModelFile';
+import createFeedbackSurveyModel from './FeedbackSurveyModelFile';
+import createGuestbookEntryModel from './GuestbookEntryModelFile';
+import createMultiFactorAuthSetupModel from './MultiFactorAuthSetupModelFile';
+import createRecoveryMethodModel from './RecoveryMethodModelFile';
+import createSecurityEventModel from './SecurityEventModelFile';
+import createSupportRequestModel from './SupportRequestModelFile';
+import createUserMfaModel from './UserMfaModelFile';
+import createUserModel from './UserModelFile';
 import createUserSessionModel from './UserSession';
+import { Logger } from '../utils/logger';
+import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 export interface Models {
 	AuditLog: ReturnType<typeof createAuditLogModel>;
 	DataShareOptions: ReturnType<typeof createDataShareOptionsModel>;
 	Device: ReturnType<typeof createDeviceModel>;
+	ErrorLog: ReturnType<typeof createErrorLogModel>;
 	FailedLoginAttempts: ReturnType<typeof createFailedLoginAttemptsModel>;
 	FeatureRequest: ReturnType<typeof createFeatureRequestModel>;
 	FeedbackSurvey: ReturnType<typeof createFeedbackSurveyModel>;
@@ -50,6 +52,7 @@ export async function loadModels(
 			AuditLog: createAuditLogModel(sequelize, logger),
 			DataShareOptions: createDataShareOptionsModel(sequelize, logger),
 			Device: createDeviceModel(sequelize, logger),
+			ErrorLog: createErrorLogModel(sequelize, logger),
 			FailedLoginAttempts: createFailedLoginAttemptsModel(
 				sequelize,
 				logger

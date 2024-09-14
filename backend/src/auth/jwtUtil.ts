@@ -1,9 +1,9 @@
+import { execSync } from 'child_process';
 import jwt from 'jsonwebtoken';
 import { Logger } from 'winston';
-import { validateDependencies } from '../utils/validateDependencies';
 import { processError } from '../utils/processError';
 import sops from '../utils/sops';
-import { execSync } from 'child_process';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface Secrets {
 	JWT_SECRET?: string;

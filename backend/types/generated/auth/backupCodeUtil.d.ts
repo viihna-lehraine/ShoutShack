@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { Logger } from '../config/logger';
-import { UserMfa } from '../models/UserMfa';
+import { Logger } from '../utils/logger';
+import { UserMfa } from '../models/UserMfaModelFile';
 interface BackupCode {
     code: string;
     used: boolean;

@@ -1,5 +1,5 @@
 import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface UserMfaAttributes {
     id: string;
     isMfaEnabled: boolean;

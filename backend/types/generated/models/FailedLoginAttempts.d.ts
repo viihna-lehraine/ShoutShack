@@ -1,5 +1,5 @@
 import { Model, InferAttributes, InferCreationAttributes, Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface FailedLoginAttemptsAttributes {
     attemptId: string;
     id: string;

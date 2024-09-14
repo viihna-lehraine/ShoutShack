@@ -1,4 +1,4 @@
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 interface Dependency {
     name: string;
     instance: unknown;

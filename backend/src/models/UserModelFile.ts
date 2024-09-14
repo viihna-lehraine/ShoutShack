@@ -9,16 +9,16 @@ import {
 	Sequelize
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import { errorClasses } from '../errors/errorClasses';
 import { hashPassword } from '../config/hashConfig';
-import { Logger } from '../config/logger';
-import { PasswordValidationError } from '../config/errorClasses';
+import { Logger } from '../utils/logger';
 import {
 	initializeRateLimitMiddleware,
 	RateLimitMiddlewareDependencies
 } from '../middleware/rateLimit';
+import { processError } from '../utils/processError';
 import sops, { SecretsMap } from '../utils/sops';
 import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
 
 interface UserAttributes {
 	id: string;
@@ -79,7 +79,9 @@ class User
 			);
 		} catch (error) {
 			processError(error, logger);
-			throw new PasswordValidationError('Passwords do not match');
+			throw new errorClasses.PasswordValidationError(
+				'Passwords do not match'
+			);
 		}
 	}
 
@@ -151,7 +153,7 @@ class User
 				logger.warn(
 					'Password does not meet the security requirements.'
 				);
-				throw new PasswordValidationError(
+				throw new errorClasses.PasswordValidationError(
 					'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.'
 				);
 			}
@@ -180,11 +182,11 @@ class User
 		} catch (error) {
 			processError(error, logger);
 
-			if (error instanceof PasswordValidationError) {
+			if (error instanceof errorClasses.PasswordValidationError) {
 				throw error;
 			}
 
-			throw new PasswordValidationError(
+			throw new errorClasses.PasswordValidationError(
 				'There was an error creating your account. Please try again. If the issue persists, please contact support.'
 			);
 		}
@@ -216,7 +218,9 @@ class User
 			return isValid;
 		} catch (error) {
 			processError(error, logger);
-			throw new PasswordValidationError('Error verifying password');
+			throw new errorClasses.PasswordValidationError(
+				'Error verifying password'
+			);
 		}
 	}
 }
@@ -308,7 +312,7 @@ export default function createUserModel(
 				});
 			} catch (error) {
 				processError(error, logger);
-				throw new PasswordValidationError('Error hashing password.');
+				throw new errorClasses.PasswordValidationError();
 			}
 		});
 
@@ -316,7 +320,7 @@ export default function createUserModel(
 			try {
 				if (user.changed('isMfaEnabled')) {
 					const UserMfa = await (
-						await import('./UserMfa')
+						await import('./UserMfaModelFile')
 					).default(sequelize, logger);
 
 					await UserMfa.update(
@@ -328,8 +332,8 @@ export default function createUserModel(
 				}
 			} catch (error) {
 				processError(error, logger);
-				throw new PasswordValidationError(
-					'Error updating multi-factor authentication status.'
+				throw new errorClasses.PasswordValidationError(
+					'An error occurred. Please try again.'
 				);
 			}
 		});

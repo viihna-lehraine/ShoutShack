@@ -1,24 +1,24 @@
-import express, { Request, Response, Router } from 'express';
-import { execSync } from 'child_process';
-import path from 'path';
 import argon2 from 'argon2';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import axios from 'axios';
-import zxcvbn from 'zxcvbn';
+import bcrypt from 'bcrypt';
+import { execSync } from 'child_process';
+import express, { Request, Response, Router } from 'express';
+import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import { Logger } from '../config/logger';
-import nodemailer from 'nodemailer';
-import sops from '../utils/sops';
+import zxcvbn from 'zxcvbn';
 import createEmail2FAUtil from '../auth/email2FAUtil';
 import createTOTPUtil from '../auth/totpUtil';
-import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
-import { getTransporter } from '../config/mailer';
 import { environmentVariables } from '../config/environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
 import { hashPassword } from '../config/hashConfig';
+import { Logger } from '../utils/logger';
+import { getTransporter } from '../config/mailer';
+import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
+import { processError } from '../utils/processError';
+import sops from '../utils/sops';
+import { validateDependencies } from '../utils/validateDependencies';
 
 export interface UserSecrets {
 	JWT_SECRET: string;

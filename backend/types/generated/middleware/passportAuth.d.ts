@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { AuthenticateOptions, PassportStatic } from 'passport';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface PassportAuthMiddlewareDependencies {
     passport: PassportStatic;
     authenticateOptions: AuthenticateOptions;

@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface TOTPSecret {
     ascii: string;
     hex: string;

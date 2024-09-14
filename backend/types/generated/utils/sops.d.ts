@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { Logger } from '../config/logger';
+import { Logger } from './logger';
 interface SopsDependencies {
     logger: Logger;
     execSync: typeof execSync;

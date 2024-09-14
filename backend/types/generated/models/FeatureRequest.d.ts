@@ -1,5 +1,5 @@
 import { Model, InferAttributes, InferCreationAttributes, CreationOptional, Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface FeatureRequestAttributes {
     featureRequestNumber: number;
     id: string;

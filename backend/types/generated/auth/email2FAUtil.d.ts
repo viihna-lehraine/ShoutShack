@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface Secrets {
     EMAIL_2FA_KEY: string;
 }

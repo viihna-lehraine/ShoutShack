@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { FeatureFlags } from '../config/environmentConfig';
-import { Logger } from '../config/logger';
-import { AppError } from '../config/errorClasses';
+import { AppError } from '../errors/errorClasses';
+import { Logger } from '../utils/logger';
 interface ExpressErrorHandlerDependencies {
     logger: Logger;
     featureFlags: FeatureFlags;

@@ -1,5 +1,5 @@
 import { Application, Router } from 'express';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 import { FeatureFlags } from '../config/environmentConfig';
 interface TestRouteDependencies {
     app: Application;

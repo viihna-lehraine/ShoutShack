@@ -1,10 +1,10 @@
 import { constants as cryptoConstants } from 'crypto';
 import { Application } from 'express';
-import { Sequelize } from 'sequelize';
-import SopsDependencies from './utils/sops';
-import { FeatureFlags } from './config/environmentConfig';
-import { Logger } from './config/logger';
 import { RedisClientType } from 'redis';
+import { Sequelize } from 'sequelize';
+import { Logger } from './utils/logger';
+import { FeatureFlags } from './config/environmentConfig';
+import SopsDependencies from './utils/sops';
 interface SetupHttpServerParams {
     app: Application;
     sops: typeof SopsDependencies;

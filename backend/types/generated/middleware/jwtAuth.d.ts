@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface JwtAuthMiddlewareDependencies {
     logger: Logger;
     verifyJwt: (token: string) => Promise<string | object | null>;

@@ -1,0 +1,452 @@
+import {
+	AppError,
+	ErrorDetails,
+	ErrorSeverity,
+	createQuotaExceededMessage,
+	createRetryMessage,
+	defaultRetryAfter
+} from './errorClasses';
+
+export class ConfigurationError extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			'CONFIG_ERROR',
+			details
+		);
+		this.name = 'ConfigurationError';
+	}
+}
+
+export class ConfigurationErrorFatal extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'CONFIG_ERROR_FATAL',
+			details
+		);
+		this.name = 'ConfigurationErrorFatal';
+	}
+}
+
+export class ConcurrencyError extends AppError {
+	constructor(resource?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = resource
+			? `Concurrency error on resource: ${resource}`
+			: 'Concurrency error';
+		const customDetails = resource ? { resource, ...details } : details;
+
+		super(
+			errorMessage,
+			409,
+			ErrorSeverity.RECOVERABLE,
+			'CONCURRENCY_ERROR',
+			customDetails
+		);
+		this.name = 'ConcurrencyError';
+	}
+}
+
+export class ConflictError extends AppError {
+	constructor(resource?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = resource
+			? `Conflict: ${resource} already exists`
+			: 'Conflict: resource already exists';
+
+		const customDetails = resource ? { resource, ...details } : details;
+
+		super(
+			errorMessage,
+			409,
+			ErrorSeverity.RECOVERABLE,
+			'CONFLICT_ERROR',
+			customDetails
+		);
+		this.name = 'ConflictError';
+	}
+}
+
+export class DatabaseErrorFatal extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'DATABASE_ERROR_FATAL',
+			details
+		);
+		this.name = 'DatabaseError';
+	}
+}
+
+export class DataIntegrityError extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'DATA_INTEGRITY_ERROR',
+			details
+		);
+		this.name = 'DataIntegrityError';
+	}
+}
+
+export class DependencyError extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {},
+		dependencyName?: string
+	) {
+		const customDetails = dependencyName
+			? { dependencyName, ...details }
+			: details;
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'DEPENDENCY_ERROR',
+			customDetails
+		);
+		this.name = 'DependencyError';
+	}
+}
+
+export class ExternalServiceErrorFatal extends AppError {
+	constructor(
+		errorMessage = 'Service unavailable',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			503,
+			ErrorSeverity.FATAL,
+			'EXTERNAL_SERVICE_ERROR_FATAL',
+			details
+		);
+		this.name = 'ExternalServiceErrorFatal';
+	}
+}
+
+export class FallbackSuccessInfo extends AppError {
+	constructor(service?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = service
+			? `Successfully fell back to ${service}`
+			: 'Successfully fell back to another service';
+
+		const customDetails = service ? { service, ...details } : details;
+
+		super(
+			errorMessage,
+			200,
+			ErrorSeverity.INFO,
+			'FALLBACK_SUCCESS',
+			customDetails
+		);
+		this.name = 'FallbackSuccessInfo';
+	}
+}
+
+export class InsufficientStorageError extends AppError {
+	constructor(
+		requiredSpace?: number,
+		availableSpace?: number,
+		details: ErrorDetails = {}
+	) {
+		const errorMessage = [
+			'Insufficient storage.',
+			requiredSpace ? `Required: ${requiredSpace}MB` : null,
+			availableSpace ? `Available: ${availableSpace}MB` : null
+		]
+			.filter(Boolean)
+			.join(', ');
+
+		const errorDetails: ErrorDetails = {
+			...(requiredSpace !== undefined ? { requiredSpace } : {}),
+			...(availableSpace !== undefined ? { availableSpace } : {}),
+			...details
+		};
+
+		super(
+			errorMessage,
+			507,
+			ErrorSeverity.FATAL,
+			'INSUFFICIENT_STORAGE',
+			errorDetails
+		);
+		this.name = 'InsufficientStorageError';
+	}
+}
+
+export class InvalidConfigurationError extends AppError {
+	constructor(configKey?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = configKey
+			? `Invalid or missing configuration for ${configKey}`
+			: 'Invalid or missing configuration';
+
+		const customDetails = configKey ? { configKey, ...details } : details;
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'INVALID_CONFIGURATION',
+			customDetails
+		);
+		this.name = 'InvalidConfigurationError';
+	}
+}
+
+export class PartialServiceFailureWarning extends AppError {
+	constructor(serviceName?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = serviceName
+			? `${serviceName} is currently experiencing issues. Please try again later.`
+			: 'Service is currently experiencing issues. Please try again later.';
+
+		const customDetails = serviceName
+			? { serviceName, ...details }
+			: details;
+		super(
+			errorMessage,
+			503,
+			ErrorSeverity.WARNING,
+			'PARTIAL_SERVICE_FAILURE',
+			customDetails
+		);
+		this.name = 'PartialServiceFailureWarning';
+	}
+}
+
+export class QuotaExceededErrorFatal extends AppError {
+	constructor(
+		retryAfter: number = defaultRetryAfter,
+		quotaName?: string,
+		limit?: number,
+		details: ErrorDetails = {}
+	) {
+		const errorMessage: string = createQuotaExceededMessage(
+			quotaName,
+			limit,
+			retryAfter
+		);
+
+		const errorDetails: ErrorDetails = {
+			...(quotaName ? { quotaName } : {}),
+			...(limit !== undefined ? { limit } : {}),
+			...(retryAfter ? { retryAfter } : {}),
+			...details
+		};
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			'QUOTA_EXCEEDED_FATAL',
+			errorDetails
+		);
+		this.name = 'QuotaExceededError';
+	}
+}
+
+export class RateLimitErrorFatal extends AppError {
+	constructor(
+		retryAfter: number = defaultRetryAfter,
+		details: ErrorDetails = {}
+	) {
+		const message: string = 'Rate limit exceeded (fatal exception).';
+		const retryMessage: string = createRetryMessage(retryAfter);
+		const errorMessage = `${message}${retryMessage}`.trim();
+
+		const customDetails = retryAfter ? { retryAfter, ...details } : details;
+
+		super(
+			errorMessage,
+			429,
+			ErrorSeverity.FATAL,
+			'RATE_LIMIT_EXCEEDED_FATAL',
+			customDetails
+		);
+		this.name = 'RateLimitErrorFatal';
+	}
+}
+
+export class ServiceDegradedError extends AppError {
+	constructor(service?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = service
+			? `${service} is currently degraded`
+			: 'Service is currently degraded';
+
+		const customDetails = service ? { service, ...details } : details;
+
+		super(
+			errorMessage,
+			200,
+			ErrorSeverity.WARNING,
+			'SERVICE_DEGRADED',
+			customDetails
+		);
+		this.name = 'ServiceDegradedError';
+	}
+}
+
+export class ServiceDegradedErrorMinor extends AppError {
+	constructor(service: string, details: ErrorDetails = {}) {
+		const errorMessage: string = service
+			? `${service} is currently degraded (minor)`
+			: 'Service is currently degraded (minor)';
+
+		const customDetails = service ? { service, ...details } : details;
+
+		super(
+			errorMessage,
+			200,
+			ErrorSeverity.INFO,
+			'SERVICE_DEGRADED_MINOR',
+			customDetails
+		);
+		this.name = 'ServiceDegradedErrorMinor';
+	}
+}
+
+export class ServiceUnavailableErrorFatal extends AppError {
+	constructor(
+		retryAfter: number = defaultRetryAfter,
+		service?: string,
+		details: ErrorDetails = {}
+	) {
+		const message: string = service
+			? `${service} is currently unavailable (fatal exception)`
+			: 'Service is currently unavailable (fatal exception)';
+
+		const retryMessage: string = retryAfter
+			? `Please try again after ${retryAfter} seconds.`
+			: 'Please try again later';
+
+		const errorMessage: string = `${message} ${retryMessage}`.trim();
+
+		const errorDetails: ErrorDetails = {
+			...(retryAfter !== undefined ? { retryAfter } : {}),
+			...(service !== undefined ? { service } : {}),
+			...details
+		};
+
+		super(
+			errorMessage,
+			503,
+			ErrorSeverity.FATAL,
+			'SERVICE_UNAVAILABLE',
+			errorDetails
+		);
+		this.name = 'ServiceUnavailableErrorFatal';
+	}
+}
+
+export class SlowApiWarning extends AppError {
+	constructor(
+		apiName?: string,
+		responseTime?: number,
+		details: ErrorDetails = {}
+	) {
+		const errorMessage = [
+			apiName
+				? `${apiName} is responding slowly`
+				: 'API is responding slowly.',
+			responseTime ? ` Response time: ${responseTime}ms` : null
+		]
+			.filter(Boolean)
+			.join('');
+
+		const errorDetails: ErrorDetails = {
+			...(apiName !== undefined ? { apiName } : {}),
+			...(responseTime !== undefined ? { responseTime } : {}),
+			...details
+		};
+
+		super(
+			errorMessage,
+			200,
+			ErrorSeverity.WARNING,
+			'SLOW_API_WARNING',
+			errorDetails
+		);
+		this.name = 'SlowApiWarning';
+	}
+}
+
+export class UserActionInfo extends AppError {
+	constructor(action?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = action
+			? `User performed action: ${action}`
+			: 'User performed action';
+
+		const customDetails = action ? { action, ...details } : details;
+
+		super(
+			errorMessage,
+			200,
+			ErrorSeverity.INFO,
+			'USER_ACTION_LOGGED',
+			customDetails
+		);
+		this.name = 'UserActionInfo';
+	}
+}
+
+export class ValidationError extends AppError {
+	constructor(invalidFields?: string[], details: ErrorDetails = {}) {
+		const errorMessage: string = invalidFields
+			? `Validation error on fields: ${invalidFields.join(', ')}`
+			: 'Validation error';
+
+		const customDetails = invalidFields
+			? { invalidFields, ...details }
+			: details;
+
+		super(
+			errorMessage,
+			400,
+			ErrorSeverity.WARNING,
+			'VALIDATION_ERROR',
+			customDetails
+		);
+		this.name = 'ValidationError';
+	}
+}
+
+export const appErrorClasses = {
+	ConfigurationError,
+	ConfigurationErrorFatal,
+	ConcurrencyError,
+	ConflictError,
+	DatabaseErrorFatal,
+	DataIntegrityError,
+	DependencyError,
+	ExternalServiceErrorFatal,
+	InsufficientStorageError,
+	PartialServiceFailureWarning,
+	QuotaExceededErrorFatal,
+	RateLimitErrorFatal,
+	ServiceDegradedError,
+	ServiceDegradedErrorMinor,
+	ServiceUnavailableErrorFatal,
+	SlowApiWarning,
+	UserActionInfo,
+	ValidationError
+};

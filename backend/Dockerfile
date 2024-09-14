@@ -1,6 +1,6 @@
 FROM node:22.3.0
 
-WORKDIR /app
+WORKDIR /backend
 
 # install system dependencies and SOPS
 RUN apt-get update && apt-get install -y curl \

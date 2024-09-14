@@ -6,7 +6,7 @@ interface AppErrorOptions {
     details?: unknown;
 }
 interface AppErrorDependencies {
-    logger?: ReturnType<typeof import('../config/logger').default>;
+    logger?: ReturnType<typeof import('../utils/logger').default>;
 }
 declare class AppError extends Error {
     statusCode: number;

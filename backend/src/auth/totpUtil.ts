@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface TOTPSecret {
 	ascii: string;

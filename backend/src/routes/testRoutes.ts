@@ -1,8 +1,8 @@
 import { Application, Request, Response, NextFunction, Router } from 'express';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 import { FeatureFlags } from '../config/environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface TestRouteDependencies {
 	app: Application;

@@ -1,19 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import { inRange } from 'range_check';
-import { Logger } from '../config/logger';
 import {
 	environmentVariables,
 	FeatureFlags
 } from '../config/environmentConfig';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
-interface IpBlacklistDependencies {
+export interface IpBlacklistDependencies {
 	logger: Logger;
 	featureFlags: FeatureFlags;
 	environmentVariables: typeof environmentVariables;
-	fsModule: typeof fs.promises;
+	fsModule: typeof fs;
 }
 
 let blacklist: string[] = [];
@@ -32,7 +32,7 @@ export const loadBlacklist = async ({
 		logger || console
 	);
 
-	const filePath = environmentVariables.ipBlacklistPath;
+	const filePath = environmentVariables.serverDataFilePath2;
 	try {
 		if (await fsModule.stat(filePath)) {
 			const data = await fsModule.readFile(filePath, 'utf8');
@@ -61,7 +61,7 @@ const saveBlacklist = async ({
 	);
 
 	if (featureFlags.enableIpBlacklistFlag) {
-		const filePath = environmentVariables.ipBlacklistPath;
+		const filePath = environmentVariables.serverDataFilePath2;
 		try {
 			await fsModule.writeFile(filePath, JSON.stringify(blacklist));
 			logger.info('Blacklist saved successfully');
@@ -159,7 +159,7 @@ export const removeFromBlacklist = async (
 	}
 };
 
-export const ipBlacklistMiddleware =
+export const initializeIpBlacklistMiddleware =
 	(deps: IpBlacklistDependencies) =>
 	(req: Request, res: Response, next: NextFunction): void => {
 		const { logger, featureFlags } = deps;

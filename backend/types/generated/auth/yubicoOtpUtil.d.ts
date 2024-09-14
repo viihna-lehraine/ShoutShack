@@ -1,8 +1,8 @@
+import { execSync } from 'child_process';
 import yub from 'yub';
 import '../../types/custom/yub.js';
+import { Logger } from '../utils/logger.js';
 import getSecrets from '../utils/sops.js';
-import { execSync } from 'child_process';
-import { Logger } from '../config/logger.js';
 interface YubicoOtpOptions {
     clientId: number;
     apiKey: string;

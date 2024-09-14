@@ -1,5 +1,5 @@
 import os from 'os';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface MemoryMonitorDependencies {
     logger: Logger;
     os: typeof os;

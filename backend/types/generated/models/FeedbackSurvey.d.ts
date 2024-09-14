@@ -1,5 +1,5 @@
 import { CreationOptional, Model, InferAttributes, InferCreationAttributes, Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface FeedbackSurveyAttributes {
     surveyId: number;
     questionGeneralApproval?: number | null;

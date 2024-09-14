@@ -1,6 +1,6 @@
-import express, { Request, Response, NextFunction, Router } from 'express';
+import express, { NextFunction, Request, Response, Router } from 'express';
 import { validationResult } from 'express-validator';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 import { initializeValidatorMiddleware } from '../middleware/validator';
 import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';

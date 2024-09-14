@@ -1,5 +1,5 @@
 import { InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface AuditLogAttributes {
     auditId: string;
     id?: string | null;

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 interface JwtAuthMiddlewareDependencies {
-    logger: ReturnType<typeof import('../config/logger').default>;
+    logger: ReturnType<typeof import('../utils/logger').default>;
     featureFlags: ReturnType<typeof import('../utils/featureFlags').getFeatureFlags>;
     verifyJwToken: (token: string) => Promise<string | object | null>;
 }

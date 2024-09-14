@@ -1,5 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import { Logger } from './logger';
+import { Logger } from '../utils/logger';
 export interface MailerSecrets {
     readonly EMAIL_HOST: string;
     readonly EMAIL_PORT: number;

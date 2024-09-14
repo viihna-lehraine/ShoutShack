@@ -1,15 +1,15 @@
 import {
 	CreationOptional,
+	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
 	Model,
-	DataTypes,
 	Sequelize
 } from 'sequelize';
-import { Logger } from '../config/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { User } from './UserModelFile';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-import { User } from './User';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface RecoveryMethodAttributes {
 	id: string; // UUID for recovery method, primary key (from User model)

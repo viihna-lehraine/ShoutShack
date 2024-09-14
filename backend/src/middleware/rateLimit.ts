@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
-import { Logger } from '../config/logger';
-import { AppError, errorClasses } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
+import { AppError, errorClasses } from '../errors/errorClasses';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 const { RateLimitError } = errorClasses;
 

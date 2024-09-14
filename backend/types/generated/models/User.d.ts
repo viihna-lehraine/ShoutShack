@@ -1,6 +1,6 @@
 import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 import { RateLimitMiddlewareDependencies } from '../middleware/rateLimit';
 import { SecretsMap } from '../utils/sops';
 interface UserAttributes {

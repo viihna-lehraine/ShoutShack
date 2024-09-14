@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { Logger } from '../config/logger';
-import { UserMfa } from '../models/UserMfa';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
+import { UserMfa } from '../models/UserMfaModelFile';
 import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 interface BackupCode {
 	code: string;

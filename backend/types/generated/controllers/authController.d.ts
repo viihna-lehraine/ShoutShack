@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
-import { Logger } from '../config/logger';
-import createJwtUtil from '../auth/jwtUtil';
-import createUserModel from '../models/User';
 import argon2 from 'argon2';
+import { Request, Response } from 'express';
+import createJwtUtil from '../auth/jwtUtil';
+import { Logger } from '../utils/logger';
+import createUserModel from '../models/UserModelFile';
 interface AuthDependencies {
     logger: Logger;
     UserModel: ReturnType<typeof createUserModel>;

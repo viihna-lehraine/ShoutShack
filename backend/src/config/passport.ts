@@ -1,15 +1,15 @@
 import { PassportStatic } from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
 import {
-	Strategy as JwtStrategy,
 	ExtractJwt,
+	Strategy as JwtStrategy,
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { Strategy as LocalStrategy } from 'passport-local';
-import { Logger } from './logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/logger';
 import { processError } from '../utils/processError';
-import createUserModel from '../models/User';
+import createUserModel from '../models/UserModelFile';
+import { validateDependencies } from '../utils/validateDependencies';
 
 export interface UserInstance {
 	id: string;

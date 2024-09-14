@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Logger } from '../config/logger';
+import { Logger } from '../utils/logger';
 interface ValidationRouteDependencies {
     logger: Logger;
     validator: typeof import('validator');

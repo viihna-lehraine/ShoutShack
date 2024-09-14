@@ -1,17 +1,16 @@
 import { Sequelize } from 'sequelize';
-import { AppError } from '../config/errorClasses';
-import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
 import { loadModels, Models } from './loadModels';
 import { environmentVariables } from '../config/environmentConfig';
-import { Logger, setupLogger } from '../config/logger';
+import { AppError } from '../errors/errorClasses';
+import { Logger, setupLogger } from '../utils/logger';
+import { processError } from '../utils/processError';
+import { validateDependencies } from '../utils/validateDependencies';
 
 const logger: Logger = setupLogger({
 	logLevel: environmentVariables.nodeEnv === 'production' ? 'info' : 'debug'
 });
 
 let models: Models | null = null;
-
 let sequelize: Sequelize;
 
 export async function initializeModels(

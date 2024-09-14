@@ -2,21 +2,21 @@ import { execSync } from 'child_process';
 import { constants as cryptoConstants } from 'crypto';
 import { Application } from 'express';
 import http from 'http';
+import gracefulShutdown from 'http-graceful-shutdown';
+import net from 'net';
 import https from 'https';
 import path from 'path';
-import gracefulShutdown from 'http-graceful-shutdown';
+import { RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
 import { SecureContextOptions } from 'tls';
-import { validateDependencies } from './utils/validateDependencies';
+import { Logger } from './utils/logger';
+import { environmentVariables, FeatureFlags } from './config/environmentConfig';
+import { getRedisClient } from './config/redis';
 import { processError } from './utils/processError';
 import SopsDependencies from './utils/sops';
-import { environmentVariables, FeatureFlags } from './config/environmentConfig';
-import { Logger } from './config/logger';
-import { RedisClientType } from 'redis';
-import net from 'net';
-import { getRedisClient } from './config/redis';
+import { validateDependencies } from './utils/validateDependencies';
 
-interface SetupHttpServerParams {
+interface SetUpHttpServerParams {
 	app: Application;
 	sops: typeof SopsDependencies;
 	fs: typeof import('fs').promises;
@@ -27,7 +27,7 @@ interface SetupHttpServerParams {
 	getSequelizeInstance: () => Sequelize;
 }
 
-interface SetupHttpServerReturn {
+interface SetUpHttpServerReturn {
 	startServer: () => Promise<void>;
 }
 
@@ -145,7 +145,7 @@ async function flushInMemoryCache(
 	}
 }
 
-export async function setupHttpServer({
+export async function setUpHttpServer({
 	app,
 	sops,
 	fs: fsPromises,
@@ -154,7 +154,7 @@ export async function setupHttpServer({
 	featureFlags,
 	getRedisClient,
 	getSequelizeInstance
-}: SetupHttpServerParams): Promise<SetupHttpServerReturn | undefined> {
+}: SetUpHttpServerParams): Promise<SetUpHttpServerReturn | undefined> {
 	try {
 		logger.info('Setting up the HTTP/HTTPS server');
 

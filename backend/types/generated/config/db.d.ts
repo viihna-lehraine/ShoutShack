@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { FeatureFlags } from './environmentConfig';
-import { Logger } from './logger';
+import { Logger } from '../utils/logger';
 export interface DBSecrets {
     DB_NAME: string;
     DB_USER: string;

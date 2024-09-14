@@ -1,14 +1,14 @@
-import { Router } from 'express';
 import argon2 from 'argon2';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import bcrypt from 'bcrypt';
+import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import { Logger } from '../config/logger';
 import createTOTPUtil from '../auth/totpUtil';
-import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
+import { Logger } from '../utils/logger';
 import { getTransporter } from '../config/mailer';
+import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
 export interface UserSecrets {
     JWT_SECRET: string;
     PEPPER: string;
