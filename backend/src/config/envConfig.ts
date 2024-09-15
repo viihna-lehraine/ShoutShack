@@ -1,8 +1,10 @@
 import { config } from 'dotenv';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +36,7 @@ interface EnvironmentVariableTypes {
 	featureEnableErrorHandler: boolean;
 	featureEnableIpBlacklist: boolean;
 	featureEnableJwtAuth: boolean;
+	featureEnableLogStash: boolean;
 	featureEnableRateLimit: boolean;
 	featureEnableRedis: boolean;
 	featureEnableSession: boolean;
@@ -44,7 +47,12 @@ interface EnvironmentVariableTypes {
 	frontendSecretsPath: string;
 	loggerLevel: string;
 	logLevel: 'debug' | 'info' | 'warn' | 'error';
+	logStashHost: string;
+	logStashNode: string;
+	logStashPort: number;
 	nodeEnv: 'development' | 'testing' | 'production';
+	redisUrl: string;
+	secretsFilePath: string;
 	serverDataFilePath1: string;
 	serverDataFilePath2: string;
 	serverDataFilePath3: string;
@@ -59,7 +67,7 @@ interface EnvironmentVariableTypes {
 	yubicoApiUrl: string;
 }
 
-export const environmentVariables: EnvironmentVariableTypes = {
+export const envVariables: EnvironmentVariableTypes = {
 	backendLogExportPath: process.env.BACKEND_LOG_EXPORT_PATH || '',
 	emailUser: process.env.EMAIL_USER || '',
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
@@ -68,6 +76,7 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	featureEnableErrorHandler: process.env.FEATURE_ENABLE_ERROR_HANDLER === 'true',
 	featureEnableIpBlacklist: process.env.FEATURE_ENABLE_IP_BLACKLIST === 'true',
 	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
+	featureEnableLogStash: process.env.FEATURE_ENABLE_LOGSTASH === 'true',
 	featureEnableRateLimit: process.env.FEATURE_ENABLE_RATE_LIMIT === 'true',
 	featureEnableRedis: process.env.FEATURE_ENABLE_REDIS === 'true',
 	featureEnableSession: process.env.FEATURE_ENABLE_SESSION === 'true',
@@ -78,7 +87,12 @@ export const environmentVariables: EnvironmentVariableTypes = {
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH || '',
 	loggerLevel: process.env.LOGGER || '1',
 	logLevel: process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
+	logStashHost: process.env.LOGSTASH_HOST || 'localhost',
+	logStashNode: process.env.LOGSTASH_NODE || 'guestbook-logstash-node',
+	logStashPort: parseInt(process.env.LOGSTASH_PORT || '5000', 10),
 	nodeEnv: process.env.NODE_ENV as 'development' | 'testing' | 'production',
+	redisUrl: process.env.REDIS_URL || '',
+	secretsFilePath: process.env.SECRETS_FILE_PATH || '',
 	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1 || '',
 	serverDataFilePath2: process.env.SERVER_DATA_FILE_PATH_2 || '',
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3 || '',
@@ -101,6 +115,7 @@ export const FeatureFlagNames = {
 	ENABLE_ERROR_HANDLER: 'FEATURE_ENABLE_ERROR_HANDLER',
 	ENABLE_IP_BLACKLIST: 'FEATURE_ENABLE_IP_BLACKLIST',
 	ENABLE_JWT_AUTH: 'FEATURE_ENABLE_JWT_AUTH',
+	ENABLE_LOG_STASH: 'FEATURE_ENABLE_LOG_STASH',
 	ENABLE_RATE_LIMIT: 'FEATURE_ENABLE_RATE_LIMIT',
 	ENABLE_REDIS: 'FEATURE_ENABLE_REDIS',
 	ENABLE_SSL: 'FEATURE_ENABLE_SSL',
@@ -121,6 +136,7 @@ export interface FeatureFlags {
 	enableErrorHandlerFlag: boolean;
 	enableIpBlacklistFlag: boolean;
 	enableJwtAuthFlag: boolean;
+	enableLogStashFlag: boolean;
 	enableRateLimitFlag: boolean;
 	enableRedisFlag: boolean;
 	enableSslFlag: boolean;
@@ -150,9 +166,15 @@ export function parseBoolean(
 			return value.toLowerCase() === 'true';
 		}
 		return value === true;
-	} catch (error) {
-		processError(error, logger || console);
-		return false;
+	} catch (utilError) {
+		const utility: string = 'parseBoolean()';
+		const utilityError = new errorClasses.UtilityErrorFatal(
+			utility,
+			{ exposeToClient: false, value, logger }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
+		throw utilityError;
 	}
 }
 
@@ -182,6 +204,7 @@ export function getFeatureFlags(
 				logger
 			),
 			enableJwtAuthFlag: parseBoolean(env.FEATURE_ENABLE_JWT_AUTH, logger),
+			enableLogStashFlag: parseBoolean(env.FEATURE_ENABLE_LOGSTASH, logger),
 			enableRateLimitFlag: parseBoolean(
 				env.FEATURE_ENABLE_RATE_LIMIT,
 				logger
@@ -195,9 +218,14 @@ export function getFeatureFlags(
 				logger
 			)
 		}
-	} catch (error) {
-		processError(error, logger || console);
-		logger.error(`Returning 'false' for all feature flags`);
+	} catch (utilError) {
+		const utility: string = 'getFeatureFlags()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			utility,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
 		return {
 			apiRoutesCsrfFlag: false,
 			dbSyncFlag: false,
@@ -205,6 +233,7 @@ export function getFeatureFlags(
 			enableErrorHandlerFlag: false,
 			enableIpBlacklistFlag: false,
 			enableJwtAuthFlag: false,
+			enableLogStashFlag: false,
 			enableRateLimitFlag: false,
 			enableRedisFlag: false,
 			enableSslFlag: false,
@@ -261,8 +290,14 @@ export function createFeatureEnabler(logger: Logger) {
     	        }
     	    },
     	};
-	} catch (error) {
-		processError(error, logger || console);
+	} catch (utilError) {
+		const utility: string = 'createFeatureEnabler()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			utility,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger || console);
 		return {
 			enableFeatureBasedOnFlag: () => {},
 			enableFeatureWithProdOverride: () => {}

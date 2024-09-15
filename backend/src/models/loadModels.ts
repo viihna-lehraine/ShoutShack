@@ -14,8 +14,8 @@ import createSupportRequestModel from './SupportRequestModelFile';
 import createUserMfaModel from './UserMfaModelFile';
 import createUserModel from './UserModelFile';
 import createUserSessionModel from './UserSession';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface Models {

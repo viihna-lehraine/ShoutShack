@@ -1,6 +1,8 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface MailerSecrets {
@@ -17,7 +19,6 @@ export interface MailerDependencies {
 	readonly logger: Logger;
 }
 
-// Create a transporter instance
 async function createTransporter({
 	nodemailer,
 	getSecrets,
@@ -46,9 +47,15 @@ async function createTransporter({
 				pass: secrets.SMTP_TOKEN
 			}
 		});
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (depError) {
+		const dependency: string = 'createTransporter()';
+		const dependencyError = new errorClasses.DependencyErrorRecoverable(
+			dependency,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(dependencyError, logger);
+		processError(dependencyError, logger || console);
+		throw dependencyError;
 	}
 }
 
@@ -70,8 +77,13 @@ export async function getTransporter(deps: MailerDependencies): Promise<Transpor
 			transporter = await createTransporter(deps);
 		}
 		return transporter;
-	} catch (error) {
-		processError(error, deps.logger || console);
-		throw error;
+	} catch (depError) {
+		const dependency: string = 'getTransporter()';
+		const dependencyError = new errorClasses.DependencyErrorRecoverable(
+			dependency,
+			{ exposeToClient: false }
+		);
+		processError(dependencyError, deps.logger || console);
+		throw dependencyError;
 	}
 }

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
-import { environmentVariables, FeatureFlags } from '../config/environmentConfig';
+import { environmentVariables, FeatureFlags } from '../config/envConfig';
 import { Logger } from '../utils/logger';
 interface IpBlacklistDependencies {
     logger: Logger;

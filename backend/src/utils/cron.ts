@@ -3,9 +3,13 @@ import compressing from 'compressing';
 import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
-import { Logger } from './logger';
-import { processError } from '../utils/processError';
+import { logger, Logger } from './logger';
+import { getSequelizeInstance } from '../config/db';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/validateDependencies';
+
+const sequelize = getSequelizeInstance({ logger });
 
 interface CronDependencies {
 	logger: Logger;
@@ -173,6 +177,16 @@ export function createCronJobs({
 			}
 		};
 
+		const cleanupLogs = async (): Promise<void> => {
+			try {
+				await ErrorLogger.cleanupOldLogs(sequelize, logger, 30);
+				logger.info('Scheduled log cleanup completed successfully');
+			} catch (error) {
+				processError(error, logger);
+				logger.error('Scheduld log cleanup failed');
+			}
+		};
+
 		const performNpmTasks = async (): Promise<void> => {
 			const npmLogDir = path.join(
 				__dirname,
@@ -237,6 +251,10 @@ export function createCronJobs({
 					exportLogs().catch(error => processError(error, logger));
 				});
 			}
+
+			cron.schedule('0 0 * * *', () => {
+				cleanupLogs().catch(error => processError(error, logger));
+			});
 
 			cron.schedule('0 * * * *', () => {
 				performNpmTasks().catch(error => processError(error, logger));

@@ -1,11 +1,13 @@
 import argon2 from 'argon2';
 import { execSync } from 'child_process';
 import { Request, Response } from 'express';
-import createJwtUtil from '../auth/jwtUtil';
-import { Logger } from '../utils/logger';
+import { createJwtUtil } from '../auth/jwtUtil';
+import sops from '../config/sops';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError, sendClientErrorResponse } from '../errors/processError';
 import createUserModel from '../models/UserModelFile';
-import sops from '../utils/sops';
-import { processError } from '../utils/processError';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface AuthDependencies {
@@ -28,29 +30,32 @@ export function login({
 					{ name: 'logger', instance: logger },
 					{ name: 'UserModel', instance: UserModel },
 					{ name: 'jwtUtil', instance: jwtUtil },
-					{ name: 'argon2', instance: argon2 }
+					{ name: 'argon2', instance: argon2 },
+					{ name: 'secrets', instance: sops }
 				],
 				logger || console
 			);
 			const { username, password } = req.body;
 
-			// find user by username
 			const user = await UserModel.findOne({ where: { username } });
 			if (!user) {
-				logger.warn(
+				logger.debug(
 					`Login attempt failed - user not found: ${username}`
 				);
-				return res.status(401).json({ msg: 'Invalid credentials' });
+				const clientError = new errorClasses.ClientAuthenticationError(
+					'Login attempt failed - please try again',
+					{ exposeToClient: true }
+				);
+				sendClientErrorResponse(clientError, res);
+				return;
 			}
 
-			// fetch secrets
 			const secrets = await sops.getSecrets({
 				logger,
 				execSync,
 				getDirectoryPath: () => process.cwd()
 			});
 
-			// validate password using argon2 and secrets
 			const isPasswordValid = await user.comparePassword(
 				password,
 				argon2,
@@ -58,19 +63,27 @@ export function login({
 				logger
 			);
 			if (!isPasswordValid) {
-				logger.warn(
+				logger.debug(
 					`Login attempt failed - invalid password for user: ${username}`
 				);
-				return res.status(401).json({ msg: 'Invalid credentials' });
+				const clientError = new errorClasses.ClientAuthenticationError(
+					'Login attempt failed - please try again',
+					{ exposeToClient: true }
+				);
+				sendClientErrorResponse(clientError, res);
 			}
 
-			// generate JWT token and use it to respond
 			const token = await jwtUtil.generateJwt(user);
 			logger.info(`User logged in successfully: ${username}`);
 			return res.json({ token });
-		} catch (err) {
-			processError(err, logger || console);
-			throw err;
+		} catch (depError) {
+			const dependency: string = 'authController - login()';
+			const dependencyError = new errorClasses.DependencyErrorRecoverable(
+				`Dependency error: ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
+				{ exposeToClient: false }
+			);
+			ErrorLogger.logError(dependencyError, logger);
+			processError(dependencyError, logger || console);
 		}
 	};
 }

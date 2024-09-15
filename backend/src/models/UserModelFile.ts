@@ -10,14 +10,14 @@ import {
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { errorClasses } from '../errors/errorClasses';
+import { processError } from '../errors/processError';
 import { hashPassword } from '../config/hashConfig';
-import { Logger } from '../utils/logger';
+import sops, { SecretsMap } from '../config/sops';
 import {
 	initializeRateLimitMiddleware,
 	RateLimitMiddlewareDependencies
 } from '../middleware/rateLimit';
-import { processError } from '../utils/processError';
-import sops, { SecretsMap } from '../utils/sops';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface UserAttributes {

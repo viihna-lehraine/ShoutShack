@@ -6,9 +6,11 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import createUserModel from '../models/UserModelFile';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface UserInstance {
@@ -80,9 +82,15 @@ export default async function configurePassport({
 						logger.warn('JWT authentication failed: User not found');
 						return done(null, false, { message: 'User not found' });
 					}
-				} catch (err) {
-					processError(err, logger || console);
-					return done(new Error(err instanceof Error ? err.message : String(err)), false);
+				} catch (depError) {
+					const dependency: string = 'passportJwtStrategy()';
+					const dependencyError = new errorClasses.DependencyErrorRecoverable(
+						dependency,
+						{ exposeToClient: false }
+					);
+					ErrorLogger.logError(dependencyError, logger);
+					processError(dependencyError, logger || console);
+					return done(new Error(dependencyError instanceof Error ? dependencyError.message : String(dependencyError)), false);
 				}
 			})
 		);
@@ -116,15 +124,27 @@ export default async function configurePassport({
 						return done(null, false, { message: 'Incorrect password' });
 					}
 				} catch (err) {
-					processError(err, logger || console);
+					const dependency: string = 'passportLocalStrategy()';
+					const dependencyError = new errorClasses.DependencyErrorRecoverable(
+						dependency,
+						{ exposeToClient: false }
+					);
+					ErrorLogger.logError(dependencyError, logger);
+					processError(dependencyError, logger || console);
 					return done(new Error(err instanceof Error ? err.message : String(err)));
 				}
 			})
 		);
 
 		logger.info('Passport configured successfully');
-	} catch (error) {
-		processError(error, logger || console);
-		throw new Error(error instanceof Error ? error.message : String(error));
+	} catch (depError) {
+		const dependency: string = 'configurePassport()';
+		const dependencyError = new errorClasses.DependencyErrorFatal(
+			dependency,
+			{ exposeToClient: false }
+		);
+		processError(dependencyError, logger || console);
+		ErrorLogger.logError(dependencyError, logger);
+		throw new Error(dependencyError instanceof Error ? dependencyError.message : String(dependencyError));
 	}
 }

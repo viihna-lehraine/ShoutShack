@@ -3,8 +3,8 @@ import { Application } from 'express';
 import { RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
 import { Logger } from './utils/logger';
-import { FeatureFlags } from './config/environmentConfig';
-import SopsDependencies from './utils/sops';
+import { FeatureFlags } from './config/envConfig';
+import SopsDependencies from './config/sops';
 interface SetupHttpServerParams {
     app: Application;
     sops: typeof SopsDependencies;

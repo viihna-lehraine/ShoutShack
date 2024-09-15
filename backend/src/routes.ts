@@ -9,16 +9,16 @@ import speakeasy from 'speakeasy';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
 import totpUtil from './auth/totpUtil';
-import { environmentVariables, FeatureFlags } from './config/environmentConfig';
-import { Logger } from './utils/logger';
+import { envVariables, FeatureFlags } from './config/envConfig';
 import { getTransporter } from './config/mailer';
+import sops from './config/sops';
+import { processError } from './errors/processError';
 import { initializeStaticRoutes } from './routes/staticRoutes';
 import { initializeTestRoutes } from './routes/testRoutes';
 import initializeUserRoutes, { UserRoutesModel } from './routes/userRoutes';
 import initializeValidationRoutes from './routes/validationRoutes';
 import generateConfirmationEmailTemplate from './templates/confirmationEmailTemplate';
-import { processError } from './utils/processError';
-import sops from './utils/sops';
+import { Logger } from './utils/logger';
 import { validateDependencies } from './utils/validateDependencies';
 
 interface RouteDependencies {
@@ -29,7 +29,6 @@ interface RouteDependencies {
 }
 
 let UserRoutes: UserRoutesModel;
-
 let validator: typeof import('validator');
 
 export async function initializeRoutes({
@@ -65,14 +64,14 @@ export async function initializeRoutes({
 
 		if (
 			featureFlags.loadTestRoutesFlag &&
-			environmentVariables.nodeEnv !== 'production'
+			envVariables.nodeEnv !== 'production'
 		) {
 			logger.info('Test routes enabled. Initializing test routes.');
 			const testRoutes: Router = initializeTestRoutes({
 				app,
 				logger,
 				featureFlags,
-				environmentVariables
+				envVariables
 			});
 			app.use('/test', testRoutes);
 		} else {

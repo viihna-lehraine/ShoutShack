@@ -1,14 +1,13 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import helmet, { HelmetOptions } from 'helmet';
-import { environmentVariables } from '../config/environmentConfig';
-import { setupLogger } from '../utils/logger';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
+import { processError } from '../errors/processError';
+import { logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;
@@ -16,11 +15,6 @@ interface SecurityHeadersDependencies {
 		[key: string]: string[];
 	};
 }
-
-const logger = setupLogger({
-	serviceName: 'security-headers',
-	isProduction: environmentVariables.nodeEnv === 'production'
-});
 
 export function initializeSecurityHeaders(
 	app: Application,

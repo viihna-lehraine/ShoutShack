@@ -6,6 +6,23 @@ import {
 	createRetryMessage,
 	defaultRetryAfter
 } from './errorClasses';
+import { ERROR_CODES } from './errorCodes';
+
+export class AppAuthenticationError extends AppError {
+	constructor(
+		errorMessage: string = 'Server-side authentication error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			401,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.APP_AUTH_ERROR,
+			details
+		);
+		this.name = 'AppAuthenticationError';
+	}
+}
 
 export class ConfigurationError extends AppError {
 	constructor(
@@ -16,7 +33,7 @@ export class ConfigurationError extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.RECOVERABLE,
-			'CONFIG_ERROR',
+			ERROR_CODES.CONFIG_ERROR,
 			details
 		);
 		this.name = 'ConfigurationError';
@@ -32,7 +49,7 @@ export class ConfigurationErrorFatal extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'CONFIG_ERROR_FATAL',
+			ERROR_CODES.CONFIG_ERROR_FATAL,
 			details
 		);
 		this.name = 'ConfigurationErrorFatal';
@@ -50,7 +67,7 @@ export class ConcurrencyError extends AppError {
 			errorMessage,
 			409,
 			ErrorSeverity.RECOVERABLE,
-			'CONCURRENCY_ERROR',
+			ERROR_CODES.CONCURRENCY_ERROR,
 			customDetails
 		);
 		this.name = 'ConcurrencyError';
@@ -69,7 +86,7 @@ export class ConflictError extends AppError {
 			errorMessage,
 			409,
 			ErrorSeverity.RECOVERABLE,
-			'CONFLICT_ERROR',
+			ERROR_CODES.CONFLICT_ERROR,
 			customDetails
 		);
 		this.name = 'ConflictError';
@@ -85,7 +102,7 @@ export class DatabaseErrorFatal extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'DATABASE_ERROR_FATAL',
+			ERROR_CODES.DB_ERROR_FATAL,
 			details
 		);
 		this.name = 'DatabaseError';
@@ -101,14 +118,14 @@ export class DataIntegrityError extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'DATA_INTEGRITY_ERROR',
+			ERROR_CODES.DATA_INTEGRITY_ERROR,
 			details
 		);
 		this.name = 'DataIntegrityError';
 	}
 }
 
-export class DependencyError extends AppError {
+export class DependencyErrorFatal extends AppError {
 	constructor(
 		errorMessage: string = 'Internal server error',
 		details: ErrorDetails = {},
@@ -122,10 +139,48 @@ export class DependencyError extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'DEPENDENCY_ERROR',
+			ERROR_CODES.DEPENDENCY_ERROR_FATAL,
 			customDetails
 		);
 		this.name = 'DependencyError';
+	}
+}
+
+export class DependencyErrorRecoverable extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {},
+		dependencyName?: string
+	) {
+		const customDetails = dependencyName
+			? { dependencyName, ...details }
+			: details;
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.DEPENDENCY_ERROR_RECOVERABLE,
+			customDetails
+		);
+	}
+}
+
+export class ExpressError extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE ||
+				ErrorSeverity.WARNING ||
+				ErrorSeverity.FATAL,
+			ERROR_CODES.EXPRESS_ERROR,
+			details
+		);
+		this.name = 'ExpressError';
 	}
 }
 
@@ -138,7 +193,7 @@ export class ExternalServiceErrorFatal extends AppError {
 			errorMessage,
 			503,
 			ErrorSeverity.FATAL,
-			'EXTERNAL_SERVICE_ERROR_FATAL',
+			ERROR_CODES.EXTERNAL_SERVICE_ERROR_FATAL,
 			details
 		);
 		this.name = 'ExternalServiceErrorFatal';
@@ -157,7 +212,7 @@ export class FallbackSuccessInfo extends AppError {
 			errorMessage,
 			200,
 			ErrorSeverity.INFO,
-			'FALLBACK_SUCCESS',
+			ERROR_CODES.FALLBACK_SUCCESS,
 			customDetails
 		);
 		this.name = 'FallbackSuccessInfo';
@@ -188,7 +243,7 @@ export class InsufficientStorageError extends AppError {
 			errorMessage,
 			507,
 			ErrorSeverity.FATAL,
-			'INSUFFICIENT_STORAGE',
+			ERROR_CODES.INSUFFICIENT_STORAGE,
 			errorDetails
 		);
 		this.name = 'InsufficientStorageError';
@@ -207,10 +262,29 @@ export class InvalidConfigurationError extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'INVALID_CONFIGURATION',
+			ERROR_CODES.INVALID_CONFIG,
 			customDetails
 		);
 		this.name = 'InvalidConfigurationError';
+	}
+}
+
+export class MissingResourceError extends AppError {
+	constructor(resource?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = resource
+			? `${resource} not found`
+			: 'Resource not found';
+
+		const customDetails = resource ? { resource, ...details } : details;
+
+		super(
+			errorMessage,
+			404,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.MISSING_RESOURCE,
+			customDetails
+		);
+		this.name = 'MissingResourceError';
 	}
 }
 
@@ -227,7 +301,7 @@ export class PartialServiceFailureWarning extends AppError {
 			errorMessage,
 			503,
 			ErrorSeverity.WARNING,
-			'PARTIAL_SERVICE_FAILURE',
+			ERROR_CODES.PARTIAL_SERVICE_FAILURE,
 			customDetails
 		);
 		this.name = 'PartialServiceFailureWarning';
@@ -258,7 +332,7 @@ export class QuotaExceededErrorFatal extends AppError {
 			errorMessage,
 			500,
 			ErrorSeverity.FATAL,
-			'QUOTA_EXCEEDED_FATAL',
+			ERROR_CODES.QUOTA_EXCEEDED_FATAL,
 			errorDetails
 		);
 		this.name = 'QuotaExceededError';
@@ -280,7 +354,7 @@ export class RateLimitErrorFatal extends AppError {
 			errorMessage,
 			429,
 			ErrorSeverity.FATAL,
-			'RATE_LIMIT_EXCEEDED_FATAL',
+			ERROR_CODES.RATE_LIMIT_EXCEEDED_FATAL,
 			customDetails
 		);
 		this.name = 'RateLimitErrorFatal';
@@ -299,7 +373,7 @@ export class ServiceDegradedError extends AppError {
 			errorMessage,
 			200,
 			ErrorSeverity.WARNING,
-			'SERVICE_DEGRADED',
+			ERROR_CODES.SERVICE_DEGRADED,
 			customDetails
 		);
 		this.name = 'ServiceDegradedError';
@@ -318,28 +392,28 @@ export class ServiceDegradedErrorMinor extends AppError {
 			errorMessage,
 			200,
 			ErrorSeverity.INFO,
-			'SERVICE_DEGRADED_MINOR',
+			ERROR_CODES.SERVICE_DEGRADED_MINOR,
 			customDetails
 		);
 		this.name = 'ServiceDegradedErrorMinor';
 	}
 }
 
-export class ServiceUnavailableErrorFatal extends AppError {
+export class ServiceUnavailableError extends AppError {
 	constructor(
 		retryAfter: number = defaultRetryAfter,
 		service?: string,
 		details: ErrorDetails = {}
 	) {
 		const message: string = service
-			? `${service} is currently unavailable (fatal exception)`
-			: 'Service is currently unavailable (fatal exception)';
+			? `${service} is currently unavailable`
+			: 'Service is currently unavailable';
 
 		const retryMessage: string = retryAfter
-			? `Please try again after ${retryAfter} seconds.`
-			: 'Please try again later';
+			? ` Please try again after ${retryAfter} seconds.`
+			: ' Please try again later.';
 
-		const errorMessage: string = `${message} ${retryMessage}`.trim();
+		const errorMessage = `${message} ${retryMessage}`.trim();
 
 		const errorDetails: ErrorDetails = {
 			...(retryAfter !== undefined ? { retryAfter } : {}),
@@ -350,8 +424,30 @@ export class ServiceUnavailableErrorFatal extends AppError {
 		super(
 			errorMessage,
 			503,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.SERVICE_UNAVAILABLE,
+			errorDetails
+		);
+		this.name = 'ServiceUnavailableError';
+	}
+}
+
+export class ServiceUnavailableErrorFatal extends AppError {
+	constructor(service?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = service
+			? `${service} is currently unavailable (fatal exception)`
+			: 'Service is currently unavailable (fatal exception)';
+
+		const errorDetails: ErrorDetails = {
+			...(service !== undefined ? { service } : {}),
+			...details
+		};
+
+		super(
+			errorMessage,
+			503,
 			ErrorSeverity.FATAL,
-			'SERVICE_UNAVAILABLE',
+			ERROR_CODES.SERVICE_UNAVAILABLE,
 			errorDetails
 		);
 		this.name = 'ServiceUnavailableErrorFatal';
@@ -383,7 +479,7 @@ export class SlowApiWarning extends AppError {
 			errorMessage,
 			200,
 			ErrorSeverity.WARNING,
-			'SLOW_API_WARNING',
+			ERROR_CODES.SLOW_API_WARNING,
 			errorDetails
 		);
 		this.name = 'SlowApiWarning';
@@ -402,10 +498,44 @@ export class UserActionInfo extends AppError {
 			errorMessage,
 			200,
 			ErrorSeverity.INFO,
-			'USER_ACTION_LOGGED',
+			ERROR_CODES.USER_ACTION_INFO,
 			customDetails
 		);
 		this.name = 'UserActionInfo';
+	}
+}
+
+export class UtilityErrorFatal extends AppError {
+	constructor(utility?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = `Fatal error occured when calling ${utility}`;
+
+		const customDetails = utility ? { utility, ...details } : details;
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			ERROR_CODES.UTILITY_ERROR_FATAL,
+			customDetails
+		);
+		this.name = 'UtilityErrorFatal';
+	}
+}
+
+export class UtilityErrorRecoverable extends AppError {
+	constructor(utility?: string, details: ErrorDetails = {}) {
+		const errorMessage: string = `Utility occurred in ${utility}`;
+
+		const customDetails = utility ? { utility, ...details } : details;
+
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.UTILITY_ERROR_RECOVERABLE,
+			customDetails
+		);
+		this.name = 'UtilityErrorRecoverable';
 	}
 }
 
@@ -423,7 +553,7 @@ export class ValidationError extends AppError {
 			errorMessage,
 			400,
 			ErrorSeverity.WARNING,
-			'VALIDATION_ERROR',
+			ERROR_CODES.VALIDATION_ERROR,
 			customDetails
 		);
 		this.name = 'ValidationError';
@@ -431,22 +561,29 @@ export class ValidationError extends AppError {
 }
 
 export const appErrorClasses = {
+	AppAuthenticationError,
 	ConfigurationError,
 	ConfigurationErrorFatal,
 	ConcurrencyError,
 	ConflictError,
 	DatabaseErrorFatal,
 	DataIntegrityError,
-	DependencyError,
+	DependencyErrorFatal,
+	DependencyErrorRecoverable,
+	ExpressError,
 	ExternalServiceErrorFatal,
 	InsufficientStorageError,
+	MissingResourceError,
 	PartialServiceFailureWarning,
 	QuotaExceededErrorFatal,
 	RateLimitErrorFatal,
 	ServiceDegradedError,
 	ServiceDegradedErrorMinor,
+	ServiceUnavailableError,
 	ServiceUnavailableErrorFatal,
 	SlowApiWarning,
 	UserActionInfo,
+	UtilityErrorFatal,
+	UtilityErrorRecoverable,
 	ValidationError
 };

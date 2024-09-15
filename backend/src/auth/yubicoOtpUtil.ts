@@ -1,10 +1,13 @@
 import { execSync } from 'child_process';
 import yub from 'yub';
-import '../../types/custom/yub.js';
+import getSecrets, { SecretsMap } from '../config/sops';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger.js';
-import { processError } from '../utils/processError';
-import getSecrets, { SecretsMap } from '../utils/sops.js';
 import { validateDependencies } from '../utils/validateDependencies';
+
+import '../../types/custom/yub';
 
 interface YubClient {
 	verify(
@@ -60,61 +63,84 @@ export default function createYubicoOtpUtil({
 	async function initializeYubicoOtpUtil(): Promise<void> {
 		try {
 			logger.info('Initializing Yubico OTP Utility.');
-			secrets = await getSecrets({ logger, execSync, getDirectoryPath });
 
-			if (!secrets) {
-				throw new Error('Secrets could not be loaded');
-			}
+			const utility: string = 'initializeYubicoOtpUtil()';
+
+			secrets = await getSecrets({ logger, execSync, getDirectoryPath });
 
 			yubClient = yub.init(
 				secrets.YUBICO_CLIENT_ID.toString(),
 				secrets.YUBICO_SECRET_KEY
 			) as YubClient;
 
-			logger.info('Yubico OTP Utility initialized successfully.');
-		} catch (error) {
-			processError(error, logger);
-			throw new Error(
+			logger.info(`${utility} complete}`);
+		} catch (utilError) {
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
 				`Failed to initialize Yubico OTP Utility: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+					utilError instanceof Error ? utilError.message : utilError
+				}`,
+				{
+					exposeToClient: false
+				}
 			);
+			ErrorLogger.logError(utilityError, logger);
+			processError(utilityError, logger);
 		}
 	}
 
 	async function validateYubicoOTP(otp: string): Promise<boolean> {
 		try {
 			if (!yubClient) {
-				logger.warn('Yubico client not initialized, initializing now.');
 				await initializeYubicoOtpUtil();
 			}
 
 			return new Promise((resolve, reject) => {
 				yubClient!.verify(
 					otp,
-					(error: Error | null, data: YubResponse) => {
-						if (error) {
-							processError(error, logger);
-							return reject(error);
+					(utilError: Error | null, data: YubResponse) => {
+						if (utilError) {
+							const innerUtilError =
+								new errorClasses.UtilityErrorRecoverable(
+									`Failed to validate Yubico OTP: ${
+										utilError instanceof Error
+											? utilError.message
+											: String(utilError)
+									}`,
+									{
+										exposeToClient: false
+									}
+								);
+							ErrorLogger.logWarning(
+								innerUtilError.message,
+								logger
+							);
+							processError(innerUtilError, logger);
+							return reject(innerUtilError);
 						}
 
 						if (data && data.status === 'OK') {
-							logger.info('Yubico OTP validation successful.');
+							logger.debug('Yubico OTP validation successful.');
 							resolve(true);
 						} else {
-							logger.info('Yubico OTP validation failed.');
+							logger.debug('Yubico OTP validation failed.');
 							resolve(false);
 						}
 					}
 				);
 			});
-		} catch (error) {
-			processError(error, logger);
-			throw new Error(
-				`Failed to validate Yubico OTP: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+		} catch (utilError) {
+			const utility: string = 'validateYubicoOTP()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Failed to validate Yubico OTP in ${utility}: ${
+					utilError instanceof Error ? utilError.message : utilError
+				}`,
+				{
+					exposeToClient: false
+				}
 			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilityError, logger);
+			return false;
 		}
 	}
 
@@ -130,13 +156,23 @@ export default function createYubicoOtpUtil({
 				apiKey: secrets.YUBICO_SECRET_KEY as string,
 				apiUrl: secrets.YUBICO_API_URL as string
 			};
-		} catch (error) {
-			processError(error, logger);
-			throw new Error(
-				`Failed to generate Yubico OTP options: ${
-					error instanceof Error ? error.message : String(error)
-				}`
+		} catch (utiLError) {
+			const utility: string = 'generateYubicoOtpOptions()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Failed to generate Yubico OTP options in ${utility}: ${
+					utiLError instanceof Error ? utiLError.message : utiLError
+				} ; Returning object with placeholder values in lieu of complted YubicoOtpOptions object`,
+				{
+					exposeToClient: false
+				}
 			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilityError, logger);
+			return {
+				clientId: 0,
+				apiKey: '',
+				apiUrl: ''
+			};
 		}
 	}
 

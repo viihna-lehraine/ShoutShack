@@ -1,5 +1,6 @@
 import { appErrorClasses } from './appErrorClasses';
 import { clientErrorClasses } from './clientErrorClasses';
+import { ERROR_CODES } from './errorCodes';
 
 export interface ErrorDetails {
 	retryAfter?: number | undefined;
@@ -44,7 +45,7 @@ export class AppError extends RootError {
 		errorMessage: string,
 		statusCode: number = 500,
 		severity: ErrorSeverityType = ErrorSeverity.FATAL,
-		errorCode?: string = 'APP_ERROR',
+		errorCode: string = ERROR_CODES.APP_ERROR,
 		details: ErrorDetails = {}
 	) {
 		super(
@@ -63,7 +64,7 @@ export class ClientError extends RootError {
 		errorMessage: string,
 		statusCode: number = 400,
 		severity: ErrorSeverityType = ErrorSeverity.RECOVERABLE, // disallow use of ErrorSeverity.FATAL here
-		errorCode: string = 'CLIENT_ERROR',
+		errorCode: string = ERROR_CODES.CLIENT_ERROR,
 		details: ErrorDetails = {}
 	) {
 		super(

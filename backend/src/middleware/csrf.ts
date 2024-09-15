@@ -1,7 +1,10 @@
 import csrf from 'csrf';
 import { NextFunction, Request, Response } from 'express';
+import { FeatureFlags, getFeatureFlags } from '../config/envConfig';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface CsrfDependencies {
@@ -21,45 +24,48 @@ export function initializeCsrfMiddleware({
 		logger || console
 	);
 
+	const featureFlags: FeatureFlags = getFeatureFlags(logger);
+
 	return function csrfMiddleware(
 		req: Request,
 		res: Response,
 		next: NextFunction
 	): void {
 		try {
-			try {
-				logger.info('CSRF middleware enabled');
+			logger.info('CSRF middleware enabled');
 
-				const sessionID = req.sessionID || '';
-				const csrfToken = csrfProtection.create(sessionID);
-				res.locals.csrfToken = csrfToken;
+			const sessionID = req.sessionID || '';
+			const csrfToken = csrfProtection.create(sessionID);
+			res.locals.csrfToken = csrfToken;
 
-				if (req.method !== 'GET') {
-					const token =
-						req.body.csrfToken ||
-						(req.headers['x-xsrf-token'] as string);
-					if (!token) {
-						logger.warn('No CSRF token provided');
-						res.status(403).send('No CSRF token provided');
-						return;
-					}
-					if (!csrfProtection.verify(sessionID, token)) {
-						logger.warn(
-							`Invalid CSRF token for session ID: ${sessionID}`
-						);
-						res.status(403).send('Invalid CSRF token');
-						return;
-					}
-					logger.info('CSRF token validated successfully');
+			if (req.method !== 'GET') {
+				const token =
+					req.body.csrfToken ||
+					(req.headers['x-xsrf-token'] as string);
+				if (!token) {
+					logger.debug('No CSRF token provided');
+					res.status(403).send('No CSRF token provided');
+					return;
 				}
-				next();
-			} catch (err) {
-				processError(err, logger || console, req);
-				next(err);
+				if (!csrfProtection.verify(sessionID, token)) {
+					logger.debug(
+						`Invalid CSRF token for session ID: ${sessionID}`
+					);
+					res.status(403).send('Invalid CSRF token');
+					return;
+				}
+				logger.debug('CSRF token validated successfully');
 			}
-		} catch (error) {
-			processError(error, logger || console, req);
-			next(error);
+			next();
+		} catch (expressError) {
+			const middleware: string = 'CSRF Middleware';
+			const expressMiddlewareError = new errorClasses.ExpressError(
+				`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+				{ exposeToClient: false, ErrorSeverity.FATAL }
+			);
+			ErrorLogger.logError(expressMiddlewareError, logger);
+			expressErrorHandler({ logger, featureFlags });
+			next(expressError);
 		}
 	};
 }

@@ -1,9 +1,11 @@
 import { Request } from 'express';
 import multer, { FileFilterCallback, Multer } from 'multer';
 import path from 'path';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
-import { processError } from '../utils/processError';
 
 export interface MulterDependencies {
 	readonly multer: typeof multer;
@@ -73,10 +75,14 @@ export function createMulterUpload({
 			fileFilter: fileFilter,
 			limits: multerLimits
 		});
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (depError) {
+		const dependency: string = 'createMulterUpload()';
+		const dependencyError = new errorClasses.DependencyErrorRecoverable(
+			dependency,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(dependencyError, logger);
+		processError(dependencyError, logger || console);
+		throw dependencyError
 	}
 }
-
-export default createMulterUpload;

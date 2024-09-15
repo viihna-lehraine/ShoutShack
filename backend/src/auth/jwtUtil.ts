@@ -1,8 +1,10 @@
 import { execSync } from 'child_process';
 import jwt from 'jsonwebtoken';
 import { Logger } from 'winston';
-import { processError } from '../utils/processError';
-import sops from '../utils/sops';
+import sops from '../config/sops';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface Secrets {
@@ -42,21 +44,17 @@ export function createJwtUtil(logger: Logger): {
 			);
 
 			return secrets;
-		} catch (error) {
-			processError(error, logger);
-			throw new Error('Failed to load secrets');
-		}
-	};
-
-	const loadAndCacheSecrets = async (): Promise<void> => {
-		if (!secrets) {
-			logger.info('Secrets not found. Loading secrets...');
-			try {
-				secrets = await loadSecrets();
-			} catch (error) {
-				processError(error, logger);
-				throw new Error('Failed to load and cache secrets');
-			}
+		} catch (utilError) {
+			const utility: string = 'jwtUtil - loadSecrets()';
+			const utilityError = new errorClasses.UtilityErrorFatal(
+				`Failed to load secrets in ${utility}: ${utilError instanceof Error ? utilError.message : utilError} ; Shutting down...`,
+				{
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(utilityError, logger);
+			processError(utilityError, logger);
+			process.exit(1);
 		}
 	};
 
@@ -64,7 +62,9 @@ export function createJwtUtil(logger: Logger): {
 		try {
 			validateDependencies([{ name: 'user', instance: user }], logger);
 
-			await loadAndCacheSecrets();
+			if (!secrets) {
+				secrets = await loadSecrets();
+			}
 
 			if (!secrets.JWT_SECRET) {
 				logger.error('JWT_SECRET is not available.');
@@ -76,9 +76,17 @@ export function createJwtUtil(logger: Logger): {
 				secrets.JWT_SECRET,
 				{ expiresIn: '1h' }
 			);
-		} catch (error) {
-			processError(error, logger);
-			throw new Error('Failed to generate JWT token');
+		} catch (utilError) {
+			const utility: string = 'generateJwt()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Failed to generate JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
+				{
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilityError, logger);
+			return '';
 		}
 	};
 
@@ -88,7 +96,9 @@ export function createJwtUtil(logger: Logger): {
 		try {
 			validateDependencies([{ name: 'token', instance: token }], logger);
 
-			await loadAndCacheSecrets();
+			if (!secrets) {
+				secrets = await loadSecrets();
+			}
 
 			if (!secrets.JWT_SECRET) {
 				logger.error('JWT_SECRET is not available.');
@@ -96,18 +106,17 @@ export function createJwtUtil(logger: Logger): {
 			}
 
 			return jwt.verify(token, secrets.JWT_SECRET);
-		} catch (error) {
-			if (error instanceof jwt.JsonWebTokenError) {
-				logger.warn(`JWT verification error: ${error.message}`, {
-					name: error.name,
-					message: error.message,
-					stack: error.stack
-				});
-				return null;
-			} else {
-				processError(error, logger);
-				throw new Error('Failed to verify JWT token');
-			}
+		} catch (utilError) {
+			const utility: string = 'verifyJwt()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Failed to verify JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
+				{
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilityError, logger);
+			return null;
 		}
 	};
 
@@ -116,5 +125,3 @@ export function createJwtUtil(logger: Logger): {
 		verifyJwt
 	};
 }
-
-export default createJwtUtil;

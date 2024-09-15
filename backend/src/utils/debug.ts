@@ -1,6 +1,6 @@
 import debug, { Debugger } from 'debug';
 import { Logger } from './logger';
-import { processError } from '../utils/processError';
+import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface DebugUtilDependencies {

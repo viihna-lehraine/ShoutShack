@@ -6,8 +6,8 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface ErrorLogAttributes {
@@ -19,6 +19,7 @@ interface ErrorLogAttributes {
 	errorCode?: string | null;
 	details?: string | Record<string, unknown> | null;
 	timestamp: CreationOptional<Date>;
+	count: number;
 }
 
 class ErrorLog
@@ -33,6 +34,7 @@ class ErrorLog
 	public errorCode!: string | null;
 	public details!: string | Record<string, unknown> | null;
 	public timestamp!: CreationOptional<Date>;
+	public count!: number;
 }
 
 export function createErrorLogModel(
@@ -87,6 +89,11 @@ export function createErrorLogModel(
 					type: DataTypes.DATE,
 					allowNull: false,
 					defaultValue: DataTypes.NOW
+				},
+				count: {
+					type: DataTypes.INTEGER,
+					allowNull: false,
+					defaultValue: 0
 				}
 			},
 			{

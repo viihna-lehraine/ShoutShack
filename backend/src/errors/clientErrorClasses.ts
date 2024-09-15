@@ -7,22 +7,7 @@ import {
 	createRetryMessage,
 	defaultRetryAfter
 } from './errorClasses';
-
-export class AuthenticationError extends ClientError {
-	constructor(
-		errorMessage: string = 'Authentication failed',
-		details: ErrorDetails = {}
-	) {
-		super(
-			errorMessage,
-			401,
-			ErrorSeverity.RECOVERABLE,
-			'AUTH_ERROR',
-			details
-		);
-		this.name = 'AuthenticationError';
-	}
-}
+import { ERROR_CODES } from './errorCodes';
 
 export class AutoCorrectedInputWarning extends ClientError {
 	constructor(fieldName?: string, details: ErrorDetails = {}) {
@@ -36,10 +21,26 @@ export class AutoCorrectedInputWarning extends ClientError {
 			errorMessage,
 			200,
 			ErrorSeverity.WARNING,
-			'AUTOCORRECT_WARNING',
+			ERROR_CODES.AUTOCORRECT_INPUT_WARNING,
 			customDetails
 		);
 		this.name = 'AutoCorrectedInputWarning';
+	}
+}
+
+export class ClientAuthenticationError extends ClientError {
+	constructor(
+		errorMessage: string = 'Authentication failed',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			401,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.CLIENT_AUTH_ERROR,
+			details
+		);
+		this.name = 'AuthenticationError';
 	}
 }
 
@@ -52,7 +53,7 @@ export class DatabaseErrorRecoverable extends ClientError {
 			errorMessage,
 			503,
 			ErrorSeverity.RECOVERABLE,
-			'DATABASE_ERROR_RECOVERABLE',
+			ERROR_CODES.DB_ERROR_RECOVERABLE,
 			details
 		);
 		this.name = 'DatabaseErrorRecoverable';
@@ -71,7 +72,7 @@ export class DeprecatedApiWarning extends ClientError {
 			errorMessage,
 			200,
 			ErrorSeverity.WARNING,
-			'DEPRECATED_API_WARNING',
+			ERROR_CODES.DEPRECATED_API_WARNING,
 			customDetails
 		);
 		this.name = 'DeprecatedApiWarning';
@@ -87,7 +88,7 @@ export class ExternalServiceError extends ClientError {
 			errorMessage,
 			503,
 			ErrorSeverity.RECOVERABLE,
-			'EXTERNAL_SERVICE_ERROR',
+			ERROR_CODES.EXTERNAL_SERVICE_ERROR,
 			details
 		);
 		this.name = 'ExternalServiceError';
@@ -109,7 +110,7 @@ export class FileProcessingError extends ClientError {
 			errorMessage,
 			500,
 			ErrorSeverity.RECOVERABLE,
-			'FILE_PROCESSING_ERROR',
+			ERROR_CODES.FILE_PROCESSING_ERROR,
 			customDetails
 		);
 		this.name = 'FileProcessingError';
@@ -128,7 +129,7 @@ export class ForbiddenError extends ClientError {
 			errorMessage,
 			403,
 			ErrorSeverity.RECOVERABLE,
-			'FORBIDDEN',
+			ERROR_CODES.FORBIDDEN,
 			customDetails
 		);
 		this.name = 'ForbiddenError';
@@ -144,7 +145,7 @@ export class InvalidCredentialsError extends ClientError {
 			errorMessage,
 			401,
 			ErrorSeverity.RECOVERABLE,
-			'INVALID_CREDENTIALS',
+			ERROR_CODES.INVALID_CREDENTIALS,
 			details
 		);
 		this.name = 'InvalidCredentialsError';
@@ -163,7 +164,7 @@ export class InvalidInputError extends ClientError {
 			errorMessage,
 			400,
 			ErrorSeverity.WARNING,
-			'INVALID_INPUT',
+			ERROR_CODES.INVALID_INPUT,
 			customDetails
 		);
 		this.name = 'InvalidInputError';
@@ -182,29 +183,10 @@ export class InvalidTokenError extends ClientError {
 			errorMessage,
 			401,
 			ErrorSeverity.RECOVERABLE,
-			'INVALID_TOKEN',
+			ERROR_CODES.INVALID_TOKEN,
 			customDetails
 		);
 		this.name = 'InvalidTokenError';
-	}
-}
-
-export class MissingResourceError extends ClientError {
-	constructor(resource?: string, details: ErrorDetails = {}) {
-		const errorMessage: string = resource
-			? `${resource} not found`
-			: 'Resource not found';
-
-		const customDetails = resource ? { resource, ...details } : details;
-
-		super(
-			errorMessage,
-			404,
-			ErrorSeverity.RECOVERABLE,
-			'MISSING_RESOURCE',
-			customDetails
-		);
-		this.name = 'MissingResourceError';
 	}
 }
 
@@ -217,7 +199,7 @@ export class PasswordValidationError extends ClientError {
 			errorMessage,
 			400,
 			ErrorSeverity.WARNING,
-			'PASSWORD_VALIDATION_ERROR',
+			ERROR_CODES.PASSWORD_VALIDATION_ERROR,
 			details
 		);
 		this.name = 'PasswordValidationError';
@@ -236,7 +218,7 @@ export class PermissionDeniedError extends ClientError {
 			errorMessage,
 			403,
 			ErrorSeverity.RECOVERABLE,
-			'PERMISSION_DENIED',
+			ERROR_CODES.PERMISSION_DENIED,
 			customDetails
 		);
 		this.name = 'PermissionDeniedError';
@@ -267,7 +249,7 @@ export class QuotaExceededErrorRecoverable extends ClientError {
 			errorMessage,
 			429,
 			ErrorSeverity.RECOVERABLE,
-			'QUOTA_EXCEEDED',
+			ERROR_CODES.QUOTA_EXCEEDED,
 			errorDetails
 		);
 		this.name = 'QuotaExceededError';
@@ -298,7 +280,7 @@ export class QuotaExceededErrorWarning extends ClientError {
 			errorMessage,
 			429,
 			ErrorSeverity.WARNING,
-			'QUOTA_EXCEEDED_WARNING',
+			ERROR_CODES.QUOTA_EXCEEDED_WARNING,
 			errorDetails
 		);
 		this.name = 'QuotaExceededErrorWarning';
@@ -320,7 +302,7 @@ export class RateLimitErrorRecoverable extends ClientError {
 			errorMessage,
 			429,
 			ErrorSeverity.RECOVERABLE,
-			'RATE_LIMIT_EXCEEDED',
+			ERROR_CODES.RATE_LIMIT_EXCEEDED,
 			customDetails
 		);
 		this.name = 'RateLimitErrorRecoverable';
@@ -342,43 +324,10 @@ export class RateLimitErrorWarning extends ClientError {
 			errorMessage,
 			429,
 			ErrorSeverity.WARNING,
-			'RATE_LIMIT_EXCEEDED_WARNING',
+			ERROR_CODES.RATE_LIMIT_EXCEEDED_WARNING,
 			customDetails
 		);
 		this.name = 'RateLimitErrorWarning';
-	}
-}
-
-export class ServiceUnavailableError extends ClientError {
-	constructor(
-		retryAfter: number = defaultRetryAfter,
-		service?: string,
-		details: ErrorDetails = {}
-	) {
-		const message: string = service
-			? `${service} is currently unavailable`
-			: 'Service is currently unavailable';
-
-		const retryMessage: string = retryAfter
-			? ` Please try again after ${retryAfter} seconds.`
-			: ' Please try again later.';
-
-		const errorMessage = `${message} ${retryMessage}`.trim();
-
-		const errorDetails: ErrorDetails = {
-			...(retryAfter !== undefined ? { retryAfter } : {}),
-			...(service !== undefined ? { service } : {}),
-			...details
-		};
-
-		super(
-			errorMessage,
-			503,
-			ErrorSeverity.RECOVERABLE,
-			'SERVICE_UNAVAILABLE',
-			errorDetails
-		);
-		this.name = 'ServiceUnavailableError';
 	}
 }
 
@@ -391,7 +340,7 @@ export class SessionExpiredError extends ClientError {
 			errorMessage,
 			401,
 			ErrorSeverity.RECOVERABLE,
-			'SESSION_EXPIRED',
+			ERROR_CODES.SESSION_EXPIRED,
 			details
 		);
 		this.name = 'SessionExpiredError';
@@ -407,7 +356,7 @@ export class TimeoutError extends ClientError {
 			errorMessage,
 			504,
 			ErrorSeverity.RECOVERABLE,
-			'TIMEOUT_ERROR',
+			ERROR_CODES.TIMEOUT_ERROR,
 			details
 		);
 		this.name = 'TimeoutError';
@@ -415,8 +364,8 @@ export class TimeoutError extends ClientError {
 }
 
 export const clientErrorClasses = {
-	AuthenticationError,
 	AutoCorrectedInputWarning,
+	ClientAuthenticationError,
 	DatabaseErrorRecoverable,
 	DeprecatedApiWarning,
 	ExternalServiceError,
@@ -426,14 +375,12 @@ export const clientErrorClasses = {
 	InvalidCredentialsError,
 	InvalidInputError,
 	InvalidTokenError,
-	MissingResourceError,
 	PasswordValidationError,
 	PermissionDeniedError,
 	QuotaExceededErrorRecoverable,
 	QuotaExceededErrorWarning,
 	RateLimitErrorRecoverable,
 	RateLimitErrorWarning,
-	ServiceUnavailableError,
 	SessionExpiredError,
 	TimeoutError
 };

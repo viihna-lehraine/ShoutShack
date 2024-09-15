@@ -1,9 +1,11 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { environmentVariables } from '../config/environmentConfig';
-import { Logger } from './logger';
-import { processError } from '../utils/processError';
+import { envVariables } from './envConfig';
+import { processError } from '../errors/processError';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
+import { errorClasses } from 'src/errors/errorClasses';
+import { ErrorLogger } from 'src/errors/errorLogger';
 
 interface SopsDependencies {
 	logger: Logger;
@@ -57,22 +59,26 @@ async function getSecrets({
 				{ name: 'execSync', instance: execSync },
 				{ name: 'getDirectoryPath', instance: getDirectoryPath }
 			],
-			logger
+			logger || console
 		);
 
 		const secretsPath = path.join(
 			getDirectoryPath(),
-			'./config/secrets.json.gpg'
+			envVariables.secretsFilePath
 		);
 		logger.info(`Resolved secrets path: ${secretsPath}`);
 		const decryptedSecrets = execSync(
 			`sops -d --output-type json ${secretsPath}`
 		).toString();
 		return JSON.parse(decryptedSecrets);
-	} catch (error) {
-		processError(error, logger);
-		throw new Error(`
-			Failed to get secrets: ${error instanceof Error ? error.message : String(error)}`);
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			`Failed to retrieve secrets: ${configError instanceof Error ? configError.message : String(configError)}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(configurationError, logger);
+		processError(configurationError, logger || console);
+		return {} as SecretsMap;
 	}
 }
 
@@ -93,16 +99,14 @@ async function decryptKey(
 			`sops -d --output-type string ${encryptedFilePath}`
 		).toString('utf-8');
 		return decryptedKey;
-	} catch (error: unknown) {
-		if (error instanceof Error) {
-			logger.error(`Command execution failed: ${error.message}`);
-		} else {
-			logger.error(`An unknown error occurred: ${String(error)}`);
-		}
-		processError(error, logger);
-		throw new Error(
-			`Failed to decrypt key: ${error instanceof Error ? error.message : String(error)}`
+	} catch (utilError) {
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Failed to decrypt key: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+			{ exposeToClient: false }
 		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
+		return '';
 	}
 }
 
@@ -122,10 +126,10 @@ async function decryptDataFiles({
 		);
 
 		const filePaths: Array<string | undefined> = [
-			environmentVariables.serverDataFilePath1,
-			environmentVariables.serverDataFilePath2,
-			environmentVariables.serverDataFilePath3,
-			environmentVariables.serverDataFilePath4
+			envVariables.serverDataFilePath1,
+			envVariables.serverDataFilePath2,
+			envVariables.serverDataFilePath3,
+			envVariables.serverDataFilePath4
 		];
 
 		const decryptedFilesPromises = filePaths.map(
@@ -154,11 +158,14 @@ async function decryptDataFiles({
 		});
 
 		return decryptedFiles;
-	} catch (error) {
-		processError(error, logger);
-		throw new Error(
-			`Unable to decrypt data files: ${error instanceof Error ? error.message : String(error)}`
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			`Failed to decrypt data files ${configError instanceof Error ? configError.message : String(configError)}`,
+			{ exposeToClient: false }
 		);
+		ErrorLogger.logError(configurationError, logger);
+		processError(configurationError, logger);
+		return {};
 	}
 }
 
@@ -180,12 +187,12 @@ async function getSSLKeys(
 
 		const keyPath = path.join(
 			dependencies.getDirectoryPath(),
-			'./keys/ssl/guestbook_key.pem.gpg'
+			envVariables.serverSslKeyPath
 		);
 
 		const certPath = path.join(
 			dependencies.getDirectoryPath(),
-			'./keys/ssl/guestbook_cert.pem.gpg'
+			'envVariables.serverSslCertPath'
 		);
 
 		const decryptedKey = await decryptKey(
@@ -202,11 +209,17 @@ async function getSSLKeys(
 			key: decryptedKey,
 			cert: decryptedCert
 		};
-	} catch (error) {
-		processError(error, dependencies.logger);
-		throw new Error(
-			`Unable to retrieve SSL keys: ${error instanceof Error ? error.message : String(error)}`
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			`Failed to get SSL keys: ${configError instanceof Error ? configError.message : String(configError)}`,
+			{ exposeToClient: false }
 		);
+		ErrorLogger.logError(configurationError, dependencies.logger);
+		processError(configurationError, dependencies.logger);
+		return {
+			key: '',
+			cert: ''
+		};
 	}
 }
 

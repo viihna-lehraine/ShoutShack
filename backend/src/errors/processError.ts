@@ -1,14 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { FeatureFlags } from '../config/environmentConfig'
+import { AppError, ClientError, ErrorSeverity } from './errorClasses';
+import { ErrorLogger } from './errorLogger';
+import { envVariables, FeatureFlags } from '../config/envConfig';
+import { isLogger, Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
-import { isLogger, Logger } from './logger';
-import {
-	AppError,
-	errorClasses,
-	ErrorSeverity,
-	ErrorSeverityType
-} from './errorClasses';
-import { environmentVariables } from '../config/environmentConfig';
 
 interface ExpressErrorHandlerDependencies {
 	logger: Logger;
@@ -47,7 +42,7 @@ export function handleCriticalError(
 					: String(loggingError)
 		});
 	} finally {
-		if (environmentVariables.nodeEnv === 'production') {
+		if (envVariables.nodeEnv === 'production') {
 			process.exit(1);
 		}
 	}
@@ -79,13 +74,15 @@ export function processError(
 		} else if (error instanceof Error) {
 			appError = new AppError(error.message);
 		} else {
-			appError = new AppError(`Unknown error: ${String(error)}`)
+			appError = new AppError(`Unknown error: ${String(error)}`);
 		}
 
-		ErrorLogger.logErrorDetails(appError, effectiveLogger);
+		ErrorLogger.logError(appError, effectiveLogger);
 
 		if (appError.severity === ErrorSeverity.FATAL) {
-			handleCriticalError(appError, effectiveLogger, req, { stack: appError.stack})
+			handleCriticalError(appError, effectiveLogger, req, {
+				stack: appError.stack
+			});
 		}
 	} catch (loggingError) {
 		fallbackLogger.error('Failed to log the original error', {
@@ -98,14 +95,11 @@ export function processError(
 	}
 }
 
-export function sendClientErrorResponse(
-	error: AppError,
-	res: Response,
-	logger: Logger
-): void {
-	logger.error('Error caught in handleErrorResponse error', error);
-
-	const statusCode = error.statusCode || 500;
+export async function sendClientErrorResponse(
+	error: ClientError,
+	res: Response
+): Promise<void> {
+	const statusCode = error.statusCode || 400;
 	const clientResponse = {
 		message: error.message,
 		...(error.details?.exposeToClient ? { details: error.details } : {})
@@ -119,7 +113,7 @@ export function expressErrorHandler({
 	featureFlags
 }: ExpressErrorHandlerDependencies) {
 	return function errorHandler(
-		err: AppError | Error,
+		expressError: AppError | ClientError | Error,
 		req: Request,
 		res: Response,
 		_next: NextFunction
@@ -135,30 +129,37 @@ export function expressErrorHandler({
 
 			if (featureFlags.enableErrorHandlerFlag) {
 				logger.info('Error handler middleware enabled');
-				processError(err, logger, req);
+				processError(expressError, logger, req);
 
-				if (err instanceof AppError) {
+				if (expressError instanceof AppError) {
 					const responsePayload: Record<string, unknown> = {
 						status: 'error',
-						message: err.message ?? 'An error occurred',
-						code: err.errorCode ?? 'ERR_GENERIC',
-						...(err.details && { details: err.details })
+						message: expressError.message ?? 'An error occurred',
+						code: expressError.errorCode ?? 'ERR_GENERIC',
+						...(expressError.details && {
+							details: expressError.details
+						})
 					};
 
-					if (err.details?.retryAfter) {
-						res.set('Retry-After', String(err.details.retryAfter));
+					if (expressError.details?.retryAfter) {
+						res.set(
+							'Retry-After',
+							String(expressError.details.retryAfter)
+						);
 					}
 
-					res.status(err.statusCode ?? 500).json(responsePayload);
+					res.status(expressError.statusCode ?? 500).json(
+						responsePayload
+					);
 				} else {
 					res.status(500).json({
 						status: 'error',
-						message: err.message ?? 'Internal server error'
+						message: expressError.message ?? 'Internal server error'
 					});
 				}
 			} else {
 				logger.info('Error handler middleware disabled');
-				_next(err);
+				_next(expressError);
 			}
 		} catch (error) {
 			processError(error, logger, req);

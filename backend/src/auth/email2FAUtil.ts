@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface Secrets {
@@ -46,9 +48,11 @@ export default async function createEmail2FAUtil({
 		secrets = await getSecrets();
 
 		if (!secrets.EMAIL_2FA_KEY) {
-			const error = new Error('Missing EMAIL_2FA_KEY in secrets');
-			processError(error, logger);
-			throw error;
+			const configError = new errorClasses.ConfigurationErrorFatal(
+				'Unable to find EMAIL_2FA_KEY from secrets'
+			);
+			ErrorLogger.logError(configError, logger);
+			processError(configError, logger);
 		}
 	} catch (err) {
 		processError(err, logger);
@@ -76,9 +80,17 @@ export default async function createEmail2FAUtil({
 				email2FACode, // raw 2FA code
 				email2FAToken // JWT containing the 2FA code
 			};
-		} catch (err) {
-			processError(err, logger);
-			throw new Error('Failed to generate email 2FA code');
+		} catch (utilError) {
+			const utility: string = 'generateEmail2FACode()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Error occured with ${utility}. Failed to generate email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
+			);
+			ErrorLogger.logError(utilityError, logger);
+			processError(utilityError, logger);
+			return {
+				email2FACode: '',
+				email2FAToken: ''
+			};
 		}
 	}
 
@@ -99,16 +111,14 @@ export default async function createEmail2FAUtil({
 				return false;
 			}
 
-			// ensure the decoded 2FA code matches the provided 2FA code
 			return decoded.email2FACode === email2FACode;
-		} catch (err) {
-			if (err instanceof jwt.JsonWebTokenError) {
-				logger.warn(
-					`JWT error during email 2FA verification: ${err.message}`
-				);
-			} else {
-				processError(err, logger);
-			}
+		} catch (utilError) {
+			const utility: string = 'verifyEmail2FACode()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Error occured with dependency ${utility}. Failed to verify email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
+			);
+			ErrorLogger.logError(utilityError, logger);
+			processError(utilityError, logger);
 			return false;
 		}
 	}

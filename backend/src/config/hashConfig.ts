@@ -1,8 +1,10 @@
 import argon2 from 'argon2';
+import { SecretsMap } from './sops';
+import { errorClasses } from '../errors/errorClasses';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
-import { SecretsMap } from '../utils/sops';
 import { validateDependencies } from '../utils/validateDependencies';
+import { ErrorLogger } from 'src/errors/errorLogger';
 
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 
@@ -33,8 +35,14 @@ export async function hashPassword({
 			logger || console
 		);
 		return await argon2.hash(password + secrets.PEPPER, hashConfig);
-	} catch (error) {
-		processError(error, logger || console);
+	} catch (utilError) {
+		const utility: string = 'hashPassword()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			utility,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger || console);
 		return '';
 	}
 }

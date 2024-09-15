@@ -6,14 +6,44 @@ import {
 	transports
 } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { environmentVariables } from '../config/environmentConfig';
+import LogStashTransport from 'winston-logstash';
+import TransportStream from 'winston-transport';
+import {
+	envVariables,
+	FeatureFlags,
+	getFeatureFlags
+} from '../config/envConfig';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { validateDependencies } from './validateDependencies';
+
+import '../../types/custom/winston-logstash';
+
+const { ServiceUnavailableError } = errorClasses;
 
 const { colorize, combine, errors, json, printf, timestamp } = format;
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
 	return `${timestamp} ${level}: ${stack || message}`;
 });
+
+const customLevels = {
+	levels: {
+		critical: 0,
+		error: 1,
+		warn: 2,
+		info: 3,
+		debug: 4
+	},
+	colors: {
+		critical: 'red',
+		error: 'orange',
+		warn: 'yellow',
+		info: 'green',
+		debug: 'blue'
+	}
+};
 
 export interface LoggerDependencies {
 	logLevel?: string | undefined;
@@ -23,13 +53,56 @@ export interface LoggerDependencies {
 	console?: typeof console;
 }
 
+const service: string = 'Logger Service';
+
 let loggerInstance: WinstonLogger | null = null;
 
+function createLogStashTransport(): TransportStream | null {
+	try {
+		return new LogStashTransport({
+			port: envVariables.logStashPort,
+			node_name: envVariables.logStashNode,
+			host: envVariables.logStashHost
+		}) as unknown as TransportStream;
+	} catch (error) {
+		const appError = new ServiceUnavailableError(60, service, {
+			exposeToClient: false,
+			message: `${service} Error: Failed to create Logstash transport`
+		});
+		ErrorLogger.logError(appError, logger);
+		processError(error, logger);
+		return null;
+	}
+}
+
+function addLogStashTransportIfEnabled(
+	transportsArray: TransportStream[],
+	logger: Logger
+): void {
+	validateDependencies(
+		[
+			{ name: 'transportsArray', instance: transportsArray },
+			{ name: 'logger', instance: logger }
+		],
+		logger
+	);
+
+	const featureFlags: FeatureFlags = getFeatureFlags(logger);
+
+	if (featureFlags.enableLogStashFlag) {
+		console.log('Logstash flag enabled. Adding Logstash transport...');
+		const logStashTransport = createLogStashTransport();
+		if (logStashTransport) {
+			transportsArray.push(logStashTransport);
+		}
+	}
+}
+
 export function setupLogger({
-	logLevel = environmentVariables.logLevel || 'info',
-	logDirectory = environmentVariables.serverLogPath,
-	serviceName = environmentVariables.serviceName,
-	isProduction = environmentVariables.nodeEnv === 'production'
+	logLevel = envVariables.logLevel || 'info',
+	logDirectory = envVariables.serverLogPath,
+	serviceName = envVariables.serviceName,
+	isProduction = envVariables.nodeEnv === 'production'
 }: LoggerDependencies = {}): WinstonLogger {
 	try {
 		validateDependencies(
@@ -50,9 +123,9 @@ export function setupLogger({
 		}
 
 		if (!logDirectory || typeof logDirectory !== 'string') {
-			logDirectory = './logs';
+			logDirectory = './data/logs/server/main/';
 			console.warn(
-				'Invalid or missing log directory path. Using default "./logs".'
+				'Invalid or missing log directory path. Using default path, ./data/logs/server/main/.'
 			);
 		}
 
@@ -66,36 +139,54 @@ export function setupLogger({
 					`Log directory ${logDirectory} created successfully.`
 				);
 			} catch (error) {
-				console.error(`Failed to create log directory: ${error}`);
-				throw new Error(`Failed to create log directory`);
+				const appError = new ServiceUnavailableError(60, service, {
+					message: `${service} Error: Failed to create the log directory ${error instanceof Error ? error.stack : error}`,
+					exposeToClient: false
+				});
+				ErrorLogger.logError(appError, logger);
+				processError(error, logger);
+				throw appError;
 			}
 		}
 
+		const envLogLevel = isProduction
+			? 'info'
+			: envVariables.nodeEnv === 'testing'
+				? 'warn'
+				: logLevel;
+
+		const loggerTransports: TransportStream[] = [
+			new transports.Console({
+				format: combine(colorize(), logFormat),
+				level: envLogLevel
+			}),
+			new DailyRotateFile({
+				filename: 'server-%DATE%.log',
+				dirname: logDirectory,
+				datePattern: 'YYYY-MM-DD',
+				zippedArchive: true,
+				maxSize: '20m',
+				maxFiles: '14d',
+				format: combine(
+					timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+					logFormat
+				),
+				level: envLogLevel
+			})
+		];
+
+		addLogStashTransportIfEnabled(loggerTransports, logger);
+
 		loggerInstance = createLogger({
-			level: isProduction ? 'info' : logLevel,
+			levels: customLevels.levels,
+			level: envLogLevel,
 			format: combine(
 				errors({ stack: true }),
 				timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
 				json()
 			),
 			defaultMeta: { service: serviceName },
-			transports: [
-				new transports.Console({
-					format: combine(colorize(), logFormat)
-				}),
-				new DailyRotateFile({
-					filename: 'server-%DATE%.log',
-					dirname: logDirectory,
-					datePattern: 'YYYY-MM-DD',
-					zippedArchive: true,
-					maxSize: '20m',
-					maxFiles: '14d',
-					format: combine(
-						timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-						logFormat
-					)
-				})
-			]
+			transports: loggerTransports
 		});
 
 		console.log = (...args): void => {
@@ -130,7 +221,14 @@ export function setupLogger({
 
 		return loggerInstance;
 	} catch (error) {
-		console.error(`Failed to initialize logger: ${error}`);
+		const appError = new ServiceUnavailableError(60, service, {
+			exposeToClient: false,
+			message: `${service} Error: Failed to initialize logger`
+		});
+		ErrorLogger.logError(appError, logger);
+		processError(error, logger);
+
+		// fallback to console logger in case of initialization failure
 		return Object.assign(
 			createLogger({
 				level: 'error',
@@ -152,6 +250,14 @@ export function setupLogger({
 	}
 }
 
+export function logCritical(message: string): void {
+	if (loggerInstance) {
+		loggerInstance.log('critical', message);
+	} else {
+		console.error(`Critical: ${message}`);
+	}
+}
+
 export function isLogger(
 	logger: Logger | Console | undefined
 ): logger is Logger {
@@ -166,4 +272,4 @@ export function isLogger(
 }
 
 export type Logger = WinstonLogger;
-export const logger = setupLogger();
+export const logger: Logger = setupLogger();

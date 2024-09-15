@@ -6,8 +6,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface UserMfaAttributes {

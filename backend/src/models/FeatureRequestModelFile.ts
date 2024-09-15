@@ -6,8 +6,8 @@ import {
 	CreationOptional,
 	Sequelize
 } from 'sequelize';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface FeatureRequestAttributes {

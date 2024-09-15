@@ -12,9 +12,11 @@ import {
 	AssertionResult
 } from 'fido2-lib';
 import path from 'path';
+import sops, { SecretsMap } from '../config/sops';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
-import sops, { SecretsMap } from '../utils/sops';
 import { validateDependencies } from '../utils/validateDependencies';
 
 let fido2: Fido2Lib | null = null;
@@ -35,7 +37,7 @@ function getDirectoryPath(): string {
 
 type Factor = 'first' | 'second' | 'either';
 
-async function initializeFido2(logger: Logger): Promise<void> {
+export async function initializeFido2(logger: Logger): Promise<void> {
 	try {
 		validateDependencies(
 			[
@@ -64,7 +66,6 @@ async function initializeFido2(logger: Logger): Promise<void> {
 			logger
 		);
 
-		// Initialize Fido2Lib instance
 		fido2 = new Fido2Lib({
 			timeout: 60000,
 			rpId: secrets.RP_ID,
@@ -78,22 +79,29 @@ async function initializeFido2(logger: Logger): Promise<void> {
 		});
 
 		logger.info('Fido2Lib initialized successfully.');
-	} catch (error) {
-		processError(error, logger);
-		throw new Error('Failed to initialize Fido2Lib');
+	} catch (utilErrr) {
+		const utility: string = 'initializeFido2()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Failed to initialize ${utility}: ${utilErrr instanceof Error ? utilErrr.message : utilErrr}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
 	}
 }
 
-async function ensureFido2Initialized(logger: Logger): Promise<void> {
+export async function ensureFido2Initialized(logger: Logger): Promise<void> {
 	validateDependencies([{ name: 'logger', instance: logger }], logger);
-
 	if (!fido2) {
 		logger.debug('Fido2Lib is not initialized, initializing now.');
 		await initializeFido2(logger);
+	} else {
+		logger.debug('Fido2Lib is already initialized.');
+		return;
 	}
 }
 
-async function generatePasskeyRegistrationOptions(
+export async function generatePasskeyRegistrationOptions(
 	user: User,
 	logger: Logger
 ): Promise<PublicKeyCredentialCreationOptions> {
@@ -128,13 +136,22 @@ async function generatePasskeyRegistrationOptions(
 		};
 		logger.info('Passkey registration options generated successfully.');
 		return registrationOptions;
-	} catch (error) {
-		processError(error, logger);
-		throw new Error('Failed to generate passkey registration options');
+	} catch (utilError) {
+		const utility: string = 'generatePasskeyRegistrationOptions()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured with ${utility}. Failed to generate passkey registration options: ${utilError instanceof Error ? utilError.message : utilError}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logWarning(
+			`Error occured with ${utility}. Failed to generate passkey registration options: ${utilError instanceof Error ? utilError.message : utilError} ; Returning PublicKeyCredentialCreationOptions as an empty object`,
+			logger
+		);
+		processError(utilityError, logger);
+		return {} as PublicKeyCredentialCreationOptions;
 	}
 }
 
-async function verifyPasskeyRegistration(
+export async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
 	expectedChallenge: string,
 	logger: Logger
@@ -165,13 +182,19 @@ async function verifyPasskeyRegistration(
 
 		logger.info('Passkey registration verified successfully.');
 		return result;
-	} catch (error) {
-		processError(error, logger);
-		throw new Error('Failed to verify passkey registration');
+	} catch (utilError) {
+		const utility: string = 'verifyPasskeyRegistration()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured with ${utility}. Failed to verify passkey registration: ${utilError instanceof Error ? utilError.message : utilError} ; Returning Fido2AttestationResult as an empty object`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
+		return {} as Fido2AttestationResult;
 	}
 }
 
-async function generatePasskeyAuthenticationOptions(
+export async function generatePasskeyAuthenticationOptions(
 	user: User,
 	logger: Logger
 ): Promise<PublicKeyCredentialRequestOptions> {
@@ -203,13 +226,19 @@ async function generatePasskeyAuthenticationOptions(
 
 		logger.info('Passkey authentication options generated successfully.');
 		return authenticationOptions;
-	} catch (error) {
-		processError(error, logger);
-		throw new Error('Failed to generate passkey authentication options');
+	} catch (utilError) {
+		const utility: string = 'generatePasskeyAuthenticationOptions()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured with ${utility}. Failed to generate passkey authentication options: ${utilError instanceof Error ? utilError.message : utilError} ; Returning PublicKeyCredentialRequestOptions as an empty object`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
+		return {} as PublicKeyCredentialRequestOptions;
 	}
 }
 
-async function verifyPasskeyAuthentication(
+export async function verifyPasskeyAuthentication(
 	assertion: AssertionResult,
 	expectedChallenge: string,
 	publicKey: string,
@@ -248,15 +277,14 @@ async function verifyPasskeyAuthentication(
 
 		logger.info('Passkey authentication verified successfully.');
 		return result;
-	} catch (error) {
-		processError(error, logger);
-		throw new Error('Failed to verify passkey authentication');
+	} catch (utilError) {
+		const utility: string = 'verifyPasskeyAuthentication()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured with ${utility}. Failed to verify passkey authentication: ${utilError instanceof Error ? utilError.message : utilError} ; Returning Fido2AssertionResult as an empty object`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(utilityError, logger);
+		processError(utilityError, logger);
+		return {} as Fido2AssertionResult;
 	}
 }
-
-export default {
-	generatePasskeyAuthenticationOptions,
-	generatePasskeyRegistrationOptions,
-	verifyPasskeyAuthentication,
-	verifyPasskeyRegistration
-};

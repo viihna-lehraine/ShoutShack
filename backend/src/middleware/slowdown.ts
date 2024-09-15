@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export const slowdownThreshold = 100; // in ms

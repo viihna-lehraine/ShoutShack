@@ -1,8 +1,8 @@
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
-import { environmentVariables } from '../config/environmentConfig';
+import { environmentVariables } from '../config/envConfig';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 const router = express.Router();

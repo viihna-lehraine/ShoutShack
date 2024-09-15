@@ -2,17 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { promises as fs } from 'fs';
 import { inRange } from 'range_check';
 import {
-	environmentVariables,
-	FeatureFlags
-} from '../config/environmentConfig';
+	envVariables,
+	FeatureFlags,
+	getFeatureFlags
+} from '../config/envConfig';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler, processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface IpBlacklistDependencies {
 	logger: Logger;
 	featureFlags: FeatureFlags;
-	environmentVariables: typeof environmentVariables;
+	envVariables: typeof envVariables;
 	fsModule: typeof fs;
 }
 
@@ -21,26 +24,34 @@ let blacklist: string[] = [];
 export const loadBlacklist = async ({
 	logger,
 	fsModule,
-	environmentVariables
+	envVariables
 }: IpBlacklistDependencies): Promise<void> => {
 	validateDependencies(
 		[
 			{ name: 'logger', instance: logger },
 			{ name: 'fsModule', instance: fsModule },
-			{ name: 'environmentVariables', instance: environmentVariables }
+			{ name: 'envVariables', instance: envVariables }
 		],
 		logger || console
 	);
 
-	const filePath = environmentVariables.serverDataFilePath2;
+	const featureFlags: FeatureFlags = getFeatureFlags(logger);
+
+	const filePath = envVariables.serverDataFilePath2;
+
 	try {
 		if (await fsModule.stat(filePath)) {
 			const data = await fsModule.readFile(filePath, 'utf8');
 			blacklist = JSON.parse(data);
 			logger.info('Blacklist loaded successfully');
 		}
-	} catch (err) {
-		processError(err, logger || console);
+	} catch (expressError) {
+		const middleware: string = 'loadIpBlacklist';
+		const expressMiddlwareError = new errorClasses.ExpressError(
+			`Error occured when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.
 	}
 };
 
@@ -48,20 +59,20 @@ const saveBlacklist = async ({
 	logger,
 	featureFlags,
 	fsModule,
-	environmentVariables
+	envVariables
 }: IpBlacklistDependencies): Promise<void> => {
 	validateDependencies(
 		[
 			{ name: 'logger', instance: logger },
 			{ name: 'featureFlags', instance: featureFlags },
 			{ name: 'fsModule', instance: fsModule },
-			{ name: 'environmentVariables', instance: environmentVariables }
+			{ name: 'envVariables', instance: envVariables }
 		],
 		logger || console
 	);
 
 	if (featureFlags.enableIpBlacklistFlag) {
-		const filePath = environmentVariables.serverDataFilePath2;
+		const filePath = envVariables.serverDataFilePath2;
 		try {
 			await fsModule.writeFile(filePath, JSON.stringify(blacklist));
 			logger.info('Blacklist saved successfully');

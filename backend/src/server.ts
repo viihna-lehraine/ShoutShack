@@ -6,14 +6,16 @@ import gracefulShutdown from 'http-graceful-shutdown';
 import net from 'net';
 import https from 'https';
 import path from 'path';
-import { RedisClientType } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
 import { SecureContextOptions } from 'tls';
-import { Logger } from './utils/logger';
-import { environmentVariables, FeatureFlags } from './config/environmentConfig';
+import { envVariables, FeatureFlags } from './config/envConfig';
 import { getRedisClient } from './config/redis';
-import { processError } from './utils/processError';
-import SopsDependencies from './utils/sops';
+import SopsDependencies from './config/sops';
+import { errorClasses } from './errors/errorClasses';
+import { ErrorLogger } from './errors/errorLogger';
+import { processError } from './errors/processError';
+import { Logger } from './utils/logger';
 import { validateDependencies } from './utils/validateDependencies';
 
 interface SetUpHttpServerParams {
@@ -24,7 +26,7 @@ interface SetUpHttpServerParams {
 	constants: typeof cryptoConstants;
 	featureFlags: FeatureFlags;
 	getRedisClient: () => RedisClientType | null;
-	getSequelizeInstance: () => Sequelize;
+	sequelize: Sequelize;
 }
 
 interface SetUpHttpServerReturn {
@@ -38,7 +40,7 @@ interface SSLKeys {
 
 type Options = SecureContextOptions;
 
-const port = environmentVariables.serverPort;
+const port = envVariables.serverPort;
 
 const ciphers = [
 	'ECDHE-ECDSA-AES256-GCM-SHA384',
@@ -117,8 +119,17 @@ async function declareOptions({
 			honorCipherOrder: true
 		};
 	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+		const service: string = 'HTTP/HTTPS Server';
+		const serviceError = new errorClasses.ServiceUnavailableErrorFatal(
+			service,
+			{
+				message: `Failed to declare options required for HTTP/HTTPS server ${error instanceof Error ? error.message : error}`,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logError(serviceError, logger);
+		processError(serviceError, logger || console);
+		throw serviceError;
 	}
 }
 
@@ -127,21 +138,35 @@ async function flushInMemoryCache(
 	featureFlags: FeatureFlags
 ): Promise<void> {
 	logger.info('Flushing in-memory cache');
-	const redisClient = await getRedisClient();
+
+	const redisClient = await getRedisClient(createClient);
 
 	if (featureFlags.enableRedisFlag) {
 		if (redisClient) {
 			try {
-				await redisClient.flushAll(); // Use the Redis client instance
+				await redisClient.flushAll();
 				logger.info('In-memory cache flushed');
-			} catch (error) {
-				logger.error('Error flushing Redis cache', error);
+			} catch (utilError) {
+				const utility: string = 'flushInMemoryCache()';
+				const utilityError = new errorClasses.UtilityErrorRecoverable(
+					'flushInMemoryCache()',
+					{
+						message: `Error flushing Redis cache ${utilError instanceof Error ? utilError.message : utilError}`,
+						utility,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logError(utilityError, logger);
+				processError(utilityError, logger || console);
 			}
 		} else {
-			logger.warn('Redis client is not available for cache flush');
+			ErrorLogger.logWarning(
+				'Redis client is not available for cache flush',
+				logger
+			);
 		}
 	} else {
-		logger.info('No cache to flush (Redis is disabled)');
+		ErrorLogger.logInfo('No cache to flush (Redis is disabled)', logger);
 	}
 }
 
@@ -153,7 +178,7 @@ export async function setUpHttpServer({
 	constants,
 	featureFlags,
 	getRedisClient,
-	getSequelizeInstance
+	sequelize
 }: SetUpHttpServerParams): Promise<SetUpHttpServerReturn | undefined> {
 	try {
 		logger.info('Setting up the HTTP/HTTPS server');
@@ -167,7 +192,7 @@ export async function setUpHttpServer({
 				{ name: 'constants', instance: constants },
 				{ name: 'featureFlags', instance: featureFlags },
 				{ name: 'getRedisClient', instance: getRedisClient },
-				{ name: 'getSequelizeInstance', instance: getSequelizeInstance }
+				{ name: 'sequelize', instance: sequelize }
 			],
 			logger || console
 		);
@@ -184,8 +209,8 @@ export async function setUpHttpServer({
 				logger,
 				constants,
 				DECRYPT_KEYS: featureFlags.decryptKeysFlag,
-				SSL_KEY: environmentVariables.serverSslKeyPath || null,
-				SSL_CERT: environmentVariables.serverSslCertPath || null,
+				SSL_KEY: envVariables.serverSslKeyPath || null,
+				SSL_CERT: envVariables.serverSslCertPath || null,
 				ciphers
 			});
 		} else {
@@ -231,13 +256,22 @@ export async function setUpHttpServer({
 					logger.info('Pre-shutdown tasks complete');
 					server.keepAliveTimeout = 1;
 
-					const sequelize: Sequelize = getSequelizeInstance();
-
 					try {
 						await sequelize.close();
 						logger.info('Database connection closed');
-					} catch (error) {
-						processError(error, logger);
+					} catch (depError) {
+						const dependency: string = 'sequelize.close()';
+						const dependencyError =
+							new errorClasses.DependencyErrorRecoverable(
+								dependency,
+								{
+									message: `Error closing database connection ${depError instanceof Error ? depError.message : depError}`,
+									dependency,
+									exposeToClient: false
+								}
+							);
+						ErrorLogger.logError(dependencyError, logger);
+						processError(dependencyError, logger);
 					}
 
 					if (featureFlags.enableRedisFlag) {
@@ -248,8 +282,19 @@ export async function setUpHttpServer({
 								await redisClient.quit();
 								logger.info('Redis connection closed');
 							}
-						} catch (error) {
-							processError(error, logger);
+						} catch (depError) {
+							const dependency: string = 'redisClient.quit()';
+							const dependencyError =
+								new errorClasses.DependencyErrorRecoverable(
+									dependency,
+									{
+										message: `Error closing Redis connection ${depError instanceof Error ? depError.message : depError}`,
+										dependency,
+										exposeToClient: false
+									}
+								);
+							ErrorLogger.logError(dependencyError, logger);
+							processError(dependencyError, logger);
 						}
 					}
 
@@ -259,8 +304,19 @@ export async function setUpHttpServer({
 							resolve();
 						});
 						logger.info('Logger closed');
-					} catch (error) {
-						processError(error, logger);
+					} catch (depError) {
+						const dependency: string = 'logger.close()';
+						const dependencyError =
+							new errorClasses.DependencyErrorRecoverable(
+								dependency,
+								{
+									message: `Error closing logger ${depError instanceof Error ? depError.message : depError}`,
+									dependency,
+									exposeToClient: false
+								}
+							);
+						ErrorLogger.logError(dependencyError, logger);
+						processError(dependencyError, console);
 					}
 				},
 				finally: async () => {
@@ -269,8 +325,9 @@ export async function setUpHttpServer({
 					const waitForConnectionsToClose = new Promise<void>(
 						resolve => {
 							const timeout = setTimeout(() => {
-								logger.warn(
-									'Forcing shutdown: some connections did not close in time'
+								ErrorLogger.logInfo(
+									'Forcing shutdown: some connections did not close in time',
+									logger
 								);
 								connections.forEach(con => con.destroy());
 								resolve();
@@ -295,10 +352,17 @@ export async function setUpHttpServer({
 		}
 
 		return { startServer };
-	} catch (error) {
-		processError(error, logger || console);
-		throw new Error(
-			`Error occurred in setupHttpServer(): ${error instanceof Error ? error.message : error}`
+	} catch (appError) {
+		const service: string = 'HTTP/HTTPS Server';
+		const serviceError = new errorClasses.ServiceUnavailableErrorFatal(
+			service,
+			{
+				message: `Fatal error occurred while trying to set up the HTTP/HTTPS server ${appError instanceof Error ? appError.message : appError}`,
+				exposeToClient: false
+			}
 		);
+		ErrorLogger.logError(serviceError, logger);
+		processError(serviceError, logger || console);
+		throw serviceError;
 	}
 }

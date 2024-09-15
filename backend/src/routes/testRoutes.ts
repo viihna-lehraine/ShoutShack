@@ -1,21 +1,21 @@
 import { Application, Request, Response, NextFunction, Router } from 'express';
+import { FeatureFlags } from '../config/envConfig';
+import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
-import { FeatureFlags } from '../config/environmentConfig';
-import { processError } from '../utils/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface TestRouteDependencies {
 	app: Application;
 	logger: Logger;
 	featureFlags: FeatureFlags;
-	environmentVariables: typeof import('../config/environmentConfig').environmentVariables;
+	envVariables: typeof import('../config/envConfig').envVariables;
 }
 
 export function initializeTestRoutes({
 	app,
 	logger,
 	featureFlags,
-	environmentVariables
+	envVariables
 }: TestRouteDependencies): Router {
 	const router = Router();
 
@@ -25,7 +25,7 @@ export function initializeTestRoutes({
 				{ name: 'app', instance: app },
 				{ name: 'logger', instance: logger },
 				{ name: 'featureFlags', instance: featureFlags },
-				{ name: 'environmentVariables', instance: environmentVariables }
+				{ name: 'envVariables', instance: envVariables }
 			],
 			logger
 		);
@@ -34,7 +34,7 @@ export function initializeTestRoutes({
 			logger.info('Test routes not loaded; feature flag is disabled.');
 		}
 
-		if (environmentVariables.nodeEnv === 'production') {
+		if (envVariables.nodeEnv === 'production') {
 			router.use((_req: Request, res: Response) => {
 				res.status(404).json({
 					message: 'Test routes are not available in production.'

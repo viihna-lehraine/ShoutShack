@@ -11,13 +11,13 @@ import xss from 'xss';
 import zxcvbn from 'zxcvbn';
 import createEmail2FAUtil from '../auth/email2FAUtil';
 import createTOTPUtil from '../auth/totpUtil';
-import { environmentVariables } from '../config/environmentConfig';
+import { environmentVariables } from '../config/envConfig';
 import { hashPassword } from '../config/hashConfig';
-import { Logger } from '../utils/logger';
 import { getTransporter } from '../config/mailer';
+import sops from '../config/sops';
+import { processError } from '../errors/processError';
 import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
-import { processError } from '../utils/processError';
-import sops from '../utils/sops';
+import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface UserSecrets {
