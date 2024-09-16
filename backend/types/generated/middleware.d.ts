@@ -10,7 +10,7 @@ import passport, { AuthenticateOptions } from 'passport';
 import { FeatureFlags } from './config/envConfig';
 import { Logger } from './utils/logger';
 import { getRedisClient } from './config/redis';
-import { SecretsMap } from './config/sops';
+import { SecretsMap } from './environment/sops';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { expressErrorHandler } from './middleware/expressErrorHandler';
 import { ipBlacklistMiddleware } from './middleware/ipBlacklist';

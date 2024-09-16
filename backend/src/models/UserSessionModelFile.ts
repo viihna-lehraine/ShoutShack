@@ -7,6 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -22,7 +24,7 @@ interface UserSessionAttributes {
 	isActive: boolean;
 }
 
-class UserSession
+export class UserSession
 	extends Model<
 		InferAttributes<UserSession>,
 		InferCreationAttributes<UserSession>
@@ -136,10 +138,15 @@ export default function createUserSessionModel(
 		);
 
 		return UserSession;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize UserSession model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return {} as typeof UserSession;
 	}
 }
-
-export { UserSession };

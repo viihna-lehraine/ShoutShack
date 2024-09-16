@@ -7,6 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -38,7 +40,7 @@ class GuestbookEntry
 export default function createGuestbookEntryModel(
 	sequelize: Sequelize,
 	logger: Logger
-): typeof GuestbookEntry {
+): typeof GuestbookEntry | null {
 	try {
 		validateDependencies(
 			[
@@ -101,9 +103,16 @@ export default function createGuestbookEntryModel(
 
 		logger.info('GuestbookEntry model initialized successfully');
 		return GuestbookEntry;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize GuestbookEntry model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return null;
 	}
 }
 

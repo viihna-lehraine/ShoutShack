@@ -16,13 +16,13 @@ import {
 	helmetOptions,
 	permissionsPolicyOptions
 } from './config/securityOptions';
-import { envVariables, FeatureFlags } from './config/envConfig';
+import { envVariables, FeatureFlags } from './environment/envVars';
 import { errorClasses } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import { expressErrorHandler, processError } from './errors/processError';
 import { Logger } from './utils/logger';
 import { getRedisClient } from './config/redis';
-import sops, { SecretsMap } from './config/sops';
+import sops, { SecretsMap } from './environment/envSecrets';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
 import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';

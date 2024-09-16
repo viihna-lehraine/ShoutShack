@@ -1,6 +1,6 @@
 import os from 'os';
 import { createClient, RedisClientType } from 'redis';
-import { envVariables, FeatureFlags, getFeatureFlags } from './envConfig';
+import { envVariables, FeatureFlags, getFeatureFlags } from '../environment/envVars';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

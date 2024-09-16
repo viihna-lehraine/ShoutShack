@@ -1,4 +1,3 @@
-import { execSync } from 'child_process';
 import { Request, Response } from 'express';
 import {
 	CreationOptional,
@@ -10,9 +9,11 @@ import {
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { errorClasses } from '../errors/errorClasses';
-import { processError } from '../errors/processError';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError, sendClientErrorResponse } from '../errors/processError';
 import { hashPassword } from '../config/hashConfig';
-import sops, { SecretsMap } from '../config/sops';
+import { envSecrets } from '../environment/envConfig';
+import { EnvSecretsMap } from '../environment/envSecrets';
 import {
 	initializeRateLimitMiddleware,
 	RateLimitMiddlewareDependencies
@@ -33,7 +34,7 @@ interface UserAttributes {
 	creationDate: Date;
 }
 
-type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
+type UserSecrets = Pick<EnvSecretsMap, 'PEPPER'>;
 
 interface UserModelDependencies {
 	argon2: typeof import('argon2');
@@ -41,7 +42,7 @@ interface UserModelDependencies {
 	getSecrets: () => Promise<UserSecrets>;
 }
 
-class User
+export class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
 	implements UserAttributes
 {
@@ -60,39 +61,43 @@ class User
 		password: string,
 		argon2: typeof import('argon2'),
 		secrets: UserSecrets,
-		logger: Logger
-	): Promise<boolean> {
+		appLogger: Logger
+	): Promise<boolean | null> {
 		try {
 			validateDependencies(
 				[
 					{ name: 'password', instance: password },
 					{ name: 'argon2', instance: argon2 },
 					{ name: 'secrets', instance: secrets },
-					{ name: 'logger', instance: logger }
+					{ name: 'appLogger', instance: appLogger }
 				],
-				logger
+				appLogger || console
 			);
 
 			return await argon2.verify(
 				this.password,
 				password + secrets.PEPPER
 			);
-		} catch (error) {
-			processError(error, logger);
-			throw new errorClasses.PasswordValidationError(
-				'Passwords do not match'
-			);
+		} catch (passwordError) {
+			const passwordValidationError =
+				new errorClasses.PasswordValidationError(
+					'Passwords do not match',
+					{ exposeToClient: true }
+				);
+			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
+			processError(passwordError || passwordValidationError, appLogger);
+			return null;
 		}
 	}
 
-	static validatePassword(password: string, logger: Logger): boolean {
+	static validatePassword(password: string, appLogger: Logger): boolean {
 		try {
 			validateDependencies(
 				[
 					{ name: 'password', instance: password },
-					{ name: 'logger', instance: logger }
+					{ name: 'appLogger', instance: appLogger }
 				],
-				logger
+				appLogger || console
 			);
 
 			const isValidLength =
@@ -109,8 +114,14 @@ class User
 				hasNumber &&
 				hasSpecial
 			);
-		} catch (error) {
-			processError(error, logger);
+		} catch (passwordError) {
+			const passwordValidationError =
+				new errorClasses.PasswordValidationError(
+					'Error validating password',
+					{ exposeToClient: true }
+				);
+			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
+			processError(passwordError || passwordValidationError, appLogger);
 			return false;
 		}
 	}
@@ -122,20 +133,24 @@ class User
 		password: string,
 		email: string,
 		rateLimitDependencies: RateLimitMiddlewareDependencies,
-		logger: Logger
-	): Promise<User> {
+		appLogger: Logger
+	): Promise<User | null> {
 		try {
 			validateDependencies(
 				[
 					{ name: 'uuidv4', instance: uuidv4 },
+					{ name: 'userId', instance: userId },
+					{ name: 'username', instance: username },
+					{ name: 'password', instance: password },
+					{ name: 'email', instance: email },
 					{ name: 'getSecrets', instance: getSecrets },
 					{
 						name: 'rateLimitDependencies',
 						instance: rateLimitDependencies
 					},
-					{ name: 'logger', instance: logger }
+					{ name: 'appLogger', instance: appLogger }
 				],
-				logger
+				appLogger
 			);
 
 			const rateLimiter = initializeRateLimitMiddleware(
@@ -148,21 +163,28 @@ class User
 				rateLimiter(req, res, err => (err ? reject(err) : resolve()));
 			});
 
-			const isValidPassword = User.validatePassword(password, logger);
+			const isValidPassword = User.validatePassword(password, appLogger);
 			if (!isValidPassword) {
-				logger.warn(
+				appLogger.warn(
 					'Password does not meet the security requirements.'
 				);
-				throw new errorClasses.PasswordValidationError(
-					'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.'
-				);
+
+				const validationError =
+					new errorClasses.PasswordValidationError(
+						'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.',
+						{
+							exposeToClient: true
+						}
+					);
+				await sendClientErrorResponse(validationError, res);
+				throw validationError;
 			}
 
 			const secrets = await getSecrets();
 			const hashedPassword = await hashPassword({
 				password,
 				secrets,
-				logger
+				appLogger
 			});
 
 			const newUser = await User.create({
@@ -179,16 +201,15 @@ class User
 			});
 
 			return newUser;
-		} catch (error) {
-			processError(error, logger);
-
-			if (error instanceof errorClasses.PasswordValidationError) {
-				throw error;
-			}
-
-			throw new errorClasses.PasswordValidationError(
-				'There was an error creating your account. Please try again. If the issue persists, please contact support.'
-			);
+		} catch (regisrationError) {
+			const userRegistrationError =
+				new errorClasses.UserRegistrationError(
+					'There was an error creating your account. Please try again. If the issue persists, please contact support.',
+					{ exposeToClient: true }
+				);
+			ErrorLogger.logWarning(userRegistrationError.message, appLogger);
+			processError(regisrationError || userRegistrationError, appLogger);
+			return null;
 		}
 	}
 
@@ -197,16 +218,16 @@ class User
 		password: string,
 		argon2: typeof import('argon2'),
 		secrets: UserSecrets,
-		logger: Logger
-	): Promise<boolean> {
+		appLogger: Logger
+	): Promise<boolean | null> {
 		try {
 			validateDependencies(
 				[
 					{ name: 'argon2', instance: argon2 },
 					{ name: 'secrets', instance: secrets },
-					{ name: 'logger', instance: logger }
+					{ name: 'appLogger', instance: appLogger }
 				],
-				logger
+				appLogger || console
 			);
 
 			const isValid = await argon2.verify(
@@ -214,28 +235,32 @@ class User
 				password + secrets.PEPPER
 			);
 
-			logger.debug('Password verified successfully');
+			appLogger.debug('Password verified successfully');
 			return isValid;
-		} catch (error) {
-			processError(error, logger);
-			throw new errorClasses.PasswordValidationError(
-				'Error verifying password'
-			);
+		} catch (passwordError) {
+			const passwordValidationError =
+				new errorClasses.PasswordValidationError(
+					'Error verifying password',
+					{ exposeToClient: true }
+				);
+			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
+			processError(passwordError, appLogger);
+			return null;
 		}
 	}
 }
 
-export default function createUserModel(
+export function createUserModel(
 	sequelize: Sequelize,
-	logger: Logger
+	appLogger: Logger
 ): typeof User {
 	try {
 		validateDependencies(
 			[
 				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
+				{ name: 'appLogger', instance: appLogger }
 			],
-			logger
+			appLogger
 		);
 
 		User.init(
@@ -300,49 +325,88 @@ export default function createUserModel(
 
 		User.addHook('beforeCreate', async (user: User) => {
 			try {
-				const secrets = await sops.getSecrets({
-					logger,
-					execSync,
-					getDirectoryPath: () => process.cwd()
-				});
+				const secrets = envSecrets;
 				user.password = await hashPassword({
 					password: user.password,
 					secrets,
-					logger
+					appLogger
 				});
-			} catch (error) {
-				processError(error, logger);
-				throw new errorClasses.PasswordValidationError();
+			} catch (dbError) {
+				const databaseError = new errorClasses.DatabaseErrorRecoverable(
+					`Failed to create hashed password: ${
+						dbError instanceof Error
+							? dbError.message
+							: 'Unknown error'
+					}`,
+					{
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logInfo(databaseError.message, appLogger);
+				processError(databaseError, appLogger);
+				throw databaseError;
 			}
 		});
 
 		User.addHook('afterUpdate', async (user: User) => {
 			try {
-				if (user.changed('isMfaEnabled')) {
-					const UserMfa = await (
-						await import('./UserMfaModelFile')
-					).default(sequelize, logger);
+				const { UserMfa } = await import('./UserMfaModelFile');
 
+				if (!UserMfa) {
+					throw new Error(
+						'Error occurred when attempting to load UserMfaModel by importing UserMfaModelFile'
+					);
+				}
+
+				if (typeof UserMfa.update === 'function') {
 					await UserMfa.update(
 						{ isMfaEnabled: user.isMfaEnabled },
 						{ where: { id: user.id } }
 					);
-
-					logger.debug('MFA status updated successfully');
+					appLogger.debug('MFA status updated successfully');
+				} else {
+					const databaseError =
+						new errorClasses.DatabaseErrorRecoverable(
+							'UserMfa update method is not available',
+							{
+								exposeToClient: false
+							}
+						);
+					ErrorLogger.logInfo(databaseError.message, appLogger);
+					processError(databaseError, appLogger);
+					throw new Error(
+						'UserMfa update method is not available. Unable to update MFA status'
+					);
 				}
-			} catch (error) {
-				processError(error, logger);
-				throw new errorClasses.PasswordValidationError(
-					'An error occurred. Please try again.'
+			} catch (dbError) {
+				const databaseError = new errorClasses.DatabaseErrorRecoverable(
+					`Failed to update MFA status: ${
+						dbError instanceof Error
+							? dbError.message
+							: 'Unknown error'
+					}`,
+					{
+						exposeToClient: false
+					}
 				);
+				ErrorLogger.logError(databaseError, appLogger);
+				processError(databaseError, appLogger);
 			}
 		});
 
 		return User;
-	} catch (error) {
-		processError(error, logger);
-		throw error;
+	} catch (dbError) {
+		const databaseRecoverableError =
+			new errorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize User model: ${
+					dbError instanceof Error ? dbError.message : 'Unknown error'
+				}`,
+				{
+					exposeToClient: false
+				}
+			);
+		ErrorLogger.logInfo(databaseRecoverableError.message, appLogger);
+		processError(databaseRecoverableError, appLogger);
+		throw databaseRecoverableError;
 	}
 }
-
-export { User };

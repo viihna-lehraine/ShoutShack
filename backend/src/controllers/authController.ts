@@ -2,7 +2,7 @@ import argon2 from 'argon2';
 import { execSync } from 'child_process';
 import { Request, Response } from 'express';
 import { createJwtUtil } from '../auth/jwtUtil';
-import sops from '../config/sops';
+import sops from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';

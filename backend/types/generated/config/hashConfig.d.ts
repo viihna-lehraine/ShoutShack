@@ -1,5 +1,5 @@
 import { Logger } from '../utils/logger';
-import { SecretsMap } from './sops';
+import { SecretsMap } from '../environment/sops';
 type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
 interface HashPasswordDependencies {
     password: string;

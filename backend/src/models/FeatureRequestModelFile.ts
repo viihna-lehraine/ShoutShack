@@ -6,6 +6,8 @@ import {
 	CreationOptional,
 	Sequelize
 } from 'sequelize';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -41,7 +43,7 @@ class FeatureRequest
 export default function createFeatureRequestModel(
 	sequelize: Sequelize,
 	logger: Logger
-): typeof FeatureRequest {
+): typeof FeatureRequest | null {
 	try {
 		validateDependencies(
 			[
@@ -98,9 +100,16 @@ export default function createFeatureRequestModel(
 
 		logger.info('FeatureRequest model initialized successfully');
 		return FeatureRequest;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize FeatureRequest model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return null;
 	}
 }
 

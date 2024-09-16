@@ -6,6 +6,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -37,7 +39,7 @@ class FailedLoginAttempts
 export default function createFailedLoginAttemptsModel(
 	sequelize: Sequelize,
 	logger: Logger
-): typeof FailedLoginAttempts {
+): typeof FailedLoginAttempts | null {
 	try {
 		validateDependencies(
 			[
@@ -93,9 +95,16 @@ export default function createFailedLoginAttemptsModel(
 
 		logger.info('FailedLoginAttempts model initialized successfully');
 		return FailedLoginAttempts;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize FailedLoginAttempts model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return null;
 	}
 }
 

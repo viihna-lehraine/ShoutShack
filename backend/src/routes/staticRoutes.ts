@@ -1,7 +1,9 @@
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
-import { environmentVariables } from '../config/envConfig';
-import { processError } from '../errors/processError';
+import { envVariables } from '../environment/envVars';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler, processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -13,10 +15,11 @@ interface StaticRoutesDependencies {
 	secretsPath: string;
 }
 
-// Helper function to serve static files and handle errors
+// serve static files and handle errors
 function serveStaticFile(
 	filePath: string,
 	route: string,
+	req: Request,
 	res: Response,
 	next: NextFunction,
 	logger: Logger
@@ -26,6 +29,7 @@ function serveStaticFile(
 			[
 				{ name: 'filePath', instance: filePath },
 				{ name: 'route', instance: route },
+				{ name: 'req', instance: req },
 				{ name: 'res', instance: res },
 				{ name: 'next', instance: next },
 				{ name: 'logger', instance: logger }
@@ -33,23 +37,53 @@ function serveStaticFile(
 			logger || console
 		);
 
-		res.sendFile(filePath, err => {
-			if (err) {
-				processError(err, logger || console, undefined, console);
-				return next(new Error(`File ${route} not found`));
+		res.sendFile(filePath, error => {
+			if (error) {
+				const errorResponse: string = `${filePath} not found`;
+				const expressError = new errorClasses.ExpressError(
+					`Error occurred when attempting to serve static file ${route}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+					{
+						statusCode: 404,
+						severity: ErrorSeverity.RECOVERABLE,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logError(expressError, logger);
+				expressErrorHandler({ logger })(
+					expressError,
+					req,
+					res,
+					errorResponse
+				);
+				next();
 			}
 			logger.debug(`${route} was accessed`);
 		});
-	} catch (error) {
-		processError(error as Error, logger || console);
-		next(error);
+	} catch (expressError) {
+		const errorResponse = 'Internal Server Error';
+		const expressRouterError = new errorClasses.ExpressError(
+			`Error occurred when attempting to serve static file ${route}: ${expressError instanceof Error ? expressError.message : 'Unknown error'}`,
+			{
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logError(expressRouterError, logger);
+		expressErrorHandler({ logger })(
+			expressRouterError,
+			req,
+			res,
+			errorResponse
+		);
+		next(expressError);
 	}
 }
 
 export function setupStaticRoutes({
 	logger,
-	staticRootPath = environmentVariables.staticRootPath,
-	secretsPath = environmentVariables.frontendSecretsPath
+	staticRootPath = envVariables.staticRootPath,
+	secretsPath = envVariables.frontendSecretsPath
 }: StaticRoutesDependencies): express.Router {
 	try {
 		validateDependencies(
@@ -68,6 +102,7 @@ export function setupStaticRoutes({
 				serveStaticFile(
 					secretsPath,
 					'/secrets.json.gpg',
+					_req,
 					res,
 					next,
 					logger
@@ -81,14 +116,26 @@ export function setupStaticRoutes({
 			(req: Request, res: Response, next: NextFunction) => {
 				const page = req.params.page;
 				const filePath = path.join(staticRootPath, `${page}.html`);
-				serveStaticFile(filePath, `/${page}.html`, res, next, logger);
+				serveStaticFile(
+					filePath,
+					`/${page}.html`,
+					req,
+					res,
+					next,
+					logger
+				);
 			}
 		);
 
 		return router;
-	} catch (error) {
-		processError(error as Error, logger);
-		throw error;
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			`Fatal error occurred when attempting to configure Express static routes using setupStaticRoutes(): ${configError instanceof Error ? configError.message : 'Unknown error'}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(configurationError, logger || console);
+		processError(configurationError, logger || console);
+		throw configurationError;
 	}
 }
 
@@ -110,12 +157,17 @@ export function initializeStaticRoutes(
 		const router = setupStaticRoutes({
 			logger,
 			staticRootPath,
-			secretsPath: environmentVariables.frontendSecretsPath!
+			secretsPath: envVariables.frontendSecretsPath!
 		});
 
 		app.use('/', router);
-	} catch (error) {
-		processError(error as Error, logger);
-		throw error;
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			`Fatal error occurred when attempting to initialize Express static routes using initializeStaticRoutes(): ${configError instanceof Error ? configError.message : 'Unknown error'}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(configurationError, logger || console);
+		processError(configurationError, logger || console);
+		throw configurationError;
 	}
 }

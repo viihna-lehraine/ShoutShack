@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import yub from 'yub';
 import '../../types/custom/yub.js';
 import { Logger } from '../utils/logger.js';
-import getSecrets from '../config/sops.js';
+import getSecrets from '../environment/sops.js';
 interface YubicoOtpOptions {
     clientId: number;
     apiKey: string;

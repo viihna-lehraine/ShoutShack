@@ -80,7 +80,7 @@ export async function getTransporter(deps: MailerDependencies): Promise<Transpor
 	} catch (depError) {
 		const dependency: string = 'getTransporter()';
 		const dependencyError = new errorClasses.DependencyErrorRecoverable(
-			dependency,
+			`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
 			{ exposeToClient: false }
 		);
 		processError(dependencyError, deps.logger || console);

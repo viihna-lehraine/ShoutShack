@@ -12,7 +12,7 @@ import {
 	AssertionResult
 } from 'fido2-lib';
 import path from 'path';
-import sops, { SecretsMap } from '../config/sops';
+import sops, { SecretsMap } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

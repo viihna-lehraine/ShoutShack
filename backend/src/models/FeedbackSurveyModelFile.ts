@@ -6,6 +6,8 @@ import {
 	InferCreationAttributes,
 	Sequelize
 } from 'sequelize';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -69,7 +71,7 @@ class FeedbackSurvey
 export default function createFeedbackSurveyModel(
 	sequelize: Sequelize,
 	logger: Logger
-): typeof FeedbackSurvey {
+): typeof FeedbackSurvey | null {
 	try {
 		validateDependencies(
 			[
@@ -226,9 +228,16 @@ export default function createFeedbackSurveyModel(
 
 		logger.info('FeedbackSurvey model initialized successfully');
 		return FeedbackSurvey;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize FeedbackSurvey model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return null;
 	}
 }
 

@@ -4,7 +4,7 @@ import { RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
 import { Logger } from './utils/logger';
 import { FeatureFlags } from './config/envConfig';
-import SopsDependencies from './config/sops';
+import SopsDependencies from './environment/sops';
 interface SetupHttpServerParams {
     app: Application;
     sops: typeof SopsDependencies;

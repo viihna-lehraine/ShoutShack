@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
-import { processError } from '../errors/processError';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler, processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -73,13 +75,38 @@ export function initializeSlowdownMiddleware({
 						next();
 					}
 				}
-			} catch (err) {
-				processError(err, logger || console, req);
-				next(err);
+			} catch (expressError) {
+				const middleware = 'slowdownMiddleware()';
+				const errorResponse = 'Internal Server Error';
+				const expressMiddlewareError = new errorClasses.ExpressError(
+					`Fatal error occured when attempting to execute ${middleware}: ${
+						expressError instanceof Error
+							? expressError.message
+							: 'Unknown error'
+					} ; Shutting down...`,
+					{
+						middleware,
+						severity: ErrorSeverity.FATAL,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logError(expressMiddlewareError, logger);
+				expressErrorHandler({ logger })(
+					expressMiddlewareError,
+					req,
+					res,
+					errorResponse
+				);
+				next();
 			}
 		};
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (depError) {
+		const dependency: string = 'initializeSlowdownMiddleware()';
+		const dependencyError = new errorClasses.DependencyErrorRecoverable(
+			`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
+			{ exposeToClient: false }
+		);
+		processError(dependencyError, logger || console);
+		throw dependencyError;
 	}
 }

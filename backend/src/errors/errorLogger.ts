@@ -1,6 +1,6 @@
 import { Op, Sequelize } from 'sequelize';
 import { Logger } from '../utils/logger';
-import { envVariables } from '../config/envConfig';
+import { envVariables } from '../environment/envVars';
 import { AppError, ErrorSeverity } from '../errors/errorClasses';
 import { createErrorLogModel } from '../models/ErrorLogModelFile';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -184,7 +184,7 @@ export class ErrorLogger {
 		try {
 			const ErrorLog = createErrorLogModel(sequelize, logger);
 
-			await ErrorLog.create({
+			await ErrorLog!.create({
 				name: error.name,
 				message: error.message,
 				statusCode: error.statusCode || null,

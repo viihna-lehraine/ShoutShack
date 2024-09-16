@@ -1,6 +1,7 @@
 import { Options, Sequelize } from 'sequelize';
-import { FeatureFlags } from './envConfig';
-import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { FeatureFlagTypes } from '../environment/envVars';
+import { envSecrets, envSecretsStore, featureFlagsStore } from '../environment/envConfig';
+import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
@@ -16,15 +17,15 @@ export interface DBSecrets {
 
 export interface DBDependencies {
 	logger: Logger;
-	featureFlags: FeatureFlags;
-	getSecrets: () => Promise<DBSecrets>;
+	featureFlagsStore: FeatureFlagTypes;
+	envSecrets;
 }
 
 let sequelize: Sequelize | null = null;
 
 export async function initializeDatabase({
 	logger,
-	featureFlags,
+	featureFlagsStore,
 	getSecrets
 }: DBDependencies): Promise<Sequelize> {
 	const maxRetries = 5;

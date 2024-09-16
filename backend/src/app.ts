@@ -17,12 +17,17 @@ import { initializeAllMiddleware } from './middleware';
 import { setUpHttpServer } from './server';
 import { initializeRoutes } from './routes';
 import { initializeDatabase } from './config/db';
-import { envVariables, FeatureFlags, loadEnv } from './config/envConfig';
+import {
+	envVariablesStore,
+	envSecretsStore,
+	initializeEnvConfig
+} from './environment/envConfig';
+import { envVariables, FeatureFlagTypes, loadEnv } from './environment/envVars';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import configurePassport from './config/passport';
 import { getRedisClient } from './config/redis';
-import sops, { SecretsMap } from './config/sops';
+
 import { expressErrorHandler, processError } from './errors/processError';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
@@ -32,64 +37,94 @@ import { initializeSecurityHeaders } from './middleware/securityHeaders';
 import { initializeValidatorMiddleware } from './middleware/validator';
 import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
-import createUserModel from './models/UserModelFile';
-import { logger, Logger, setupLogger } from './utils/logger';
+import { createUserModel } from './models/UserModelFile';
+import { logger, Logger } from './utils/logger';
 import { validateDependencies } from './utils/validateDependencies';
 
 async function start(): Promise<void> {
 	try {
 		try {
 			loadEnv();
-		} catch (error) {
-			throw new errorClasses.ConfigurationError(
-				'Failed to load environment variables',
-				{
-					originalError: error,
-					severity: ErrorSeverity.FATAL
-				}
-			);
-		}
 
-		const staticRootPath = envVariables.staticRootPath;
-
-		let logger: Logger;
-		try {
-			logger = setupLogger();
-			logger.info('Logger successfully initialized');
-		} catch (error) {
-			const dependencyError = new errorClasses.DependencyErrorFatal(
-				'Fatal error occured: Logger service initializaton failed. Console logger fallback initialization has also failed. Shutting down now...',
-				{
-					originalError: error,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(dependencyError, console);
-			processError(dependencyError, console);
-			process.exit(1);
-		}
-
-		let secrets: SecretsMap;
-		try {
-			secrets = await sops.getSecrets({
-				logger,
+			initializeEnvConfig({
+				appLogger: logger,
 				execSync,
 				getDirectoryPath: () => process.cwd()
 			});
-		} catch (depError) {
-			const dependency: string = 'Secrets';
-			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to fetch ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+
+			const featureFlags: FeatureFlagTypes = envVariablesStore.getFeatureFlags();
+		} catch (error) {
+			if (error instanceof Error) {
+				ErrorLogger.logCritical(
+					error.message
+						? error.message
+						: 'Fatal error occured\n Failed to initialize secrets, flags, and other environment variables',
+					console
+				);
+			} else {
+				ErrorLogger.logCritical(
+					'Fatal error occured\n Failed to fetch envVariables',
+					console
+				);
+			}
+			throw new errorClasses.ConfigurationErrorFatal(
+				`Failed to load environment variables \n${error instanceof Error ? error.message : error}`,
 				{
+					statusCode: 404,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+		}
+
+		const envVariablesStore = EnvVariablesStore.getInstance();
+		const featureFlags: FeatureFlagTypes =
+			envVariablesStore.getFeatureFlags();
+		const envSecretsStore = EnvSecretsStore.getInstance();
+		const envSecrets = envSecretsStore.getEnvSecrets();
+
+		console.log('Environment Variables');
+		console.table(envVariablesStore.getEnvVariables());
+
+		console.log('Feature Flags');
+		console.table(`${envVariablesStore.getFeatureFlags()}`);
+
+		const staticRootPath = envVariables.staticRootPath;
+
+		const appLogger: Logger = logger;
+		try {
+			appLogger.info('Logger successfully initialized');
+		} catch (error) {
+			const appLoggerError = new errorClasses.DependencyErrorFatal(
+				`appLogger initialization failed. Shutting down now... \n${error instanceof Error ? error.message : error}`,
+				{
+					statusCode: 500,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(appLoggerError, console);
+			processError(appLoggerError, console);
 			process.exit(1);
 		}
 
-		const featureFlags = {} as FeatureFlags;
+		try {
+			await envSecretsStore.loadSecrets({
+				appLogger,
+				execSync,
+				getDirectoryPath: () => process.cwd()
+			});
+			appLogger.info('Secrets loaded');
+		} catch (configurationError) {
+			const loadSecretsError = new errorClasses.ConfigurationErrorFatal(
+				`Fatal error occurred: Unable to fetch envSecrets \nShutting down... ${configurationError instanceof Error ? configurationError.message : configurationError}.`,
+				{
+					statusCode: 404,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logCritical(loadSecretsError.message, logger);
+			processError(loadSecretsError, logger);
+			process.exit(1);
+		}
 
 		try {
 			const memoryMonitor = createMemoryMonitor({
@@ -123,7 +158,7 @@ async function start(): Promise<void> {
 
 		// test logger module writing functions in development
 		if (envVariables.nodeEnv === 'development') {
-			logger.debug('Testing logger levels...');
+			appLogger.debug('Testing logger levels...');
 			console.log('Test log');
 			console.info('Test info log');
 			console.warn('Test warning');
@@ -138,12 +173,7 @@ async function start(): Promise<void> {
 			sequelize = await initializeDatabase({
 				logger,
 				featureFlags,
-				getSecrets: () =>
-					sops.getSecrets({
-						logger,
-						execSync,
-						getDirectoryPath: () => process.cwd()
-					})
+				envSecrets
 			});
 			logger.info('Database successfully initialized');
 		} catch (error) {
@@ -178,12 +208,7 @@ async function start(): Promise<void> {
 			await configurePassport({
 				passport,
 				logger,
-				getSecrets: () =>
-					sops.getSecrets({
-						logger,
-						execSync,
-						getDirectoryPath: () => process.cwd()
-					}),
+				envSecrets,
 				UserModel,
 				argon2
 			});

@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import { Sequelize } from 'sequelize';
 import createAuditLogModel from './AuditLogModelFile';
 import createDataShareOptionsModel from './DataShareOptionsModelFile';
@@ -12,22 +13,30 @@ import createRecoveryMethodModel from './RecoveryMethodModelFile';
 import createSecurityEventModel from './SecurityEventModelFile';
 import createSupportRequestModel from './SupportRequestModelFile';
 import createUserMfaModel from './UserMfaModelFile';
-import createUserModel from './UserModelFile';
-import createUserSessionModel from './UserSession';
-import { processError } from '../errors/processError';
+import { createUserModel } from './UserModelFile';
+import createUserSessionModel from './UserSessionModelFile';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { processError, sendClientErrorResponse } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
+let res: Response;
+
 export interface Models {
-	AuditLog: ReturnType<typeof createAuditLogModel>;
-	DataShareOptions: ReturnType<typeof createDataShareOptionsModel>;
-	Device: ReturnType<typeof createDeviceModel>;
-	ErrorLog: ReturnType<typeof createErrorLogModel>;
-	FailedLoginAttempts: ReturnType<typeof createFailedLoginAttemptsModel>;
-	FeatureRequest: ReturnType<typeof createFeatureRequestModel>;
-	FeedbackSurvey: ReturnType<typeof createFeedbackSurveyModel>;
-	GuestbookEntry: ReturnType<typeof createGuestbookEntryModel>;
-	MultiFactorAuthSetup: ReturnType<typeof createMultiFactorAuthSetupModel>;
+	AuditLog: ReturnType<typeof createAuditLogModel> | null;
+	DataShareOptions: ReturnType<typeof createDataShareOptionsModel> | null;
+	Device: ReturnType<typeof createDeviceModel> | null;
+	ErrorLog: ReturnType<typeof createErrorLogModel> | null;
+	FailedLoginAttempts: ReturnType<
+		typeof createFailedLoginAttemptsModel
+	> | null;
+	FeatureRequest: ReturnType<typeof createFeatureRequestModel> | null;
+	FeedbackSurvey: ReturnType<typeof createFeedbackSurveyModel> | null;
+	GuestbookEntry: ReturnType<typeof createGuestbookEntryModel> | null;
+	MultiFactorAuthSetup: ReturnType<
+		typeof createMultiFactorAuthSetupModel
+	> | null;
 	RecoveryMethod: ReturnType<typeof createRecoveryMethodModel>;
 	SecurityEvent: ReturnType<typeof createSecurityEventModel>;
 	SupportRequest: ReturnType<typeof createSupportRequestModel>;
@@ -39,7 +48,7 @@ export interface Models {
 export async function loadModels(
 	sequelize: Sequelize,
 	logger: Logger
-): Promise<Models> {
+): Promise<Models | null> {
 	validateDependencies(
 		[
 			{ name: 'sequelize', instance: sequelize },
@@ -72,83 +81,119 @@ export async function loadModels(
 			UserSession: createUserSessionModel(sequelize, logger)
 		};
 
-		models.User.hasMany(models.AuditLog, {
+		for (const [modelName, modelInstance] of Object.entries(models)) {
+			if (modelInstance === null) {
+				const errorMessage = `Model ${modelName} failed to initialize`;
+				logger.error(errorMessage);
+				return null;
+			}
+		}
+
+		models.User!.hasMany(models.AuditLog!, {
 			foreignKey: 'id',
 			as: 'auditLogs'
 		});
-		models.User.hasMany(models.FailedLoginAttempts, {
+		models.User!.hasMany(models.FailedLoginAttempts!, {
 			foreignKey: 'id',
 			as: 'failedLoginAttempts'
 		});
-		models.User.hasMany(models.GuestbookEntry, {
+		models.User!.hasMany(models.GuestbookEntry!, {
 			foreignKey: 'id',
 			as: 'guestbookEntries'
 		});
-		models.User.hasMany(models.RecoveryMethod, {
+		models.User!.hasMany(models.RecoveryMethod!, {
 			foreignKey: 'id',
 			as: 'recoveryMethods'
 		});
-		models.User.hasMany(models.SecurityEvent, {
+		models.User!.hasMany(models.SecurityEvent!, {
 			foreignKey: 'id',
 			as: 'securityEvents'
 		});
-		models.User.hasMany(models.SupportRequest, {
+		models.User!.hasMany(models.SupportRequest!, {
 			foreignKey: 'id',
 			as: 'supportRequests'
 		});
-		models.User.hasMany(models.UserSession, {
+		models.User!.hasMany(models.UserSession!, {
 			foreignKey: 'id',
 			as: 'sessions'
 		});
+		models.User!.hasOne(models.UserMfa!, { foreignKey: 'id', as: 'user' });
 
-		models.User.hasOne(models.UserMfa, { foreignKey: 'id', as: 'user' });
-
-		models.AuditLog.belongsTo(models.User, {
+		models.AuditLog!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.DataShareOptions.belongsTo(models.User, {
+		models.DataShareOptions!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.Device.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
-		models.FailedLoginAttempts.belongsTo(models.User, {
+		models.Device!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.FeatureRequest.belongsTo(models.User, {
+		models.FailedLoginAttempts!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.GuestbookEntry.belongsTo(models.User, {
+		models.FeatureRequest!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.MultiFactorAuthSetup.belongsTo(models.User, {
+		models.GuestbookEntry!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.RecoveryMethod.belongsTo(models.User, {
+		models.MultiFactorAuthSetup!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.SecurityEvent.belongsTo(models.User, {
+		models.RecoveryMethod!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.SupportRequest.belongsTo(models.User, {
+		models.SecurityEvent!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.UserMfa.belongsTo(models.User, { foreignKey: 'id', as: 'user' });
-		models.UserSession.belongsTo(models.User, {
+		models.SupportRequest!.belongsTo(models.User!, {
+			foreignKey: 'id',
+			as: 'user'
+		});
+		models.UserMfa!.belongsTo(models.User!, {
+			foreignKey: 'id',
+			as: 'user'
+		});
+		models.UserSession!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
 
 		return models;
-	} catch (error) {
-		processError(error, logger || console);
-		throw error;
+	} catch (DB_ERROR_RECOVERABLE) {
+		const dbUtil = 'loadModels()';
+		const databaseRecoverableError =
+			new errorClasses.DatabaseErrorRecoverable(
+				`Error occurred when attempting to execute ${dbUtil}: ${DB_ERROR_RECOVERABLE instanceof Error ? DB_ERROR_RECOVERABLE.message : 'Unknown error'};`,
+				{ exposeToClient: false }
+			);
+		ErrorLogger.logError(databaseRecoverableError, logger);
+
+		const clientResponse = {
+			message: 'Internal Server Error',
+			statusCode: 500
+		};
+
+		await sendClientErrorResponse(
+			{
+				message: clientResponse.message,
+				statusCode: clientResponse.statusCode,
+				severity: ErrorSeverity.RECOVERABLE,
+				name: 'Model Load Error'
+			},
+			res
+		);
+		processError(databaseRecoverableError, logger);
+
+		return null;
 	}
 }

@@ -1,5 +1,8 @@
 import os from 'os';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
+import { envVariables } from '../environment/envVars';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -51,23 +54,47 @@ export function createMemoryMonitor({
 				logger.info(
 					`Memory usage (MB): RSS: ${memoryStats.rss}, Heap Total: ${memoryStats.heapTotal}, Heap Used: ${memoryStats.heapUsed}, External: ${memoryStats.external}, System Available: ${memoryStats.available}`
 				);
-			} catch (error) {
-				processError(error, logger);
+			} catch (utilError) {
+				const utility: string = 'logMemoryUsage()';
+				const utilityError = new errorClasses.UtilityErrorRecoverable(
+					`Failed to log memory usage using the utility ${utility}: ${
+						utilError instanceof Error
+							? utilError.message
+							: String(utilError)
+					}`,
+					{
+						utility,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logWarning(utilityError.message, logger);
+				processError(utilityError, logger);
 			}
 		}
 
 		function startMemoryMonitor(): NodeJS.Timeout {
-			// start monitoring memory usage every 5 minutes (300000 ms)
-			return setInterval(logMemoryUsage, 300000);
+			return setInterval(
+				logMemoryUsage,
+				envVariables.memoryMonitorInterval // ms
+			);
 		}
 
 		return { startMemoryMonitor };
-	} catch (error) {
-		processError(error, logger);
-		throw new Error(
-			`Failed to create and start memory monitor: ${
-				error instanceof Error ? error.message : String(error)
-			}`
+	} catch (utilError) {
+		const utility: string = 'createMemoryMonitor()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Failed to create and start memory monitor using the utility ${utility}: ${
+				utilError instanceof Error
+					? utilError.message
+					: String(utilError)
+			}`,
+			{
+				utility,
+				exposeToClient: false
+			}
 		);
+		ErrorLogger.logWarning(utilityError.message, logger);
+		processError(utilityError, logger);
+		return { startMemoryMonitor: () => setInterval(() => {}, 0) }; // no-op function
 	}
 }

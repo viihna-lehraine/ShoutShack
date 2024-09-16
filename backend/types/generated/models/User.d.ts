@@ -2,7 +2,7 @@ import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequ
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '../utils/logger';
 import { RateLimitMiddlewareDependencies } from '../middleware/rateLimit';
-import { SecretsMap } from '../config/sops';
+import { SecretsMap } from '../environment/sops';
 interface UserAttributes {
     id: string;
     userId: number;

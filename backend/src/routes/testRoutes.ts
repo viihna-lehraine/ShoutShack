@@ -1,14 +1,16 @@
 import { Application, Request, Response, NextFunction, Router } from 'express';
-import { FeatureFlags } from '../config/envConfig';
-import { processError } from '../errors/processError';
+import { FeatureFlagTypes } from '../environment/envVars';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler, processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface TestRouteDependencies {
 	app: Application;
 	logger: Logger;
-	featureFlags: FeatureFlags;
-	envVariables: typeof import('../config/envConfig').envVariables;
+	featureFlags: FeatureFlagTypes;
+	envVariables: typeof import('../environment/envVars').envVariables;
 }
 
 export function initializeTestRoutes({
@@ -30,10 +32,6 @@ export function initializeTestRoutes({
 			logger
 		);
 
-		if (!featureFlags.loadTestRoutesFlag) {
-			logger.info('Test routes not loaded; feature flag is disabled.');
-		}
-
 		if (envVariables.nodeEnv === 'production') {
 			router.use((_req: Request, res: Response) => {
 				res.status(404).json({
@@ -48,7 +46,17 @@ export function initializeTestRoutes({
 						logger.info('Test route accessed.');
 						res.send('Test route is working!');
 					} catch (error) {
-						processError(error as Error, logger, req);
+						const expressRouteError =
+							new errorClasses.ExpressRouteError(
+								`Error occurred when accessing test route: ${error instanceof Error ? error.message : String(error)}`,
+								{
+									statusCode: 500,
+									exposeToClient: false,
+									severity: ErrorSeverity.WARNING
+								}
+							);
+						ErrorLogger.logError(expressRouteError, logger);
+						processError(expressRouteError, logger, req);
 						next(new Error('Internal server error on test route'));
 					}
 				}

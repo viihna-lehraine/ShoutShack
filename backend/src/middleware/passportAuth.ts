@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { AuthenticateOptions, PassportStatic } from 'passport';
-import { processError } from '../errors/processError';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
+import { expressErrorHandler } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -48,9 +50,26 @@ export const initializePassportAuthMiddleware = ({
 					return next();
 				}
 			)(req, res, next);
-		} catch (error) {
-			processError(error, logger || console, req);
+		} catch (expressError) {
+			const middleware: string = 'initializePassportAuthMiddleware()';
+			const errorResponse: string = 'Internal Server Error';
+			const expressMiddlewareError = new errorClasses.ExpressError(
+				`Fatal error occured when attempting to execute ${middleware}: ${expressError instanceof Error ? expressError.message : 'Unknown error'} ; Shutting down...`,
+				{
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(expressMiddlewareError, logger);
+			expressErrorHandler({ logger })(
+				expressMiddlewareError,
+				req,
+				res,
+				errorResponse
+			);
 			res.status(500).json({ error: 'Internal Server Error' });
+			process.exit(1);
 		}
 	};
 };

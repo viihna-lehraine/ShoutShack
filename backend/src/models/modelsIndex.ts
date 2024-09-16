@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { loadModels, Models } from './loadModels';
-import { AppError } from '../errors/errorClasses';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { logger, Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -27,9 +28,19 @@ export async function initializeModels(
 			logger.info('Models loaded');
 		}
 		return models as Models;
-	} catch (error) {
-		processError(error, logger || console);
-		throw new AppError('Internal Server Error', 500);
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Error occurred while attempting to initialize model files using initializeModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+
+		logger.debug('Returning empty object in lieu of models');
+
+		return {} as Models;
 	}
 }
 
@@ -44,14 +55,33 @@ export async function getModels(): Promise<Models> {
 					logger.info('Models loaded');
 					return models;
 				}
-			} catch (error) {
-				processError(error, logger || console);
-				throw new AppError('Internal Server Error', 500);
+			} catch (dbError) {
+				const databaseError = new errorClasses.DatabaseErrorRecoverable(
+					`Error occurred within getModels() - models were uninitialized when function was called and getModels() failed to initialize them: ${dbError instanceof Error ? dbError.message : dbError}`,
+					{
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logInfo(databaseError.message, logger);
+				processError(databaseError, logger);
+
+				logger.debug('Returning empty object in lieu of models');
+
+				return {} as Models;
 			}
 		}
 		return models as Models;
-	} catch (error) {
-		processError(error, logger || console);
-		throw new AppError('Internal Server Error', 500);
+	} catch (dbError) {
+		const DatabaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Error occurred while attempting to retrieve models using getModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(DatabaseError.message, logger);
+		processError(DatabaseError, logger);
+
+		logger.debug('Returning empty object in lieu of models');
+		return {} as Models;
 	}
 }

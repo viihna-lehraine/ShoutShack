@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import jwt from 'jsonwebtoken';
 import { Logger } from 'winston';
-import sops from '../config/sops';
+import sops from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

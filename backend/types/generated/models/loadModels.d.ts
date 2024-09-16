@@ -12,7 +12,7 @@ import createSecurityEventModel from './SecurityEventModelFile';
 import createSupportRequestModel from './SupportRequestModelFile';
 import createUserMfaModel from './UserMfaModelFile';
 import createUserModel from './UserModelFile';
-import createUserSessionModel from './UserSession';
+import createUserSessionModel from './UserSessionModelFile';
 import { Logger } from '../utils/logger';
 export interface Models {
     AuditLog: ReturnType<typeof createAuditLogModel>;

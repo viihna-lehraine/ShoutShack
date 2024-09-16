@@ -1,17 +1,17 @@
 import argon2 from 'argon2';
-import { SecretsMap } from './sops';
+import { EnvSecretsMap } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 import { ErrorLogger } from 'src/errors/errorLogger';
 
-type UserSecrets = Pick<SecretsMap, 'PEPPER'>;
+type UserSecrets = Pick<EnvSecretsMap, 'PEPPER'>;
 
 interface HashPasswordDependencies {
 	password: string;
 	secrets: UserSecrets;
-	logger: Logger;
+	appLogger: Logger;
 }
 
 export const hashConfig = {
@@ -24,7 +24,7 @@ export const hashConfig = {
 export async function hashPassword({
 	password,
 	secrets,
-	logger
+	appLogger
 }: HashPasswordDependencies): Promise<string> {
 	try {
 		validateDependencies(
@@ -32,7 +32,7 @@ export async function hashPassword({
 				{ name: 'password', instance: password },
 				{ name: 'secrets', instance: secrets }
 			],
-			logger || console
+			appLogger || console
 		);
 		return await argon2.hash(password + secrets.PEPPER, hashConfig);
 	} catch (utilError) {
@@ -41,8 +41,8 @@ export async function hashPassword({
 			utility,
 			{ exposeToClient: false }
 		);
-		ErrorLogger.logError(utilityError, logger);
-		processError(utilityError, logger || console);
+		ErrorLogger.logError(utilityError, appLogger);
+		processError(utilityError, appLogger || console);
 		return '';
 	}
 }

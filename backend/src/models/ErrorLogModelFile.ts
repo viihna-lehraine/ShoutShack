@@ -6,6 +6,8 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
+import { errorClasses } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
@@ -40,7 +42,7 @@ class ErrorLog
 export function createErrorLogModel(
 	sequelize: Sequelize,
 	logger: Logger
-): typeof ErrorLog {
+): typeof ErrorLog | null {
 	try {
 		validateDependencies(
 			[
@@ -107,8 +109,15 @@ export function createErrorLogModel(
 		logger.info('ErrorLog model initialized');
 
 		return ErrorLog;
-	} catch (error) {
-		processError(error, logger);
-		throw error;
+	} catch (dbError) {
+		const databaseError = new errorClasses.DatabaseErrorRecoverable(
+			`Failed to initialize ErrorLog model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+			{
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logInfo(databaseError.message, logger);
+		processError(databaseError, logger);
+		return null;
 	}
 }

@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { processError } from '../errors/processError';
+import { FeatureFlags, getFeatureFlags } from '../environment/envVars';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { expressErrorHandler } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -20,13 +22,14 @@ export async function initializeJwtAuthMiddleware({
 		logger || console
 	);
 
+	const featureFlags: FeatureFlags = getFeatureFlags(logger);
+
 	return async (
 		req: Request,
 		res: Response,
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			logger.info('JWT Auth is enabled');
 			const authHeader = req.headers.authorization;
 			const token = authHeader?.split(' ')[1];
 
@@ -45,8 +48,20 @@ export async function initializeJwtAuthMiddleware({
 
 			req.user = user;
 			next();
-		} catch (error) {
-			processError(error, logger || console, req);
+		} catch (expressError) {
+			const middleware: string = 'initializeJwtAuthMiddleware()';
+			const errorRespone: string = 'Internal server error';
+			const expressMiddlewareError = new errorClasses.ExpressError(
+				`Error occurred when attempting to use JWT authentication via middleware ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+				{
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+			expressErrorHandler({
+				logger,
+				featureFlags
+			})(expressMiddlewareError, req, res, errorRespone);
 			res.sendStatus(500);
 		}
 	};

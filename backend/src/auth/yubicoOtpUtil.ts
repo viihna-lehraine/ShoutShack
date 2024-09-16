@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import yub from 'yub';
-import getSecrets, { SecretsMap } from '../config/sops';
+import getSecrets, { SecretsMap } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

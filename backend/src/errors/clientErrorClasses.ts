@@ -44,22 +44,6 @@ export class ClientAuthenticationError extends ClientError {
 	}
 }
 
-export class DatabaseErrorRecoverable extends ClientError {
-	constructor(
-		errorMessage: string = 'Internal server error. Please try again later.',
-		details: ErrorDetails = {}
-	) {
-		super(
-			errorMessage,
-			503,
-			ErrorSeverity.RECOVERABLE,
-			ERROR_CODES.DB_ERROR_RECOVERABLE,
-			details
-		);
-		this.name = 'DatabaseErrorRecoverable';
-	}
-}
-
 export class DeprecatedApiWarning extends ClientError {
 	constructor(apiVersion?: string, details: ErrorDetails = {}) {
 		const errorMessage: string = apiVersion
@@ -363,10 +347,25 @@ export class TimeoutError extends ClientError {
 	}
 }
 
+export class UserRegistrationError extends ClientError {
+	constructor(
+		errorMessage: string = 'Account registration failed. Please try again.',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.USER_REGISTRATION_ERROR,
+			details
+		);
+		this.name = 'UserRegistrationError';
+	}
+}
+
 export const clientErrorClasses = {
 	AutoCorrectedInputWarning,
 	ClientAuthenticationError,
-	DatabaseErrorRecoverable,
 	DeprecatedApiWarning,
 	ExternalServiceError,
 	FallbackSuccessInfo,
@@ -382,5 +381,6 @@ export const clientErrorClasses = {
 	RateLimitErrorRecoverable,
 	RateLimitErrorWarning,
 	SessionExpiredError,
-	TimeoutError
+	TimeoutError,
+	UserRegistrationError
 };

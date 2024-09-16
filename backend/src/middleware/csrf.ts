@@ -1,6 +1,5 @@
 import csrf from 'csrf';
 import { NextFunction, Request, Response } from 'express';
-import { FeatureFlags, getFeatureFlags } from '../config/envConfig';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
@@ -23,9 +22,6 @@ export function initializeCsrfMiddleware({
 		],
 		logger || console
 	);
-
-	const featureFlags: FeatureFlags = getFeatureFlags(logger);
-
 	return function csrfMiddleware(
 		req: Request,
 		res: Response,
@@ -61,10 +57,10 @@ export function initializeCsrfMiddleware({
 			const middleware: string = 'CSRF Middleware';
 			const expressMiddlewareError = new errorClasses.ExpressError(
 				`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
-				{ exposeToClient: false, ErrorSeverity.FATAL }
+				{ severity: ErrorSeverity.FATAL, exposeToClient: false }
 			);
 			ErrorLogger.logError(expressMiddlewareError, logger);
-			expressErrorHandler({ logger, featureFlags });
+			expressErrorHandler({ logger });
 			next(expressError);
 		}
 	};

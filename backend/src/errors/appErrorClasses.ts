@@ -109,6 +109,22 @@ export class DatabaseErrorFatal extends AppError {
 	}
 }
 
+export class DatabaseErrorRecoverable extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error. Please try again later.',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			503,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.DB_ERROR_RECOVERABLE,
+			details
+		);
+		this.name = 'DatabaseErrorRecoverable';
+	}
+}
+
 export class DataIntegrityError extends AppError {
 	constructor(
 		errorMessage: string = 'Internal server error',
@@ -181,6 +197,22 @@ export class ExpressError extends AppError {
 			details
 		);
 		this.name = 'ExpressError';
+	}
+}
+
+export class ExpressRouteError extends AppError {
+	constructor(
+		errorMessage: string = 'Internal server error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.EXPRESS_ROUTE_ERROR,
+			details
+		);
+		this.name = 'ExpressRouteError';
 	}
 }
 
@@ -567,10 +599,12 @@ export const appErrorClasses = {
 	ConcurrencyError,
 	ConflictError,
 	DatabaseErrorFatal,
+	DatabaseErrorRecoverable,
 	DataIntegrityError,
 	DependencyErrorFatal,
 	DependencyErrorRecoverable,
 	ExpressError,
+	ExpressRouteError,
 	ExternalServiceErrorFatal,
 	InsufficientStorageError,
 	MissingResourceError,

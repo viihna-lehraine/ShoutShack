@@ -12,7 +12,7 @@ import {
 	envVariables,
 	FeatureFlags,
 	getFeatureFlags
-} from '../config/envConfig';
+} from '../environment/envVars';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

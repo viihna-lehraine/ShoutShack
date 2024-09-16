@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
-import { AppError, errorClasses } from '../errors/errorClasses';
-import { processError } from '../errors/processError';
+import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { expressErrorHandler } from '../errors/processError';
 import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
@@ -54,7 +54,7 @@ export const initializeRateLimitMiddleware = ({
 				rateLimitInfo.remainingPoints <= 2 &&
 				rateLimitInfo.remainingPoints > 0
 			) {
-				logger.warn(
+				logger.info(
 					`Rate limit warning for IP ${ip}. Remaining points: ${rateLimitInfo.remainingPoints}`
 				);
 				next(
@@ -91,8 +91,19 @@ export const initializeRateLimitMiddleware = ({
 					);
 				}
 			} else {
-				processError(error, logger || console, req);
-				next(new AppError('Internal server error', 500));
+				const middleware = 'initializeRateLimitMiddleware()';
+				const expressMiddlewareError = new AppError(
+					`Fatal error occurred in ${middleware}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+					500,
+					ErrorSeverity.FATAL,
+					'RATE_LIMIT_INTERNAL_ERROR'
+				);
+
+				expressErrorHandler({ logger })(
+					expressMiddlewareError,
+					req,
+					res
+				);
 			}
 		}
 	};

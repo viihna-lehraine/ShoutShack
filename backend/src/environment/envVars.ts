@@ -4,36 +4,45 @@ import { fileURLToPath } from 'url';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
+import { logger, Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+export const __filename = fileURLToPath(import.meta.url);
+export const __dirname = dirname(__filename);
 
 export function loadEnv(): void {
 	try {
-		const masterEnvPath: string = path.join(__dirname, '../../config/env/backend.master.env');
+		const masterEnvPath: string = path.join(
+			__dirname,
+			'../../config/env/backend.master.env'
+		);
 		config({ path: masterEnvPath });
 
 		const envType = process.env.ENV_TYPE || 'dev';
-		console.log(`envType = ${envType}`)
-		const envFile = envType === 'docker' ? 'backend.docker-dev.env' : 'backend.dev.env';
+		console.log(`envType = ${envType}`);
+		const envFile =
+			envType === 'docker' ? 'backend.docker-dev.env' : 'backend.dev.env';
 		const envPath = path.join(process.cwd(), `./config/env/${envFile}`);
 		console.log(`Loading environment variables from ${envFile}`);
 
 		config({ path: envPath });
-	} catch (error) {
-		processError(error, console);
+	} catch (configError) {
+		const configurationError = new errorClasses.ConfigurationError(
+			'Failed to load environment variables from .env files using loadEnv(): ${configError instanceof Error ? configError.message : configError}',
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(configurationError, console);
+		processError(configError, console);
+		throw configurationError;
 	}
 }
 
-interface EnvironmentVariableTypes {
+export interface EnvVariableTypes {
 	backendLogExportPath: string;
 	emailUser: string;
 	featureApiRoutesCsrf: boolean;
 	featureDbSync: boolean;
 	featureDecryptKeys: boolean;
-	featureEnableErrorHandler: boolean;
 	featureEnableIpBlacklist: boolean;
 	featureEnableJwtAuth: boolean;
 	featureEnableLogStash: boolean;
@@ -50,6 +59,7 @@ interface EnvironmentVariableTypes {
 	logStashHost: string;
 	logStashNode: string;
 	logStashPort: number;
+	memoryMonitorInterval: number;
 	nodeEnv: 'development' | 'testing' | 'production';
 	redisUrl: string;
 	secretsFilePath: string;
@@ -73,8 +83,8 @@ export const envVariables: EnvironmentVariableTypes = {
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
 	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
 	featureDecryptKeys: process.env.FEATURE_DECRYPT_KEYS === 'true',
-	featureEnableErrorHandler: process.env.FEATURE_ENABLE_ERROR_HANDLER === 'true',
-	featureEnableIpBlacklist: process.env.FEATURE_ENABLE_IP_BLACKLIST === 'true',
+	featureEnableIpBlacklist:
+		process.env.FEATURE_ENABLE_IP_BLACKLIST === 'true',
 	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
 	featureEnableLogStash: process.env.FEATURE_ENABLE_LOGSTASH === 'true',
 	featureEnableRateLimit: process.env.FEATURE_ENABLE_RATE_LIMIT === 'true',
@@ -90,6 +100,10 @@ export const envVariables: EnvironmentVariableTypes = {
 	logStashHost: process.env.LOGSTASH_HOST || 'localhost',
 	logStashNode: process.env.LOGSTASH_NODE || 'guestbook-logstash-node',
 	logStashPort: parseInt(process.env.LOGSTASH_PORT || '5000', 10),
+	memoryMonitorInterval: parseInt(
+		process.env.MEMORY_MONITOR_INTERVAL || '300000',
+		10
+	),
 	nodeEnv: process.env.NODE_ENV as 'development' | 'testing' | 'production',
 	redisUrl: process.env.REDIS_URL || '',
 	secretsFilePath: process.env.SECRETS_FILE_PATH || '',
@@ -112,7 +126,6 @@ export const FeatureFlagNames = {
 	DB_SYNC: 'FEATURE_DB_SYNC',
 	DECRYPT_KEYS: 'FEATURE_DECRYPT_KEYS',
 	ENABLE_CSRF: 'FEATURE_ENABLE_CSRF',
-	ENABLE_ERROR_HANDLER: 'FEATURE_ENABLE_ERROR_HANDLER',
 	ENABLE_IP_BLACKLIST: 'FEATURE_ENABLE_IP_BLACKLIST',
 	ENABLE_JWT_AUTH: 'FEATURE_ENABLE_JWT_AUTH',
 	ENABLE_LOG_STASH: 'FEATURE_ENABLE_LOG_STASH',
@@ -127,13 +140,13 @@ export const FeatureFlagNames = {
 
 export type FeatureFlagNamesType = keyof typeof FeatureFlagNames;
 
-export type FeatureFlagValueType = typeof FeatureFlagNames[FeatureFlagNamesType];
+export type FeatureFlagValueType =
+	(typeof FeatureFlagNames)[FeatureFlagNamesType];
 
-export interface FeatureFlags {
+export interface FeatureFlagTypes {
 	apiRoutesCsrfFlag: boolean;
 	dbSyncFlag: boolean;
 	decryptKeysFlag: boolean;
-	enableErrorHandlerFlag: boolean;
 	enableIpBlacklistFlag: boolean;
 	enableJwtAuthFlag: boolean;
 	enableLogStashFlag: boolean;
@@ -156,7 +169,7 @@ export function parseBoolean(
 				{ name: 'value', instance: value }
 			],
 			logger
-		)
+		);
 
 		if (value === undefined) {
 			logger.warn('Feature flag value is undefined. Defaulting to false');
@@ -169,7 +182,7 @@ export function parseBoolean(
 	} catch (utilError) {
 		const utility: string = 'parseBoolean()';
 		const utilityError = new errorClasses.UtilityErrorFatal(
-			utility,
+			`Failed to parse boolean value ${value} using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
 			{ exposeToClient: false, value, logger }
 		);
 		ErrorLogger.logError(utilityError, logger);
@@ -181,7 +194,7 @@ export function parseBoolean(
 export function getFeatureFlags(
 	logger: Logger | Console,
 	env: Partial<NodeJS.ProcessEnv> = process.env
-): FeatureFlags {
+): FeatureFlagTypes {
 	try {
 		validateDependencies(
 			[
@@ -192,19 +205,24 @@ export function getFeatureFlags(
 		);
 
 		return {
-			apiRoutesCsrfFlag: parseBoolean(env.FEATURE_API_ROUTES_CSRF, logger),
-			dbSyncFlag: parseBoolean(env.FEATURE_DB_SYNC, logger),
-			decryptKeysFlag: parseBoolean(env.FEATURE_DECRYPT_KEYS, logger),
-			enableErrorHandlerFlag: parseBoolean(
-				env.FEATURE_ENABLE_ERROR_HANDLER,
+			apiRoutesCsrfFlag: parseBoolean(
+				env.FEATURE_API_ROUTES_CSRF,
 				logger
 			),
+			dbSyncFlag: parseBoolean(env.FEATURE_DB_SYNC, logger),
+			decryptKeysFlag: parseBoolean(env.FEATURE_DECRYPT_KEYS, logger),
 			enableIpBlacklistFlag: parseBoolean(
 				env.FEATURE_ENABLE_IP_BLACKLIST,
 				logger
 			),
-			enableJwtAuthFlag: parseBoolean(env.FEATURE_ENABLE_JWT_AUTH, logger),
-			enableLogStashFlag: parseBoolean(env.FEATURE_ENABLE_LOGSTASH, logger),
+			enableJwtAuthFlag: parseBoolean(
+				env.FEATURE_ENABLE_JWT_AUTH,
+				logger
+			),
+			enableLogStashFlag: parseBoolean(
+				env.FEATURE_ENABLE_LOGSTASH,
+				logger
+			),
 			enableRateLimitFlag: parseBoolean(
 				env.FEATURE_ENABLE_RATE_LIMIT,
 				logger
@@ -212,17 +230,20 @@ export function getFeatureFlags(
 			enableRedisFlag: parseBoolean(env.FEATURE_ENABLE_REDIS, logger),
 			enableSslFlag: parseBoolean(env.FEATURE_ENABLE_SSL, logger),
 			httpsRedirectFlag: parseBoolean(env.FEATURE_HTTPS_REDIRECT, logger),
-			loadTestRoutesFlag: parseBoolean(env.FEATURE_LOAD_TEST_ROUTES, logger),
+			loadTestRoutesFlag: parseBoolean(
+				env.FEATURE_LOAD_TEST_ROUTES,
+				logger
+			),
 			sequelizeLoggingFlag: parseBoolean(
 				env.FEATURE_SEQUELIZE_LOGGING,
 				logger
 			)
-		}
+		};
 	} catch (utilError) {
 		const utility: string = 'getFeatureFlags()';
 		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			utility,
-			{ exposeToClient: false }
+			`Failed to get feature flags using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
+			{ utility, exposeToClient: false }
 		);
 		ErrorLogger.logError(utilityError, logger);
 		processError(utilityError, logger);
@@ -230,7 +251,6 @@ export function getFeatureFlags(
 			apiRoutesCsrfFlag: false,
 			dbSyncFlag: false,
 			decryptKeysFlag: false,
-			enableErrorHandlerFlag: false,
 			enableIpBlacklistFlag: false,
 			enableJwtAuthFlag: false,
 			enableLogStashFlag: false,
@@ -240,7 +260,7 @@ export function getFeatureFlags(
 			httpsRedirectFlag: false,
 			loadTestRoutesFlag: false,
 			sequelizeLoggingFlag: false
-		}
+		};
 	}
 }
 
@@ -251,56 +271,71 @@ export function createFeatureEnabler(logger: Logger) {
 			logger || console
 		);
 
-    	return {
-    	    enableFeatureBasedOnFlag(
+		return {
+			enableFeatureBasedOnFlag(
 				flag: boolean,
 				description: string,
 				callback: () => void
-			) {
-    	        if (flag) {
-    	            logger.info(
-						`Enabling ${description} (flag is ${flag})`
-					);
-    	            callback();
-    	        } else {
-    	            logger.info(
-						`Skipping ${description} (flag is ${flag})`
-					);
-    	        }
-    	    },
-    	    enableFeatureWithProdOverride(
+			): void {
+				if (flag) {
+					logger.info(`Enabling ${description} (flag is ${flag})`);
+					callback();
+				} else {
+					logger.info(`Skipping ${description} (flag is ${flag})`);
+				}
+			},
+			enableFeatureWithProdOverride(
 				flag: boolean,
 				description: string,
 				callback: () => void
-			) {
-    	        if (process.env.NODE_ENV === 'production') {
-    	            logger.info(
+			): void {
+				if (process.env.NODE_ENV === 'production') {
+					logger.info(
 						`Enabling ${description} in production regardless of flag value.`
 					);
-    	            callback();
-    	        } else if (flag) {
-    	            logger.info(
-						`Enabling ${description} (flag is ${flag})`
-					);
-    	            callback();
-    	        } else {
-    	            logger.info(
-						`Skipping ${description} (flag is ${flag})`
-					);
-    	        }
-    	    },
-    	};
+					callback();
+				} else if (flag) {
+					logger.info(`Enabling ${description} (flag is ${flag})`);
+					callback();
+				} else {
+					logger.info(`Skipping ${description} (flag is ${flag})`);
+				}
+			}
+		};
 	} catch (utilError) {
 		const utility: string = 'createFeatureEnabler()';
 		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			utility,
-			{ exposeToClient: false }
+			`Failed to create feature enabler using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
+			{
+				utility,
+				exposeToClient: false
+			}
 		);
 		ErrorLogger.logError(utilityError, logger);
 		processError(utilityError, logger || console);
 		return {
-			enableFeatureBasedOnFlag: () => {},
-			enableFeatureWithProdOverride: () => {}
+			enableFeatureBasedOnFlag: (): void => {},
+			enableFeatureWithProdOverride: (): void => {}
 		};
+	}
+}
+
+export const featureFlags = getFeatureFlags(logger || console);
+
+export function displayEnvAndFeatureFlags(): void {
+	try {
+		console.log('Environment Variables:');
+		console.table(envVariables);
+
+		console.log('\nFeature Flags:');
+		console.table(featureFlags);
+	} catch (displayError) {
+		const displayUtility = 'displayEnvAndFeatureFlags()';
+		const displayErrorObj = new errorClasses.UtilityErrorRecoverable(
+			`Error displaying environment variables and feature flags using ${displayUtility}: ${displayError instanceof Error ? displayError.message : displayError}`,
+			{ exposeToClient: false }
+		);
+		ErrorLogger.logError(displayErrorObj, logger);
+		processError(displayErrorObj, logger);
 	}
 }

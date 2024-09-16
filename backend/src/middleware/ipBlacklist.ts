@@ -1,12 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { promises as fs } from 'fs';
 import { inRange } from 'range_check';
-import {
-	envVariables,
-	FeatureFlags,
-	getFeatureFlags
-} from '../config/envConfig';
-import { errorClasses } from '../errors/errorClasses';
+import { envVariables, FeatureFlags } from '../environment/envVars';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
 import { Logger } from '../utils/logger';
@@ -24,18 +20,18 @@ let blacklist: string[] = [];
 export const loadBlacklist = async ({
 	logger,
 	fsModule,
-	envVariables
+	envVariables,
+	featureFlags
 }: IpBlacklistDependencies): Promise<void> => {
 	validateDependencies(
 		[
 			{ name: 'logger', instance: logger },
 			{ name: 'fsModule', instance: fsModule },
-			{ name: 'envVariables', instance: envVariables }
+			{ name: 'envVariables', instance: envVariables },
+			{ name: 'featureFlags', instance: featureFlags }
 		],
 		logger || console
 	);
-
-	const featureFlags: FeatureFlags = getFeatureFlags(logger);
 
 	const filePath = envVariables.serverDataFilePath2;
 
@@ -45,17 +41,18 @@ export const loadBlacklist = async ({
 			blacklist = JSON.parse(data);
 			logger.info('Blacklist loaded successfully');
 		}
-	} catch (expressError) {
-		const middleware: string = 'loadIpBlacklist';
-		const expressMiddlwareError = new errorClasses.ExpressError(
-			`Error occured when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+	} catch (utilError) {
+		const utility: string = 'loadIpBlacklist()';
+		const expressMiddlwareError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured when attempting to load IP blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
 			{ exposeToClient: false }
 		);
-		ErrorLogger.
+		ErrorLogger.logWarning(expressMiddlwareError.message, logger);
+		processError(utilError, logger);
 	}
 };
 
-const saveBlacklist = async ({
+const saveIpBlacklist = async ({
 	logger,
 	featureFlags,
 	fsModule,
@@ -76,19 +73,27 @@ const saveBlacklist = async ({
 		try {
 			await fsModule.writeFile(filePath, JSON.stringify(blacklist));
 			logger.info('Blacklist saved successfully');
-		} catch (err) {
-			processError(err, logger || console);
+		} catch (utilError) {
+			const utility: string = 'saveIpBlacklist()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Error occured when attempting to save IP blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+				{ exposeToClient: false }
+			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilError, logger);
 		}
 	}
 };
 
-export const initializeBlacklist = async (
+export const initializeIpBlacklist = async (
 	deps: IpBlacklistDependencies
 ): Promise<void> => {
 	validateDependencies(
 		[
 			{ name: 'logger', instance: deps.logger },
-			{ name: 'featureFlags', instance: deps.featureFlags }
+			{ name: 'fsModule', instance: deps.fsModule },
+			{ name: 'featureFlags', instance: deps.featureFlags },
+			{ name: 'envVariables', instance: deps.envVariables }
 		],
 		deps.logger
 	);
@@ -102,9 +107,14 @@ export const initializeBlacklist = async (
 		try {
 			await loadBlacklist(deps);
 			logger.info('Blacklist and range_check module loaded successfully');
-		} catch (err) {
-			processError(err, logger);
-			throw err;
+		} catch (utilError) {
+			const utility: string = 'initializeIpBlacklist()';
+			const utilityError = new errorClasses.UtilityErrorRecoverable(
+				`Error occured when attempting to initialize IP blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+				{ exposeToClient: false }
+			);
+			ErrorLogger.logWarning(utilityError.message, logger);
+			processError(utilError, logger);
 		}
 	} else {
 		logger.info('IP blacklist middleware is disabled');
@@ -131,7 +141,7 @@ export const addToBlacklist = async (
 			logger.info('IP Blacklist is enabled. Adding IP to blacklist');
 			if (!blacklist.includes(ip)) {
 				blacklist.push(ip);
-				await saveBlacklist(deps);
+				await saveIpBlacklist(deps);
 				logger.info(`IP ${ip} added to blacklist`);
 			} else {
 				logger.info('IP already in blacklist');
@@ -139,8 +149,17 @@ export const addToBlacklist = async (
 		} else {
 			logger.info('IP Blacklist is disabled');
 		}
-	} catch (err) {
-		processError(err, logger);
+	} catch (utilError) {
+		const utility: string = 'addToBlacklist()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured when attempting to add IP address ${ip} to blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+			{
+				severity: ErrorSeverity.WARNING,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logWarning(utilityError.message, logger);
+		processError(utilError, logger);
 	}
 };
 
@@ -162,11 +181,20 @@ export const removeFromBlacklist = async (
 	try {
 		if (featureFlags.enableIpBlacklistFlag) {
 			blacklist = blacklist.filter(range => range !== ip);
-			await saveBlacklist(deps);
+			await saveIpBlacklist(deps);
 			logger.info(`IP ${ip} removed from blacklist`);
 		}
-	} catch (err) {
-		processError(err, logger);
+	} catch (utilError) {
+		const utility: string = 'removeFromBlacklist()';
+		const utilityError = new errorClasses.UtilityErrorRecoverable(
+			`Error occured when attempting to remove IP address ${ip} from blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+			{
+				severity: ErrorSeverity.WARNING,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logWarning(utilityError.message, logger);
+		processError(utilError, logger);
 	}
 };
 
@@ -177,7 +205,9 @@ export const initializeIpBlacklistMiddleware =
 
 		validateDependencies([
 			{ name: 'logger', instance: logger },
-			{ name: 'featureFlags', instance: featureFlags }
+			{ name: 'featureFlags', instance: featureFlags },
+			{ name: 'envVariables', instance: deps.envVariables },
+			{ name: 'fsModule', instance: deps.fsModule }
 		]);
 
 		try {
@@ -186,13 +216,13 @@ export const initializeIpBlacklistMiddleware =
 				const clientIp = req.ip;
 
 				if (!clientIp) {
-					logger.error('Client IP not found');
+					logger.info('Client IP not found');
 					res.status(500).json({ error: 'Bad request' });
 					return;
 				}
 
 				if (blacklist.some(range => inRange(clientIp, range))) {
-					logger.warn(
+					logger.info(
 						`Blocked request from blacklisted IP: ${clientIp}`
 					);
 					res.status(403).json({ error: 'Access denied' });
@@ -201,10 +231,14 @@ export const initializeIpBlacklistMiddleware =
 			} else {
 				logger.info('IP Blacklist middleware disabled');
 			}
-		} catch (err) {
-			processError(err, logger);
-			res.status(500).json({ error: 'Internal server error' });
-			return;
+		} catch (expressError) {
+			const middleware: string = 'initializeIpBlacklistMiddleware()';
+			const expressMiddlewareError = new errorClasses.ExpressError(
+				`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+				{ severity: ErrorSeverity.FATAL, exposeToClient: false }
+			);
+			ErrorLogger.logError(expressMiddlewareError, logger);
+			expressErrorHandler({ logger, featureFlags });
 		}
 
 		next();
