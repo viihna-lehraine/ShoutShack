@@ -20,6 +20,7 @@ if (logDirectory) {
 	console.error(
 		'Log directory is undefined. Please check the environment variable LOGIN_LOGS_PATH.'
 	);
+
 	process.exit(1);
 }
 
@@ -119,11 +120,11 @@ async function promptCredentials(): Promise<{
 	return { username, password };
 }
 
-async function promptEncryptionKey(): Promise<string> {
+async function promptAdminSecret(promptMessage: string): Promise<string> {
 	return new Promise<string>(resolve => {
-		rl.question('Enter Encryption Key: ', key => {
+		rl.question(promptMessage, secret => {
 			process.stdout.write('\n');
-			resolve(key);
+			resolve(secret);
 		});
 	});
 }
@@ -161,8 +162,13 @@ async function validateCredentials(
 	return argon2.verify(storedHashedPassword, password);
 }
 
-async function validateEncryptionKey(key: string): Promise<boolean> {
-	const allowedKeys = [process.env.key1, process.env.key2, process.env.key3];
+async function validateAdminSecret(
+	key: string,
+	prefix: string
+): Promise<boolean> {
+	const allowedKeys: string[] = Object.keys(process.env)
+		.filter(envKey => envKey.startsWith(prefix))
+		.map(envKey => process.env[envKey] as string);
 
 	for (const hashedKey of allowedKeys) {
 		if (hashedKey && (await argon2.verify(hashedKey, key))) {
@@ -193,10 +199,14 @@ async function logAttempt(
 	startupLogger.info(loginData);
 }
 
-export async function adminLogin(): Promise<string | null> {
+export async function login(): Promise<{
+	encryptionKey: string | null;
+	gpgPassphrase: string | null;
+}> {
 	let retries = 3;
 	let attempts = 0;
 	let rawEncryptionKey: string | null = null;
+	let rawGPGPassphrase: string | null = null;
 
 	const adminCredentials = getAdminCredentials();
 
@@ -217,23 +227,64 @@ export async function adminLogin(): Promise<string | null> {
 
 			if (valid) {
 				for (let keyAttempts = 0; keyAttempts < 3; keyAttempts++) {
-					const encryptionKey = await promptEncryptionKey();
-					const keyValid = await validateEncryptionKey(encryptionKey);
+					const encryptionKey = await promptAdminSecret(
+						'Enter Encryption Key: '
+					);
+					const keyValid = await validateAdminSecret(
+						encryptionKey,
+						'ENCRYPTION_KEY_'
+					);
 
 					if (keyValid) {
-						console.log(
-							'Login and Encryption key validated successfully.'
-						);
+						console.log('Encryption key validated successfully.');
 						rawEncryptionKey = encryptionKey;
-						await logAttempt(true, attempts, username, 'login');
 						await logAttempt(
 							true,
-							keyAttempts,
+							attempts,
 							username,
-							'key-validation'
+							'encryption-key-validation'
 						);
-						rl.close();
-						return rawEncryptionKey;
+
+						for (
+							let passphraseAttempts = 0;
+							passphraseAttempts < 3;
+							passphraseAttempts++
+						) {
+							const passphrase = await promptAdminSecret(
+								'Enter GPG Passphrase: '
+							);
+							const passphraseValid = await validateAdminSecret(
+								passphrase,
+								'GPG_PASSPHRASE_'
+							);
+
+							if (passphraseValid) {
+								console.log(
+									'GPG Passphrase validated successfully.'
+								);
+								rawGPGPassphrase = passphrase;
+								await logAttempt(
+									true,
+									passphraseAttempts,
+									username,
+									'gpg-passphrase-validation'
+								);
+								rl.close();
+								return {
+									encryptionKey: rawEncryptionKey,
+									gpgPassphrase: rawGPGPassphrase
+								};
+							} else {
+								console.log(
+									'Invalid GPG passphrase. Please try again.'
+								);
+							}
+						}
+
+						console.error(
+							'Maximum GPG passphrase retries reached.\nShutting down...'
+						);
+						process.exit(1);
 					} else {
 						console.log(
 							'Invalid encryption key. Please try again.'

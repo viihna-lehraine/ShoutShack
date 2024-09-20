@@ -13,15 +13,14 @@ import os from 'os';
 import passport from 'passport';
 import path from 'path';
 import process from 'process';
-import readlineSync from 'readline-sync';
 import { createClient, RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
+import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
 import { setUpHttpServer } from './server';
 import { initializeRoutes } from './routes';
-import { configService } from './config/configService';
+import { configService, initialize } from './config/configService';
 import { initializeDatabase } from './config/db';
-import { initSecretsConfig } from './environment/envConfig';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import { configurePassport } from './config/passport';
@@ -39,6 +38,28 @@ import { createUserModel } from './models/UserModelFile';
 
 async function start(): Promise<void> {
 	try {
+		try {
+			const { encryptionKey, gpgPassphrase } = await login();
+
+			if (!encryptionKey || !gpgPassphrase) {
+				throw new Error(
+					'Missing encryption key or GPG passphrase. Exiting.'
+				);
+			}
+
+			configService.initialize(encryptionKey);
+
+			// *DEV-NOTE* ADD THIS AS WELL AS AN ADMIN SECRETS STORE CLASS, LIKE SECRETSSTORE
+			// If you have any additional GPG handling logic, handle that here
+			// Example: someGPGService.initialize(gpgPassphrase);
+
+			console.log(
+				'Secrets store initialized This application is ready to ROCK AND ROLL!!!'
+			);
+		} catch (error) {
+			throw error;
+		}
+
 		const appLogger = configService.getLogger();
 
 		appLogger.info('Environment Variables');
@@ -46,30 +67,6 @@ async function start(): Promise<void> {
 
 		appLogger.info('Feature Flags');
 		console.table(configService.getFeatureFlags());
-
-		const MAX_RETRIES = 3;
-		let encryptionKey = '';
-		let retryCount = 0;
-		let validKey = false;
-
-		while (retryCount < MAX_RETRIES && !validKey) {
-			encryptionKey = readlineSync.question(
-				'Enter the encryption key: ',
-				{
-					hideEchoBack: true,
-					mask: '*'
-				}
-			);
-
-			if (encryptionKey && encryptionKey.length >= 32) {
-				validKey = true;
-			} else {
-				retryCount++;
-				appLogger.error(
-					`Invalid encryption key. Please try again.\n${MAX_RETRIES - retryCount} attempts remaining...`
-				);
-			}
-		}
 
 		const initSecretsDependencies = {
 			execSync,

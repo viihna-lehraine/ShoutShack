@@ -10,7 +10,7 @@ function askHiddenQuestion(query) {
 
 	return new Promise(resolve => {
 		rl.question(query, answer => {
-			rl.history = rl.history.slice(1); // Clear last line from history
+			rl.history = rl.history.slice(1);
 			rl.close();
 			resolve(answer);
 		});
@@ -22,9 +22,9 @@ function askHiddenQuestion(query) {
 	});
 }
 
-async function hashKeys() {
+async function hashAdminSecret() {
 	try {
-		const key = await askHiddenQuestion('Enter encryption key to hash: ');
+		const key = await askHiddenQuestion('Enter secret to hash: ');
 
 		const hashedKey = await argon2.hash(key);
 
@@ -34,4 +34,4 @@ async function hashKeys() {
 	}
 }
 
-await hashKeys();
+await hashAdminSecret();

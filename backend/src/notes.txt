@@ -1,0 +1,15 @@
+1. get gpg passphrase working in app.ts startup
+
+2. create AdminSecretsStore class
+
+3. ensure AdminSecrets are ALWAYS MASKED AND WILL NEVER PRINT NO MATTER WHAT THE FUCK ANYONE DOES
+
+4. write a listening function that will check if they STILL somehow got printed and then throw every goddamn alert I can come up with
+
+5. fix secrets masking in logger configs
+
+6. ensure secrets, env vars, and logger instances initialize in the correct order
+
+7. ensure environment configs, error files, and logger files have no circular dependencies
+
+8. create 2 new GPG keys just for use with this server so if they are compromised, your entire life isnt fucked

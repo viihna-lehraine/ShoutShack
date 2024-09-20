@@ -1,18 +1,22 @@
 import { execSync } from 'child_process';
-import { ConfigStore } from '../environment/envConfig';
-import { getSecretsSync, SecretsMap, SecretsDependencies } from '../environment/envSecrets';
+import { ConfigStore, envSecretsStore } from '../environment/envConfig';
+import { SecretsMap, SecretsDependencies } from '../environment/envSecrets';
 import { loadEnv } from '../environment/envVars';
 import { appLogger, logWithMaskedSecrets, setupLogger } from '../utils/appLogger';
 
 class ConfigService {
 	private static instance: ConfigService;
-  	private envVariablesStore = ConfigStore.getInstance();
-  	private secrets: SecretsMap | null = null;
-  	private appLogger: appLogger = setupLogger();
+	private envVariablesStore = ConfigStore.getInstance();
+	private appLogger: appLogger = setupLogger();
+	private encryptionKey: string | null = null;
 
 	private constructor() {
 		loadEnv();
-		this.loadSecrets({
+	}
+
+	public initialize(encryptionKey: string) {
+		this.encryptionKey = encryptionKey;
+		this.initializeSecrets({
 			appLogger: this.appLogger,
 			execSync,
 			getDirectoryPath: () => process.cwd()
@@ -57,23 +61,66 @@ class ConfigService {
 		return this.envVariablesStore.getFeatureFlags();
 	}
 
+	public getSecrets(keys: keyof SecretsMap | (keyof SecretsMap)[]): Record<string, string | undefined> | string | undefined {
+		let result = envSecretsStore.retrieveSecrets(
+			Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString()
+		);
 
-	public getSpecificSecret(key: keyof SecretsMap): string | number | undefined {
-		return this.secrets ? this.secrets[key]: undefined;
+		if (result === null || (typeof result === 'object' && Object.values(result).some(value => value === null))) {
+			this.appLogger.warn(`Secret(s) not found, attempting to refresh secrets.`);
+			this.refreshSecrets({
+				appLogger: this.appLogger,
+				execSync,
+				getDirectoryPath: () => process.cwd(),
+			});
+
+			result = envSecretsStore.retrieveSecrets(
+				Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString()
+			);
+		}
+
+		if (result === null) {
+			this.appLogger.error(`Secret(s) ${keys} still not found after refreshing.`);
+			return undefined;
+		}
+
+		if (typeof result === 'object') {
+			const transformedResult: Record<string, string | undefined> = {};
+			for (const key in result) {
+				transformedResult[key] = result[key] === null ? undefined : result[key] as string;
+			}
+			return transformedResult;
+		}
+
+		return result === null ? undefined : result;
 	}
 
-	private loadSecrets(dependencies: SecretsDependencies): void {
-		try {
-			const secrets = getSecretsSync(dependencies);
-			this.secrets = secrets;
+	private initializeSecrets(dependencies: SecretsDependencies): void {
+		if (!this.encryptionKey) {
+			throw new Error('Encryption key is not set');
+		}
 
-			logWithMaskedSecrets('info', 'Secrets loaded successfully', this.secrets as unknown as Record<string, unknown>);
+		try {
+			envSecretsStore.initializeEncryptionKey(this.encryptionKey);
+			envSecretsStore.loadSecrets(dependencies);
+			this.appLogger.info('Secrets loaded successfully');
 		} catch (error) {
-			logWithMaskedSecrets('error', 'Failed to load secrets', { error });
+			this.appLogger.error('Failed to load secrets', { error });
+
+			throw error;
+		}
+	}
+
+	public refreshSecrets(dependencies: SecretsDependencies): void {
+		try {
+			envSecretsStore.refreshSecrets(dependencies);
+			this.appLogger.info('Secrets refreshed successfully');
+		} catch (error) {
+			this.appLogger.error('Failed to refresh secrets', { error });
+
 			throw error;
 		}
 	}
 }
 
 export const configService = ConfigService.getInstance();
-

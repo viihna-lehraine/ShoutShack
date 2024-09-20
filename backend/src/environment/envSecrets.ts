@@ -1,4 +1,10 @@
 import { execSync } from 'child_process';
+import {
+	createCipheriv,
+	createDecipheriv,
+	createHash,
+	randomBytes
+} from 'crypto';
 import path from 'path';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
@@ -16,271 +22,175 @@ export interface SecretsMap {
 	[key: string]: string;
 }
 
-export function decryptSecretOnDemand(
-	secretKey: string,
-	dependencies: SecretsDependencies,
-	encryptionKey: string
-): string | null {
-	const { execSync, getDirectoryPath, appLogger } = dependencies;
-	try {
-		const secretsPath = path.join(
-			getDirectoryPath(),
-			configService.getEnvVariables().secretsFilePath
-		);
+const algorithm = 'aes-256-ctr';
+const ivLength = 16;
 
-		const decryptedSecrets = execSync(
-			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
-		).toString();
-		const secrets = JSON.parse(decryptedSecrets);
+export class SecretsStore {
+	private static instance: SecretsStore;
+	private secrets: Map<
+		string,
+		{ value: string; isDecrypted: boolean; lastAccessed: number }
+	> = new Map();
+	private encryptionKey: string | null = null;
+	private reEncryptionCooldown: number =
+		parseInt(process.env.RE_ENCRYPTION_COOLDOWN!, 10) || 5000; // in ms
 
-		if (secrets[secretKey]) {
-			const secretValue = secrets[secretKey];
-			appLogger.info(`Decrypted secret: ${secretKey}`);
+	private constructor() {}
 
-			encryptSecretOnDemand(
-				secretKey,
-				secretValue,
-				encryptionKey,
-				dependencies
+	public static getInstance(): SecretsStore {
+		if (!SecretsStore.instance) {
+			SecretsStore.instance = new SecretsStore();
+		}
+
+		return SecretsStore.instance;
+	}
+
+	public initializeEncryptionKey(encryptionKey: string): void {
+		this.encryptionKey = encryptionKey;
+	}
+
+	public loadSecrets(dependencies: SecretsDependencies): void {
+		const { execSync, getDirectoryPath, appLogger } = dependencies;
+		try {
+			const secretsPath = path.join(
+				getDirectoryPath(),
+				configService.getEnvVariables().secretsFilePath
 			);
-			return secretValue;
-		} else {
-			appLogger.error(`Secret not found: ${secretKey}`);
-			return null;
-		}
-	} catch (error) {
-		const secretsError = new errorClasses.ConfigurationError(
-			`Failed to retrieve secret for ${secretKey}: ${error instanceof Error ? error.message : String(error)}`,
-			{
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
+			const decryptedSecrets = execSync(
+				`sops -d --output-type json --passphrase ${this.encryptionKey} ${secretsPath}`
+			).toString();
+			const secrets = JSON.parse(decryptedSecrets);
+
+			for (const key in secrets) {
+				const encryptedSecret = this.encryptSecret(secrets[key]);
+
+				this.secrets.set(key, {
+					value: encryptedSecret,
+					isDecrypted: false,
+					lastAccessed: Date.now()
+				});
 			}
-		);
-		ErrorLogger.logError(secretsError);
-		processError(secretsError);
-		return null;
-	}
-}
+			appLogger.info('Secrets loaded successfully');
+		} catch (error) {
+			const secretsLoadError = new errorClasses.ConfigurationError(
+				`Fatal error in APP_INIT process: Failed to load secrets\n${error instanceof Error ? error.message : String(error)}`,
+				{
+					originalError: error,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(secretsLoadError);
+			processError(secretsLoadError);
 
-export function encryptSecretOnDemand(
-	secretKey: string,
-	secretValue: string,
-	encryptionKey: string,
-	dependencies: SecretsDependencies
-): void {
-	const { execSync, getDirectoryPath, appLogger } = dependencies;
-	try {
-		const secretsPath = path.join(
-			getDirectoryPath(),
-			configService.getEnvVariables().secretsFilePath
-		);
-
-		const decryptedSecrets = execSync(
-			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
-		).toString();
-		const secrets = JSON.parse(decryptedSecrets);
-
-		secrets[secretKey] = secretValue;
-
-		const updatedSecretsJson = JSON.stringify(secrets);
-
-		execSync(
-			`sops -e --input-type json --passphrase ${encryptionKey} ${secretsPath}`,
-			{ input: updatedSecretsJson }
-		);
-
-		appLogger.info(`Secret ${secretKey} re-encrypted successfully.`);
-	} catch (error) {
-		const secretsError = new errorClasses.ConfigurationError(
-			`Failed to re-encrypt secret ${secretKey}: ${error instanceof Error ? error.message : String(error)}`,
-			{
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(secretsError);
-		processError(secretsError);
-	}
-}
-
-export function getSecretsSync(
-	{ execSync, getDirectoryPath, appLogger }: SecretsDependencies,
-	encryptionKey: string
-): SecretsMap {
-	try {
-		const secretsPath = path.join(
-			getDirectoryPath(),
-			configService.getEnvVariables().secretsFilePath
-		);
-		appLogger.info('Resolved secrets path:', secretsPath);
-
-		const decryptedSecrets = execSync(
-			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
-		).toString();
-		const secrets = JSON.parse(decryptedSecrets);
-
-		appLogger.info('Secrets successfully decrypted');
-		return {
-			dbPassword: secrets.DB_PASSWORD,
-			email2FAKey: secrets.EMAIL_2FA_KEY,
-			jwtSecret: secrets.JWT_SECRET,
-			pepper: secrets.PEPPER,
-			sessionSecret: secrets.SESSION_SECRET,
-			smtpToken: secrets.SMTP_TOKEN
-		};
-	} catch (error) {
-		const secretsError = new errorClasses.ConfigurationErrorFatal(
-			`Failed to retrieve secrets: ${error instanceof Error ? error.message : String(error)}`,
-			{
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(secretsError);
-		processError(secretsError);
-		throw secretsError;
-	}
-}
-
-function decryptKeySync(
-	{ execSync }: Pick<SecretsDependencies, 'appLogger' | 'execSync'>,
-	encryptedFilePath: string
-): string {
-	try {
-		const decryptedKey = execSync(
-			`sops -d --output-type string ${encryptedFilePath}`
-		).toString('utf-8');
-		return decryptedKey;
-	} catch (utilError) {
-		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Error occurred while decrypting key\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
-			{
-				utility: 'decryptKeySync',
-				originalError: utilError,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(utilityError);
-		processError(utilityError);
-		return '';
-	}
-}
-
-export function decryptDataFilesSync({ execSync }: SecretsDependencies): {
-	[key: string]: string;
-} {
-	const appLogger = configService.getLogger();
-
-	try {
-		const filePaths = [
-			configService.getEnvVariables().serverDataFilePath1,
-			configService.getEnvVariables().serverDataFilePath2,
-			configService.getEnvVariables().serverDataFilePath3,
-			configService.getEnvVariables().serverDataFilePath4
-		];
-
-		const decryptedFiles: { [key: string]: string } = {};
-		filePaths.forEach((filePath, index) => {
-			if (filePath) {
-				appLogger.info(`Decrypting file: ${filePath}`);
-				const fileContent = execSync(
-					`sops -d --output-type json ${filePath}`
-				).toString();
-				decryptedFiles[`files${index + 1}`] = fileContent;
-			} else {
-				appLogger.warn(`serverDataFilePath${index + 1} is not defined`);
-			}
-		});
-
-		return decryptedFiles;
-	} catch (error) {
-		const configurationError = new errorClasses.ConfigurationErrorFatal(
-			`Fatal error: Failed to decrypt data files\n${error instanceof Error ? error.message : String(error)}`,
-			{
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(configurationError);
-		processError(configurationError);
-		return {};
-	}
-}
-
-export function getTLSKeysSync(dependencies: SecretsDependencies): {
-	key: string;
-	cert: string;
-} {
-	try {
-		const keyPath = path.join(
-			dependencies.getDirectoryPath(),
-			configService.getEnvVariables().tlsKeyPath
-		);
-		const certPath = path.join(
-			dependencies.getDirectoryPath(),
-			configService.getEnvVariables().tlsCertPath
-		);
-
-		const cert = decryptKeySync(dependencies, certPath);
-		const key = decryptKeySync(dependencies, keyPath);
-
-		return { key, cert };
-	} catch (error) {
-		const configurationError = new errorClasses.ConfigurationErrorFatal(
-			`Fatal error: Failed to retrieve TLS keys\n${error instanceof Error ? error.message : String(error)}`,
-			{
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(configurationError);
-		processError(configurationError);
-		return { key: '', cert: '' };
-	}
-}
-
-export function maskSecrets(
-	meta: Record<string, unknown>
-): Record<string, unknown> {
-	const maskedMeta: Record<string, unknown> = {};
-
-	for (const key in meta) {
-		if (Object.prototype.hasOwnProperty.call(meta, key)) {
-			if (isSensitiveField(key)) {
-				maskedMeta[key] = '***REDACTED***';
-			} else {
-				maskedMeta[key] = meta[key];
-			}
+			throw secretsLoadError;
 		}
 	}
 
-	return maskedMeta;
+	private encryptSecret(secret: string): string {
+		const iv = randomBytes(ivLength);
+		const cipher = createCipheriv(
+			algorithm,
+			this.getEncryptionKeyHash(),
+			iv
+		);
+		const encrypted = Buffer.concat([
+			cipher.update(secret, 'utf-8'),
+			cipher.final()
+		]);
+
+		return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+	}
+
+	private decryptSecret(encryptedSecret: string): string {
+		const [ivHex, encryptedHex] = encryptedSecret.split(':');
+		const iv = Buffer.from(ivHex, 'hex');
+		const encryptedText = Buffer.from(encryptedHex, 'hex');
+		const decipher = createDecipheriv(
+			algorithm,
+			this.getEncryptionKeyHash(),
+			iv
+		);
+		const decrypted = Buffer.concat([
+			decipher.update(encryptedText),
+			decipher.final()
+		]);
+
+		return decrypted.toString();
+	}
+
+	private getEncryptionKeyHash(): Buffer {
+		return createHash('sha256').update(this.encryptionKey!).digest();
+	}
+
+	public retrieveSecrets(
+		secretKeys: string | string[]
+	): Record<string, string | null> | string | null {
+		if (typeof secretKeys === 'string') {
+			secretKeys = [secretKeys];
+		}
+
+		const secretsResult: Record<string, string | null> = {};
+
+		for (const key of secretKeys) {
+			const secretData = this.secrets.get(key);
+
+			if (!secretData) {
+				console.error(`Secret ${key} not found`);
+				secretsResult[key] = null;
+
+				continue;
+			}
+
+			if (secretData.isDecrypted) {
+				secretData.lastAccessed = Date.now();
+				secretsResult[key] = secretData.value;
+			} else {
+				const decryptedSecret = this.decryptSecret(secretData.value);
+
+				this.secrets.set(key, {
+					value: decryptedSecret,
+					isDecrypted: true,
+					lastAccessed: Date.now()
+				});
+				secretsResult[key] = decryptedSecret;
+			}
+		}
+
+		return Array.isArray(secretKeys) && secretKeys.length === 1
+			? secretsResult[secretKeys[0]]
+			: secretsResult;
+	}
+
+	public reEncryptSecret(secretKey: string): void {
+		const secretData = this.secrets.get(secretKey);
+
+		if (!secretData || !secretData.isDecrypted) {
+			return;
+		}
+
+		const currentTime = Date.now();
+		const isTimeElapsed = currentTime - secretData.lastAccessed;
+
+		if (isTimeElapsed < this.reEncryptionCooldown) {
+			const encryptedSecret = this.encryptSecret(secretData.value);
+
+			this.secrets.set(secretKey, {
+				value: encryptedSecret,
+				isDecrypted: false,
+				lastAccessed: Date.now()
+			});
+		}
+	}
+
+	public releaseSecret(secretKey: string): void {
+		this.reEncryptSecret(secretKey);
+	}
+
+	public refreshSecrets(dependencies: SecretsDependencies): void {
+		this.loadSecrets(dependencies);
+	}
 }
 
-function isSensitiveField(key: string): boolean {
-	const sensitiveFields = [
-		'dbPassword',
-		'email2FAKey',
-		'fidoChallengeSize',
-		'jwtSecret',
-		'pepper',
-		'sessionSecret',
-		'smtpToken',
-		'yubicoClientId',
-		'yubicoSecretKey'
-	];
-
-	return sensitiveFields.includes(key);
-}
+export const envSecretsStore = SecretsStore.getInstance();

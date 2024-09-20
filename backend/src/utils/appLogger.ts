@@ -9,7 +9,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
 import TransportStream from 'winston-transport';
 import { configService } from '../config/configService';
-import { maskSecrets } from '../environment/envSecrets';
+// import { maskSecrets } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
@@ -143,7 +143,6 @@ export function setupLogger(): WinstonLogger {
 	}
 }
 
-// Function to log with masked secrets
 export function logWithMaskedSecrets(
 	level: string,
 	message: string,
@@ -156,12 +155,7 @@ export function logWithMaskedSecrets(
 	}
 }
 
-// A simple critical logging example
-export function logCritical(message: string): void {
-	logWithMaskedSecrets('critical', message);
-}
-
-// Check if the given logger is an instance of our logger
+// check if the given logger is an instance of appLogger
 export function isAppLogger(
 	appLogger: appLogger | Console | undefined
 ): appLogger is appLogger {
