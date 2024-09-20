@@ -4,7 +4,7 @@ import path from 'path';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface MulterDependencies {

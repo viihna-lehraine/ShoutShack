@@ -6,10 +6,10 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
+import { ConfigService } from '../config/configService';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface ErrorLogAttributes {
@@ -40,16 +40,15 @@ class ErrorLog
 }
 
 export function createErrorLogModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof ErrorLog | null {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			appLogger || console
 		);
 
 		ErrorLog.init(
@@ -106,18 +105,19 @@ export function createErrorLogModel(
 			}
 		);
 
-		logger.info('ErrorLog model initialized');
+		appLogger.info('ErrorLog model initialized');
 
 		return ErrorLog;
-	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize ErrorLog model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+	} catch (loadModelError) {
+		const loadErrorLogModelError =
+			new errorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize ErrorLog model: ${loadModelError instanceof Error ? loadModelError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		ErrorLogger.logInfo(loadErrorLogModelError.message);
+		processError(loadErrorLogModelError);
 		return null;
 	}
 }

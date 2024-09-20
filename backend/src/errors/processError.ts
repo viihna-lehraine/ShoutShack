@@ -1,22 +1,18 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { AppError, ClientError, ErrorSeverity } from './errorClasses';
 import { ErrorLogger } from './errorLogger';
 import { envVariables } from '../environment/envVars';
-import { isLogger, Logger } from '../utils/logger';
+import { configService } from '../config/configService';
+import { isAppLogger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
-
-interface ExpressErrorHandlerDependencies {
-	logger: Logger;
-}
 
 export function processCriticalError(
 	error: AppError | unknown,
-	logger: Logger | Console,
 	req?: Request,
 	details: Record<string, unknown> = {}
 ): void {
-	const effectiveLogger = isLogger(logger) ? logger : console;
-
+	const appLogger = configService.getLogger() || console;
+	const effectiveLogger = isAppLogger(appLogger) ? appLogger : console;
 	const errorMessage = error instanceof Error ? error.message : String(error);
 	const errorStack = error instanceof Error ? error.stack : undefined;
 
@@ -47,19 +43,15 @@ export function processCriticalError(
 	}
 }
 
-export function processError(
-	error: unknown,
-	logger: Logger | Console,
-	req?: Request,
-	fallbackLogger: Console = console
-): void {
-	const effectiveLogger = isLogger(logger) ? logger : fallbackLogger;
+export function processError(error: unknown, req?: Request): void {
+	const appLogger = configService.getLogger();
+	const fallbackLogger = console;
+	const effectiveLogger = isAppLogger(appLogger) ? appLogger : fallbackLogger;
 
 	try {
 		validateDependencies(
 			[
 				{ name: 'error', instance: error },
-				{ name: 'logger', instance: logger },
 				{ name: req ? 'req' : 'undefined', instance: req },
 				{ name: 'fallbackLogger', instance: fallbackLogger }
 			],
@@ -75,12 +67,10 @@ export function processError(
 			appError = new AppError(`Unknown error: ${String(error)}`);
 		}
 
-		ErrorLogger.logError(appError, effectiveLogger);
+		ErrorLogger.logError(appError);
 
 		if (appError.severity === ErrorSeverity.FATAL) {
-			processCriticalError(appError, effectiveLogger, req, {
-				stack: appError.stack
-			});
+			processCriticalError(error, req, { stack: appError.stack });
 		}
 	} catch (loggingError) {
 		fallbackLogger.error('Failed to log the original error', {
@@ -94,34 +84,25 @@ export function processError(
 }
 
 export async function sendClientErrorResponse(
-	error: ClientError,
+	message: string,
+	statusCode: number = 400,
 	res: Response
 ): Promise<void> {
-	const statusCode = error.statusCode || 400;
-	const clientResponse = {
-		message: error.message,
-		...(error.details?.exposeToClient ? { details: error.details } : {})
-	};
+	const clientResponse = message;
 
 	res.status(statusCode).json(clientResponse);
 }
 
-export function expressErrorHandler({
-	logger
-}: ExpressErrorHandlerDependencies) {
+export function expressErrorHandler() {
 	return function errorHandler(
 		expressError: AppError | ClientError | Error,
 		req: Request,
 		res: Response,
+		next: NextFunction,
 		errorResponse?: string
 	): void {
 		try {
-			validateDependencies(
-				[{ name: 'logger', instance: logger }],
-				logger
-			);
-
-			processError(expressError, logger, req);
+			processError(expressError, req);
 
 			const customResponse: string =
 				errorResponse ||
@@ -155,7 +136,7 @@ export function expressErrorHandler({
 				});
 			}
 		} catch (error) {
-			processError(error, logger, req);
+			processError(error, req);
 			res.status(500).json({
 				status: 'error',
 				message: 'Internal server error: expressErrorHandler() failed'

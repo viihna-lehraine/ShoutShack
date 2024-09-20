@@ -1,9 +1,8 @@
 import os from 'os';
-import { errorClasses } from '../errors/errorClasses';
+import { ConfigService } from '../config/configService';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { envVariables } from '../environment/envVars';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface MemoryStats {
@@ -15,29 +14,28 @@ interface MemoryStats {
 }
 
 interface MemoryMonitorDependencies {
-	logger: Logger;
 	os: typeof os;
 	process: NodeJS.Process;
 	setInterval: typeof setInterval;
 }
 
 export function createMemoryMonitor({
-	logger,
 	os,
 	process,
 	setInterval
 }: MemoryMonitorDependencies): {
 	startMemoryMonitor: () => NodeJS.Timeout;
 } {
+	const appLogger = ConfigService.getInstance().getLogger();
+	const envVariables = ConfigService.getInstance().getEnvVariables();
+
 	try {
 		validateDependencies(
 			[
-				{ name: 'logger', instance: logger },
-				{ name: 'os', instance: os },
 				{ name: 'process', instance: process },
 				{ name: 'setInterval', instance: setInterval }
 			],
-			logger
+			appLogger || console
 		);
 
 		function logMemoryUsage(): void {
@@ -51,24 +49,26 @@ export function createMemoryMonitor({
 					available: (os.freemem() / 1024 / 1024).toFixed(2)
 				};
 
-				logger.info(
+				appLogger.info(
 					`Memory usage (MB): RSS: ${memoryStats.rss}, Heap Total: ${memoryStats.heapTotal}, Heap Used: ${memoryStats.heapUsed}, External: ${memoryStats.external}, System Available: ${memoryStats.available}`
 				);
 			} catch (utilError) {
-				const utility: string = 'logMemoryUsage()';
 				const utilityError = new errorClasses.UtilityErrorRecoverable(
-					`Failed to log memory usage using the utility ${utility}: ${
+					`Failed to log memory usage\n${
 						utilError instanceof Error
 							? utilError.message
 							: String(utilError)
 					}`,
 					{
-						utility,
+						utility: 'logMemoryUsage',
+						originalError: utilError,
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logWarning(utilityError.message, logger);
-				processError(utilityError, logger);
+				ErrorLogger.logWarning(utilityError.message);
+				processError(utilityError);
 			}
 		}
 
@@ -93,8 +93,8 @@ export function createMemoryMonitor({
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logWarning(utilityError.message, logger);
-		processError(utilityError, logger);
+		ErrorLogger.logWarning(utilityError.message);
+		processError(utilityError);
 		return { startMemoryMonitor: () => setInterval(() => {}, 0) }; // no-op function
 	}
 }

@@ -4,7 +4,7 @@ import { envVariables } from '../environment/envVars';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 const router = express.Router();

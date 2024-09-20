@@ -1,28 +1,22 @@
 import { NextFunction, Request, Response } from 'express';
-import { FeatureFlags, getFeatureFlags } from '../environment/envVars';
+import { ConfigService } from 'src/config/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { expressErrorHandler } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface JwtAuthMiddlewareDependencies {
-	logger: Logger;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 }
 
 export async function initializeJwtAuthMiddleware({
-	logger,
 	verifyJwt
 }: JwtAuthMiddlewareDependencies) {
-	validateDependencies(
-		[
-			{ name: 'logger', instance: logger },
-			{ name: 'verifyJwt', instance: verifyJwt }
-		],
-		logger || console
-	);
+	const appLogger = ConfigService.getInstance().getLogger();
 
-	const featureFlags: FeatureFlags = getFeatureFlags(logger);
+	validateDependencies(
+		[{ name: 'verifyJwt', instance: verifyJwt }],
+		appLogger || console
+	);
 
 	return async (
 		req: Request,
@@ -34,14 +28,16 @@ export async function initializeJwtAuthMiddleware({
 			const token = authHeader?.split(' ')[1];
 
 			if (!token) {
-				logger.warn('No JWT token found in the authorization header');
+				appLogger.warn(
+					'No JWT token found in the authorization header'
+				);
 				res.sendStatus(403);
 				return;
 			}
 
 			const user = await verifyJwt(token);
 			if (!user) {
-				logger.warn('Invalid JWT token');
+				appLogger.warn('Invalid JWT token');
 				res.sendStatus(403);
 				return;
 			}
@@ -50,7 +46,6 @@ export async function initializeJwtAuthMiddleware({
 			next();
 		} catch (expressError) {
 			const middleware: string = 'initializeJwtAuthMiddleware()';
-			const errorRespone: string = 'Internal server error';
 			const expressMiddlewareError = new errorClasses.ExpressError(
 				`Error occurred when attempting to use JWT authentication via middleware ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
 				{
@@ -58,10 +53,7 @@ export async function initializeJwtAuthMiddleware({
 					exposeToClient: false
 				}
 			);
-			expressErrorHandler({
-				logger,
-				featureFlags
-			})(expressMiddlewareError, req, res, errorRespone);
+			expressErrorHandler()(expressMiddlewareError, req, res, next);
 			res.sendStatus(500);
 		}
 	};

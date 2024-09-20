@@ -3,31 +3,29 @@ import { execSync } from 'child_process';
 import RedisStore from 'connect-redis';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import { constants, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import express from 'express';
 import session from 'express-session';
-import fsPromises from 'fs/promises';
+import { promises as fs } from 'fs';
 import hpp from 'hpp';
 import morgan from 'morgan';
 import os from 'os';
 import passport from 'passport';
+import path from 'path';
 import process from 'process';
+import readlineSync from 'readline-sync';
 import { createClient, RedisClientType } from 'redis';
+import { Sequelize } from 'sequelize';
 import { initializeAllMiddleware } from './middleware';
 import { setUpHttpServer } from './server';
 import { initializeRoutes } from './routes';
+import { configService } from './config/configService';
 import { initializeDatabase } from './config/db';
-import {
-	envVariablesStore,
-	envSecretsStore,
-	initializeEnvConfig
-} from './environment/envConfig';
-import { envVariables, FeatureFlagTypes, loadEnv } from './environment/envVars';
+import { initSecretsConfig } from './environment/envConfig';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
-import configurePassport from './config/passport';
+import { configurePassport } from './config/passport';
 import { getRedisClient } from './config/redis';
-
 import { expressErrorHandler, processError } from './errors/processError';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
@@ -38,126 +36,67 @@ import { initializeValidatorMiddleware } from './middleware/validator';
 import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
-import { logger, Logger } from './utils/logger';
-import { validateDependencies } from './utils/validateDependencies';
 
 async function start(): Promise<void> {
 	try {
-		try {
-			loadEnv();
+		const appLogger = configService.getLogger();
 
-			initializeEnvConfig({
-				appLogger: logger,
-				execSync,
-				getDirectoryPath: () => process.cwd()
-			});
+		appLogger.info('Environment Variables');
+		console.table(configService.getEnvVariables());
 
-			const featureFlags: FeatureFlagTypes = envVariablesStore.getFeatureFlags();
-		} catch (error) {
-			if (error instanceof Error) {
-				ErrorLogger.logCritical(
-					error.message
-						? error.message
-						: 'Fatal error occured\n Failed to initialize secrets, flags, and other environment variables',
-					console
-				);
+		appLogger.info('Feature Flags');
+		console.table(configService.getFeatureFlags());
+
+		const MAX_RETRIES = 3;
+		let encryptionKey = '';
+		let retryCount = 0;
+		let validKey = false;
+
+		while (retryCount < MAX_RETRIES && !validKey) {
+			encryptionKey = readlineSync.question(
+				'Enter the encryption key: ',
+				{
+					hideEchoBack: true,
+					mask: '*'
+				}
+			);
+
+			if (encryptionKey && encryptionKey.length >= 32) {
+				validKey = true;
 			} else {
-				ErrorLogger.logCritical(
-					'Fatal error occured\n Failed to fetch envVariables',
-					console
+				retryCount++;
+				appLogger.error(
+					`Invalid encryption key. Please try again.\n${MAX_RETRIES - retryCount} attempts remaining...`
 				);
 			}
-			throw new errorClasses.ConfigurationErrorFatal(
-				`Failed to load environment variables \n${error instanceof Error ? error.message : error}`,
-				{
-					statusCode: 404,
-					exposeToClient: false
-				}
-			);
 		}
 
-		const envVariablesStore = EnvVariablesStore.getInstance();
-		const featureFlags: FeatureFlagTypes =
-			envVariablesStore.getFeatureFlags();
-		const envSecretsStore = EnvSecretsStore.getInstance();
-		const envSecrets = envSecretsStore.getEnvSecrets();
-
-		console.log('Environment Variables');
-		console.table(envVariablesStore.getEnvVariables());
-
-		console.log('Feature Flags');
-		console.table(`${envVariablesStore.getFeatureFlags()}`);
-
-		const staticRootPath = envVariables.staticRootPath;
-
-		const appLogger: Logger = logger;
-		try {
-			appLogger.info('Logger successfully initialized');
-		} catch (error) {
-			const appLoggerError = new errorClasses.DependencyErrorFatal(
-				`appLogger initialization failed. Shutting down now... \n${error instanceof Error ? error.message : error}`,
-				{
-					statusCode: 500,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(appLoggerError, console);
-			processError(appLoggerError, console);
-			process.exit(1);
-		}
-
-		try {
-			await envSecretsStore.loadSecrets({
-				appLogger,
-				execSync,
-				getDirectoryPath: () => process.cwd()
-			});
-			appLogger.info('Secrets loaded');
-		} catch (configurationError) {
-			const loadSecretsError = new errorClasses.ConfigurationErrorFatal(
-				`Fatal error occurred: Unable to fetch envSecrets \nShutting down... ${configurationError instanceof Error ? configurationError.message : configurationError}.`,
-				{
-					statusCode: 404,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logCritical(loadSecretsError.message, logger);
-			processError(loadSecretsError, logger);
-			process.exit(1);
-		}
+		const initSecretsDependencies = {
+			execSync,
+			getDirectoryPath: (): string =>
+				path.resolve(__dirname, '../secrets'),
+			appLogger: configService.getLogger()
+		};
+		initSecretsConfig(initSecretsDependencies);
 
 		try {
 			const memoryMonitor = createMemoryMonitor({
-				logger,
 				os,
 				process,
 				setInterval
 			});
-
 			memoryMonitor.startMemoryMonitor();
-		} catch (depError) {
-			const dependency: string = 'Memory Monitor';
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				`Failed to initialize ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
-				{
-					exposeToClient: false
-				}
+		} catch (error) {
+			const memoryMonitorError = new errorClasses.UtilityErrorRecoverable(
+				`Failed to start memory monitor\n${error instanceof Error ? error.message : String(error)}`,
+				{ statusCode: 500, exposeToClient: false }
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(memoryMonitorError);
+			processError(memoryMonitorError);
 		}
 
-		validateDependencies(
-			[
-				{ name: 'logger', instance: logger },
-				{ name: 'staticRootPath', instance: staticRootPath },
-				{ name: 'featureFlags', instance: featureFlags }
-			],
-			logger
-		);
-
-		// test logger module writing functions in development
-		if (envVariables.nodeEnv === 'development') {
+		// development only - logger test
+		if (configService.getEnvVariables().nodeEnv === 'development') {
 			appLogger.debug('Testing logger levels...');
 			console.log('Test log');
 			console.info('Test info log');
@@ -166,95 +105,96 @@ async function start(): Promise<void> {
 			console.debug('Test debug log');
 		}
 
-		// database initialization
-		logger.info('Initializing database');
-		let sequelize;
+		let sequelize: Sequelize;
 		try {
-			sequelize = await initializeDatabase({
-				logger,
-				featureFlags,
-				envSecrets
-			});
-			logger.info('Database successfully initialized');
-		} catch (error) {
-			logger.error(`Error during database initialization: ${error}`);
-			throw new errorClasses.DatabaseErrorFatal(
-				'Failed to initialize the database',
+			sequelize = await initializeDatabase();
+		} catch (dbError) {
+			const databaseErrorFatal = new errorClasses.DatabaseErrorFatal(
+				`Error occurred during database initialization\n${dbError instanceof Error ? dbError.message : String(dbError)}`,
 				{
-					originalError: error,
-					severity: ErrorSeverity.FATAL
-				}
-			);
-		}
-
-		// models initialization
-		try {
-			logger.info('Initializing models');
-			initializeModels(sequelize, logger);
-		} catch (error) {
-			throw new errorClasses.DataIntegrityError(
-				'Failed to initialize models',
-				{
-					originalError: error,
-					severity: ErrorSeverity.FATAL
-				}
-			);
-		}
-
-		// passport initialization
-		try {
-			logger.info('Initializing passport');
-			const UserModel = createUserModel(sequelize, logger);
-			await configurePassport({
-				passport,
-				logger,
-				envSecrets,
-				UserModel,
-				argon2
-			});
-		} catch (error) {
-			throw new errorClasses.AppAuthenticationError(
-				'Passport initialization failed',
-				{
-					originalError: error,
-					severity: ErrorSeverity.FATAL
-				}
-			);
-		}
-
-		// redis initialization
-		let redisClient: RedisClientType | null = null;
-		try {
-			redisClient = await getRedisClient(createClient);
-			if (!redisClient) {
-				const dependency: string = 'Redis';
-				const dependencyError =
-					new errorClasses.DependencyErrorRecoverable(
-						`Failed to initialize ${dependency}`,
-						{
-							exposeToClient: false
-						}
-					);
-				ErrorLogger.logError(dependencyError, logger);
-				processError(dependencyError, logger);
-			}
-		} catch (depError) {
-			const dependency: string = 'Redis';
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				`Failed to initialize ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
-				{
+					originalError: dbError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(databaseErrorFatal);
+			processError(databaseErrorFatal);
+			throw databaseErrorFatal;
 		}
 
-		logger.info('Initializing middleware');
+		try {
+			initializeModels(sequelize, appLogger);
+		} catch (loadModelError) {
+			const loadModelErrorFatal = new errorClasses.DataIntegrityError(
+				`Error occurred during model initialization\n${loadModelError instanceof Error ? loadModelError.message : String(loadModelError)}`,
+				{
+					originalError: loadModelError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(loadModelErrorFatal);
+			processError(loadModelErrorFatal);
+			throw loadModelErrorFatal;
+		}
+
+		try {
+			const UserModel = createUserModel(sequelize);
+			await configurePassport({ passport, UserModel, argon2 });
+		} catch (passportConfigError) {
+			const passportConfigErrorFatal =
+				new errorClasses.DependencyErrorFatal(
+					`Error occurred during passport configuration\n${passportConfigError instanceof Error ? passportConfigError.message : String(passportConfigError)}`,
+					{
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
+						originalError: passportConfigError,
+						exposeToClient: false
+					}
+				);
+			ErrorLogger.logError(passportConfigErrorFatal);
+			processError(passportConfigErrorFatal);
+			throw passportConfigErrorFatal;
+		}
+
+		const redisClient: RedisClientType | null =
+			await getRedisClient(createClient);
+
+		try {
+			if (!redisClient) {
+				const redisError = new errorClasses.DependencyErrorRecoverable(
+					`Failed to get Redis client. Redis client is null\n${String(Error)}`,
+					{
+						originalError: String(Error),
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logError(redisError);
+				processError(redisError);
+			}
+		} catch (initRedisErrorRecoverable) {
+			const initRedisError = new errorClasses.DependencyErrorRecoverable(
+				`Failed to initialize Redis client\n${initRedisErrorRecoverable instanceof Error ? initRedisErrorRecoverable.message : String(initRedisErrorRecoverable)}`,
+				{
+					originalError: initRedisErrorRecoverable,
+					statusCode: 500,
+					severity: ErrorSeverity.RECOVERABLE,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(initRedisError);
+			processError(initRedisError);
+		}
+
+		appLogger.info('Initializing application middleware...');
 		const app = await initializeAllMiddleware({
 			express,
 			session,
-			secrets,
+			fsModule: fs,
 			cookieParser,
 			cors,
 			hpp,
@@ -268,9 +208,6 @@ async function start(): Promise<void> {
 			initializeIpBlacklistMiddleware,
 			initializeRateLimitMiddleware,
 			initializeSecurityHeaders,
-			logger,
-			staticRootPath,
-			featureFlags,
 			expressErrorHandler,
 			processError,
 			verifyJwt: passport.authenticate('jwt', { session: false }),
@@ -283,70 +220,47 @@ async function start(): Promise<void> {
 			initializeSlowdownMiddleware
 		});
 
-		// initialize routes
-		try {
-			logger.info('Initializing routes');
-			initializeRoutes({
-				app,
-				logger,
-				featureFlags,
-				staticRootPath
-			});
-		} catch (configError) {
-			const configurationError = new errorClasses.ConfigurationError(
-				`Failed to initialize routes ${configError instanceof Error ? configError.message : configError}`,
-				{
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(configurationError, logger);
-			processError(configurationError, logger);
-			process.exit(1);
-		}
+		initializeRoutes({ app });
 
-		// sync database if flag is enabled
-		const dbSyncFlag = featureFlags?.dbSyncFlag ?? false;
-		try {
-			if (envVariables.nodeEnv === 'production' || dbSyncFlag) {
-				logger.info('Syncing database models');
+		// sync database (if enabled)
+		if (
+			configService.getFeatureFlags().dbSync ||
+			configService.getEnvVariables().nodeEnv === 'production'
+		) {
+			appLogger.info('Synchronizing database');
+			try {
 				await sequelize.sync();
-				logger.info('Database and tables created!');
+				appLogger.info('Database synchronized successfully');
+			} catch (dbSyncErrorRecoverable) {
+				const dbSyncError = new errorClasses.DatabaseErrorRecoverable(
+					`Failed to synchronize database: ${dbSyncErrorRecoverable instanceof Error ? dbSyncErrorRecoverable.message : dbSyncErrorRecoverable}`,
+					{
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
+						originalError: dbSyncErrorRecoverable,
+						exposeToClient: false
+					}
+				);
+				ErrorLogger.logError(dbSyncError);
+				processError(dbSyncError);
 			}
-		} catch (dbError) {
-			const databaseError = new errorClasses.DatabaseErrorRecoverable(
-				`Failed to synchronize database ${dbError instanceof Error ? dbError.message : dbError}`,
-				{
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(databaseError, logger);
-			processError(databaseError, logger);
 		}
 
-		// set up HTTP/HTTPS server
 		await setUpHttpServer({
 			app,
-			sops,
-			fs: fsPromises,
-			logger,
-			constants,
-			featureFlags,
-			getRedisClient: () => redisClient,
 			sequelize
 		});
 	} catch (error) {
-		if (!logger) {
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				'Logger initialization failed',
-				{ exposeToClient: false }
+		const fallbackLogger = configService.getLogger();
+		if (!fallbackLogger) {
+			console.error(
+				`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`
 			);
-			ErrorLogger.logError(dependencyError, console);
-			processError(error, console);
+			process.exit(1);
 		} else {
-			logger.error(
-				`Critical error before logger setup: ${error instanceof Error ? error.stack : error}`
+			fallbackLogger.error(
+				`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`
 			);
-			processError(error, logger);
 			process.exit(1);
 		}
 	}

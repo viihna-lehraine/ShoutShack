@@ -3,7 +3,7 @@ import { loadModels, Models } from './loadModels';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { logger, Logger } from '../utils/logger';
+import { logger, Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 let models: Models | null = null;
@@ -11,22 +11,23 @@ let sequelize: Sequelize;
 
 export async function initializeModels(
 	sequelize: Sequelize,
-	logger: Logger
+	appLogger: Logger
 ): Promise<Models> {
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			appLogger || console
 		);
 
+		appLogger.info('Initializing and loading models');
+
 		if (!models) {
-			logger.info('Loading models');
 			models = await loadModels(sequelize, logger);
-			logger.info('Models loaded');
+			appLogger.info('Models loaded');
+		} else {
+			appLogger.info('Models loaded');
 		}
+
 		return models as Models;
 	} catch (dbError) {
 		const databaseError = new errorClasses.DatabaseErrorRecoverable(
@@ -38,21 +39,21 @@ export async function initializeModels(
 		ErrorLogger.logInfo(databaseError.message, logger);
 		processError(databaseError, logger);
 
-		logger.debug('Returning empty object in lieu of models');
+		appLogger.debug('Returning empty object in lieu of models');
 
 		return {} as Models;
 	}
 }
 
-export async function getModels(): Promise<Models> {
+export async function getModels(appLogger: Logger): Promise<Models> {
 	try {
 		if (!models) {
-			logger.error('Models have not been initialized');
+			appLogger.error('Models have not been initialized');
 			try {
-				logger.info('Attempting to load models');
+				appLogger.info('Attempting to load models');
 				models = await initializeModels(sequelize, logger);
 				if (models) {
-					logger.info('Models loaded');
+					appLogger.info('Models loaded');
 					return models;
 				}
 			} catch (dbError) {

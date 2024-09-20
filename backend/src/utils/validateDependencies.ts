@@ -1,4 +1,4 @@
-import { isLogger, Logger } from './logger';
+import { isLogger, Logger } from './appLogger';
 
 interface Dependency {
 	name: string;

@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
+import { ConfigService } from '../config/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export const slowdownThreshold = 100; // in ms
 
 interface SlowdownConfig {
 	slowdownThreshold: number;
-	logger: Logger;
 }
 
 interface SlowdownSession extends Session {
@@ -18,16 +17,14 @@ interface SlowdownSession extends Session {
 }
 
 export function initializeSlowdownMiddleware({
-	slowdownThreshold,
-	logger
+	slowdownThreshold
 }: SlowdownConfig) {
+	const appLogger = ConfigService.getInstance().getLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'slowdownThreshold', instance: slowdownThreshold },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'slowdownThreshold', instance: slowdownThreshold }],
+			appLogger || console
 		);
 
 		return function slowdownMiddleware(
@@ -38,7 +35,7 @@ export function initializeSlowdownMiddleware({
 			const requestTime = Date.now();
 
 			if (!req.session) {
-				logger.warn(
+				appLogger.warn(
 					'Session is undefined; proceeding without slowdown'
 				);
 				next();
@@ -47,7 +44,7 @@ export function initializeSlowdownMiddleware({
 
 			try {
 				if (!req.session.lastRequestTime) {
-					logger.info(
+					appLogger.info(
 						`First request from IP: ${req.ip}, proceeding without delay`
 					);
 					req.session.lastRequestTime = requestTime;
@@ -57,18 +54,18 @@ export function initializeSlowdownMiddleware({
 
 					if (timeDiff < slowdownThreshold) {
 						const waitTime = slowdownThreshold - timeDiff;
-						logger.warn(
+						appLogger.warn(
 							`Rapid request detected from IP: ${req.ip}. Delaying response by ${waitTime} ms`
 						);
 						setTimeout(() => {
 							req.session.lastRequestTime = requestTime;
-							logger.info(
+							appLogger.info(
 								`Resuming delayed request from IP: ${req.ip}`
 							);
 							next();
 						}, waitTime);
 					} else {
-						logger.info(
+						appLogger.info(
 							`Request from IP: ${req.ip} within acceptable time frame. Proceeding`
 						);
 						req.session.lastRequestTime = requestTime;
@@ -90,11 +87,12 @@ export function initializeSlowdownMiddleware({
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(expressMiddlewareError, logger);
-				expressErrorHandler({ logger })(
+				ErrorLogger.logError(expressMiddlewareError);
+				expressErrorHandler()(
 					expressMiddlewareError,
 					req,
 					res,
+					next,
 					errorResponse
 				);
 				next();
@@ -106,7 +104,7 @@ export function initializeSlowdownMiddleware({
 			`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
 			{ exposeToClient: false }
 		);
-		processError(dependencyError, logger || console);
+		processError(dependencyError);
 		throw dependencyError;
 	}
 }

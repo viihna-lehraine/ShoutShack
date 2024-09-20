@@ -4,7 +4,7 @@ import getSecrets, { SecretsMap } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger.js';
+import { Logger } from '../utils/appLogger.js';
 import { validateDependencies } from '../utils/validateDependencies';
 
 import '../../types/custom/yub';

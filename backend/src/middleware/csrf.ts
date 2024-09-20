@@ -1,34 +1,22 @@
 import csrf from 'csrf';
 import { NextFunction, Request, Response } from 'express';
+import { ConfigService } from '../config/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
-import { Logger } from '../utils/logger';
-import { validateDependencies } from '../utils/validateDependencies';
 
-interface CsrfDependencies {
-	logger: Logger;
-	csrfProtection: csrf;
-}
+export function initializeCsrfMiddleware() {
+	const csrfProtection = new csrf();
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
 
-export function initializeCsrfMiddleware({
-	logger,
-	csrfProtection
-}: CsrfDependencies) {
-	validateDependencies(
-		[
-			{ name: 'logger', instance: logger },
-			{ name: 'csrfProtection', instance: csrfProtection }
-		],
-		logger || console
-	);
 	return function csrfMiddleware(
 		req: Request,
 		res: Response,
 		next: NextFunction
 	): void {
 		try {
-			logger.info('CSRF middleware enabled');
+			appLogger.info('CSRF middleware enabled');
 
 			const sessionID = req.sessionID || '';
 			const csrfToken = csrfProtection.create(sessionID);
@@ -39,18 +27,18 @@ export function initializeCsrfMiddleware({
 					req.body.csrfToken ||
 					(req.headers['x-xsrf-token'] as string);
 				if (!token) {
-					logger.debug('No CSRF token provided');
+					appLogger.debug('No CSRF token provided');
 					res.status(403).send('No CSRF token provided');
 					return;
 				}
 				if (!csrfProtection.verify(sessionID, token)) {
-					logger.debug(
+					appLogger.debug(
 						`Invalid CSRF token for session ID: ${sessionID}`
 					);
 					res.status(403).send('Invalid CSRF token');
 					return;
 				}
-				logger.debug('CSRF token validated successfully');
+				appLogger.debug('CSRF token validated successfully');
 			}
 			next();
 		} catch (expressError) {
@@ -59,8 +47,8 @@ export function initializeCsrfMiddleware({
 				`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
 				{ severity: ErrorSeverity.FATAL, exposeToClient: false }
 			);
-			ErrorLogger.logError(expressMiddlewareError, logger);
-			expressErrorHandler({ logger });
+			ErrorLogger.logError(expressMiddlewareError, appLogger);
+			expressErrorHandler();
 			next(expressError);
 		}
 	};

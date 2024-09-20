@@ -8,7 +8,7 @@ import {
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface SecurityHeadersDependencies {

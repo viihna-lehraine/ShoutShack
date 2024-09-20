@@ -7,7 +7,7 @@ import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
 import createUserModel from '../models/UserModelFile';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface AuthDependencies {

@@ -1,95 +1,75 @@
 import argon2 from 'argon2';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
-import { execSync } from 'child_process';
 import express, { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import QRCode from 'qrcode';
 import speakeasy from 'speakeasy';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import totpUtil from './auth/totpUtil';
-import { envVariables, FeatureFlags } from './environment/envVars';
+import { createTOTPUtil } from './auth/totpUtil';
+import { configService } from './config/configService';
+import { errorClasses, ErrorSeverity } from './errors/errorClasses';
+import { ErrorLogger } from './errors/errorLogger';
 import { getTransporter } from './config/mailer';
-import sops from './environment/envSecrets';
 import { processError } from './errors/processError';
 import { initializeStaticRoutes } from './routes/staticRoutes';
 import { initializeTestRoutes } from './routes/testRoutes';
 import initializeUserRoutes, { UserRoutesModel } from './routes/userRoutes';
 import initializeValidationRoutes from './routes/validationRoutes';
 import generateConfirmationEmailTemplate from './templates/confirmationEmailTemplate';
-import { Logger } from './utils/logger';
 import { validateDependencies } from './utils/validateDependencies';
 
 interface RouteDependencies {
 	app: express.Application;
-	logger: Logger;
-	featureFlags: FeatureFlags;
-	staticRootPath: string;
 }
 
 let UserRoutes: UserRoutesModel;
 let validator: typeof import('validator');
 
 export async function initializeRoutes({
-	app,
-	logger,
-	featureFlags,
-	staticRootPath
+	app
 }: RouteDependencies): Promise<undefined> {
+	const envVariables = configService.getEnvVariables();
+	const appLogger = configService.getLogger();
+	const featureFlags = configService.getFeatureFlags();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'app', instance: app },
-				{ name: 'logger', instance: logger },
-				{ name: 'featureFlags', instance: featureFlags },
-				{ name: 'staticRootPath', instance: staticRootPath }
-			],
-			logger
+			[{ name: 'app', instance: app }],
+			appLogger || console
 		);
 
-		const getDirectoryPath = (): string => process.cwd();
+		appLogger.info('Initializing routes.');
 
-		const secrets = await sops.getSecrets({
-			logger,
-			execSync,
-			getDirectoryPath
-		});
+		const staticRootPath = envVariables.staticRootPath;
 
-		const totpUtilInstance = totpUtil({
+		const totpUtilInstance = createTOTPUtil({
 			speakeasy,
-			QRCode,
-			logger
+			QRCode
 		});
 
 		if (
-			featureFlags.loadTestRoutesFlag &&
+			featureFlags.loadTestRoutes &&
 			envVariables.nodeEnv !== 'production'
 		) {
-			logger.info('Test routes enabled. Initializing test routes.');
-			const testRoutes: Router = initializeTestRoutes({
-				app,
-				logger,
-				featureFlags,
-				envVariables
-			});
+			appLogger.info('Test routes enabled. Initializing test routes.');
+			const testRoutes: Router = initializeTestRoutes({ app });
 			app.use('/test', testRoutes);
 		} else {
-			logger.info('Test routes disabled or running in production.');
+			appLogger.info('Test routes disabled or running in production.');
 		}
 
-		logger.info('Initializing static routes.');
-		initializeStaticRoutes(app, staticRootPath, logger);
+		appLogger.info('Initializing static routes.');
+		initializeStaticRoutes(app, staticRootPath, appLogger);
 
 		// validation routes
-		logger.info('Initializing validation routes.');
-		initializeValidationRoutes({ logger, validator });
+		appLogger.info('Initializing validation routes.');
+		initializeValidationRoutes({ appLogger, validator });
 
 		// user routes
-		logger.info('Initializing user routes.');
+		appLogger.info('Initializing user routes.');
 		initializeUserRoutes({
-			logger,
-			secrets,
 			UserRoutes,
 			argon2,
 			jwt,
@@ -101,13 +81,18 @@ export async function initializeRoutes({
 			getTransporter,
 			totpUtil: totpUtilInstance
 		});
-	} catch (error) {
-		logger.error(
-			`FATAL EXCEPTION: Failed to initialize routes: ${error instanceof Error ? error.message : error}`
+	} catch (initRoutesError) {
+		const initRoutesErrorFatal = new errorClasses.DependencyErrorFatal(
+			`Error occurred during route initialization\n${initRoutesError instanceof Error ? initRoutesError.message : String(initRoutesError)}`,
+			{
+				statusCode: 500,
+				severity: ErrorSeverity.FATAL,
+				originalError: initRoutesError,
+				exposeToClient: false
+			}
 		);
-		processError(error, logger);
-		throw new Error(
-			`Failed to initialize routes: ${error instanceof Error ? error.message : error}`
-		);
+		ErrorLogger.logError(initRoutesErrorFatal);
+		processError(initRoutesErrorFatal);
+		throw initRoutesErrorFatal;
 	}
 }

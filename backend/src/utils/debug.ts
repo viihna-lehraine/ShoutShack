@@ -1,5 +1,5 @@
 import debug, { Debugger } from 'debug';
-import { Logger } from './logger';
+import { Logger } from './appLogger';
 import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/validateDependencies';
 

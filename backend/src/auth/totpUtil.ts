@@ -1,8 +1,8 @@
 import QRCode from 'qrcode';
+import { ConfigService } from 'src/config/configService';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface TOTPSecret {
@@ -15,32 +15,30 @@ interface TOTPSecret {
 interface TOTPUtilDependencies {
 	speakeasy: typeof import('speakeasy');
 	QRCode: typeof QRCode;
-	logger: Logger;
 }
 
-export function createTOTPUtil({
-	speakeasy,
-	QRCode,
-	logger
-}: TOTPUtilDependencies): {
+export function createTOTPUtil({ speakeasy, QRCode }: TOTPUtilDependencies): {
 	generateTOTPSecret: () => TOTPSecret;
 	generateTOTPToken: (secret: string) => string;
 	verifyTOTPToken: (secret: string, token: string) => boolean;
 	generateQRCode: (otpauth_url: string) => Promise<string>;
 } {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+
 	validateDependencies(
 		[
 			{ name: 'speakeasy', instance: speakeasy },
 			{ name: 'QRCode', instance: QRCode }
 		],
-		logger
+		appLogger || console
 	);
 
 	function generateTOTPSecret(): TOTPSecret {
 		try {
-			logger.debug('Generating TOTP secret.');
+			appLogger.debug('Generating TOTP secret.');
 			const totpSecret = speakeasy.generateSecret({ length: 20 });
-			logger.debug('TOTP secret generated successfully.');
+			appLogger.debug('TOTP secret generated successfully.');
 			return {
 				ascii: totpSecret.ascii || '',
 				hex: totpSecret.hex || '',
@@ -55,8 +53,8 @@ export function createTOTPUtil({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logWarning(utilityError.message, appLogger);
+			processError(utilityError, appLogger);
 			return {
 				ascii: '',
 				hex: '',
@@ -68,12 +66,12 @@ export function createTOTPUtil({
 
 	function generateTOTPToken(secret: string): string {
 		try {
-			logger.debug('Generating TOTP token.');
+			appLogger.debug('Generating TOTP token.');
 			const totpToken = speakeasy.totp({
 				secret,
 				encoding: 'base32'
 			});
-			logger.debug('TOTP token generated successfully.');
+			appLogger.debug('TOTP token generated successfully.');
 			return totpToken;
 		} catch (utilError) {
 			const utility: string = 'generateTOTPToken()';
@@ -83,22 +81,22 @@ export function createTOTPUtil({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logWarning(utilityError.message, appLogger);
+			processError(utilityError, appLogger);
 			return '';
 		}
 	}
 
 	function verifyTOTPToken(secret: string, token: string): boolean {
 		try {
-			logger.debug('Verifying TOTP token.');
+			appLogger.debug('Verifying TOTP token.');
 			const isTOTPTokenValid = speakeasy.totp.verify({
 				secret,
 				encoding: 'base32',
 				token,
 				window: 1 // leeway for clock drift
 			});
-			logger.debug(
+			appLogger.debug(
 				`TOTP token verification ${isTOTPTokenValid ? 'succeeded' : 'failed'}.`
 			);
 			return isTOTPTokenValid;
@@ -110,17 +108,17 @@ export function createTOTPUtil({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logWarning(utilityError.message, appLogger);
+			processError(utilityError, appLogger);
 			return false;
 		}
 	}
 
 	async function generateQRCode(otpauth_url: string): Promise<string> {
 		try {
-			logger.debug('Generating QR code for TOTP.');
+			appLogger.debug('Generating QR code for TOTP.');
 			const qrCode = await QRCode.toDataURL(otpauth_url);
-			logger.debug('QR code generated successfully.');
+			appLogger.debug('QR code generated successfully.');
 			return qrCode;
 		} catch (utilError) {
 			const utility: string = 'generateQRCode()';
@@ -130,8 +128,8 @@ export function createTOTPUtil({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logWarning(utilityError.message, appLogger);
+			processError(utilityError, appLogger);
 			return '';
 		}
 	}

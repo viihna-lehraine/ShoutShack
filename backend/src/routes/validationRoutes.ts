@@ -2,32 +2,29 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { validationResult } from 'express-validator';
 import { processError } from '../errors/processError';
 import { initializeValidatorMiddleware } from '../middleware/validator';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface ValidationRouteDependencies {
-	logger: Logger;
+	appLogger: Logger;
 	validator: typeof import('validator');
 }
 
 export default function initializeValidationRoutes({
-	logger,
+	appLogger,
 	validator
 }: ValidationRouteDependencies): Router {
 	const router = express.Router();
 
 	try {
 		validateDependencies(
-			[
-				{ name: 'logger', instance: logger },
-				{ name: 'validator', instance: validator }
-			],
-			logger || console
+			[{ name: 'validator', instance: validator }],
+			appLogger || console
 		);
 
 		const { registrationValidationRules } = initializeValidatorMiddleware({
 			validator,
-			logger
+			appLogger
 		});
 
 		router.post(
@@ -38,7 +35,7 @@ export default function initializeValidationRoutes({
 					const errors = validationResult(req);
 
 					if (!errors.isEmpty()) {
-						logger.error('Validation failed during registration', {
+						appLogger.error('Validation failed during registration', {
 							errors: errors.array()
 						});
 						return res.status(400).json({ errors: errors.array() });
@@ -46,7 +43,7 @@ export default function initializeValidationRoutes({
 
 					return next();
 				} catch (error) {
-					processError(error as Error, logger, req);
+					processError(error as Error, appLogger, req);
 					return res.status(500).json({
 						error: 'Internal server error during validation'
 					});
@@ -54,7 +51,7 @@ export default function initializeValidationRoutes({
 			}
 		);
 	} catch (error) {
-		processError(error as Error, logger);
+		processError(error as Error, appLogger);
 		throw error;
 	}
 

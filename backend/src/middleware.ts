@@ -2,7 +2,6 @@ import RedisStore from 'connect-redis';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import cors from 'cors';
-import csrf from 'csrf';
 import { randomBytes } from 'crypto';
 import express, { Application, RequestHandler } from 'express';
 import session from 'express-session';
@@ -12,17 +11,15 @@ import morgan, { StreamOptions } from 'morgan';
 import passport, { AuthenticateOptions } from 'passport';
 import responseTime from 'response-time';
 import validator from 'validator';
+import { configService } from './config/configService';
 import {
 	helmetOptions,
 	permissionsPolicyOptions
 } from './config/securityOptions';
-import { envVariables, FeatureFlags } from './environment/envVars';
-import { errorClasses } from './errors/errorClasses';
+import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import { expressErrorHandler, processError } from './errors/processError';
-import { Logger } from './utils/logger';
 import { getRedisClient } from './config/redis';
-import sops, { SecretsMap } from './environment/envSecrets';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
 import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';
@@ -34,12 +31,13 @@ import {
 	slowdownThreshold
 } from './middleware/slowdown';
 import { initializeValidatorMiddleware } from './middleware/validator';
+import { ensureSecrets } from './utils/ensureSecrets';
 import { validateDependencies } from './utils/validateDependencies';
 
 export interface MiddlewareDependencies {
 	express: typeof express;
 	session: typeof session;
-	secrets: SecretsMap;
+	fsModule: typeof fs;
 	cookieParser: typeof cookieParser;
 	cors: typeof cors;
 	hpp: typeof hpp;
@@ -53,9 +51,6 @@ export interface MiddlewareDependencies {
 	initializeIpBlacklistMiddleware: typeof initializeIpBlacklistMiddleware;
 	initializeRateLimitMiddleware: typeof initializeRateLimitMiddleware;
 	initializeSecurityHeaders: typeof initializeSecurityHeaders;
-	logger: Logger;
-	staticRootPath: string;
-	featureFlags: FeatureFlags;
 	expressErrorHandler: typeof expressErrorHandler;
 	processError: typeof processError;
 	verifyJwt: (token: string) => Promise<string | object | null>;
@@ -69,31 +64,45 @@ export interface MiddlewareDependencies {
 function initializeExpressMiddleware(
 	app: Application,
 	middleware: RequestHandler,
-	middlewareName: string,
-	logger: Logger
+	middlewareName: string
 ): void {
+	const appLogger = configService.getLogger();
+
+	validateDependencies(
+		[
+			{ name: 'middleware', instance: middleware },
+			{ name: 'middlewareName', instance: middlewareName }
+		],
+		appLogger || console
+	);
+
 	try {
-		logger.info(`Initializing standard middleware: ${middlewareName}`);
+		appLogger.info(`Initializing Express middleware ${middlewareName}`);
 		app.use(middleware);
-	} catch (depError) {
-		const dependencyError = new errorClasses.DependencyErrorFatal(
-			`Unable to initialize Express middleware ${middlewareName}`,
-			{
-				originalError: depError,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(dependencyError, logger);
-		processError(dependencyError, logger);
+	} catch (expressMiddlewareError) {
+		const initExpressMiddlewareError =
+			new errorClasses.DependencyErrorFatal(
+				`Fatal error occurred. Unable to initialize Express middleware dependency ${middlewareName}\nShutting down...\n${expressMiddlewareError instanceof Error ? expressMiddlewareError.message : expressMiddlewareError}.`,
+				{
+					dependency: middlewareName,
+					originalError: expressMiddlewareError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+		ErrorLogger.logError(initExpressMiddlewareError);
+		processError(initExpressMiddlewareError);
+		throw initExpressMiddlewareError;
 	}
 }
 
 export async function initializeAllMiddleware({
 	express,
 	session,
-	secrets,
 	cookieParser,
 	cors,
+	fsModule,
 	hpp,
 	morgan,
 	passport,
@@ -104,9 +113,6 @@ export async function initializeAllMiddleware({
 	initializeIpBlacklistMiddleware,
 	initializeRateLimitMiddleware,
 	initializeSecurityHeaders,
-	logger,
-	staticRootPath,
-	featureFlags,
 	expressErrorHandler,
 	processError,
 	verifyJwt,
@@ -117,13 +123,15 @@ export async function initializeAllMiddleware({
 }: MiddlewareDependencies): Promise<Application> {
 	try {
 		const app = express();
+		const appLogger = configService.getLogger();
+		const featureFlags = configService.getFeatureFlags();
+		const secrets = ensureSecrets({ subSecrets: ['sessionSecret'] });
 
 		validateDependencies(
 			[
 				{ name: 'express', instance: express },
 				{ name: 'session', instance: session },
 				{ name: 'cookieParser', instance: cookieParser },
-				{ name: 'secrets', instance: sops },
 				{ name: 'cors', instance: cors },
 				{ name: 'hpp', instance: hpp },
 				{ name: 'morgan', instance: morgan },
@@ -146,129 +154,130 @@ export async function initializeAllMiddleware({
 				{
 					name: 'initializeSecurityHeaders',
 					instance: initializeSecurityHeaders
-				},
-				{ name: 'logger', instance: logger },
-				{ name: 'staticRootPath', instance: staticRootPath },
-				{ name: 'featureFlags', instance: featureFlags },
-				{ name: 'expressErrorHandler', instance: expressErrorHandler },
-				{ name: 'processError', instance: processError }
+				}
 			],
-			logger || console
+			appLogger || console
 		);
+
+		appLogger.info('Initializing application middleware stack...');
 
 		// initialize body parser middlewares
 		try {
-			initializeExpressMiddleware(
-				app,
-				express.json(),
-				'express.json',
-				logger
-			);
+			initializeExpressMiddleware(app, express.json(), 'express.json');
 			initializeExpressMiddleware(
 				app,
 				express.urlencoded({ extended: true }),
-				'express.urlencoded',
-				logger
+				'express.urlencoded'
 			);
 		} catch (depError) {
-			const dependency: string = 'Body Parser Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Fatal error: Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize middleware dependency 'Body Parser'.\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Body Parser',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize cookie parser
 		try {
-			initializeExpressMiddleware(
-				app,
-				cookieParser(),
-				'Cookie Parser',
-				logger
-			);
+			initializeExpressMiddleware(app, cookieParser(), 'Cookie Parser');
 		} catch (depError) {
-			const dependency: string = 'Cookie Parser';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize middleware dependency 'Cookie Parser'.\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Cookie Parser',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize morgan logger
 		const stream: StreamOptions = {
-			write: (message: string) => logger.info(message.trim())
+			write: (message: string) => appLogger.info(message.trim())
 		};
 		try {
 			app.use(morgan('combined', { stream }));
 		} catch (depError) {
-			const dependency: string = 'Morgan Logger';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize middleware dependency Morgan Logger.\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Morgan Logger',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize CORS
 		try {
-			initializeExpressMiddleware(app, cors(), 'CORS', logger);
+			initializeExpressMiddleware(app, cors(), 'CORS');
 		} catch (depError) {
-			const dependency: string = 'CORS';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize middleware depedendency 'CORS'.\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'CORS',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize HPP
 		try {
-			initializeExpressMiddleware(app, hpp(), 'HPP', logger);
+			initializeExpressMiddleware(app, hpp(), 'HPP');
 		} catch (depError) {
-			const dependency: string = 'HPP';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize dependency HPP: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'HPP',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize session with Redis store
-		if (featureFlags.enableRedisFlag && !redisClient) {
+		if (featureFlags.enableRedis && !redisClient) {
 			try {
 				app.use(
 					session({
-						secret: secrets.SESSION_SECRET,
+						secret: secrets.sessionSecret,
 						resave: false,
 						saveUninitialized: true,
 						store:
-							featureFlags.enableRedisFlag && redisClient
+							featureFlags.enableRedis && redisClient
 								? new RedisStore({ client: redisClient })
 								: undefined,
 						cookie: {
-							secure: featureFlags.enableSslFlag,
+							secure: featureFlags.enableTLS,
 							httpOnly: true,
 							sameSite: 'strict'
 						}
@@ -279,11 +288,16 @@ export async function initializeAllMiddleware({
 				const dependencyError = new errorClasses.DependencyErrorFatal(
 					`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
 					{
+						dependency,
+						originalError: depError,
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(dependencyError, logger);
-				processError(dependencyError, logger);
+				ErrorLogger.logError(dependencyError);
+				processError(dependencyError);
+				process.exit(1);
 			}
 		}
 
@@ -299,51 +313,47 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize compression
 		try {
-			initializeExpressMiddleware(
-				app,
-				compression(),
-				'Compression',
-				logger
-			);
+			initializeExpressMiddleware(app, compression(), 'Compression');
 		} catch (depError) {
-			const dependency: string = 'Compression Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Fatal error: Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize middleware dependency 'Compression'.\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Compression Middleware',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// initialize response time
 		try {
-			initializeExpressMiddleware(
-				app,
-				responseTime(),
-				'Response Time',
-				logger
-			);
+			initializeExpressMiddleware(app, responseTime(), 'Response Time');
 		} catch (depError) {
-			const dependency: string = 'Response Time Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Fatal error: Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Failed to initialize middleware dependency 'Response Time'\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Response Time Middleware',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		// set e-tag header for client-side caching
@@ -356,23 +366,24 @@ export async function initializeAllMiddleware({
 				permissionsPolicyOptions
 			});
 		} catch (depError) {
-			const dependency: string = 'Security Headers';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Failed to initialize middleware dependency 'Security Headers'\nShutting down...\n${depError instanceof Error ? depError.message : depError}.`,
 				{
+					dependency: 'Security Headers',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
-
-		const csrfProtection = new csrf();
 
 		// initialize CSRF middleware
 		try {
-			app.use(initializeCsrfMiddleware({ logger, csrfProtection }));
+			app.use(initializeCsrfMiddleware());
 		} catch (depError) {
 			const dependency = 'CSRF Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -381,14 +392,14 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize validator middleware
 		try {
-			initializeValidatorMiddleware({ validator, logger });
+			initializeValidatorMiddleware({ validator, appLogger });
 		} catch (depError) {
 			const dependency: string = 'Validator Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -397,15 +408,15 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize rate limiter
-		if (featureFlags.enableRateLimitFlag) {
+		if (featureFlags.enableRateLimit) {
 			try {
-				initializeRateLimitMiddleware({ logger });
+				initializeRateLimitMiddleware();
 			} catch (depError) {
 				const dependency: string = 'Rate Limit Middleware';
 				const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -414,15 +425,15 @@ export async function initializeAllMiddleware({
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(dependencyError, logger);
-				processError(dependencyError, logger);
+				ErrorLogger.logError(dependencyError);
+				processError(dependencyError);
 				process.exit(1);
 			}
 		}
 
 		// initialize slowdown middleware
 		try {
-			initializeSlowdownMiddleware({ slowdownThreshold, logger });
+			initializeSlowdownMiddleware({ slowdownThreshold });
 		} catch (depError) {
 			const dependency: string = 'Slowdown Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -431,20 +442,15 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize IP blacklist middleware
-		if (featureFlags.enableIpBlacklistFlag) {
+		if (featureFlags.enableIpBlacklist) {
 			try {
-				initializeIpBlacklistMiddleware({
-					logger,
-					featureFlags,
-					envVariables,
-					fsModule: fs
-				});
+				initializeIpBlacklistMiddleware(fsModule);
 			} catch (depError) {
 				const dependency: string = 'IP Blacklist Middleware';
 				const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -453,18 +459,15 @@ export async function initializeAllMiddleware({
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(dependencyError, logger);
-				processError(dependencyError, logger);
+				ErrorLogger.logError(dependencyError);
+				processError(dependencyError);
 				process.exit(1);
 			}
 		}
 
 		// initialize JWT authentication middleware
 		try {
-			await initializeJwtAuthMiddleware({
-				logger,
-				verifyJwt
-			});
+			await initializeJwtAuthMiddleware({ verifyJwt });
 		} catch (depError) {
 			const dependency: string = 'JWT Authentication Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -473,18 +476,14 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize passport authentication middleware
 		try {
-			initializePassportAuthMiddleware({
-				logger,
-				passport,
-				authenticateOptions
-			});
+			initializePassportAuthMiddleware({ passport, authenticateOptions });
 		} catch (depError) {
 			const dependency: string = 'Passport Authentication Middleware';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
@@ -493,39 +492,45 @@ export async function initializeAllMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
 			process.exit(1);
 		}
 
 		// initialize error handler
 		try {
-			app.use(expressErrorHandler({ logger, featureFlags }));
+			app.use(expressErrorHandler());
 		} catch (depError) {
-			const dependency: string = 'Express Error Handler';
 			const dependencyError = new errorClasses.DependencyErrorFatal(
-				`Failed to initialize ${dependency}: Shutting down... ${depError instanceof Error ? depError.message : depError}.`,
+				`Fatal error: Unable to initialize initialize 'Express Error Handler'\nShutting down\n${depError instanceof Error ? depError.message : depError}`,
 				{
+					dependency: 'Express Error Handler',
+					originalError: depError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger);
-			process.exit(1);
+			ErrorLogger.logError(dependencyError);
+			processError(dependencyError);
+			throw dependencyError;
 		}
 
 		return app;
-	} catch (depError) {
-		const dependency: string =
-			'Bulk Middleware Initialization (initializeAllMiddleware())';
-		const dependencyError = new errorClasses.DependencyErrorFatal(
-			`Failed to execute ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
+	} catch (dependencyError) {
+		const dependencyErrorFatal = new errorClasses.DependencyErrorFatal(
+			`Fatal error: Failed to execute bulk middleware initialization during application setup\nShutting down\n${dependencyError instanceof Error ? dependencyError.message : dependencyError}`,
 			{
+				dependency:
+					'Bulk Middleware Initialization (initializeAllMiddleware())',
+				originalError: dependencyError,
+				statusCode: 500,
+				severity: ErrorSeverity.FATAL,
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logError(dependencyError, logger);
-		processError(dependencyError, logger);
-		process.exit(1);
+		ErrorLogger.logError(dependencyErrorFatal);
+		processError(dependencyErrorFatal);
+		throw dependencyErrorFatal;
 	}
 }

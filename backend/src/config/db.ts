@@ -1,85 +1,55 @@
 import { Options, Sequelize } from 'sequelize';
+import { ConfigService } from './configService';
 import { FeatureFlagTypes } from '../environment/envVars';
-import { envSecrets, envSecretsStore, featureFlagsStore } from '../environment/envConfig';
-import { errorClasses } from '../errors/errorClasses';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { ensureSecrets } from '../utils/ensureSecrets';
 
 export interface DBSecrets {
-	DB_NAME: string;
-	DB_USER: string;
-	DB_PASSWORD: string;
-	DB_HOST: string;
-	DB_DIALECT: 'mysql' | 'postgres' | 'sqlite' | 'mariadb' | 'mssql';
-}
-
-export interface DBDependencies {
-	logger: Logger;
-	featureFlagsStore: FeatureFlagTypes;
-	envSecrets;
+	dbName: string;
+	dbUser: string;
+	dbPassword: string;
+	dbHost: string;
+	dbDialect: 'mysql' | 'postgres' | 'sqlite' | 'mariadb' | 'mssql';
 }
 
 let sequelize: Sequelize | null = null;
 
-export async function initializeDatabase({
-	logger,
-	featureFlagsStore,
-	getSecrets
-}: DBDependencies): Promise<Sequelize> {
+export async function initializeDatabase(): Promise<Sequelize> {
+	const appLogger = ConfigService.getInstance().getLogger();
+	const featureFlags = ConfigService.getInstance().getFeatureFlags();
+	const secrets = ensureSecrets({ subSecrets: ['dbName', 'dbUser', 'dbPassword', 'dbHost', 'dbDialect'] });
 	const maxRetries = 5;
 	const retryAfter = 2000; // in ms
 	let attempt = 0;
 
 	async function tryInitialize(): Promise<Sequelize> {
-		logger.info('Initializing database connection...');
+		appLogger.info('Initializing database connection...');
 
 		try {
-			validateDependencies(
-				[
-					{ name: 'logger', instance: logger },
-					{ name: 'featureFlags', instance: featureFlags },
-					{ name: 'getSecrets', instance: getSecrets }
-				],
-				logger || console
-			);
-
-			const secrets: DBSecrets = await getSecrets();
-
-			if (!secrets.DB_NAME || !secrets.DB_USER || !secrets.DB_PASSWORD || !secrets.DB_HOST || !secrets.DB_DIALECT) {
-				throw new errorClasses.ConfigurationError(
-					'Database credentials are missing. Check DB_NAME, DB_USER, and DB_PASSWORD in your configuration.',
-					{
-						DB_NAME: secrets.DB_NAME,
-						DB_USER: secrets.DB_USER,
-						exposeToClient: false
-					}
-				);
-			}
-
 			if (!sequelize) {
-				logger.info(
-					`Sequelize logging set to ${featureFlags.sequelizeLoggingFlag}`
+				appLogger.info(
+					`Sequelize logging set to ${featureFlags.sequelizeLogging}`
 				);
 
 				const sequelizeOptions: Options = {
-					host: secrets.DB_HOST,
-					dialect: secrets.DB_DIALECT,
-					logging: featureFlags.sequelizeLoggingFlag ? (msg: string) => logger.info(msg) : false,
+					host: secrets.dbHost,
+					dialect: secrets.dbDialect,
+					logging: featureFlags.sequelizeLogging ? (msg: string) => appLogger.info(msg) : false,
 				};
 
 				sequelize = new Sequelize(
-					secrets.DB_NAME,
-					secrets.DB_USER,
-					secrets.DB_PASSWORD,
+					secrets.dbName,
+					secrets.dbUser,
+					secrets.dbPassword,
 					sequelizeOptions
 				);
 
 				await sequelize.authenticate();
-				logger.info('Connection has been established successfully.');
+				appLogger.info('Connection has been established successfully.');
 			} else {
-				logger.info('Database connection already initialized.');
+				appLogger.info('Database connection already initialized.');
 				return sequelize;
 			}
 
@@ -90,30 +60,36 @@ export async function initializeDatabase({
 
 			if (attempt < maxRetries) {
 				const recoverableError = new errorClasses.DatabaseErrorRecoverable(
-					`Attempt ${attempt} failed: Failed to authenticate database connection. Retrying...`,
+					`Database error connection attempt ${attempt} failed\nRetrying...`,
 					{
-						DB_HOST: 'Hidden for security',
-						DB_DIALECT: 'Hidden for security',
+						dbHost: 'REDACTED',
+						dbDialect: 'REDACTED',
+						originalError: dbError,
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(recoverableError, logger);
-				processError(recoverableError, logger || console);
+				ErrorLogger.logError(recoverableError);
+				processError(recoverableError);
 
-				logger.warn(`Retrying database connection in ${retryAfter / 1000} seconds...`);
+				appLogger.warn(`Retrying database connection in ${retryAfter / 1000} seconds...`);
 				await new Promise(resolve => setTimeout(resolve, retryAfter));
 				return tryInitialize();
 			} else {
 				const fatalError = new errorClasses.DatabaseErrorFatal(
 					`Failed to authenticate database connection after ${maxRetries} attempts: ${errorMessage}`,
 					{
-						DB_HOST: 'Hidden for security',
-						DB_DIALECT: 'Hidden for security',
+						dbHost: 'Hidden for security',
+						dbDialect: 'Hidden for security',
+						originalError: dbError,
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
 						exposeToClient: false
 					}
 				);
 
-				ErrorLogger.logError(fatalError, logger);
+				ErrorLogger.logError(fatalError);
 				throw fatalError;
 			}
 		}

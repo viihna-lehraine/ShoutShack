@@ -1,25 +1,18 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { ConfigService } from '../config/configService';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
+import { ensureSecrets } from '../utils/ensureSecrets';
 import { validateDependencies } from '../utils/validateDependencies';
 
-interface Secrets {
-	EMAIL_2FA_KEY: string;
-}
-
 interface Email2FAUtilDependencies {
-	logger: Logger;
-	getSecrets: () => Promise<Secrets>;
 	bcrypt: typeof bcrypt;
 	jwt: typeof jwt;
 }
 
-export default async function createEmail2FAUtil({
-	logger,
-	getSecrets,
+export async function createEmail2FAUtil({
 	bcrypt,
 	jwt
 }: Email2FAUtilDependencies): Promise<{
@@ -32,35 +25,17 @@ export default async function createEmail2FAUtil({
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+	const secrets = ensureSecrets({ subSecrets: ['EMAIL_2FA_KEY'] });
+
 	validateDependencies(
 		[
-			{ name: 'logger', instance: logger },
-			{ name: 'getSecrets', instance: getSecrets },
 			{ name: 'bcrypt', instance: bcrypt },
 			{ name: 'jwt', instance: jwt }
 		],
-		logger
+		appLogger || console
 	);
-
-	let secrets: Secrets;
-
-	try {
-		secrets = await getSecrets();
-
-		if (!secrets.EMAIL_2FA_KEY) {
-			const configError = new errorClasses.ConfigurationErrorFatal(
-				'Unable to find EMAIL_2FA_KEY from secrets'
-			);
-			ErrorLogger.logError(configError, logger);
-			processError(configError, logger);
-		}
-	} catch (err) {
-		processError(err, logger);
-		logger.error(
-			'Email 2FA functionality will not work. Secrets could not be loaded.'
-		);
-		throw new Error('Failed to load secrets for email 2FA');
-	}
 
 	async function generateEmail2FACode(): Promise<{
 		email2FACode: string;
@@ -85,8 +60,8 @@ export default async function createEmail2FAUtil({
 			const utilityError = new errorClasses.UtilityErrorRecoverable(
 				`Error occured with ${utility}. Failed to generate email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 			return {
 				email2FACode: '',
 				email2FAToken: ''
@@ -105,7 +80,7 @@ export default async function createEmail2FAUtil({
 			) as JwtPayload;
 
 			if (!decoded || typeof decoded.email2FACode !== 'string') {
-				logger.warn(
+				appLogger.warn(
 					'Invalid token structure during email 2FA verification'
 				);
 				return false;
@@ -117,8 +92,8 @@ export default async function createEmail2FAUtil({
 			const utilityError = new errorClasses.UtilityErrorRecoverable(
 				`Error occured with dependency ${utility}. Failed to verify email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 			return false;
 		}
 	}

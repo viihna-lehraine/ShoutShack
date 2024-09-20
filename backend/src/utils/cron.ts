@@ -3,7 +3,7 @@ import compressing from 'compressing';
 import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
-import { logger, Logger } from './logger';
+import { logger, Logger } from './appLogger';
 import { getSequelizeInstance } from '../config/db';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';

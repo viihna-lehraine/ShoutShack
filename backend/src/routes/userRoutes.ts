@@ -1,32 +1,26 @@
 import argon2 from 'argon2';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
-import { execSync } from 'child_process';
 import express, { Request, Response, Router } from 'express';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
 import zxcvbn from 'zxcvbn';
-import createEmail2FAUtil from '../auth/email2FAUtil';
-import createTOTPUtil from '../auth/totpUtil';
-import { environmentVariables } from '../environment/envVars';
+import { createEmail2FAUtil } from '../auth/email2FAUtil';
+import { createTOTPUtil } from '../auth/totpUtil';
+import { ConfigService } from '../config/configService';
 import { hashPassword } from '../config/hashConfig';
 import { getTransporter } from '../config/mailer';
-import sops from '../environment/envSecrets';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
-import { Logger } from '../utils/logger';
+import { generateConfirmationEmailTemplate } from '../templates/confirmationEmailTemplate';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
-export interface UserSecrets {
-	JWT_SECRET: string;
-	PEPPER: string;
-}
-
 export interface UserRoutesModel {
-	validatePassword: (password: string, logger: Logger) => boolean;
+	validatePassword: (password: string, appLogger: Logger) => boolean;
 	findOne: (criteria: object) => Promise<UserInstance | null>;
 	create: (user: Partial<UserInstance>) => Promise<UserInstance>;
 }
@@ -44,15 +38,12 @@ interface UserInstance {
 	creationDate: Date;
 	comparePassword: (
 		password: string,
-		argon2: typeof import('argon2'),
-		secrets: UserSecrets
+		argon2: typeof import('argon2')
 	) => Promise<boolean>;
 	save: () => Promise<void>;
 }
 
 interface UserRouteDependencies {
-	logger: Logger;
-	secrets: UserSecrets;
 	UserRoutes: UserRoutesModel;
 	argon2: typeof argon2;
 	jwt: typeof jwt;
@@ -65,15 +56,7 @@ interface UserRouteDependencies {
 	totpUtil: ReturnType<typeof createTOTPUtil>;
 }
 
-const port = environmentVariables.serverPort;
-
-function getDirectoryPath(): string {
-	return path.resolve(process.cwd());
-}
-
 export default function initializeUserRoutes({
-	logger,
-	secrets,
 	UserRoutes,
 	argon2,
 	jwt,
@@ -85,40 +68,52 @@ export default function initializeUserRoutes({
 	getTransporter,
 	totpUtil
 }: UserRouteDependencies): Router {
-	try {
-		validateDependencies(
-			[
-				{ name: 'logger', instance: logger },
-				{ name: 'secrets', instance: secrets },
-				{ name: 'UserRoutes', instance: UserRoutes },
-				{ name: 'argon2', instance: argon2 },
-				{ name: 'jwt', instance: jwt },
-				{ name: 'axios', instance: axios },
-				{ name: 'bcrypt', instance: bcrypt },
-				{ name: 'uuidv4', instance: uuidv4 },
-				{ name: 'xss', instance: xss },
-				{
-					name: 'generateConfirmationEmailTemplate',
-					instance: generateConfirmationEmailTemplate
-				},
-				{ name: 'getTransporter', instance: getTransporter },
-				{ name: 'totpUtil', instance: totpUtil }
-			],
-			logger
-		);
-	} catch (error) {
-		processError(error as Error, logger || console);
-		throw error;
-	}
-
 	const router = express.Router();
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+	const secrets = configService.getSecrets();
+
+	const port = configService.getEnvVariables().serverPort;
+
+	validateDependencies(
+		[
+			{ name: 'UserRoutes', instance: UserRoutes },
+			{ name: 'argon2', instance: argon2 },
+			{ name: 'jwt', instance: jwt },
+			{ name: 'axios', instance: axios },
+			{ name: 'bcrypt', instance: bcrypt },
+			{ name: 'uuidv4', instance: uuidv4 },
+			{ name: 'xss', instance: xss },
+			{
+				name: 'generateConfirmationEmailTemplate',
+				instance: generateConfirmationEmailTemplate
+			},
+			{ name: 'getTransporter', instance: getTransporter },
+			{ name: 'totpUtil', instance: totpUtil }
+		],
+		appLogger || console
+	);
+
+	if (!secrets || !secrets.PEPPER || !secrets.JWT_SECRET) {
+		const userRoutesError = new errorClasses.ConfigurationError(
+			'Error occurred when retrieving secrets',
+			{
+				statusCode: 404,
+				severity: ErrorSeverity.FATAL,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logError(userRoutesError, appLogger || console);
+		processError(userRoutesError, appLogger || console);
+		throw userRoutesError;
+	}
 
 	const checkPasswordStrength = (password: string): boolean => {
 		const { score } = zxcvbn(password);
 		return score >= 3;
 	};
 
-	// Register route
+	// register route
 	router.post('/register', async (req: Request, res: Response) => {
 		try {
 			const { username, email, password, confirmPassword } = req.body;
@@ -128,14 +123,14 @@ export default function initializeUserRoutes({
 			const sanitizedPassword = xss(password);
 
 			if (sanitizedPassword !== confirmPassword) {
-				logger.debug('Registration failure: passwords do not match');
+				appLogger.debug('Registration failure: passwords do not match');
 				return res.status(400).json({
 					password: 'Registration failure: passwords do not match'
 				});
 			}
 
-			if (!UserRoutes.validatePassword(sanitizedPassword, logger)) {
-				logger.debug(
+			if (!UserRoutes.validatePassword(sanitizedPassword, appLogger)) {
+				appLogger.debug(
 					'Registration failure: passwords do not meet complexity requirements'
 				);
 				return res.status(400).json({
@@ -145,7 +140,7 @@ export default function initializeUserRoutes({
 			}
 
 			if (!checkPasswordStrength(sanitizedPassword)) {
-				logger.debug('Registration failure: password is too weak');
+				appLogger.debug('Registration failure: password is too weak');
 				return res.status(400).json({
 					password: 'Registration failure: password is too weak'
 				});
@@ -161,7 +156,7 @@ export default function initializeUserRoutes({
 			if (
 				pwnedList.includes(sanitizedPassword.substring(5).toUpperCase())
 			) {
-				logger.warn(
+				appLogger.warn(
 					'Registration warning: password exposed in a breach'
 				);
 				return res.status(400).json({
@@ -175,16 +170,14 @@ export default function initializeUserRoutes({
 			});
 
 			if (existingUser) {
-				logger.info('Registration failure: email already exists');
+				appLogger.info('Registration failure: email already exists');
 				return res.status(400).json({
 					email: 'Registration failure: email already exists'
 				});
 			}
 
 			const hashedPassword = await hashPassword({
-				password: sanitizedPassword,
-				secrets,
-				logger
+				password: sanitizedPassword
 			});
 
 			const newUser = await UserRoutes.create({
@@ -206,36 +199,32 @@ export default function initializeUserRoutes({
 			);
 			const confirmationUrl = `http://localhost:${port}/api/users/confirm/${confirmationToken}`;
 
-			// Send confirmation email
+			// send confirmation email
 			const mailOptions = {
-				from: environmentVariables.emailUser,
+				from: configService.getEnvVariables().emailUser,
 				to: newUser.email,
 				subject: 'Guestbook - Account Confirmation',
 				html: generateConfirmationEmailTemplate(
 					newUser.username,
-					confirmationUrl,
-					logger
+					confirmationUrl
 				)
 			};
 
 			const transporter = await getTransporter({
 				nodemailer,
-				getSecrets: () =>
-					sops.getSecrets({ logger, execSync, getDirectoryPath }),
-				emailUser: environmentVariables.emailUser as string,
-				logger
+				emailUser: configService.getEnvVariables().emailUser as string
 			});
 
 			await transporter.sendMail(mailOptions);
 
-			logger.info(
+			appLogger.info(
 				`User registration for ${newUser.username} complete. Confirmation email sent.`
 			);
 			return res.json({
 				message: 'Account registered! Please confirm via email.'
 			});
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res
 				.status(500)
 				.json({ error: 'Registration failed. Please try again.' });
@@ -255,7 +244,7 @@ export default function initializeUserRoutes({
 			});
 
 			if (!user) {
-				logger.debug('400 - User not found');
+				appLogger.debug('400 - User not found');
 				return res.status(400).json({ email: 'User not found' });
 			}
 
@@ -275,7 +264,7 @@ export default function initializeUserRoutes({
 				return res.status(400).json({ password: 'Incorrect password' });
 			}
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({ error: 'Login - Server error' });
 		}
 	});
@@ -291,7 +280,7 @@ export default function initializeUserRoutes({
 				where: { email: sanitizedEmail }
 			});
 			if (!user) {
-				logger.error('Recover password: User not found');
+				appLogger.error('Recover password: User not found');
 				return res.status(404).json({
 					email: 'Unable to find your user account. Please try again.'
 				});
@@ -305,10 +294,7 @@ export default function initializeUserRoutes({
 			// send password reset email
 			const transporter = await getTransporter({
 				nodemailer,
-				getSecrets: () =>
-					sops.getSecrets({ logger, execSync, getDirectoryPath }),
-				emailUser: environmentVariables.emailUser as string,
-				logger
+				emailUser: configService.getEnvVariables().emailUser as string
 			});
 
 			await transporter.sendMail({
@@ -317,12 +303,12 @@ export default function initializeUserRoutes({
 				text: `You have requested a password reset. Please use the following token: ${token}. This token will expire in 30 minutes.`
 			});
 
-			logger.debug(`Password reset link sent to ${user.email}`);
+			appLogger.debug(`Password reset link sent to ${user.email}`);
 			return res.json({
 				message: `Password reset link sent to ${user.email}`
 			});
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({
 				error: 'Password recovery failed due to an unknown error. Please try again.'
 			});
@@ -336,7 +322,7 @@ export default function initializeUserRoutes({
 			const qrCodeUrl = await totpUtil.generateQRCode(otpauth_url);
 			return res.json({ secret: base32, qrCodeUrl });
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({
 				error: 'Unable to generate TOTP secret. Please try again.'
 			});
@@ -351,7 +337,7 @@ export default function initializeUserRoutes({
 			const isTOTPTokenValid = totpUtil.verifyTOTPToken(secret, token);
 			return res.json({ isTOTPTokenValid });
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({
 				error: 'Unable to verify TOTP token. Please try again.'
 			});
@@ -370,16 +356,13 @@ export default function initializeUserRoutes({
 			});
 
 			if (!user) {
-				logger.error('Generate 2FA: User not found');
+				appLogger.error('Generate 2FA: User not found');
 				return res
 					.status(404)
 					.json({ error: 'Generate 2FA: User not found' });
 			}
 
 			const email2FAUtil = await createEmail2FAUtil({
-				logger,
-				getSecrets: () =>
-					sops.getSecrets({ logger, execSync, getDirectoryPath }),
 				bcrypt,
 				jwt
 			});
@@ -392,10 +375,7 @@ export default function initializeUserRoutes({
 
 			const transporter = await getTransporter({
 				nodemailer,
-				getSecrets: () =>
-					sops.getSecrets({ logger, execSync, getDirectoryPath }),
-				emailUser: environmentVariables.emailUser as string,
-				logger
+				emailUser: configService.getEnvVariables().emailUser as string
 			});
 
 			await transporter.sendMail({
@@ -406,7 +386,7 @@ export default function initializeUserRoutes({
 
 			return res.json({ message: '2FA code sent to email' });
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({
 				error: 'Generate 2FA: internal server error'
 			});
@@ -424,7 +404,7 @@ export default function initializeUserRoutes({
 				where: { email: sanitizedEmail }
 			});
 			if (!user) {
-				logger.error('Verify 2FA: User not found');
+				appLogger.error('Verify 2FA: User not found');
 				return res
 					.status(404)
 					.json({ error: 'Verify 2FA: User not found' });
@@ -433,9 +413,6 @@ export default function initializeUserRoutes({
 			const resetPasswordToken = user.resetPasswordToken || '';
 
 			const email2FAUtil = await createEmail2FAUtil({
-				logger,
-				getSecrets: () =>
-					sops.getSecrets({ logger, execSync, getDirectoryPath }),
 				bcrypt,
 				jwt
 			});
@@ -446,7 +423,7 @@ export default function initializeUserRoutes({
 			);
 
 			if (!isEmail2FACodeValid) {
-				logger.error('Invalid or expired 2FA code');
+				appLogger.error('Invalid or expired 2FA code');
 				return res
 					.status(400)
 					.json({ error: 'Invalid or expired 2FA code' });
@@ -454,7 +431,7 @@ export default function initializeUserRoutes({
 
 			return res.json({ message: '2FA code verified successfully' });
 		} catch (err) {
-			processError(err, logger || console);
+			processError(err, appLogger || console);
 			return res.status(500).json({ error: 'Internal server error' });
 		}
 	});

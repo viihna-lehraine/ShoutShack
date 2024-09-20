@@ -1,129 +1,190 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import { envVariables } from './envVars';
-import { errorClasses } from '../errors/errorClasses';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { configService } from '../config/configService';
+import { appLogger } from '../utils/appLogger';
 
-export interface EnvSecretsDependencies {
-	appLogger: Logger;
+export interface SecretsDependencies {
 	execSync: typeof execSync;
 	getDirectoryPath: () => string;
+	appLogger: appLogger;
 }
 
-interface EnvSecrets {
-	[key: string]: string | number | boolean | string[] | number[] | boolean[];
+export interface SecretsMap {
+	[key: string]: string;
 }
 
-export interface EnvSecretsMap extends EnvSecrets {
-	APP_SSL_KEY: string;
-	APP_SSL_CERT: string;
-	DB_NAME: string;
-	DB_USER: string;
-	DB_PASSWORD: string;
-	DB_HOST: string;
-	DB_DIALECT: 'mysql' | 'postgres' | 'sqlite' | 'mariadb' | 'mssql';
-	EMAIL_2FA_KEY: string;
-	EMAIL_HOST: string;
-	EMAIL_PORT: number;
-	EMAIL_SECURE: boolean;
-	FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY: boolean;
-	FIDO_AUTHENTICATOR_USER_VERIFICATION:
-		| 'required'
-		| 'preferred'
-		| 'discouraged';
-	FIDO_CHALLENGE_SIZE: number;
-	FIDO_CRYPTO_PARAMETERS: number[];
-	JWT_SECRET: string;
-	PEPPER: string;
-	RP_ID: string;
-	RP_NAME: string;
-	RP_ICON: string;
-	SESSION_SECRET: string;
-	SMTP_TOKEN: string;
-	YUBICO_CLIENT_ID: number;
-	YUBICO_SECRET_KEY: string;
-}
-
-export function getSecretsSync({
-	appLogger,
-	execSync,
-	getDirectoryPath
-}: EnvSecretsDependencies): EnvSecretsMap {
+export function decryptSecretOnDemand(
+	secretKey: string,
+	dependencies: SecretsDependencies,
+	encryptionKey: string
+): string | null {
+	const { execSync, getDirectoryPath, appLogger } = dependencies;
 	try {
-		validateDependencies(
-			[{ name: 'appLogger', instance: appLogger }],
-			appLogger
-		);
 		const secretsPath = path.join(
 			getDirectoryPath(),
-			envVariables.secretsFilePath
+			configService.getEnvVariables().secretsFilePath
 		);
-		appLogger.info(`Resolved secrets path: ${secretsPath}`);
 
 		const decryptedSecrets = execSync(
-			`sops -d --output-type json ${secretsPath}`
+			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
 		).toString();
-		return JSON.parse(decryptedSecrets);
+		const secrets = JSON.parse(decryptedSecrets);
+
+		if (secrets[secretKey]) {
+			const secretValue = secrets[secretKey];
+			appLogger.info(`Decrypted secret: ${secretKey}`);
+
+			encryptSecretOnDemand(
+				secretKey,
+				secretValue,
+				encryptionKey,
+				dependencies
+			);
+			return secretValue;
+		} else {
+			appLogger.error(`Secret not found: ${secretKey}`);
+			return null;
+		}
 	} catch (error) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to retrieve secrets: ${error instanceof Error ? error.message : String(error)}`,
-			{ exposeToClient: false }
+		const secretsError = new errorClasses.ConfigurationError(
+			`Failed to retrieve secret for ${secretKey}: ${error instanceof Error ? error.message : String(error)}`,
+			{
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
-		ErrorLogger.logError(configurationError, appLogger);
-		processError(configurationError, appLogger);
-		throw configurationError;
+		ErrorLogger.logError(secretsError);
+		processError(secretsError);
+		return null;
+	}
+}
+
+export function encryptSecretOnDemand(
+	secretKey: string,
+	secretValue: string,
+	encryptionKey: string,
+	dependencies: SecretsDependencies
+): void {
+	const { execSync, getDirectoryPath, appLogger } = dependencies;
+	try {
+		const secretsPath = path.join(
+			getDirectoryPath(),
+			configService.getEnvVariables().secretsFilePath
+		);
+
+		const decryptedSecrets = execSync(
+			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
+		).toString();
+		const secrets = JSON.parse(decryptedSecrets);
+
+		secrets[secretKey] = secretValue;
+
+		const updatedSecretsJson = JSON.stringify(secrets);
+
+		execSync(
+			`sops -e --input-type json --passphrase ${encryptionKey} ${secretsPath}`,
+			{ input: updatedSecretsJson }
+		);
+
+		appLogger.info(`Secret ${secretKey} re-encrypted successfully.`);
+	} catch (error) {
+		const secretsError = new errorClasses.ConfigurationError(
+			`Failed to re-encrypt secret ${secretKey}: ${error instanceof Error ? error.message : String(error)}`,
+			{
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logError(secretsError);
+		processError(secretsError);
+	}
+}
+
+export function getSecretsSync(
+	{ execSync, getDirectoryPath, appLogger }: SecretsDependencies,
+	encryptionKey: string
+): SecretsMap {
+	try {
+		const secretsPath = path.join(
+			getDirectoryPath(),
+			configService.getEnvVariables().secretsFilePath
+		);
+		appLogger.info('Resolved secrets path:', secretsPath);
+
+		const decryptedSecrets = execSync(
+			`sops -d --output-type json --passphrase ${encryptionKey} ${secretsPath}`
+		).toString();
+		const secrets = JSON.parse(decryptedSecrets);
+
+		appLogger.info('Secrets successfully decrypted');
+		return {
+			dbPassword: secrets.DB_PASSWORD,
+			email2FAKey: secrets.EMAIL_2FA_KEY,
+			jwtSecret: secrets.JWT_SECRET,
+			pepper: secrets.PEPPER,
+			sessionSecret: secrets.SESSION_SECRET,
+			smtpToken: secrets.SMTP_TOKEN
+		};
+	} catch (error) {
+		const secretsError = new errorClasses.ConfigurationErrorFatal(
+			`Failed to retrieve secrets: ${error instanceof Error ? error.message : String(error)}`,
+			{
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.FATAL,
+				exposeToClient: false
+			}
+		);
+		ErrorLogger.logError(secretsError);
+		processError(secretsError);
+		throw secretsError;
 	}
 }
 
 function decryptKeySync(
-	{
-		appLogger,
-		execSync
-	}: Pick<EnvSecretsDependencies, 'appLogger' | 'execSync'>,
+	{ execSync }: Pick<SecretsDependencies, 'appLogger' | 'execSync'>,
 	encryptedFilePath: string
 ): string {
 	try {
-		validateDependencies(
-			[
-				{ name: 'appLogger', instance: appLogger },
-				{ name: 'execSync', instance: execSync }
-			],
-			appLogger
-		);
-
 		const decryptedKey = execSync(
 			`sops -d --output-type string ${encryptedFilePath}`
 		).toString('utf-8');
 		return decryptedKey;
 	} catch (utilError) {
 		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Failed to decrypt key: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
-			{ exposeToClient: false }
+			`Error occurred while decrypting key\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
+			{
+				utility: 'decryptKeySync',
+				originalError: utilError,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
-		ErrorLogger.logError(utilityError, appLogger);
-		processError(utilityError, appLogger);
+		ErrorLogger.logError(utilityError);
+		processError(utilityError);
 		return '';
 	}
 }
 
-export function decryptDataFilesSync({
-	appLogger,
-	execSync
-}: EnvSecretsDependencies): { [key: string]: string } {
-	try {
-		validateDependencies(
-			[{ name: 'appLogger', instance: appLogger }],
-			appLogger
-		);
+export function decryptDataFilesSync({ execSync }: SecretsDependencies): {
+	[key: string]: string;
+} {
+	const appLogger = configService.getLogger();
 
+	try {
 		const filePaths = [
-			envVariables.serverDataFilePath1,
-			envVariables.serverDataFilePath2,
-			envVariables.serverDataFilePath3,
-			envVariables.serverDataFilePath4
+			configService.getEnvVariables().serverDataFilePath1,
+			configService.getEnvVariables().serverDataFilePath2,
+			configService.getEnvVariables().serverDataFilePath3,
+			configService.getEnvVariables().serverDataFilePath4
 		];
 
 		const decryptedFiles: { [key: string]: string } = {};
@@ -135,54 +196,91 @@ export function decryptDataFilesSync({
 				).toString();
 				decryptedFiles[`files${index + 1}`] = fileContent;
 			} else {
-				appLogger.warn(
-					`SERVER_DATA_FILE_PATH_${index + 1} is not defined`
-				);
+				appLogger.warn(`serverDataFilePath${index + 1} is not defined`);
 			}
 		});
 
 		return decryptedFiles;
 	} catch (error) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to decrypt data files: ${error instanceof Error ? error.message : String(error)}`,
-			{ exposeToClient: false }
+		const configurationError = new errorClasses.ConfigurationErrorFatal(
+			`Fatal error: Failed to decrypt data files\n${error instanceof Error ? error.message : String(error)}`,
+			{
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.FATAL,
+				exposeToClient: false
+			}
 		);
-		ErrorLogger.logError(configurationError, appLogger);
-		processError(configurationError, appLogger);
+		ErrorLogger.logError(configurationError);
+		processError(configurationError);
 		return {};
 	}
 }
 
-export function getSSLKeysSync(dependencies: EnvSecretsDependencies): {
+export function getTLSKeysSync(dependencies: SecretsDependencies): {
 	key: string;
 	cert: string;
 } {
 	try {
-		validateDependencies(
-			[{ name: 'appLogger', instance: dependencies.appLogger }],
-			dependencies.appLogger
-		);
-
 		const keyPath = path.join(
 			dependencies.getDirectoryPath(),
-			envVariables.serverSslKeyPath
+			configService.getEnvVariables().tlsKeyPath
 		);
 		const certPath = path.join(
 			dependencies.getDirectoryPath(),
-			envVariables.serverSslCertPath
+			configService.getEnvVariables().tlsCertPath
 		);
 
-		const key = decryptKeySync(dependencies, keyPath);
 		const cert = decryptKeySync(dependencies, certPath);
+		const key = decryptKeySync(dependencies, keyPath);
 
 		return { key, cert };
 	} catch (error) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to get SSL keys: ${error instanceof Error ? error.message : String(error)}`,
-			{ exposeToClient: false }
+		const configurationError = new errorClasses.ConfigurationErrorFatal(
+			`Fatal error: Failed to retrieve TLS keys\n${error instanceof Error ? error.message : String(error)}`,
+			{
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.FATAL,
+				exposeToClient: false
+			}
 		);
-		ErrorLogger.logError(configurationError, dependencies.appLogger);
-		processError(configurationError, dependencies.appLogger);
+		ErrorLogger.logError(configurationError);
+		processError(configurationError);
 		return { key: '', cert: '' };
 	}
+}
+
+export function maskSecrets(
+	meta: Record<string, unknown>
+): Record<string, unknown> {
+	const maskedMeta: Record<string, unknown> = {};
+
+	for (const key in meta) {
+		if (Object.prototype.hasOwnProperty.call(meta, key)) {
+			if (isSensitiveField(key)) {
+				maskedMeta[key] = '***REDACTED***';
+			} else {
+				maskedMeta[key] = meta[key];
+			}
+		}
+	}
+
+	return maskedMeta;
+}
+
+function isSensitiveField(key: string): boolean {
+	const sensitiveFields = [
+		'dbPassword',
+		'email2FAKey',
+		'fidoChallengeSize',
+		'jwtSecret',
+		'pepper',
+		'sessionSecret',
+		'smtpToken',
+		'yubicoClientId',
+		'yubicoSecretKey'
+	];
+
+	return sensitiveFields.includes(key);
 }

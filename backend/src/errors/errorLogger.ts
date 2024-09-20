@@ -1,25 +1,27 @@
 import { Op, Sequelize } from 'sequelize';
-import { Logger } from '../utils/logger';
+import { ConfigService } from '../config/configService';
 import { envVariables } from '../environment/envVars';
 import { AppError, ErrorSeverity } from '../errors/errorClasses';
 import { createErrorLogModel } from '../models/ErrorLogModelFile';
 import { validateDependencies } from '../utils/validateDependencies';
+import { processError } from './processError';
 
 const errorCounts = new Map<string, number>();
 
 export class ErrorLogger {
 	static logError(
 		error: AppError,
-		logger: Logger | Console,
 		details: Record<string, unknown> = {}
 	): void {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
 			[
 				{ name: 'error', instance: error },
-				{ name: 'logger', instance: logger },
 				{ name: 'details', instance: details }
 			],
-			logger || console
+			appLogger || console
 		);
 
 		const logDetails = {
@@ -42,30 +44,30 @@ export class ErrorLogger {
 				error.severity === ErrorSeverity.FATAL ||
 				error.severity === ErrorSeverity.RECOVERABLE
 			) {
-				logger.error(`PROD ERROR: ${error.message}`, logDetails);
+				appLogger.error(`PROD ERROR: ${error.message}`, logDetails);
 			} else if (error.severity === ErrorSeverity.WARNING) {
-				logger.warn(`PROD WARNING: ${error.message}`, logDetails);
+				appLogger.warn(`PROD WARNING: ${error.message}`, logDetails);
 			}
 		} else {
 			// development - log everything including debug
 			switch (error.severity) {
 				case ErrorSeverity.FATAL:
-					logger.error(`DEV FATAL: ${error.message}`, logDetails);
+					appLogger.error(`DEV FATAL: ${error.message}`, logDetails);
 					break;
 				case ErrorSeverity.RECOVERABLE:
-					logger.warn(
+					appLogger.warn(
 						`DEV RECOVERABLE: ${error.message}`,
 						logDetails
 					);
 					break;
 				case ErrorSeverity.WARNING:
-					logger.info(`DEV WARNING: ${error.message}`, logDetails);
+					appLogger.info(`DEV WARNING: ${error.message}`, logDetails);
 					break;
 				case ErrorSeverity.INFO:
-					logger.debug(`DEV INFO: ${error.message}`, logDetails);
+					appLogger.debug(`DEV INFO: ${error.message}`, logDetails);
 					break;
 				default:
-					logger.error(
+					appLogger.error(
 						`DEV UNKNOWN SEVERITY: ${error.message}`,
 						logDetails
 					);
@@ -75,16 +77,17 @@ export class ErrorLogger {
 
 	static logCritical(
 		errorMessage: string,
-		logger: Logger | Console,
 		details: Record<string, unknown> = {}
 	): void {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
 			[
 				{ name: 'errorMessage', instance: errorMessage },
-				{ name: 'logger', instance: logger },
 				{ name: 'details', instance: details }
 			],
-			logger || console
+			appLogger || console
 		);
 
 		const logDetails = {
@@ -92,21 +95,22 @@ export class ErrorLogger {
 			...details
 		};
 
-		logger.error(`CRITICAL: ${errorMessage}`, logDetails);
+		appLogger.error(`CRITICAL: ${errorMessage}`, logDetails);
 	}
 
 	static logWarning(
 		warningMessage: string,
-		logger: Logger | Console,
 		details: Record<string, unknown> = {}
 	): void {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
 			[
 				{ name: 'warningMessage', instance: warningMessage },
-				{ name: 'logger', instance: logger },
 				{ name: 'details', instance: details }
 			],
-			logger || console
+			appLogger || console
 		);
 
 		const logDetails = {
@@ -117,24 +121,25 @@ export class ErrorLogger {
 		const isProduction = envVariables.nodeEnv === 'production';
 
 		if (isProduction) {
-			logger.warn(`PROD WARNING: ${warningMessage}`, logDetails);
+			appLogger.warn(`PROD WARNING: ${warningMessage}`, logDetails);
 		} else {
-			logger.warn(`DEV WARNING: ${warningMessage}`, logDetails);
+			appLogger.warn(`DEV WARNING: ${warningMessage}`, logDetails);
 		}
 	}
 
 	static logInfo(
 		infoMessage: string,
-		logger: Logger | Console,
 		details: Record<string, unknown> = {}
 	): void {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
 			[
 				{ name: 'infoMessage', instance: infoMessage },
-				{ name: 'logger', instance: logger },
 				{ name: 'details', instance: details }
 			],
-			logger || console
+			appLogger || console
 		);
 
 		const logDetails = {
@@ -145,24 +150,25 @@ export class ErrorLogger {
 		const isProduction = envVariables.nodeEnv === 'production';
 
 		if (isProduction) {
-			logger.info(`PROD INFO: ${infoMessage}`, logDetails);
+			appLogger.info(`PROD INFO: ${infoMessage}`, logDetails);
 		} else {
-			logger.info(`DEV INFO: ${infoMessage}`, logDetails);
+			appLogger.info(`DEV INFO: ${infoMessage}`, logDetails);
 		}
 	}
 
 	static logDebug(
 		debugMessage: string,
-		logger: Logger | Console,
 		details: Record<string, unknown> = {}
 	): void {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
 			[
 				{ name: 'debugMessage', instance: debugMessage },
-				{ name: 'logger', instance: logger },
 				{ name: 'details', instance: details }
 			],
-			logger || console
+			appLogger || console
 		);
 
 		const logDetails = {
@@ -170,20 +176,21 @@ export class ErrorLogger {
 			...details
 		};
 
-		logger.debug(`DEBUG: ${debugMessage}`, logDetails);
+		appLogger.debug(`DEBUG: ${debugMessage}`, logDetails);
 	}
 
 	// log to the database
 	static async logToDatabase(
 		error: AppError,
 		sequelize: Sequelize,
-		logger: Logger,
 		retryCount: number = 3,
 		retryDelay: number = 1000
 	): Promise<void> {
-		try {
-			const ErrorLog = createErrorLogModel(sequelize, logger);
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
+		const ErrorLog = createErrorLogModel(sequelize);
 
+		try {
 			await ErrorLog!.create({
 				name: error.name,
 				message: error.message,
@@ -194,27 +201,27 @@ export class ErrorLogger {
 				timestamp: new Date(),
 				count: errorCounts.get(error.name) || 1
 			});
-			logger.info('Error logged to the database');
-		} catch (dbError) {
+			appLogger.info('Error logged to the database');
+		} catch (dbLogError) {
 			if (retryCount > 0) {
-				logger.warn(
+				appLogger.warn(
 					`Database logging faild, retrying... Attempts left: ${retryCount}`,
-					dbError
+					dbLogError
 				);
 				setTimeout(() => {
 					ErrorLogger.logToDatabase(
 						error,
 						sequelize,
-						logger,
 						retryCount - 1,
 						retryDelay * 2
 					);
 				}, retryDelay);
 			} else {
-				logger.error(
+				appLogger.error(
 					'Database logging failed after multiple retries. Fallback to file logging'
 				);
-				ErrorLogger.logError(dbError as AppError, logger);
+				ErrorLogger.logError(dbLogError as AppError);
+				processError(dbLogError as AppError);
 			}
 		}
 	}
@@ -225,9 +232,10 @@ export class ErrorLogger {
 
 	static async cleanupOldLogs(
 		sequelize: Sequelize,
-		logger: Logger,
 		retentionPeriodDays: number = 30
 	): Promise<void> {
+		const configService = ConfigService.getInstance();
+		const appLogger = configService.getLogger();
 		const retentionDate = new Date();
 		retentionDate.setDate(retentionDate.getDate() - retentionPeriodDays);
 
@@ -240,11 +248,11 @@ export class ErrorLogger {
 					}
 				}
 			});
-			logger.info(
+			appLogger.info(
 				`Old logs older than ${retentionPeriodDays} days have been deleted.`
 			);
 		} catch (cleanupError) {
-			logger.error('Failed to clean up old logs', cleanupError);
+			appLogger.error('Failed to clean up old logs', cleanupError);
 		}
 	}
 }

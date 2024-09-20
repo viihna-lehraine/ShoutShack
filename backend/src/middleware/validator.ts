@@ -3,17 +3,16 @@ import validator from 'validator';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
-import { Logger } from '../utils/logger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../utils/appLogger';
 
 interface ValidatorDependencies {
+	appLogger: Logger;
 	validator: typeof validator;
-	logger: Logger;
 }
 
 export function initializeValidatorMiddleware({
-	validator,
-	logger
+	appLogger,
+	validator
 }: ValidatorDependencies): {
 	validateEntry: (req: Request, res: Response, next: NextFunction) => void;
 	registrationValidationRules: (
@@ -22,14 +21,6 @@ export function initializeValidatorMiddleware({
 		next: NextFunction
 	) => void;
 } {
-	validateDependencies(
-		[
-			{ name: 'validator', instance: validator },
-			{ name: 'logger', instance: logger }
-		],
-		logger || console
-	);
-
 	const validateEntry = (
 		req: Request,
 		res: Response,
@@ -46,14 +37,14 @@ export function initializeValidatorMiddleware({
 		}
 
 		if (errors.length) {
-			logger.warn(
+			appLogger.warn(
 				`Validation failed for entry creation: ${JSON.stringify(errors)}`
 			);
 			res.status(400).json({ errors });
 			return;
 		}
 
-		logger.info('Validation passed for entry creation');
+		appLogger.info('Validation passed for entry creation');
 		next();
 	};
 
@@ -126,14 +117,14 @@ export function initializeValidatorMiddleware({
 			}
 
 			if (errors.length) {
-				logger.info(
+				appLogger.info(
 					`Validation failed for registration: ${JSON.stringify(errors)}`
 				);
 				res.status(400).json({ errors });
 				return;
 			}
 
-			logger.info('Validation passed for registration');
+			appLogger.info('Validation passed for registration');
 			next();
 		} catch (expessError) {
 			const middleware: string = 'registrationValidationRules()';
@@ -149,8 +140,8 @@ export function initializeValidatorMiddleware({
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(expressMiddlewareError, logger);
-			expressErrorHandler({ logger })(expressMiddlewareError, req, res);
+			ErrorLogger.logError(expressMiddlewareError, appLogger);
+			expressErrorHandler({ appLogger })(expressMiddlewareError, req, res);
 		}
 	};
 

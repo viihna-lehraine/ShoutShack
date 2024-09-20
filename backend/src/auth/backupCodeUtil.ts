@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Response } from 'express';
-import { errorClasses } from '../errors/errorClasses';
+import { configService } from '../config/configService';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
 import { UserMfa } from '../models/UserMfaModelFile';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 let res: Response;
@@ -16,14 +16,12 @@ interface BackupCode {
 }
 
 interface BackupCodeServiceDependencies {
-	logger: Logger;
 	UserMfa: typeof UserMfa;
 	crypto: typeof crypto;
 	bcrypt: typeof bcrypt;
 }
 
 export default function createBackupCodeService({
-	logger,
 	UserMfa,
 	bcrypt,
 	crypto
@@ -42,19 +40,21 @@ export default function createBackupCodeService({
 		backupCodes: BackupCode[]
 	) => Promise<void>;
 } {
+	const appLogger = configService.getLogger();
+
 	validateDependencies(
-		[
-			{ name: 'logger', instance: logger },
-			{ name: 'UserMfa', instance: UserMfa },
-			{ name: 'bcrypt', instance: bcrypt },
-			{ name: 'crypto', instance: crypto }
-		],
-		logger
+		[{ name: 'UserMfa', instance: UserMfa }],
+		appLogger || console
 	);
 
 	async function generateBackupCodes(id: string): Promise<string[]> {
+		const appLogger = configService.getLogger();
+
 		try {
-			validateDependencies([{ name: 'id', instance: id }], logger);
+			validateDependencies(
+				[{ name: 'id', instance: id }],
+				appLogger || console
+			);
 
 			const backupCodes: BackupCode[] = [];
 			for (let i = 0; i < 16; i++) {
@@ -72,8 +72,8 @@ export default function createBackupCodeService({
 				`Error occured with dependency ${utility}. Failed to generate backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 				{ exposeToClient: false }
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 			return [''];
 		}
 	}
@@ -82,31 +82,35 @@ export default function createBackupCodeService({
 		id: string,
 		inputCode: string
 	): Promise<boolean> {
+		const appLogger = configService.getLogger();
+
 		try {
 			validateDependencies(
 				[
 					{ name: 'id', instance: id },
 					{ name: 'inputCode', instance: inputCode }
 				],
-				logger
+				appLogger || console
 			);
 
 			const storedCodes = await getBackupCodesFromDatabase(id);
 
 			if (!storedCodes || storedCodes.length === 0) {
-				ErrorLogger.logInfo(
-					`No backup codes found for user ${id}`,
-					logger
-				);
+				ErrorLogger.logInfo(`No backup codes found for user ${id}`);
+				const message = 'No backup codes found';
 				const clientAuthError =
 					new errorClasses.ClientAuthenticationError(
-						`Unable to find backup codes`,
+						`Client Auth Error: No backup codes found for user ${id}\n${Error instanceof Error ? Error.message : Error}`,
 						{
-							exposeToClient: true,
-							message: `Client Auth Error: No backup codes found for user ${id}`
+							originalError: Error || 'Unknown error occurred',
+							statusCode: 400,
+							severity: ErrorSeverity.RECOVERABLE,
+							exposeToClient: false
 						}
 					);
-				sendClientErrorResponse(clientAuthError, res);
+				sendClientErrorResponse(message, 400, res);
+				ErrorLogger.logError(clientAuthError);
+				processError(clientAuthError);
 				return false;
 			}
 
@@ -117,32 +121,42 @@ export default function createBackupCodeService({
 					await updateBackupCodesInDatabase(id, storedCodes);
 					return true;
 				} else {
+					const message = 'Invalid backup code';
 					const clientAuthError =
 						new errorClasses.ClientAuthenticationError(
-							`Invalid backup code`,
+							`Client Auth Error: Invalid backup code for user ${id}\n${Error instanceof Error ? Error.message : Error}`,
 							{
-								exposeToClient: true,
-								message: `Client Auth Error: Invalid backup code for user ${id}`
+								originalError:
+									Error || 'Unknown error occurred',
+								statusCode: 400,
+								severity: ErrorSeverity.RECOVERABLE,
+								exposeToClient: true
 							}
 						);
-					sendClientErrorResponse(clientAuthError, res);
+					sendClientErrorResponse(message, 400, res);
+					ErrorLogger.logError(clientAuthError);
+					processError(clientAuthError);
 					return false;
 				}
 			}
 
-			ErrorLogger.logWarning(
-				`Backup code verification failed for user ${id}`,
-				logger
+			ErrorLogger.logDebug(
+				`Backup code verification failed for user ${id}`
 			);
 			return false;
 		} catch (utilError) {
-			const utility: string = 'verifyBackupCode()';
-			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Error occured with dependency ${utility}. Failed to verify backup code for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
-				{ exposeToClient: false }
+			const utilityError = new errorClasses.DependencyErrorRecoverable(
+				`Error occured with dependency 'verifyBackupCode()': Failed to verify backup code for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
+				{
+					utility: 'verifyBackupCode()',
+					originalError: utilError,
+					statusCode: 500,
+					severity: ErrorSeverity.RECOVERABLE,
+					exposeToClient: false
+				}
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 			return false;
 		}
 	}
@@ -151,13 +165,15 @@ export default function createBackupCodeService({
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
+		const appLogger = configService.getLogger();
+
 		try {
 			validateDependencies(
 				[
 					{ name: 'id', instance: id },
 					{ name: 'backupCodes', instance: backupCodes }
 				],
-				logger
+				appLogger || console
 			);
 
 			const user = await UserMfa.findByPk(id);
@@ -171,7 +187,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
-				ErrorLogger.logError(clientAuthError, logger);
+				ErrorLogger.logError(clientAuthError);
 				sendClientErrorResponse(clientAuthError, res);
 				return;
 			}
@@ -187,8 +203,8 @@ export default function createBackupCodeService({
 				`Error occured with dependency ${utility}. Failed to save backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 				{ exposeToClient: false }
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 		}
 	}
 
@@ -196,7 +212,7 @@ export default function createBackupCodeService({
 		id: string
 	): Promise<BackupCode[] | undefined> {
 		try {
-			validateDependencies([{ name: 'id', instance: id }], logger);
+			validateDependencies([{ name: 'id', instance: id }], appLogger);
 
 			const user = await UserMfa.findByPk(id);
 
@@ -209,7 +225,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
-				ErrorLogger.logError(clientAuthError, logger);
+				ErrorLogger.logError(clientAuthError);
 				sendClientErrorResponse(clientAuthError, res);
 				return undefined;
 			}
@@ -224,7 +240,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: No backup codes found for user ${id}`
 						}
 					);
-				ErrorLogger.logError(clientAuthError, logger);
+				ErrorLogger.logError(clientAuthError);
 				sendClientErrorResponse(clientAuthError, res);
 				return;
 			}
@@ -239,8 +255,8 @@ export default function createBackupCodeService({
 				`Error occured with dependency ${utility}. Failed to get backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 				{ exposeToClient: false }
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 			return [];
 		}
 	}
@@ -255,7 +271,7 @@ export default function createBackupCodeService({
 					{ name: 'id', instance: id },
 					{ name: 'backupCodes', instance: backupCodes }
 				],
-				logger
+				appLogger || console
 			);
 
 			const user = await UserMfa.findByPk(id);
@@ -269,7 +285,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
-				ErrorLogger.logError(clientAuthError, logger);
+				ErrorLogger.logError(clientAuthError);
 				sendClientErrorResponse(clientAuthError, res);
 				return;
 			}
@@ -285,8 +301,8 @@ export default function createBackupCodeService({
 				`Error occured with dependency ${utility}. Failed to update backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 				{ exposeToClient: false }
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 		}
 	}
 

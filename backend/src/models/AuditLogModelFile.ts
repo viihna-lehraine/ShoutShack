@@ -8,7 +8,7 @@ import {
 import { User } from './UserModelFile';
 import { errorClasses } from '../errors/errorClasses';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 import { ErrorLogger } from 'src/errors/errorLogger';
 

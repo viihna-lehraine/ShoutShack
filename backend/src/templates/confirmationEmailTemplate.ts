@@ -1,19 +1,22 @@
+import { ConfigService } from '../config/configService';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
-const generateConfirmationEmailTemplate = (
+export const generateConfirmationEmailTemplate = (
 	username: string,
-	confirmationUrl: string,
-	logger: Logger
+	confirmationUrl: string
 ): string => {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+
 	validateDependencies(
 		[
 			{ name: 'username', instance: username },
-			{ name: 'confirmationUrl', instance: confirmationUrl },
-			{ name: 'logger', instance: logger }
+			{ name: 'confirmationUrl', instance: confirmationUrl }
 		],
-		logger
+		appLogger || console
 	);
 
 	try {
@@ -92,12 +95,19 @@ const generateConfirmationEmailTemplate = (
     	    </html>
     	`;
 	} catch (error) {
-		processError(error, logger);
-		throw new Error(
-			`Failed to generate confirmation email template: ${
-				error instanceof Error ? error.message : String(error)
-			}`
+		const templateError = new errorClasses.DependencyErrorRecoverable(
+			`Failed to generate confirmation email template: ${error instanceof Error ? error.message : String(error)}`,
+			{
+				dependency: 'generateConfirmationEmailTemplate()',
+				originalError: error,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
+		ErrorLogger.logError(templateError, appLogger);
+		processError(templateError, appLogger);
+		throw templateError;
 	}
 };
 

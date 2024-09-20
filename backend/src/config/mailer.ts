@@ -1,8 +1,8 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import { errorClasses } from '../errors/errorClasses';
+import { ConfigService } from '../config/configService';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/logger';
 import { validateDependencies } from '../utils/validateDependencies';
 
 export interface MailerSecrets {
@@ -14,29 +14,39 @@ export interface MailerSecrets {
 
 export interface MailerDependencies {
 	readonly nodemailer: typeof nodemailer;
-	readonly getSecrets: () => Promise<MailerSecrets>;
 	readonly emailUser: string;
-	readonly logger: Logger;
 }
 
 async function createTransporter({
 	nodemailer,
-	getSecrets,
-	emailUser,
-	logger
+	emailUser
 }: MailerDependencies): Promise<Transporter> {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+	const secrets = configService.getSecrets() as MailerSecrets;
+
 	try {
 		validateDependencies(
 			[
 				{ name: 'nodemailer', instance: nodemailer },
-				{ name: 'getSecrets', instance: getSecrets },
-				{ name: 'emailUser', instance: emailUser },
-				{ name: 'logger', instance: logger }
+				{ name: 'emailUser', instance: emailUser }
 			],
-			logger || console
+			appLogger || console
 		);
 
-		const secrets: MailerSecrets = await getSecrets();
+		if (!configService.getSecrets()) {
+			const loadSecretsError = new errorClasses.ConfigurationError(
+				`Error occurred when retrieving secrets`,
+				{
+					statusCode: 404,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
+			);
+			ErrorLogger.logError(loadSecretsError, appLogger || console);
+			processError(loadSecretsError, appLogger || console);
+			throw loadSecretsError;
+		}
 
 		return nodemailer.createTransport({
 			host: secrets.EMAIL_HOST,
@@ -51,10 +61,14 @@ async function createTransporter({
 		const dependency: string = 'createTransporter()';
 		const dependencyError = new errorClasses.DependencyErrorRecoverable(
 			dependency,
-			{ exposeToClient: false }
+			{
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
-		ErrorLogger.logError(dependencyError, logger);
-		processError(dependencyError, logger || console);
+		ErrorLogger.logError(dependencyError, appLogger);
+		processError(dependencyError, appLogger || console);
 		throw dependencyError;
 	}
 }
@@ -62,16 +76,17 @@ async function createTransporter({
 let transporter: Transporter | null = null;
 
 export async function getTransporter(deps: MailerDependencies): Promise<Transporter> {
+	const configService = ConfigService.getInstance();
+	const appLogger = configService.getLogger();
+
 	try {
 		validateDependencies(
 			[
 				{ name: 'deps', instance: deps },
 				{ name: 'deps.nodemailer', instance: deps.nodemailer },
-				{ name: 'deps.getSecrets', instance: deps.getSecrets },
 				{ name: 'deps.emailUser', instance: deps.emailUser },
-				{ name: 'deps.logger', instance: deps.logger }
 			],
-			deps.logger || console
+			appLogger || console
 		)
 		if (!transporter) {
 			transporter = await createTransporter(deps);
@@ -81,9 +96,16 @@ export async function getTransporter(deps: MailerDependencies): Promise<Transpor
 		const dependency: string = 'getTransporter()';
 		const dependencyError = new errorClasses.DependencyErrorRecoverable(
 			`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
-			{ exposeToClient: false }
+			{
+				dependency,
+				originalError: depError,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
-		processError(dependencyError, deps.logger || console);
+		ErrorLogger.logError(dependencyError, appLogger);
+		processError(dependencyError, appLogger || console);
 		throw dependencyError;
 	}
 }

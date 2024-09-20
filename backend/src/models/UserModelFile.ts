@@ -8,17 +8,14 @@ import {
 	Sequelize
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { errorClasses } from '../errors/errorClasses';
+import { configService } from '../config/configService';
+import { hashPassword } from '../config/hashConfig';
+import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
-import { hashPassword } from '../config/hashConfig';
-import { envSecrets } from '../environment/envConfig';
-import { EnvSecretsMap } from '../environment/envSecrets';
-import {
-	initializeRateLimitMiddleware,
-	RateLimitMiddlewareDependencies
-} from '../middleware/rateLimit';
-import { Logger } from '../utils/logger';
+import { initializeRateLimitMiddleware } from '../middleware/rateLimit';
+import { Logger } from '../utils/appLogger';
+import { ensureSecrets } from '../utils/ensureSecrets';
 import { validateDependencies } from '../utils/validateDependencies';
 
 interface UserAttributes {
@@ -34,12 +31,9 @@ interface UserAttributes {
 	creationDate: Date;
 }
 
-type UserSecrets = Pick<EnvSecretsMap, 'PEPPER'>;
-
 interface UserModelDependencies {
 	argon2: typeof import('argon2');
 	uuidv4: typeof uuidv4;
-	getSecrets: () => Promise<UserSecrets>;
 }
 
 export class User
@@ -59,24 +53,23 @@ export class User
 
 	async comparePassword(
 		password: string,
-		argon2: typeof import('argon2'),
-		secrets: UserSecrets,
-		appLogger: Logger
+		argon2: typeof import('argon2')
 	): Promise<boolean | null> {
+		const appLogger = configService.getLogger();
+		const secrets = ensureSecrets({ subSecrets: ['pepper'] });
+
 		try {
 			validateDependencies(
 				[
 					{ name: 'password', instance: password },
-					{ name: 'argon2', instance: argon2 },
-					{ name: 'secrets', instance: secrets },
-					{ name: 'appLogger', instance: appLogger }
+					{ name: 'argon2', instance: argon2 }
 				],
 				appLogger || console
 			);
 
 			return await argon2.verify(
 				this.password,
-				password + secrets.PEPPER
+				password + secrets.pepper
 			);
 		} catch (passwordError) {
 			const passwordValidationError =
@@ -84,8 +77,8 @@ export class User
 					'Passwords do not match',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
-			processError(passwordError || passwordValidationError, appLogger);
+			ErrorLogger.logInfo(passwordValidationError.message);
+			processError(passwordError || passwordValidationError);
 			return null;
 		}
 	}
@@ -93,10 +86,7 @@ export class User
 	static validatePassword(password: string, appLogger: Logger): boolean {
 		try {
 			validateDependencies(
-				[
-					{ name: 'password', instance: password },
-					{ name: 'appLogger', instance: appLogger }
-				],
+				[{ name: 'password', instance: password }],
 				appLogger || console
 			);
 
@@ -120,21 +110,21 @@ export class User
 					'Error validating password',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
-			processError(passwordError || passwordValidationError, appLogger);
+			ErrorLogger.logInfo(passwordValidationError.message);
+			processError(passwordError || passwordValidationError);
 			return false;
 		}
 	}
 
 	static async createUser(
-		{ uuidv4, getSecrets }: UserModelDependencies,
+		{ uuidv4 }: UserModelDependencies,
 		userId: number,
 		username: string,
 		password: string,
-		email: string,
-		rateLimitDependencies: RateLimitMiddlewareDependencies,
-		appLogger: Logger
+		email: string
 	): Promise<User | null> {
+		const appLogger = configService.getLogger();
+
 		try {
 			validateDependencies(
 				[
@@ -142,20 +132,12 @@ export class User
 					{ name: 'userId', instance: userId },
 					{ name: 'username', instance: username },
 					{ name: 'password', instance: password },
-					{ name: 'email', instance: email },
-					{ name: 'getSecrets', instance: getSecrets },
-					{
-						name: 'rateLimitDependencies',
-						instance: rateLimitDependencies
-					},
-					{ name: 'appLogger', instance: appLogger }
+					{ name: 'email', instance: email }
 				],
-				appLogger
+				appLogger || console
 			);
 
-			const rateLimiter = initializeRateLimitMiddleware(
-				rateLimitDependencies
-			);
+			const rateLimiter = initializeRateLimitMiddleware();
 			const req = { ip: email } as unknown as Request;
 			const res = {} as unknown as Response;
 
@@ -180,12 +162,7 @@ export class User
 				throw validationError;
 			}
 
-			const secrets = await getSecrets();
-			const hashedPassword = await hashPassword({
-				password,
-				secrets,
-				appLogger
-			});
+			const hashedPassword = await hashPassword({ password });
 
 			const newUser = await User.create({
 				id: uuidv4(),
@@ -207,8 +184,8 @@ export class User
 					'There was an error creating your account. Please try again. If the issue persists, please contact support.',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logWarning(userRegistrationError.message, appLogger);
-			processError(regisrationError || userRegistrationError, appLogger);
+			ErrorLogger.logWarning(userRegistrationError.message);
+			processError(regisrationError || userRegistrationError);
 			return null;
 		}
 	}
@@ -216,23 +193,20 @@ export class User
 	static async comparePasswords(
 		hashedPassword: string,
 		password: string,
-		argon2: typeof import('argon2'),
-		secrets: UserSecrets,
-		appLogger: Logger
+		argon2: typeof import('argon2')
 	): Promise<boolean | null> {
+		const appLogger = configService.getLogger();
+		const secrets = ensureSecrets({ subSecrets: ['pepper'] });
+
 		try {
 			validateDependencies(
-				[
-					{ name: 'argon2', instance: argon2 },
-					{ name: 'secrets', instance: secrets },
-					{ name: 'appLogger', instance: appLogger }
-				],
+				[{ name: 'argon2', instance: argon2 }],
 				appLogger || console
 			);
 
 			const isValid = await argon2.verify(
 				hashedPassword,
-				password + secrets.PEPPER
+				password + secrets.pepper
 			);
 
 			appLogger.debug('Password verified successfully');
@@ -243,24 +217,20 @@ export class User
 					'Error verifying password',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message, appLogger);
-			processError(passwordError, appLogger);
+			ErrorLogger.logInfo(passwordValidationError.message);
+			processError(passwordError);
 			return null;
 		}
 	}
 }
 
-export function createUserModel(
-	sequelize: Sequelize,
-	appLogger: Logger
-): typeof User {
+export function createUserModel(sequelize: Sequelize): typeof User {
 	try {
+		const appLogger = configService.getLogger();
+
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'appLogger', instance: appLogger }
-			],
-			appLogger
+			[{ name: 'sequelize', instance: sequelize }],
+			appLogger || console
 		);
 
 		User.init(
@@ -325,12 +295,7 @@ export function createUserModel(
 
 		User.addHook('beforeCreate', async (user: User) => {
 			try {
-				const secrets = envSecrets;
-				user.password = await hashPassword({
-					password: user.password,
-					secrets,
-					appLogger
-				});
+				user.password = await hashPassword({ password: user.password });
 			} catch (dbError) {
 				const databaseError = new errorClasses.DatabaseErrorRecoverable(
 					`Failed to create hashed password: ${
@@ -339,11 +304,14 @@ export function createUserModel(
 							: 'Unknown error'
 					}`,
 					{
+						originalError: dbError,
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logInfo(databaseError.message, appLogger);
-				processError(databaseError, appLogger);
+				ErrorLogger.logInfo(databaseError.message);
+				processError(databaseError);
 				throw databaseError;
 			}
 		});
@@ -353,8 +321,14 @@ export function createUserModel(
 				const { UserMfa } = await import('./UserMfaModelFile');
 
 				if (!UserMfa) {
-					throw new Error(
-						'Error occurred when attempting to load UserMfaModel by importing UserMfaModelFile'
+					throw new errorClasses.DependencyErrorRecoverable(
+						`UserModelFile is missing UserMfa model. Unable to update MFA status\n${Error instanceof Error ? Error.message : 'Unknown error'}`,
+						{
+							originalError: Error || null,
+							statusCode: 500,
+							severity: ErrorSeverity.FATAL,
+							exposeToClient: false
+						}
 					);
 				}
 
@@ -367,30 +341,34 @@ export function createUserModel(
 				} else {
 					const databaseError =
 						new errorClasses.DatabaseErrorRecoverable(
-							'UserMfa update method is not available',
+							`UserMfa update method is not available\n${Error instanceof Error ? Error.message : 'Unknown error'}`,
 							{
+								originalError: Error || null,
+								statusCode: 500,
+								severity: ErrorSeverity.RECOVERABLE,
 								exposeToClient: false
 							}
 						);
-					ErrorLogger.logInfo(databaseError.message, appLogger);
-					processError(databaseError, appLogger);
-					throw new Error(
-						'UserMfa update method is not available. Unable to update MFA status'
-					);
+					ErrorLogger.logInfo(databaseError.message);
+					processError(databaseError);
+					throw databaseError;
 				}
 			} catch (dbError) {
 				const databaseError = new errorClasses.DatabaseErrorRecoverable(
-					`Failed to update MFA status: ${
+					`Failed to update MFA status\n${
 						dbError instanceof Error
 							? dbError.message
 							: 'Unknown error'
 					}`,
 					{
+						originalError: dbError,
+						statusCode: 500,
+						severity: ErrorSeverity.RECOVERABLE,
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logError(databaseError, appLogger);
-				processError(databaseError, appLogger);
+				ErrorLogger.logError(databaseError);
+				processError(databaseError);
 			}
 		});
 
@@ -402,11 +380,14 @@ export function createUserModel(
 					dbError instanceof Error ? dbError.message : 'Unknown error'
 				}`,
 				{
+					originalError: dbError,
+					statusCode: 500,
+					severity: ErrorSeverity.RECOVERABLE,
 					exposeToClient: false
 				}
 			);
-		ErrorLogger.logInfo(databaseRecoverableError.message, appLogger);
-		processError(databaseRecoverableError, appLogger);
+		ErrorLogger.logInfo(databaseRecoverableError.message);
+		processError(databaseRecoverableError);
 		throw databaseRecoverableError;
 	}
 }
