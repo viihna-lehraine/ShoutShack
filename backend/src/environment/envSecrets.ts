@@ -1,3 +1,4 @@
+import argon2 from 'argon2';
 import { execSync } from 'child_process';
 import {
 	createCipheriv,
@@ -6,16 +7,16 @@ import {
 	randomBytes
 } from 'crypto';
 import path from 'path';
+import { configService } from '../config/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
-import { configService } from '../config/configService';
-import { appLogger } from '../utils/appLogger';
+import { AppLogger } from '../utils/appLogger';
 
 export interface SecretsDependencies {
 	execSync: typeof execSync;
 	getDirectoryPath: () => string;
-	appLogger: appLogger;
+	appLogger: AppLogger;
 }
 
 export interface SecretsMap {
@@ -24,16 +25,31 @@ export interface SecretsMap {
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
+const PLACEHOLDER = '[REDACTED]';
 
 export class SecretsStore {
 	private static instance: SecretsStore;
 	private secrets: Map<
 		string,
-		{ value: string; isDecrypted: boolean; lastAccessed: number }
+		{
+			encryptedValue: string;
+			hash: string;
+			isDecrypted: boolean;
+			lastAccessed: number;
+		}
 	> = new Map();
+	private encryptedGpgPassphrase: string | null = null;
 	private encryptionKey: string | null = null;
+	private MAX_ATTEMPTS: number =
+		configService.getEnvVariables().secretsRateLimitMaxAttempts;
+	private RATE_LIMIT_WINDOW: number =
+		configService.getEnvVariables().secretsRateLimitWindow;
 	private reEncryptionCooldown: number =
-		parseInt(process.env.RE_ENCRYPTION_COOLDOWN!, 10) || 5000; // in ms
+		configService.getEnvVariables().secretsReEncryptionCooldown;
+	private secretAccessAttempts: Map<
+		string,
+		{ attempts: number; lastAttempt: number }
+	> = new Map();
 
 	private constructor() {}
 
@@ -49,31 +65,40 @@ export class SecretsStore {
 		this.encryptionKey = encryptionKey;
 	}
 
-	public loadSecrets(dependencies: SecretsDependencies): void {
+	public async loadSecrets(
+		dependencies: SecretsDependencies,
+		gpgPassphrase: string
+	): Promise<void> {
 		const { execSync, getDirectoryPath, appLogger } = dependencies;
+		const secretsPath = path.join(
+			getDirectoryPath(),
+			configService.getEnvVariables().secretsFilePath1
+		);
+
 		try {
-			const secretsPath = path.join(
-				getDirectoryPath(),
-				configService.getEnvVariables().secretsFilePath
-			);
 			const decryptedSecrets = execSync(
-				`sops -d --output-type json --passphrase ${this.encryptionKey} ${secretsPath}`
+				`sops -d --output-type json --passphrase ${gpgPassphrase} ${secretsPath}`
 			).toString();
 			const secrets = JSON.parse(decryptedSecrets);
 
 			for (const key in secrets) {
-				const encryptedSecret = this.encryptSecret(secrets[key]);
-
+				const { encryptedValue } = await this.encryptSecret(
+					secrets[key]
+				);
 				this.secrets.set(key, {
-					value: encryptedSecret,
+					encryptedValue,
+					hash: await argon2.hash(secrets[key]),
 					isDecrypted: false,
 					lastAccessed: Date.now()
 				});
 			}
-			appLogger.info('Secrets loaded successfully');
+
+			appLogger.debug('Secrets loaded successfully');
+			this.reEncryptSecretsFile(secretsPath, gpgPassphrase, appLogger);
+			this.encryptGPGPassphraseInMemory(gpgPassphrase);
 		} catch (error) {
 			const secretsLoadError = new errorClasses.ConfigurationError(
-				`Fatal error in APP_INIT process: Failed to load secrets\n${error instanceof Error ? error.message : String(error)}`,
+				`Failed to load secrets: ${error instanceof Error ? error.message : String(error)}`,
 				{
 					originalError: error,
 					statusCode: 500,
@@ -83,12 +108,13 @@ export class SecretsStore {
 			);
 			ErrorLogger.logError(secretsLoadError);
 			processError(secretsLoadError);
-
 			throw secretsLoadError;
 		}
 	}
 
-	private encryptSecret(secret: string): string {
+	private async encryptSecret(
+		secret: string
+	): Promise<{ encryptedValue: string; hash: string }> {
 		const iv = randomBytes(ivLength);
 		const cipher = createCipheriv(
 			algorithm,
@@ -100,7 +126,183 @@ export class SecretsStore {
 			cipher.final()
 		]);
 
-		return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+		const encryptedValue = `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+		const hash = await argon2.hash(secret);
+
+		return { encryptedValue, hash };
+	}
+
+	public async storeSecret(key: string, secret: string): Promise<void> {
+		const { encryptedValue, hash } = await this.encryptSecret(secret);
+		this.secrets.set(key, {
+			encryptedValue,
+			hash,
+			isDecrypted: false,
+			lastAccessed: Date.now()
+		});
+	}
+
+	public retrieveSecret(
+		key: string,
+		appLogger: AppLogger | Console = console
+	): string | null {
+		if (this.isRateLimited(key, appLogger)) {
+			appLogger.warn(`Rate limit exceeded for secret: ${key}`);
+			return null;
+		}
+
+		const secretData = this.secrets.get(key);
+
+		if (!secretData) return null;
+
+		const decryptedSecret = this.decryptSecret(secretData.encryptedValue);
+		secretData.isDecrypted = true;
+		secretData.lastAccessed = Date.now();
+		return decryptedSecret;
+	}
+
+	public async redactSecrets(
+		logData: string | Record<string, unknown> | unknown[]
+	): Promise<string | Record<string, unknown> | unknown[]> {
+		const secretHashes = this.getSecretsHashes();
+
+		if (typeof logData === 'string') {
+			return this.redactInString(logData, secretHashes);
+		}
+
+		return this.traverseAndRedact(logData, secretHashes);
+	}
+
+	private getSecretsHashes(): string[] {
+		return [...this.secrets.values()].map(secretData => secretData.hash);
+	}
+
+	private async redactInString(
+		logData: string,
+		secretHashes: string[]
+	): Promise<string> {
+		for (const hash of secretHashes) {
+			const isMatch = await argon2.verify(hash, logData);
+
+			if (isMatch) {
+				return logData.replace(new RegExp(logData, 'g'), PLACEHOLDER);
+			}
+		}
+
+		return logData;
+	}
+
+	private async traverseAndRedact(
+		data: Record<string, unknown> | unknown[],
+		secretsHashes: string[]
+	): Promise<Record<string, unknown> | unknown[]> {
+		if (Array.isArray(data)) {
+			return Promise.all(
+				data.map(async item =>
+					typeof item === 'object'
+						? this.traverseAndRedact(
+								item as Record<string, unknown>,
+								secretsHashes
+							)
+						: item
+				)
+			);
+		} else if (typeof data === 'object' && data !== null) {
+			const result: Record<string, unknown> = {};
+
+			for (const [key, value] of Object.entries(data)) {
+				if (typeof value === 'object' && value !== null) {
+					result[key] = await this.traverseAndRedact(
+						value as Record<string, unknown>,
+						secretsHashes
+					);
+				} else if (typeof value === 'string') {
+					for (const hash of secretsHashes) {
+						const isMatch = await argon2.verify(hash, value);
+
+						if (isMatch) {
+							result[key] = '[REDACTED]';
+							break;
+						}
+					}
+					result[key] = value;
+				} else {
+					result[key] = value;
+				}
+			}
+			return result;
+		}
+		return data;
+	}
+
+	public decrptTLSKeys(
+		gpgPassphrase: string,
+		appLogger: AppLogger | Console = console
+	): object {
+		try {
+			const decryptedPassphrase = this.decryptGPGPassphraseInMemory();
+			const tlsKeyPath = configService.getEnvVariables().tlsKeyPath1;
+			const tlsCertPath = configService.getEnvVariables().tlsCertPath1;
+			const decryptedKey = execSync(
+				`sops -d --passphrase ${decryptedPassphrase} ${tlsKeyPath}`
+			).toString();
+			const decryptedCert = execSync(
+				`sops -d --passphrase ${decryptedPassphrase} ${tlsCertPath}`
+			).toString();
+
+			this.encryptGPGPassphraseInMemory(decryptedPassphrase);
+
+			appLogger.debug('TLS keys decrypted successfully');
+			return { decryptedKey, decryptedCert };
+		} catch (tlsError) {
+			const tlsKeyDecryptionError =
+				new errorClasses.ConfigurationErrorFatal(
+					`Fatal error: Failed to decrypt TLS keys\n${tlsError instanceof Error ? tlsError.message : String(tlsError)}`,
+					{
+						originalError: tlsError,
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
+						exposeToClient: false
+					}
+				);
+			ErrorLogger.logError(tlsKeyDecryptionError);
+			processError(tlsKeyDecryptionError);
+			throw tlsKeyDecryptionError;
+		}
+	}
+
+	private isRateLimited(
+		key: string,
+		appLogger: AppLogger | Console = console
+	): boolean {
+		const currentTime = Date.now();
+		let rateData = this.secretAccessAttempts.get(key);
+
+		if (!rateData) {
+			rateData = { attempts: 0, lastAttempt: currentTime };
+			this.secretAccessAttempts.set(key, rateData);
+		}
+
+		const timeElapsed = currentTime - rateData.lastAttempt;
+
+		if (timeElapsed > this.RATE_LIMIT_WINDOW) {
+			rateData.attempts = 1;
+			rateData.lastAttempt = currentTime;
+			this.secretAccessAttempts.set(key, rateData);
+
+			return false;
+		}
+
+		if (rateData.attempts >= this.MAX_ATTEMPTS) {
+			appLogger.warn(`Rate limit exceeded for key: ${key}`);
+			return true;
+		}
+
+		rateData.attempts += 1;
+		rateData.lastAttempt = currentTime;
+		this.secretAccessAttempts.set(key, rateData);
+
+		return false;
 	}
 
 	private decryptSecret(encryptedSecret: string): string {
@@ -120,12 +322,44 @@ export class SecretsStore {
 		return decrypted.toString();
 	}
 
+	private encryptGPGPassphraseInMemory(secret: string): string {
+		const iv = randomBytes(ivLength);
+		const cipher = createCipheriv(
+			algorithm,
+			this.getEncryptionKeyHash(),
+			iv
+		);
+		const encrypted = Buffer.concat([
+			cipher.update(secret, 'utf-8'),
+			cipher.final()
+		]);
+
+		const encryptedGpgPassphrase = `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+
+		return encryptedGpgPassphrase;
+	}
+
+	private decryptGPGPassphraseInMemory(): string {
+		if (!this.encryptedGpgPassphrase) {
+			throw new Error(
+				`No GPG passphrase found in memory\n${Error instanceof Error ? Error.message : String(Error)}`
+			);
+		}
+
+		const decryptedGPGPassphrase = this.decryptSecret(
+			this.encryptedGpgPassphrase
+		);
+
+		return decryptedGPGPassphrase;
+	}
+
 	private getEncryptionKeyHash(): Buffer {
 		return createHash('sha256').update(this.encryptionKey!).digest();
 	}
 
 	public retrieveSecrets(
-		secretKeys: string | string[]
+		secretKeys: string | string[],
+		appLogger: AppLogger | Console = console
 	): Record<string, string | null> | string | null {
 		if (typeof secretKeys === 'string') {
 			secretKeys = [secretKeys];
@@ -137,7 +371,7 @@ export class SecretsStore {
 			const secretData = this.secrets.get(key);
 
 			if (!secretData) {
-				console.error(`Secret ${key} not found`);
+				appLogger.error(`Secret ${key} not found`);
 				secretsResult[key] = null;
 
 				continue;
@@ -145,12 +379,14 @@ export class SecretsStore {
 
 			if (secretData.isDecrypted) {
 				secretData.lastAccessed = Date.now();
-				secretsResult[key] = secretData.value;
+				secretsResult[key] = secretData.encryptedValue;
 			} else {
-				const decryptedSecret = this.decryptSecret(secretData.value);
+				const decryptedSecret = this.decryptSecret(
+					secretData.encryptedValue
+				);
 
 				this.secrets.set(key, {
-					value: decryptedSecret,
+					...secretData,
 					isDecrypted: true,
 					lastAccessed: Date.now()
 				});
@@ -163,7 +399,7 @@ export class SecretsStore {
 			: secretsResult;
 	}
 
-	public reEncryptSecret(secretKey: string): void {
+	public async reEncryptSecret(secretKey: string): Promise<void> {
 		const secretData = this.secrets.get(secretKey);
 
 		if (!secretData || !secretData.isDecrypted) {
@@ -174,13 +410,98 @@ export class SecretsStore {
 		const isTimeElapsed = currentTime - secretData.lastAccessed;
 
 		if (isTimeElapsed < this.reEncryptionCooldown) {
-			const encryptedSecret = this.encryptSecret(secretData.value);
+			const { encryptedValue } = await this.encryptSecret(
+				secretData.encryptedValue
+			);
 
 			this.secrets.set(secretKey, {
-				value: encryptedSecret,
+				...secretData,
+				encryptedValue,
 				isDecrypted: false,
 				lastAccessed: Date.now()
 			});
+		}
+	}
+
+	public async batchReEncryptSecrets(
+		appLogger: AppLogger | Console = console
+	): Promise<void> {
+		const promises: Promise<void>[] = [];
+		this.secrets.forEach((secretData, key) => {
+			if (secretData.isDecrypted) {
+				promises.push(this.reEncryptSecret(key));
+			}
+		});
+
+		await Promise.all(promises);
+		appLogger.debug('Batch re-encryption completed');
+	}
+
+	public clearExpiredSecretsFromMemory(
+		appLogger: AppLogger | Console = console
+	): void {
+		const currentTime = Date.now();
+		this.secrets.forEach((secretData, key) => {
+			const isTimeElapsed = currentTime - secretData.lastAccessed;
+
+			if (
+				isTimeElapsed >= this.reEncryptionCooldown &&
+				secretData.isDecrypted
+			) {
+				this.secrets.set(key, {
+					...secretData,
+					isDecrypted: false
+				});
+				appLogger.debug(`Secret ${key} cleared from memory`);
+			}
+		});
+	}
+
+	public clearSecretsFromMemory(
+		secretKeys: string | string[],
+		appLogger: AppLogger | Console = console
+	): void {
+		const keysToClear = Array.isArray(secretKeys)
+			? secretKeys
+			: [secretKeys];
+
+		keysToClear.forEach(key => {
+			const secretData = this.secrets.get(key);
+
+			if (!secretData) {
+				appLogger.error(`Secret ${key} not found`);
+				return;
+			}
+
+			if (!secretData.isDecrypted) {
+				appLogger.debug(`Secret ${key} is already cleared from memory`);
+			}
+
+			this.secrets.set(key, {
+				...secretData,
+				isDecrypted: false
+			});
+
+			appLogger.debug(`Secret ${key} has been cleared from memory`);
+		});
+	}
+
+	private reEncryptSecretsFile(
+		secretsPath: string,
+		decryptedGPGPassphrase: string,
+		appLogger: AppLogger | Console = console
+	): void {
+		try {
+			this.decryptGPGPassphraseInMemory();
+			execSync(
+				`sops -e passphrase ${decryptedGPGPassphrase} ${secretsPath}`
+			);
+			appLogger.debug(`Secrets file re-enrypted successfully`);
+		} catch (error) {
+			console.error(
+				`Failed to re-encrypt secrets file\n${error instanceof Error ? error.message : String(error)}`
+			);
+			throw error;
 		}
 	}
 
@@ -188,8 +509,11 @@ export class SecretsStore {
 		this.reEncryptSecret(secretKey);
 	}
 
-	public refreshSecrets(dependencies: SecretsDependencies): void {
-		this.loadSecrets(dependencies);
+	public refreshSecrets(
+		dependencies: SecretsDependencies,
+		gpgPassphrase: string
+	): void {
+		this.loadSecrets(dependencies, gpgPassphrase);
 	}
 }
 

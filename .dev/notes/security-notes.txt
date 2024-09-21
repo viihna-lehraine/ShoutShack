@@ -1,4 +1,0 @@
-password hashing
-    * are PEPPER and salt being added and used correctly?
-    * double and triple check password hashing is done 100% correctly
-    * explicitly WIPE PASSWORDS FROM MEMORY

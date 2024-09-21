@@ -7,7 +7,6 @@ import {
 } from './envVars';
 import { SecretsStore } from './envSecrets';
 
-// stores variables from .env file, including feature flags
 export class ConfigStore {
 	private static instance: ConfigStore;
 	private config: EnvVariableTypes;
@@ -38,7 +37,8 @@ export const envVariablesStore = ConfigStore.getInstance();
 export const envSecretsStore = SecretsStore.getInstance();
 
 export function initializeSecrets(
-	initializeSecretsDependencies: SecretsDependencies
+	initializeSecretsDependencies: SecretsDependencies,
+	gpgPassphrase: string
 ): void {
-	envSecretsStore.loadSecrets(initializeSecretsDependencies);
+	envSecretsStore.loadSecrets(initializeSecretsDependencies, gpgPassphrase);
 }

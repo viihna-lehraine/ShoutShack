@@ -10,7 +10,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 
 config({ path: path.resolve(__dirname, '../config/env/backend.startup.env') });
 
-const logDirectory = process.env.LOGIN_LOGS_PATH;
+const logDirectory = process.env.APP_INIT_LOGS_PATH;
 
 if (logDirectory) {
 	if (!fs.existsSync(logDirectory)) {
@@ -18,7 +18,7 @@ if (logDirectory) {
 	}
 } else {
 	console.error(
-		'Log directory is undefined. Please check the environment variable LOGIN_LOGS_PATH.'
+		'Log directory is undefined. Please check the environment variable APP_INIT_LOGS_PATH.'
 	);
 
 	process.exit(1);

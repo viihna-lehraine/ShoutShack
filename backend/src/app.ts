@@ -1,5 +1,4 @@
 import argon2 from 'argon2';
-import { execSync } from 'child_process';
 import RedisStore from 'connect-redis';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -11,7 +10,6 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import os from 'os';
 import passport from 'passport';
-import path from 'path';
 import process from 'process';
 import { createClient, RedisClientType } from 'redis';
 import { Sequelize } from 'sequelize';
@@ -19,12 +17,13 @@ import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
 import { setUpHttpServer } from './server';
 import { initializeRoutes } from './routes';
-import { configService, initialize } from './config/configService';
+import { configService } from './config/configService';
 import { initializeDatabase } from './config/db';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import { configurePassport } from './config/passport';
 import { getRedisClient } from './config/redis';
+import { envSecretsStore } from './environment/envSecrets';
 import { expressErrorHandler, processError } from './errors/processError';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
@@ -35,46 +34,59 @@ import { initializeValidatorMiddleware } from './middleware/validator';
 import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
+import { AppLogger, handleCriticalError } from './utils/appLogger';
 
 async function start(): Promise<void> {
 	try {
+		let appLogger: AppLogger | Console = console;
+
 		try {
 			const { encryptionKey, gpgPassphrase } = await login();
 
 			if (!encryptionKey || !gpgPassphrase) {
-				throw new Error(
-					'Missing encryption key or GPG passphrase. Exiting.'
-				);
+				throw new Error('Admin key(s) not found. Shutting down...');
 			}
 
-			configService.initialize(encryptionKey);
+			configService.initialize(encryptionKey, gpgPassphrase);
 
-			// *DEV-NOTE* ADD THIS AS WELL AS AN ADMIN SECRETS STORE CLASS, LIKE SECRETSSTORE
-			// If you have any additional GPG handling logic, handle that here
-			// Example: someGPGService.initialize(gpgPassphrase);
+			console.log('ENVIRONMENT VARIABLES');
+			console.table(configService.getEnvVariables());
+
+			console.log('FEATURE FLAGS');
+			console.table(configService.getFeatureFlags());
+
+			appLogger = configService.getAppLogger() || console;
+
+			setInterval(() => {
+				envSecretsStore.clearExpiredSecretsFromMemory(appLogger);
+			}, configService.getEnvVariables().clearExpiredSecretsInterval);
+
+			setInterval(() => {
+				envSecretsStore.batchReEncryptSecrets(appLogger);
+			}, configService.getEnvVariables().batchReEncryptSecretsInterval);
 
 			console.log(
-				'Secrets store initialized This application is ready to ROCK AND ROLL!!!'
+				`Secrets store initialized. Let's get READY TO ROCK AND ROLL!!!`
 			);
-		} catch (error) {
-			throw error;
+		} catch (appInitError) {
+			if (configService.getAppLogger()) {
+				const appInitErrorFatal =
+					new errorClasses.ConfigurationErrorFatal(
+						`Fatal error occurred during APP_INIT process\n${appInitError instanceof Error ? appInitError.message : String(appInitError)}\nShutting down...`,
+						{
+							originalError: appInitError,
+							statusCode: 500,
+							severity: ErrorSeverity.FATAL,
+							exposeToClient: false
+						}
+					);
+				ErrorLogger.logError(appInitErrorFatal);
+				processError(appInitErrorFatal);
+				throw appInitErrorFatal;
+			} else {
+				handleCriticalError(appInitError);
+			}
 		}
-
-		const appLogger = configService.getLogger();
-
-		appLogger.info('Environment Variables');
-		console.table(configService.getEnvVariables());
-
-		appLogger.info('Feature Flags');
-		console.table(configService.getFeatureFlags());
-
-		const initSecretsDependencies = {
-			execSync,
-			getDirectoryPath: (): string =>
-				path.resolve(__dirname, '../secrets'),
-			appLogger: configService.getLogger()
-		};
-		initSecretsConfig(initSecretsDependencies);
 
 		try {
 			const memoryMonitor = createMemoryMonitor({
@@ -86,7 +98,12 @@ async function start(): Promise<void> {
 		} catch (error) {
 			const memoryMonitorError = new errorClasses.UtilityErrorRecoverable(
 				`Failed to start memory monitor\n${error instanceof Error ? error.message : String(error)}`,
-				{ statusCode: 500, exposeToClient: false }
+				{
+					originalError: error,
+					statusCode: 500,
+					severity: ErrorSeverity.RECOVERABLE,
+					exposeToClient: false
+				}
 			);
 			ErrorLogger.logError(memoryMonitorError);
 			processError(memoryMonitorError);
@@ -94,8 +111,8 @@ async function start(): Promise<void> {
 
 		// development only - logger test
 		if (configService.getEnvVariables().nodeEnv === 'development') {
-			appLogger.debug('Testing logger levels...');
-			console.log('Test log');
+			(appLogger as AppLogger).debug('Testing logger levels...');
+			console.log('Console test log');
 			console.info('Test info log');
 			console.warn('Test warning');
 			console.error('Test error');
@@ -248,7 +265,7 @@ async function start(): Promise<void> {
 			sequelize
 		});
 	} catch (error) {
-		const fallbackLogger = configService.getLogger();
+		const fallbackLogger = configService.getAppLogger();
 		if (!fallbackLogger) {
 			console.error(
 				`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`

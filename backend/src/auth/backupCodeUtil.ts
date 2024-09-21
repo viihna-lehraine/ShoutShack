@@ -6,8 +6,10 @@ import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
 import { UserMfa } from '../models/UserMfaModelFile';
+import { AppLogger } from '../utils/appLogger';
 import { validateDependencies } from '../utils/validateDependencies';
 
+const appLogger: AppLogger | Console = configService.getAppLogger();
 let res: Response;
 
 interface BackupCode {
@@ -19,6 +21,7 @@ interface BackupCodeServiceDependencies {
 	UserMfa: typeof UserMfa;
 	crypto: typeof crypto;
 	bcrypt: typeof bcrypt;
+	appLogger: AppLogger | Console;
 }
 
 export default function createBackupCodeService({
@@ -40,15 +43,13 @@ export default function createBackupCodeService({
 		backupCodes: BackupCode[]
 	) => Promise<void>;
 } {
-	const appLogger = configService.getLogger();
-
 	validateDependencies(
 		[{ name: 'UserMfa', instance: UserMfa }],
 		appLogger || console
 	);
 
 	async function generateBackupCodes(id: string): Promise<string[]> {
-		const appLogger = configService.getLogger();
+		const appLogger = configService.getAppLogger();
 
 		try {
 			validateDependencies(
@@ -82,8 +83,6 @@ export default function createBackupCodeService({
 		id: string,
 		inputCode: string
 	): Promise<boolean> {
-		const appLogger = configService.getLogger();
-
 		try {
 			validateDependencies(
 				[
@@ -165,8 +164,6 @@ export default function createBackupCodeService({
 		id: string,
 		backupCodes: BackupCode[]
 	): Promise<void> {
-		const appLogger = configService.getLogger();
-
 		try {
 			validateDependencies(
 				[
@@ -183,12 +180,15 @@ export default function createBackupCodeService({
 					new errorClasses.ClientAuthenticationError(
 						'User with ID not found.',
 						{
+							orginalError: String(Error),
+							statusCode: 400,
+							severity: ErrorSeverity.RECOVERABLE,
 							exposeToClient: true,
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
 				ErrorLogger.logError(clientAuthError);
-				sendClientErrorResponse(clientAuthError, res);
+				sendClientErrorResponse(String(clientAuthError), 400, res);
 				return;
 			}
 
@@ -226,7 +226,7 @@ export default function createBackupCodeService({
 						}
 					);
 				ErrorLogger.logError(clientAuthError);
-				sendClientErrorResponse(clientAuthError, res);
+				sendClientErrorResponse(String(clientAuthError), 400, res);
 				return undefined;
 			}
 
@@ -241,7 +241,7 @@ export default function createBackupCodeService({
 						}
 					);
 				ErrorLogger.logError(clientAuthError);
-				sendClientErrorResponse(clientAuthError, res);
+				sendClientErrorResponse(String(clientAuthError), 400, res);
 				return;
 			}
 
@@ -286,7 +286,7 @@ export default function createBackupCodeService({
 						}
 					);
 				ErrorLogger.logError(clientAuthError);
-				sendClientErrorResponse(clientAuthError, res);
+				sendClientErrorResponse(String(clientAuthError), 400, res);
 				return;
 			}
 

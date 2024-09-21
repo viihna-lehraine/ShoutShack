@@ -2,24 +2,27 @@ import { execSync } from 'child_process';
 import { ConfigStore, envSecretsStore } from '../environment/envConfig';
 import { SecretsMap, SecretsDependencies } from '../environment/envSecrets';
 import { loadEnv } from '../environment/envVars';
-import { appLogger, logWithMaskedSecrets, setupLogger } from '../utils/appLogger';
+import { AppLogger, createRedactedLogger, setUpLogger } from '../utils/appLogger';
 
 class ConfigService {
 	private static instance: ConfigService;
 	private envVariablesStore = ConfigStore.getInstance();
-	private appLogger: appLogger = setupLogger();
 	private encryptionKey: string | null = null;
+	private gpgPassphrase: string | undefined;
+	private logger: AppLogger;
 
 	private constructor() {
 		loadEnv();
+		this.logger = createRedactedLogger(setUpLogger());
 	}
 
-	public initialize(encryptionKey: string) {
+	public initialize(encryptionKey: string, gpgPassphrase: string): void {
 		this.encryptionKey = encryptionKey;
+		this.gpgPassphrase = gpgPassphrase;
 		this.initializeSecrets({
-			appLogger: this.appLogger,
 			execSync,
-			getDirectoryPath: () => process.cwd()
+			getDirectoryPath: () => process.cwd(),
+			appLogger: this.logger
 		});
 	}
 
@@ -30,27 +33,8 @@ class ConfigService {
 		return ConfigService.instance;
 	}
 
-	public getLogger() {
-		return {
-			log: (level: string, message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets(level, message, meta);
-			},
-			debug: (message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets('debug', message, meta);
-			},
-			info: (message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets('info', message, meta);
-			},
-			warn: (message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets('warn', message, meta);
-			},
-			error: (message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets('error', message, meta);
-			},
-			critical: (message: string, meta?: Record<string, unknown>) => {
-				logWithMaskedSecrets('critical', message, meta);
-			}
-		};
+	public getAppLogger(): AppLogger {
+		return this.logger!
 	}
 
 	public getEnvVariables() {
@@ -61,26 +45,28 @@ class ConfigService {
 		return this.envVariablesStore.getFeatureFlags();
 	}
 
-	public getSecrets(keys: keyof SecretsMap | (keyof SecretsMap)[]): Record<string, string | undefined> | string | undefined {
+	public getSecrets(keys: keyof SecretsMap | (keyof SecretsMap)[], appLogger: AppLogger): Record<string, string | undefined> | string | undefined {
 		let result = envSecretsStore.retrieveSecrets(
-			Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString()
+			Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString(),
+			appLogger
 		);
 
 		if (result === null || (typeof result === 'object' && Object.values(result).some(value => value === null))) {
-			this.appLogger.warn(`Secret(s) not found, attempting to refresh secrets.`);
+			this.logger.warn(`Secret(s) not found, attempting to refresh secrets.`);
 			this.refreshSecrets({
-				appLogger: this.appLogger,
+				appLogger: this.logger,
 				execSync,
 				getDirectoryPath: () => process.cwd(),
 			});
 
 			result = envSecretsStore.retrieveSecrets(
-				Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString()
+				Array.isArray(keys) ? keys.map(key => key.toString()) : keys.toString(),
+				appLogger
 			);
 		}
 
 		if (result === null) {
-			this.appLogger.error(`Secret(s) ${keys} still not found after refreshing.`);
+			this.logger.error(`Secret(s) ${keys} still not found after refreshing.`);
 			return undefined;
 		}
 
@@ -96,27 +82,31 @@ class ConfigService {
 	}
 
 	private initializeSecrets(dependencies: SecretsDependencies): void {
-		if (!this.encryptionKey) {
-			throw new Error('Encryption key is not set');
+		if (!this.encryptionKey || !this.gpgPassphrase || this.encryptionKey.length === 0 || this.gpgPassphrase.length === 0) {
+			throw new Error('Encryption key or GPG passphrase is not set');
 		}
 
 		try {
 			envSecretsStore.initializeEncryptionKey(this.encryptionKey);
-			envSecretsStore.loadSecrets(dependencies);
-			this.appLogger.info('Secrets loaded successfully');
+			envSecretsStore.loadSecrets(dependencies, this.gpgPassphrase);
+			this.logger.info('Secrets loaded and ready to go');
 		} catch (error) {
-			this.appLogger.error('Failed to load secrets', { error });
+			this.logger.error('Failed to load secrets', { error });
 
 			throw error;
 		}
 	}
 
 	public refreshSecrets(dependencies: SecretsDependencies): void {
+		if (!this.gpgPassphrase) {
+			throw new Error('GPG passphrase not found');
+		}
+
 		try {
-			envSecretsStore.refreshSecrets(dependencies);
-			this.appLogger.info('Secrets refreshed successfully');
+			envSecretsStore.refreshSecrets(dependencies, this.gpgPassphrase);
+			this.logger.info('Secrets refreshed successfully');
 		} catch (error) {
-			this.appLogger.error('Failed to refresh secrets', { error });
+			this.logger.error('Failed to refresh secrets', { error });
 
 			throw error;
 		}

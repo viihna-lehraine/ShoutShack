@@ -1,7 +1,10 @@
 import fs from 'fs';
 import {
+	addColors,
 	createLogger,
 	format,
+	LeveledLogMethod,
+	LogCallback,
 	Logger as WinstonLogger,
 	transports
 } from 'winston';
@@ -9,12 +12,18 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
 import TransportStream from 'winston-transport';
 import { configService } from '../config/configService';
-// import { maskSecrets } from '../environment/envSecrets';
+import { envSecretsStore } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
 import { ErrorLogger } from '../errors/errorLogger';
 import { processError } from '../errors/processError';
 
 import '../../types/custom/winston-logstash';
+
+type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+
+export type AppLogger = WinstonLogger;
+
+const service: string = 'Logger Service';
 
 const { colorize, combine, errors, json, printf, timestamp } = format;
 
@@ -38,9 +47,6 @@ const customLevels = {
 		debug: 'blue'
 	}
 };
-
-const service: string = 'Logger Service';
-let loggerInstance: WinstonLogger;
 
 function createLogStashTransport(): TransportStream | null {
 	const envVariables = configService.getEnvVariables();
@@ -74,13 +80,14 @@ function addLogStashTransportIfEnabled(
 	}
 }
 
-export function setupLogger(): WinstonLogger {
+export function setUpLogger(): AppLogger {
 	const envVariables = configService.getEnvVariables();
 	const logLevel = envVariables.logLevel || 'info';
 	const serviceName = envVariables.serviceName;
 	const isProduction = envVariables.nodeEnv === 'production';
+	const defaultLogLevel = isProduction ? 'info' : 'debug';
 	const logDirectory =
-		envVariables.serverLogPath || './data/logs/server/main/';
+		envVariables.primaryLogPath || './data/logs/server/main/';
 
 	try {
 		if (!fs.existsSync(logDirectory)) {
@@ -111,7 +118,7 @@ export function setupLogger(): WinstonLogger {
 
 		loggerInstance = createLogger({
 			levels: customLevels.levels,
-			level: logLevel,
+			level: defaultLogLevel,
 			format: combine(
 				errors({ stack: true }),
 				timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -119,54 +126,76 @@ export function setupLogger(): WinstonLogger {
 			),
 			defaultMeta: { service: serviceName },
 			transports: loggerTransports
-		});
+		}) as AppLogger;
+
+		addColors(customLevels.colors);
 
 		return loggerInstance;
 	} catch (error) {
-		const appError = new errorClasses.ServiceUnavailableError(60, service, {
-			exposeToClient: false,
-			message: `${service} Error: Failed to initialize logger`
-		});
-		ErrorLogger.logError(appError);
+		console.log(
+			`Failed to create logger instance: ${error instanceof Error ? error.message : error}`
+		);
 		processError(error);
 
-		// fallback to console logger
 		return createLogger({
-			level: 'error',
+			level: defaultLogLevel,
 			format: combine(timestamp(), logFormat),
 			transports: [
 				new transports.Console({
 					format: combine(colorize(), logFormat)
 				})
 			]
-		});
+		}) as AppLogger;
 	}
 }
 
-export function logWithMaskedSecrets(
-	level: string,
-	message: string,
-	meta?: Record<string, unknown>
-): void {
-	const maskedMeta =
-		meta && typeof meta === 'object' ? maskSecrets(meta) : meta;
-	if (loggerInstance) {
-		loggerInstance.log(level, message, maskedMeta);
-	}
+export function createRedactedLogger(
+	loggerInstance: WinstonLogger
+): WinstonLogger {
+	const levels: LogLevel[] = ['info', 'warn', 'error', 'debug'];
+
+	levels.forEach(level => {
+		const originalMethod: LeveledLogMethod =
+			loggerInstance[level].bind(loggerInstance);
+
+		loggerInstance[level] = ((
+			message: string,
+			meta?: Record<string, unknown> | string,
+			callback?: LogCallback
+		): void => {
+			const redactedMeta =
+				typeof meta === 'object'
+					? envSecretsStore.redactSecrets(meta)
+					: meta;
+			originalMethod(message, redactedMeta, callback);
+		}) as LeveledLogMethod;
+	});
+
+	return loggerInstance;
 }
 
-// check if the given logger is an instance of appLogger
 export function isAppLogger(
-	appLogger: appLogger | Console | undefined
-): appLogger is appLogger {
+	appLogger: AppLogger | Console | undefined
+): appLogger is AppLogger {
 	return (
 		appLogger !== undefined &&
 		appLogger !== null &&
 		typeof appLogger.error === 'function' &&
 		typeof appLogger.warn === 'function' &&
 		typeof appLogger.debug === 'function' &&
-		typeof appLogger.info === 'function'
+		typeof appLogger.info === 'function' &&
+		typeof appLogger.log === 'function'
 	);
 }
 
-export type appLogger = WinstonLogger;
+export function handleCriticalError(error: unknown): void {
+	const errorMessage = error instanceof Error ? error.message : String(error);
+
+	console.error(`Critical error: ${errorMessage}`);
+	console.error(
+		`Stack trace: ${error instanceof Error ? error.stack : 'N/A'}`
+	);
+	process.exit(1);
+}
+
+export let loggerInstance: AppLogger;

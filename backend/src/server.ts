@@ -10,6 +10,7 @@ import { Sequelize } from 'sequelize';
 import { configService } from './config/configService';
 import { flushInMemoryCache, getRedisClient } from './config/redis';
 import { ciphers, declareHttpServerOptions, Options } from './config/tlsConfig';
+import { envSecretsStore } from './environment/envSecrets';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './errors/errorLogger';
 import { processError } from './errors/processError';
@@ -28,14 +29,14 @@ export async function setUpHttpServer({
 	app,
 	sequelize
 }: SetUpHttpServerParams): Promise<SetUpHttpServerReturn | undefined> {
-	const appLogger = configService.getLogger();
+	const appLogger = configService.getAppLogger();
 	const envVariables = configService.getEnvVariables();
 	const featureFlags = configService.getFeatureFlags();
 	const port = envVariables.serverPort;
 
 	let options: Options | undefined;
 
-	appLogger.info('Setting up the HTTP/HTTPS server...');
+	appLogger.debug('Setting up the HTTP/HTTPS server...');
 
 	try {
 		validateDependencies(
@@ -47,14 +48,14 @@ export async function setUpHttpServer({
 		);
 
 		if (featureFlags.enableTLS) {
-			appLogger.info(`Setting up HTTPS server on port ${port}`);
+			appLogger.debug(`Setting up HTTPS server on port ${port}`);
 			options = await declareHttpServerOptions({
 				fs: fsPromises,
 				constants,
 				ciphers
 			});
 		} else {
-			appLogger.info('setting up HTTP server (no TLS)');
+			appLogger.debug('setting up HTTP server (no TLS)');
 		}
 
 		async function startServer(): Promise<void> {
@@ -169,6 +170,8 @@ export async function setUpHttpServer({
 						ErrorLogger.logError(dependencyError);
 						processError(dependencyError);
 					}
+
+					envSecretsStore.batchReEncryptSecrets();
 				},
 				finally: async () => {
 					appLogger.info('Waiting for all connections to close...');
