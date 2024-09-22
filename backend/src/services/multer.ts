@@ -1,21 +1,6 @@
 import { Request } from 'express';
-import multer, { FileFilterCallback, Multer } from 'multer';
-import path from 'path';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
-
-export interface MulterDependencies {
-	readonly multer: typeof multer;
-	readonly path: typeof path;
-	readonly storageDir: string;
-	readonly allowedMimeTypes: string[];
-	readonly allowedExtensions: string[];
-	readonly fileSizeLimit: number;
-	readonly logger: Logger;
-}
+import { FileFilterCallback, Multer } from 'multer';
+import { MulterService } from '../interfaces/serviceInterfaces';
 
 export function createMulterUpload({
 	multer,
@@ -24,8 +9,14 @@ export function createMulterUpload({
 	allowedMimeTypes,
 	allowedExtensions,
 	fileSizeLimit,
-	logger
-}: MulterDependencies): Multer {
+	appLogger,
+	configService,
+	errorClasses,
+	ErrorSeverity,
+	ErrorLogger,
+	processError
+	validateDependencies
+}: MulterService): Multer {
 	try {
 		validateDependencies(
 			[
@@ -35,9 +26,9 @@ export function createMulterUpload({
 				{ name: 'allowedMimeTypes', instance: allowedMimeTypes },
 				{ name: 'allowedExtensions', instance: allowedExtensions },
 				{ name: 'fileSizeLimit', instance: fileSizeLimit },
-				{ name: 'logger', instance: logger }
+				{ name: 'appLogger', instance: appLogger }
 			],
-			logger || console
+			appLogger
 		);
 
 		const storage = multer.diskStorage({
@@ -81,8 +72,8 @@ export function createMulterUpload({
 			dependency,
 			{ exposeToClient: false }
 		);
-		ErrorLogger.logError(dependencyError, logger);
-		processError(dependencyError, logger || console);
+		ErrorLogger.logError(dependencyError);
+		processError(dependencyError);
 		throw dependencyError
 	}
 }

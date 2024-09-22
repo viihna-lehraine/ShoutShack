@@ -1,72 +1,80 @@
-import { constants } from 'crypto';
-import { Application } from 'express';
-import { promises as fsPromises } from 'fs';
-import http from 'http';
 import gracefulShutdown from 'http-graceful-shutdown';
-import net from 'net';
 import https from 'https';
+import net from 'net';
 import { createClient } from 'redis';
-import { Sequelize } from 'sequelize';
-import { configService } from './config/configService';
-import { flushInMemoryCache, getRedisClient } from './config/redis';
-import { ciphers, declareHttpServerOptions, Options } from './config/tlsConfig';
+import { flushRedisMemoryCache, getRedisClient } from './services/redis';
+import { declareWebServerOptions } from './config/https';
 import { envSecretsStore } from './environment/envSecrets';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
-import { ErrorLogger } from './errors/errorLogger';
-import { processError } from './errors/processError';
-import { validateDependencies } from './utils/validateDependencies';
+import { validateDependencies } from './utils/helpers';
+import { AppError } from './errors/errorClasses';
+import {
+	SetUpWebServerInterface,
+	SetUpWebServerReturn
+} from './interfaces/webServerInterfaces';
+import {
+	DeclareWebServerOptionsParameters,
+	SetUpWebServerParameters as setUpWebServerParameters
+} from './parameters/webServerParameters';
+import { SecureContextOptions } from 'tls';
 
-interface SetUpHttpServerParams {
-	app: Application;
-	sequelize: Sequelize;
-}
-
-interface SetUpHttpServerReturn {
-	startServer: () => Promise<void>;
-}
-
-export async function setUpHttpServer({
-	app,
-	sequelize
-}: SetUpHttpServerParams): Promise<SetUpHttpServerReturn | undefined> {
-	const appLogger = configService.getAppLogger();
-	const envVariables = configService.getEnvVariables();
-	const featureFlags = configService.getFeatureFlags();
+export async function setUpWebServer(
+	SetUpWebServerParameters: SetUpWebServerInterface
+): Promise<SetUpWebServerReturn | undefined> {
+	const { appLogger, envVariables, featureFlags, processError, sequelize } =
+		SetUpWebServerParameters;
+	const app = SetUpWebServerParameters.app;
+	const errorLogger = SetUpWebServerParameters.errorLogger;
 	const port = envVariables.serverPort;
 
-	let options: Options | undefined;
+	type Options = SecureContextOptions;
+	let options: Options;
 
-	appLogger.debug('Setting up the HTTP/HTTPS server...');
+	appLogger.debug('Setting up the HTTPS server...');
 
 	try {
 		validateDependencies(
-			[
-				{ name: 'app', instance: app },
-				{ name: 'sequelize', instance: sequelize }
-			],
-			appLogger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			appLogger
 		);
 
-		if (featureFlags.enableTLS) {
-			appLogger.debug(`Setting up HTTPS server on port ${port}`);
-			options = await declareHttpServerOptions({
-				fs: fsPromises,
-				constants,
-				ciphers
-			});
-		} else {
-			appLogger.debug('setting up HTTP server (no TLS)');
-		}
+		options = await declareWebServerOptions(
+			DeclareWebServerOptionsParameters
+		);
 
 		async function startServer(): Promise<void> {
 			let shuttingDown = false;
 			const connections: Set<net.Socket> = new Set();
 
-			const server = options
-				? https.createServer(options, app)
-				: http.createServer(app);
+			if (!options) {
+				const ConfigError = new errorClasses.ConfigurationErrorFatal(
+					`HTTPS server options are required but were not provided`,
+					{
+						message:
+							'HTTPS server options are required but were not provided',
+						originalError: null,
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
+						exposeToClient: false
+					}
+				);
+				errorLogger.logError(
+					ConfigError as AppError,
+					SetUpWebServerParameters.errorLoggerDetails(
+						SetUpWebServerParameters.getCallerInfo,
+						SetUpWebServerParameters.blankRequest,
+						'DECLARE_HTTPS_OPTIONS'
+					),
+					appLogger,
+					ErrorSeverity.FATAL
+				);
+				processError(ConfigError);
+				throw ConfigError;
+			}
 
-			server.on('connection', conn => {
+			const server = https.createServer(options, app);
+
+			server.on('connection', (conn: net.Socket) => {
 				connections.add(conn);
 				conn.on('close', () => {
 					connections.delete(conn);
@@ -94,7 +102,7 @@ export async function setUpHttpServer({
 					appLogger.info('Cleaning up resources before shutdown');
 					shuttingDown = true;
 
-					await flushInMemoryCache();
+					await flushRedisMemoryCache();
 
 					appLogger.info('Pre-shutdown tasks complete');
 					server.keepAliveTimeout = 1;
@@ -108,7 +116,7 @@ export async function setUpHttpServer({
 							new errorClasses.DependencyErrorRecoverable(
 								dependency,
 								{
-									message: `Error closing database connection ${depError instanceof Error ? depError.message : depError}`,
+									message: `Error closing database connection\n${depError instanceof Error ? depError.message : depError}`,
 									originalError: depError,
 									dependency,
 									statusCode: 500,
@@ -116,7 +124,16 @@ export async function setUpHttpServer({
 									exposeToClient: false
 								}
 							);
-						ErrorLogger.logError(dependencyError);
+						errorLogger.logError(
+							dependencyError as AppError,
+							SetUpWebServerParameters.errorLoggerDetails(
+								SetUpWebServerParameters.getCallerInfo,
+								SetUpWebServerParameters.blankRequest,
+								'DATABASE_CLOSE'
+							),
+							appLogger,
+							ErrorSeverity.RECOVERABLE
+						);
 						processError(dependencyError);
 					}
 
@@ -135,7 +152,7 @@ export async function setUpHttpServer({
 								new errorClasses.DependencyErrorRecoverable(
 									dependency,
 									{
-										message: `Error closing Redis connection ${depError instanceof Error ? depError.message : depError}`,
+										message: `Error closing Redis connection\n${depError instanceof Error ? depError.message : depError}`,
 										originalError: depError,
 										dependency,
 										statusCode: 500,
@@ -143,7 +160,16 @@ export async function setUpHttpServer({
 										exposeToClient: false
 									}
 								);
-							ErrorLogger.logError(dependencyError);
+							errorLogger.logError(
+								dependencyError as AppError,
+								SetUpWebServerParameters.errorLoggerDetails(
+									SetUpWebServerParameters.getCallerInfo,
+									SetUpWebServerParameters.blankRequest,
+									'REDIS_CLOSE'
+								),
+								appLogger,
+								ErrorSeverity.RECOVERABLE
+							);
 							processError(dependencyError);
 						}
 					}
@@ -167,7 +193,16 @@ export async function setUpHttpServer({
 									exposeToClient: false
 								}
 							);
-						ErrorLogger.logError(dependencyError);
+						errorLogger.logError(
+							dependencyError as AppError,
+							SetUpWebServerParameters.errorLoggerDetails(
+								SetUpWebServerParameters.getCallerInfo,
+								SetUpWebServerParameters.blankRequest,
+								'LOGGER_CLOSE'
+							),
+							appLogger,
+							ErrorSeverity.RECOVERABLE
+						);
 						processError(dependencyError);
 					}
 
@@ -179,7 +214,7 @@ export async function setUpHttpServer({
 					const waitForConnectionsToClose = new Promise<void>(
 						resolve => {
 							const timeout = setTimeout(() => {
-								ErrorLogger.logInfo(
+								console.warn(
 									'Forcing shutdown: some connections did not close in time'
 								);
 								connections.forEach(con => con.destroy());
@@ -198,7 +233,7 @@ export async function setUpHttpServer({
 
 					await waitForConnectionsToClose;
 					appLogger.info(
-						'Application Shutdown\nAll connections closed: Shutting down server.'
+						'Application Shutdown\nAll connections closed\nShutting down...'
 					);
 				}
 			});
@@ -217,7 +252,16 @@ export async function setUpHttpServer({
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logError(serviceErrorFatal);
+		errorLogger.logError(
+			serviceErrorFatal as AppError,
+			SetUpWebServerParameters.errorLoggerDetails(
+				SetUpWebServerParameters.getCallerInfo,
+				SetUpWebServerParameters.blankRequest,
+				'SETUP_HTTPS_SERVER'
+			),
+			appLogger,
+			ErrorSeverity.FATAL
+		);
 		processError(serviceErrorFatal);
 		throw serviceErrorFatal;
 	}

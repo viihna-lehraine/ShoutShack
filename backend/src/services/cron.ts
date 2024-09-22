@@ -4,10 +4,10 @@ import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
 import { logger, Logger } from './appLogger';
-import { getSequelizeInstance } from '../config/db';
-import { ErrorLogger } from '../errors/errorLogger';
+import { getSequelizeInstance } from '../config/database';
+import { ErrorLogger } from './errorLogger';
 import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 const sequelize = getSequelizeInstance({ logger });
 

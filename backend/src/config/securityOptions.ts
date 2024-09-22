@@ -13,7 +13,7 @@ export const contentSecurityPolicyOptions = {
 		imgSrc: ["'self'", 'data:'],
 		objectSrc: ["'none'"],
 		scriptSrc: ["'self'", 'https://api.haveibeenpwned.com'],
-		styleSrc: ["'self'", "'unsafe-inline'"], // *DEV-NOTE* switch to none-based inline style usage
+		styleSrc: ["'self'", "'unsafe-inline'"], // *DEV-NOTE* switch to nonce-based inline style usage
 		upgradeInsecureRequests: [],
 	},
 	reportOnly: false // set to true to test policy without blocking

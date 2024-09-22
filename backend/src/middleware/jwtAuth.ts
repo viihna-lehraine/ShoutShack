@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ConfigService } from 'src/config/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { expressErrorHandler } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 interface JwtAuthMiddlewareDependencies {
 	verifyJwt: (token: string) => Promise<string | object | null>;

@@ -6,10 +6,10 @@ import {
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 interface SecurityHeadersDependencies {
 	helmetOptions?: HelmetOptions;

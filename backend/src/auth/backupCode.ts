@@ -1,34 +1,20 @@
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import { Response } from 'express';
-import { configService } from '../config/configService';
+import { configService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
-import { UserMfa } from '../models/UserMfaModelFile';
-import { AppLogger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { BackupCode, BackupCodeService } from '../interfaces/authInterfaces';
+import { AppLogger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 const appLogger: AppLogger | Console = configService.getAppLogger();
 let res: Response;
-
-interface BackupCode {
-	code: string;
-	used: boolean;
-}
-
-interface BackupCodeServiceDependencies {
-	UserMfa: typeof UserMfa;
-	crypto: typeof crypto;
-	bcrypt: typeof bcrypt;
-	appLogger: AppLogger | Console;
-}
 
 export default function createBackupCodeService({
 	UserMfa,
 	bcrypt,
 	crypto
-}: BackupCodeServiceDependencies): {
+}: BackupCodeService): {
 	generateBackupCodes: (id: string) => Promise<string[]>;
 	verifyBackupCode: (id: string, inputCode: string) => Promise<boolean>;
 	saveBackupCodesToDatabase: (
@@ -245,7 +231,6 @@ export default function createBackupCodeService({
 				return;
 			}
 
-			// convert string array to BackupCode array
 			return backupCodes.map(
 				(code: string) => ({ code, used: false }) as BackupCode
 			);

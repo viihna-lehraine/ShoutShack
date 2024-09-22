@@ -11,19 +11,18 @@ import morgan from 'morgan';
 import os from 'os';
 import passport from 'passport';
 import process from 'process';
-import { createClient, RedisClientType } from 'redis';
-import { Sequelize } from 'sequelize';
+import { createClient } from 'redis';
 import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
-import { setUpHttpServer } from './server';
 import { initializeRoutes } from './routes';
-import { configService } from './config/configService';
-import { initializeDatabase } from './config/db';
-import { errorClasses, ErrorSeverity } from './errors/errorClasses';
-import { ErrorLogger } from './errors/errorLogger';
-import { configurePassport } from './config/passport';
-import { getRedisClient } from './config/redis';
+import { configService } from './services/configService';
+import { initializeDatabase } from './config/database';
+import { AppError, errorClasses, ErrorSeverity } from './errors/errorClasses';
+import { errorLogger } from './services/errorLogger';
+import { configurePassport } from './auth/passport';
+import { getRedisClient } from './services/redis';
 import { envSecretsStore } from './environment/envSecrets';
+import { displayEnvAndFeatureFlags } from './environment/envVars';
 import { expressErrorHandler, processError } from './errors/processError';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
@@ -34,236 +33,258 @@ import { initializeValidatorMiddleware } from './middleware/validator';
 import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
-import { AppLogger, handleCriticalError } from './utils/appLogger';
+import { AppLogger, handleCriticalError } from './services/appLogger';
+import { errorLoggerDetails } from './utils/helpers';
+import { getCallerInfo } from './utils/helpers';
+import { blankRequest } from './utils/helpers';
 
 async function start(): Promise<void> {
 	try {
-		let appLogger: AppLogger | Console = console;
+		let appLogger: AppLogger;
 
-		try {
-			const { encryptionKey, gpgPassphrase } = await login();
+		return login()
+			.then(({ encryptionKey, gpgPassphrase, adminId }) => {
+				if (!encryptionKey || !gpgPassphrase) {
+					throw new Error('Admin key(s) not found. Shutting down...');
+				}
 
-			if (!encryptionKey || !gpgPassphrase) {
-				throw new Error('Admin key(s) not found. Shutting down...');
-			}
+				if (!adminId) {
+					throw new Error('Admin ID not found. Shutting down...');
+				}
 
-			configService.initialize(encryptionKey, gpgPassphrase);
+				configService.initialize(encryptionKey, gpgPassphrase, adminId);
 
-			console.log('ENVIRONMENT VARIABLES');
-			console.table(configService.getEnvVariables());
+				appLogger = configService.getAppLogger();
 
-			console.log('FEATURE FLAGS');
-			console.table(configService.getFeatureFlags());
+				displayEnvAndFeatureFlags();
 
-			appLogger = configService.getAppLogger() || console;
+				setInterval(() => {
+					envSecretsStore.clearExpiredSecretsFromMemory(appLogger);
+				}, configService.getEnvVariables().clearExpiredSecretsInterval);
 
-			setInterval(() => {
-				envSecretsStore.clearExpiredSecretsFromMemory(appLogger);
-			}, configService.getEnvVariables().clearExpiredSecretsInterval);
+				setInterval(() => {
+					envSecretsStore.batchReEncryptSecrets(appLogger);
+				}, configService.getEnvVariables().batchReEncryptSecretsInterval);
 
-			setInterval(() => {
-				envSecretsStore.batchReEncryptSecrets(appLogger);
-			}, configService.getEnvVariables().batchReEncryptSecretsInterval);
-
-			console.log(
-				`Secrets store initialized. Let's get READY TO ROCK AND ROLL!!!`
-			);
-		} catch (appInitError) {
-			if (configService.getAppLogger()) {
-				const appInitErrorFatal =
-					new errorClasses.ConfigurationErrorFatal(
-						`Fatal error occurred during APP_INIT process\n${appInitError instanceof Error ? appInitError.message : String(appInitError)}\nShutting down...`,
-						{
-							originalError: appInitError,
-							statusCode: 500,
-							severity: ErrorSeverity.FATAL,
-							exposeToClient: false
-						}
+				console.log(
+					`Secrets store initialized. READY TO ROCK AND ROLL!!!`
+				);
+			})
+			.then(() => {
+				try {
+					const memoryMonitor = createMemoryMonitor({
+						os,
+						process,
+						setInterval
+					});
+					memoryMonitor.startMemoryMonitor();
+				} catch (error) {
+					const memoryMonitorError =
+						new errorClasses.UtilityErrorRecoverable(
+							`Failed to start memory monitor\n${error instanceof Error ? error.message : String(error)}`,
+							{
+								originalError: error,
+								statusCode: 500,
+								severity: ErrorSeverity.RECOVERABLE,
+								exposeToClient: false
+							}
+						);
+					errorLogger.logError(
+						memoryMonitorError as AppError,
+						errorLoggerDetails(
+							getCallerInfo,
+							blankRequest,
+							'start_memory_monitor'
+						),
+						appLogger,
+						ErrorSeverity.RECOVERABLE
 					);
-				ErrorLogger.logError(appInitErrorFatal);
-				processError(appInitErrorFatal);
-				throw appInitErrorFatal;
-			} else {
-				handleCriticalError(appInitError);
-			}
-		}
+					processError(memoryMonitorError);
+				}
+			})
+			.then(() => {
+				return initializeDatabase()
+					.then(sequelize => {
+						initializeModels(sequelize, appLogger);
 
-		try {
-			const memoryMonitor = createMemoryMonitor({
-				os,
-				process,
-				setInterval
+						if (
+							configService.getFeatureFlags().dbSync ||
+							configService.getEnvVariables().nodeEnv ===
+								'production'
+						) {
+							appLogger.info('Synchronizing database');
+							return sequelize.sync();
+						}
+
+						return Promise.resolve();
+					})
+					.catch(dbError => {
+						const databaseErrorFatal =
+							new errorClasses.DatabaseErrorFatal(
+								`Error occurred during database initialization\n${dbError instanceof Error ? dbError.message : String(dbError)}`,
+								{
+									originalError: dbError,
+									statusCode: 500,
+									severity: ErrorSeverity.FATAL,
+									exposeToClient: false
+								}
+							);
+						errorLogger.logError(
+							databaseErrorFatal as AppError,
+							errorLoggerDetails(
+								getCallerInfo,
+								blankRequest,
+								'DATABASE_INIT'
+							),
+							appLogger,
+							ErrorSeverity.FATAL
+						);
+						processError(databaseErrorFatal);
+						throw databaseErrorFatal;
+					});
+			})
+			.then(() => {
+				return configurePassport({
+					passport,
+					UserModel: createUserModel(sequelize),
+					argon2
+				}).catch(passportConfigError => {
+					const passportConfigErrorFatal =
+						new errorClasses.DependencyErrorFatal(
+							`Error occurred during passport configuration\n${passportConfigError instanceof Error ? passportConfigError.message : String(passportConfigError)}`,
+							{
+								statusCode: 500,
+								severity: ErrorSeverity.FATAL,
+								originalError: passportConfigError,
+								exposeToClient: false
+							}
+						);
+					errorLogger.logError(
+						passportConfigErrorFatal as AppError,
+						errorLoggerDetails(
+							getCallerInfo,
+							blankRequest,
+							'PASSPORT_CONFIG'
+						),
+						appLogger,
+						ErrorSeverity.FATAL
+					);
+					processError(passportConfigErrorFatal);
+					throw passportConfigErrorFatal;
+				});
+			})
+			.then(() => {
+				return getRedisClient(createClient)
+					.then(redisClient => {
+						if (!redisClient) {
+							const redisError =
+								new errorClasses.DependencyErrorRecoverable(
+									`Failed to get Redis client. Redis client is null\n${String(Error)}`,
+									{
+										originalError: String(Error),
+										statusCode: 500,
+										severity: ErrorSeverity.RECOVERABLE,
+										exposeToClient: false
+									}
+								);
+							errorLogger.logError(
+								redisError as AppError,
+								errorLoggerDetails(
+									getCallerInfo,
+									blankRequest,
+									'REDIS_CLIENT_FETCH'
+								),
+								appLogger,
+								ErrorSeverity.RECOVERABLE
+							);
+							processError(redisError);
+						}
+					})
+					.catch(initRedisErrorRecoverable => {
+						const initRedisError =
+							new errorClasses.DependencyErrorRecoverable(
+								`Failed to initialize Redis client\n${initRedisErrorRecoverable instanceof Error ? initRedisErrorRecoverable.message : String(initRedisErrorRecoverable)}`,
+								{
+									originalError: initRedisErrorRecoverable,
+									statusCode: 500,
+									severity: ErrorSeverity.RECOVERABLE,
+									exposeToClient: false
+								}
+							);
+						errorLogger.logError(
+							initRedisError as AppError,
+							errorLoggerDetails(
+								getCallerInfo,
+								blankRequest,
+								'REDIS_INIT'
+							),
+							appLogger,
+							ErrorSeverity.RECOVERABLE
+						);
+						processError(initRedisError);
+					});
+			})
+			.then(() => {
+				return initializeAllMiddleware({
+					express,
+					session,
+					fsModule: fs,
+					cookieParser,
+					cors,
+					hpp,
+					morgan,
+					passport,
+					randomBytes,
+					RedisStore,
+					redisClient: () => getRedisClient(createClient),
+					initializeCsrfMiddleware,
+					getRedisClient,
+					initializeIpBlacklistMiddleware,
+					initializeRateLimitMiddleware,
+					initializeSecurityHeaders,
+					expressErrorHandler,
+					processError,
+					verifyJwt: passport.authenticate('jwt', { session: false }),
+					initializeJwtAuthMiddleware: () =>
+						passport.authenticate('jwt', { session: false }),
+					initializePassportAuthMiddleware: () =>
+						passport.authenticate('local'),
+					authenticateOptions: { session: false },
+					initializeValidatorMiddleware,
+					initializeSlowdownMiddleware
+				}).then(app => {
+					initializeRoutes({ app });
+				});
+			})
+			.catch(appInitError => {
+				const appLogger: AppLogger = configService.getAppLogger();
+				if (configService.getAppLogger()) {
+					const appInitErrorFatal =
+						new errorClasses.ConfigurationErrorFatal(
+							`Fatal error occurred during APP_INIT process\n${appInitError instanceof Error ? appInitError.message : String(appInitError)}\nShutting down...`,
+							{
+								originalError: appInitError,
+								statusCode: 500,
+								severity: ErrorSeverity.FATAL,
+								exposeToClient: false
+							}
+						);
+					errorLogger.logError(
+						appInitErrorFatal as AppError,
+						errorLoggerDetails(
+							getCallerInfo,
+							blankRequest,
+							'APP_INIT'
+						),
+						appLogger,
+						ErrorSeverity.FATAL
+					);
+					processError(appInitErrorFatal);
+					throw appInitErrorFatal;
+				} else {
+					handleCriticalError(appInitError);
+				}
 			});
-			memoryMonitor.startMemoryMonitor();
-		} catch (error) {
-			const memoryMonitorError = new errorClasses.UtilityErrorRecoverable(
-				`Failed to start memory monitor\n${error instanceof Error ? error.message : String(error)}`,
-				{
-					originalError: error,
-					statusCode: 500,
-					severity: ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(memoryMonitorError);
-			processError(memoryMonitorError);
-		}
-
-		// development only - logger test
-		if (configService.getEnvVariables().nodeEnv === 'development') {
-			(appLogger as AppLogger).debug('Testing logger levels...');
-			console.log('Console test log');
-			console.info('Test info log');
-			console.warn('Test warning');
-			console.error('Test error');
-			console.debug('Test debug log');
-		}
-
-		let sequelize: Sequelize;
-		try {
-			sequelize = await initializeDatabase();
-		} catch (dbError) {
-			const databaseErrorFatal = new errorClasses.DatabaseErrorFatal(
-				`Error occurred during database initialization\n${dbError instanceof Error ? dbError.message : String(dbError)}`,
-				{
-					originalError: dbError,
-					statusCode: 500,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(databaseErrorFatal);
-			processError(databaseErrorFatal);
-			throw databaseErrorFatal;
-		}
-
-		try {
-			initializeModels(sequelize, appLogger);
-		} catch (loadModelError) {
-			const loadModelErrorFatal = new errorClasses.DataIntegrityError(
-				`Error occurred during model initialization\n${loadModelError instanceof Error ? loadModelError.message : String(loadModelError)}`,
-				{
-					originalError: loadModelError,
-					statusCode: 500,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(loadModelErrorFatal);
-			processError(loadModelErrorFatal);
-			throw loadModelErrorFatal;
-		}
-
-		try {
-			const UserModel = createUserModel(sequelize);
-			await configurePassport({ passport, UserModel, argon2 });
-		} catch (passportConfigError) {
-			const passportConfigErrorFatal =
-				new errorClasses.DependencyErrorFatal(
-					`Error occurred during passport configuration\n${passportConfigError instanceof Error ? passportConfigError.message : String(passportConfigError)}`,
-					{
-						statusCode: 500,
-						severity: ErrorSeverity.FATAL,
-						originalError: passportConfigError,
-						exposeToClient: false
-					}
-				);
-			ErrorLogger.logError(passportConfigErrorFatal);
-			processError(passportConfigErrorFatal);
-			throw passportConfigErrorFatal;
-		}
-
-		const redisClient: RedisClientType | null =
-			await getRedisClient(createClient);
-
-		try {
-			if (!redisClient) {
-				const redisError = new errorClasses.DependencyErrorRecoverable(
-					`Failed to get Redis client. Redis client is null\n${String(Error)}`,
-					{
-						originalError: String(Error),
-						statusCode: 500,
-						severity: ErrorSeverity.RECOVERABLE,
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logError(redisError);
-				processError(redisError);
-			}
-		} catch (initRedisErrorRecoverable) {
-			const initRedisError = new errorClasses.DependencyErrorRecoverable(
-				`Failed to initialize Redis client\n${initRedisErrorRecoverable instanceof Error ? initRedisErrorRecoverable.message : String(initRedisErrorRecoverable)}`,
-				{
-					originalError: initRedisErrorRecoverable,
-					statusCode: 500,
-					severity: ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(initRedisError);
-			processError(initRedisError);
-		}
-
-		appLogger.info('Initializing application middleware...');
-		const app = await initializeAllMiddleware({
-			express,
-			session,
-			fsModule: fs,
-			cookieParser,
-			cors,
-			hpp,
-			morgan,
-			passport,
-			randomBytes,
-			RedisStore,
-			redisClient: () => getRedisClient(createClient),
-			initializeCsrfMiddleware,
-			getRedisClient,
-			initializeIpBlacklistMiddleware,
-			initializeRateLimitMiddleware,
-			initializeSecurityHeaders,
-			expressErrorHandler,
-			processError,
-			verifyJwt: passport.authenticate('jwt', { session: false }),
-			initializeJwtAuthMiddleware: () =>
-				passport.authenticate('jwt', { session: false }),
-			initializePassportAuthMiddleware: () =>
-				passport.authenticate('local'),
-			authenticateOptions: { session: false },
-			initializeValidatorMiddleware,
-			initializeSlowdownMiddleware
-		});
-
-		initializeRoutes({ app });
-
-		// sync database (if enabled)
-		if (
-			configService.getFeatureFlags().dbSync ||
-			configService.getEnvVariables().nodeEnv === 'production'
-		) {
-			appLogger.info('Synchronizing database');
-			try {
-				await sequelize.sync();
-				appLogger.info('Database synchronized successfully');
-			} catch (dbSyncErrorRecoverable) {
-				const dbSyncError = new errorClasses.DatabaseErrorRecoverable(
-					`Failed to synchronize database: ${dbSyncErrorRecoverable instanceof Error ? dbSyncErrorRecoverable.message : dbSyncErrorRecoverable}`,
-					{
-						statusCode: 500,
-						severity: ErrorSeverity.RECOVERABLE,
-						originalError: dbSyncErrorRecoverable,
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logError(dbSyncError);
-				processError(dbSyncError);
-			}
-		}
-
-		await setUpHttpServer({
-			app,
-			sequelize
-		});
 	} catch (error) {
 		const fallbackLogger = configService.getAppLogger();
 		if (!fallbackLogger) {

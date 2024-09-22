@@ -16,10 +16,10 @@ import createUserMfaModel from './UserMfaModelFile';
 import { createUserModel } from './UserModelFile';
 import createUserSessionModel from './UserSessionModelFile';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 let res: Response;
 

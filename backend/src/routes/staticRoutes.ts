@@ -2,10 +2,10 @@ import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { envVariables } from '../environment/envVars';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 const router = express.Router();
 

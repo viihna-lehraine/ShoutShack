@@ -1,71 +1,25 @@
-import RedisStore from 'connect-redis';
-import cookieParser from 'cookie-parser';
 import compression from 'compression';
-import cors from 'cors';
-import { randomBytes } from 'crypto';
-import express, { Application, RequestHandler } from 'express';
-import session from 'express-session';
-import { promises as fs } from 'fs';
-import hpp from 'hpp';
-import morgan, { StreamOptions } from 'morgan';
-import passport, { AuthenticateOptions } from 'passport';
+import { Application } from 'express';
+import { StreamOptions } from 'morgan';
 import responseTime from 'response-time';
 import validator from 'validator';
-import { configService } from './config/configService';
+import { configService } from './services/configService';
+import { getRedisClient } from './services/redis';
 import {
 	helmetOptions,
 	permissionsPolicyOptions
 } from './config/securityOptions';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
-import { ErrorLogger } from './errors/errorLogger';
-import { expressErrorHandler, processError } from './errors/processError';
-import { getRedisClient } from './config/redis';
-import { initializeCsrfMiddleware } from './middleware/csrf';
-import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
-import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';
-import { initializePassportAuthMiddleware } from './middleware/passportAuth';
-import { initializeRateLimitMiddleware } from './middleware/rateLimit';
-import { initializeSecurityHeaders } from './middleware/securityHeaders';
+import { ErrorLogger } from './services/errorLogger';
+import { processError } from './errors/processError';
+import { initializeExpressMiddlwareParams } from './interfaces/appInitInterfaces';
 import {
 	initializeSlowdownMiddleware,
 	slowdownThreshold
 } from './middleware/slowdown';
-import { initializeValidatorMiddleware } from './middleware/validator';
-import { ensureSecrets } from './utils/ensureSecrets';
-import { validateDependencies } from './utils/validateDependencies';
+import { validateDependencies } from './utils/helpers';
 
-export interface MiddlewareDependencies {
-	express: typeof express;
-	session: typeof session;
-	fsModule: typeof fs;
-	cookieParser: typeof cookieParser;
-	cors: typeof cors;
-	hpp: typeof hpp;
-	morgan: typeof morgan;
-	passport: typeof passport;
-	randomBytes: typeof randomBytes;
-	RedisStore: typeof RedisStore;
-	redisClient: typeof getRedisClient;
-	initializeCsrfMiddleware: typeof initializeCsrfMiddleware;
-	getRedisClient: typeof getRedisClient;
-	initializeIpBlacklistMiddleware: typeof initializeIpBlacklistMiddleware;
-	initializeRateLimitMiddleware: typeof initializeRateLimitMiddleware;
-	initializeSecurityHeaders: typeof initializeSecurityHeaders;
-	expressErrorHandler: typeof expressErrorHandler;
-	processError: typeof processError;
-	verifyJwt: (token: string) => Promise<string | object | null>;
-	initializeJwtAuthMiddleware: typeof initializeJwtAuthMiddleware;
-	initializePassportAuthMiddleware: typeof initializePassportAuthMiddleware;
-	authenticateOptions: AuthenticateOptions;
-	initializeValidatorMiddleware: typeof initializeValidatorMiddleware;
-	initializeSlowdownMiddleware: typeof initializeSlowdownMiddleware;
-}
-
-function initializeExpressMiddleware(
-	app: Application,
-	middleware: RequestHandler,
-	middlewareName: string
-): void {
+function initializeExpressMiddleware(initializeExpressMiddlwareParams): void {
 	const appLogger = configService.getLogger();
 
 	validateDependencies(
@@ -120,12 +74,11 @@ export async function initializeAllMiddleware({
 	initializePassportAuthMiddleware,
 	authenticateOptions,
 	initializeValidatorMiddleware
-}: MiddlewareDependencies): Promise<Application> {
+}: InitMiddlewareParams): Promise<Application> {
 	try {
 		const app = express();
-		const appLogger = configService.getLogger();
+		const appLogger = configService.getAppLogger();
 		const featureFlags = configService.getFeatureFlags();
-		const secrets = ensureSecrets({ subSecrets: ['sessionSecret'] });
 
 		validateDependencies(
 			[
@@ -358,6 +311,9 @@ export async function initializeAllMiddleware({
 
 		// set e-tag header for client-side caching
 		app.set('etag', 'strong');
+
+		// set proxy trust
+		app.set('trust proxy', true);
 
 		// initialize security headers
 		try {

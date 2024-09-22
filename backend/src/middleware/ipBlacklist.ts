@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { promises as fs } from 'fs';
 import { inRange } from 'range_check';
-import { ConfigService } from '../config/configService';
+import { ConfigService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 let blacklist: string[] = [];
 

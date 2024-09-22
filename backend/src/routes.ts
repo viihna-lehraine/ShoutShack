@@ -7,18 +7,18 @@ import QRCode from 'qrcode';
 import speakeasy from 'speakeasy';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import { createTOTPUtil } from './auth/totpUtil';
-import { configService } from './config/configService';
+import { createTOTPUtil } from './auth/totpMfa';
+import { configService } from './services/configService';
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
-import { ErrorLogger } from './errors/errorLogger';
-import { getTransporter } from './config/mailer';
+import { ErrorLogger } from './services/errorLogger';
+import { getTransporter } from './services/mailer';
 import { processError } from './errors/processError';
 import { initializeStaticRoutes } from './routes/staticRoutes';
 import { initializeTestRoutes } from './routes/testRoutes';
 import initializeUserRoutes, { UserRoutesModel } from './routes/userRoutes';
 import initializeValidationRoutes from './routes/validationRoutes';
 import generateConfirmationEmailTemplate from './templates/confirmationEmailTemplate';
-import { validateDependencies } from './utils/validateDependencies';
+import { validateDependencies } from './utils/helpers';
 
 interface RouteDependencies {
 	app: express.Application;

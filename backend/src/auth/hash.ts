@@ -1,13 +1,9 @@
 import argon2 from 'argon2';
-import { ConfigService } from './configService';
+import { configService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
-import { ErrorLogger } from 'src/errors/errorLogger';
-
-interface HashPasswordDependencies {
-	password: string;
-}
+import { validateDependencies } from '../utils/helpers';
+import { ErrorLogger } from '../services/errorLogger';
 
 export const hashConfig = {
 	type: argon2.argon2id,
@@ -16,10 +12,8 @@ export const hashConfig = {
 	parallelism: 1
 };
 
-export async function hashPassword({ password }: HashPasswordDependencies): Promise<string> {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
-	const secrets = configService.getSecrets();
+export async function hashPassword(password: string): Promise<string> {
+	const appLogger = configService.getAppLogger();
 
 	try {
 		validateDependencies(
@@ -36,8 +30,8 @@ export async function hashPassword({ password }: HashPasswordDependencies): Prom
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(hashConfigError, appLogger || console);
-			processError(hashConfigError, appLogger || console);
+			ErrorLogger.logError(hashConfigError);
+			processError(hashConfigError);
 			appLogger.error('Failed to retrieve pepper from secrets');
 			throw hashConfigError;
 		}

@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import {
+	AttestationResult,
 	ExpectedAssertionResult,
 	ExpectedAttestationResult,
 	Fido2Lib,
@@ -8,34 +9,28 @@ import {
 	PublicKeyCredentialRequestOptions,
 	Fido2AttestationResult,
 	Fido2AssertionResult,
-	AttestationResult,
 	AssertionResult
 } from 'fido2-lib';
 import path from 'path';
-import sops, { SecretsMap } from '../environment/envSecrets';
+import { SecretsMap } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import {
+	FidoFactor,
+	FidoUser,
+	GeneratePasskeyAuthenticationOptions,
+	VerifyPasskeyAuthentication
+} from '../interfaces/authInterfaces';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 let fido2: Fido2Lib | null = null;
 let secrets: SecretsMap;
 
-interface User {
-	id: string;
-	email: string;
-	username: string;
-	credential: {
-		credentialId: string;
-	}[];
-}
-
 function getDirectoryPath(): string {
 	return path.resolve(process.cwd());
 }
-
-type Factor = 'first' | 'second' | 'either';
 
 export async function initializeFido2(logger: Logger): Promise<void> {
 	try {
@@ -102,7 +97,7 @@ export async function ensureFido2Initialized(logger: Logger): Promise<void> {
 }
 
 export async function generatePasskeyRegistrationOptions(
-	user: User,
+	user: FidoUser,
 	logger: Logger
 ): Promise<PublicKeyCredentialCreationOptions> {
 	try {
@@ -171,7 +166,7 @@ export async function verifyPasskeyRegistration(
 		const u2fAttestationExpectations: ExpectedAttestationResult = {
 			challenge: expectedChallenge,
 			origin: secrets.RP_ORIGIN as string,
-			factor: 'either' as Factor,
+			factor: 'either' as FidoFactor,
 			rpId: secrets.RP_ID
 		};
 
@@ -195,7 +190,7 @@ export async function verifyPasskeyRegistration(
 }
 
 export async function generatePasskeyAuthenticationOptions(
-	user: User,
+	user: FidoUser,
 	logger: Logger
 ): Promise<PublicKeyCredentialRequestOptions> {
 	try {
@@ -253,8 +248,7 @@ export async function verifyPasskeyAuthentication(
 				{ name: 'expectedChallenge', instance: expectedChallenge },
 				{ name: 'publicKey', instance: publicKey },
 				{ name: 'previousCounter', instance: previousCounter },
-				{ name: 'id', instance: id },
-				{ name: 'logger', instance: logger }
+				{ name: 'id', instance: id }
 			],
 			logger
 		);
@@ -264,7 +258,7 @@ export async function verifyPasskeyAuthentication(
 		const assertionExpectations: ExpectedAssertionResult = {
 			challenge: expectedChallenge,
 			origin: secrets.RP_ORIGIN as string,
-			factor: 'either' as Factor,
+			factor: 'either' as FidoFactor,
 			publicKey,
 			prevCounter: previousCounter,
 			userHandle: id

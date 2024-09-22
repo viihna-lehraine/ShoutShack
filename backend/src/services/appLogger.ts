@@ -11,10 +11,10 @@ import {
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
 import TransportStream from 'winston-transport';
-import { configService } from '../config/configService';
+import { configService } from './configService';
 import { envSecretsStore } from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from './errorLogger';
 import { processError } from '../errors/processError';
 
 import '../../types/custom/winston-logstash';

@@ -1,21 +1,7 @@
-import bcrypt from 'bcrypt';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import { ConfigService } from '../config/configService';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { ensureSecrets } from '../utils/ensureSecrets';
-import { validateDependencies } from '../utils/validateDependencies';
+import { JwtPayload } from 'jsonwebtoken';
+import { EmailMFA } from '../interfaces/authInterfaces';
 
-interface Email2FAUtilDependencies {
-	bcrypt: typeof bcrypt;
-	jwt: typeof jwt;
-}
-
-export async function createEmail2FAUtil({
-	bcrypt,
-	jwt
-}: Email2FAUtilDependencies): Promise<{
+export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 	generateEmail2FACode: () => Promise<{
 		email2FACode: string;
 		email2FAToken: string;
@@ -25,9 +11,7 @@ export async function createEmail2FAUtil({
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
-	const configService = ConfigService.getInstance();
 	const appLogger = configService.getLogger();
-	const secrets = ensureSecrets({ subSecrets: ['EMAIL_2FA_KEY'] });
 
 	validateDependencies(
 		[

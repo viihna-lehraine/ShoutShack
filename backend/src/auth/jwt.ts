@@ -1,23 +1,13 @@
 import { execSync } from 'child_process';
 import jwt from 'jsonwebtoken';
-import { Logger } from 'winston';
-import sops from '../environment/envSecrets';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { CreateJwt, JwtUser } from '../interfaces/authInterfaces';
+import { validateDependencies } from '../utils/helpers';
 
-interface Secrets {
-	JWT_SECRET?: string;
-}
-
-interface User {
-	id: string;
-	username: string;
-}
-
-export function createJwtUtil(logger: Logger): {
-	generateJwt: (user: User) => Promise<string>;
+export function createJwt(logger: Logger): {
+	generateJwt: (user: JwtUser) => Promise<string>;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 } {
 	let secrets: Secrets;
@@ -25,10 +15,7 @@ export function createJwtUtil(logger: Logger): {
 	const loadSecrets = async (): Promise<Secrets> => {
 		try {
 			validateDependencies(
-				[
-					{ name: 'logger', instance: logger },
-					{ name: 'execSync', instance: execSync }
-				],
+				[{ name: 'execSync', instance: execSync }],
 				logger
 			);
 
@@ -58,7 +45,7 @@ export function createJwtUtil(logger: Logger): {
 		}
 	};
 
-	const generateJwt = async (user: User): Promise<string> => {
+	const generateJwt = async (user: JwtUser): Promise<string> => {
 		try {
 			validateDependencies([{ name: 'user', instance: user }], logger);
 

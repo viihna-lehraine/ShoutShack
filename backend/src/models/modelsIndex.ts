@@ -1,10 +1,10 @@
 import { Sequelize } from 'sequelize';
 import { loadModels, Models } from './loadModels';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { logger, Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { logger, Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 let models: Models | null = null;
 let sequelize: Sequelize;

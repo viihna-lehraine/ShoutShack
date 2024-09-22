@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { Session } from 'express-session';
-import { ConfigService } from '../config/configService';
+import { ConfigService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler, processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 export const slowdownThreshold = 100; // in ms
 

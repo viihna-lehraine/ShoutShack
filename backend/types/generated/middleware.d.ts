@@ -9,7 +9,7 @@ import morgan from 'morgan';
 import passport, { AuthenticateOptions } from 'passport';
 import { FeatureFlags } from './config/envConfig';
 import { Logger } from './utils/logger';
-import { getRedisClient } from './config/redis';
+import { getRedisClient } from './services/redis';
 import { SecretsMap } from './environment/sops';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { expressErrorHandler } from './middleware/expressErrorHandler';

@@ -5,9 +5,9 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
-import createTOTPUtil from '../auth/totpUtil';
+import createTOTPUtil from '../auth/totpMFA';
 import { Logger } from '../utils/logger';
-import { getTransporter } from '../config/mailer';
+import { getTransporter } from '../services/mailer';
 import generateConfirmationEmailTemplate from '../templates/confirmationEmailTemplate';
 export interface UserSecrets {
     JWT_SECRET: string;

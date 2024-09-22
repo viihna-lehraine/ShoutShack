@@ -7,17 +7,17 @@ import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 import xss from 'xss';
 import zxcvbn from 'zxcvbn';
-import { createEmail2FAUtil } from '../auth/email2FAUtil';
-import { createTOTPUtil } from '../auth/totpUtil';
-import { ConfigService } from '../config/configService';
-import { hashPassword } from '../config/hashConfig';
-import { getTransporter } from '../config/mailer';
+import { createEmail2FAUtil } from '../auth/emailMfa';
+import { createTOTPUtil } from '../auth/totpMfa';
+import { ConfigService } from '../services/configService';
+import { hashPassword } from '../auth/hash';
+import { getTransporter } from '../services/mailer';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
 import { generateConfirmationEmailTemplate } from '../templates/confirmationEmailTemplate';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 export interface UserRoutesModel {
 	validatePassword: (password: string, appLogger: Logger) => boolean;

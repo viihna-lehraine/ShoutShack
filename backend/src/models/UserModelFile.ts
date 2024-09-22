@@ -8,15 +8,15 @@ import {
 	Sequelize
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { configService } from '../config/configService';
-import { hashPassword } from '../config/hashConfig';
+import { configService } from '../services/configService';
+import { hashPassword } from '../auth/hash';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
 import { initializeRateLimitMiddleware } from '../middleware/rateLimit';
-import { Logger } from '../utils/appLogger';
+import { Logger } from '../services/appLogger';
 import { ensureSecrets } from '../utils/ensureSecrets';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 interface UserAttributes {
 	id: string;

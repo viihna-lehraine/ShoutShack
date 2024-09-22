@@ -1,4 +1,3 @@
-import { PassportStatic } from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import {
 	ExtractJwt,
@@ -6,36 +5,18 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { configService } from '../config/configService';
+import { configService } from '../services/configService';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { createUserModel } from '../models/UserModelFile';
-import { ensureSecrets } from '../utils/ensureSecrets';
-import { validateDependencies } from '../utils/validateDependencies';
-
-export interface UserInstance {
-	id: string;
-	username: string;
-	comparePassword: (
-		password: string,
-		argon2: typeof import('argon2')
-	) => Promise<boolean>;
-}
-
-interface PassportDependencies {
-	readonly passport: PassportStatic;
-	readonly UserModel: ReturnType<typeof createUserModel>;
-	readonly argon2: typeof import('argon2');
-}
+import { validateDependencies } from '../utils/helpers';
 
 export async function configurePassport({
 	passport,
 	UserModel,
 	argon2
-}: PassportDependencies): Promise<void> {
-	const appLogger = configService.getLogger();
-	const secrets = ensureSecrets({ subSecrets: ['jwtSecrets'] });
+}: PassportService): Promise<void> {
+	const appLogger = configService.getAppLogger();
 
 	try {
 		validateDependencies(

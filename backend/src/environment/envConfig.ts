@@ -1,11 +1,10 @@
-import { SecretsDependencies } from './envSecrets';
+import { ConfigSecretsInterface } from '../interfaces/environmentInterfaces';
 import {
-	envVariables,
 	EnvVariableTypes,
-	FeatureFlagTypes,
-	getFeatureFlags
-} from './envVars';
+	FeatureFlagTypes
+} from '../interfaces/environmentInterfaces';
 import { SecretsStore } from './envSecrets';
+import { ConfigService } from '../services/configService';
 
 export class ConfigStore {
 	private static instance: ConfigStore;
@@ -13,8 +12,8 @@ export class ConfigStore {
 	private featureFlags: FeatureFlagTypes;
 
 	private constructor() {
-		this.config = envVariables;
-		this.featureFlags = getFeatureFlags(process.env);
+		this.config = ConfigService.getInstance().getEnvVariables();
+		this.featureFlags = ConfigService.getInstance().getFeatureFlags();
 	}
 
 	public static getInstance(): ConfigStore {
@@ -37,8 +36,7 @@ export const envVariablesStore = ConfigStore.getInstance();
 export const envSecretsStore = SecretsStore.getInstance();
 
 export function initializeSecrets(
-	initializeSecretsDependencies: SecretsDependencies,
-	gpgPassphrase: string
+	initializeSecretsDependencies: ConfigSecretsInterface
 ): void {
-	envSecretsStore.loadSecrets(initializeSecretsDependencies, gpgPassphrase);
+	envSecretsStore.loadSecrets(initializeSecretsDependencies);
 }

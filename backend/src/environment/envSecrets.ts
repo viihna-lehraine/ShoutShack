@@ -7,21 +7,14 @@ import {
 	randomBytes
 } from 'crypto';
 import path from 'path';
-import { configService } from '../config/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { hashConfig } from '../auth/hash';
+import { configService } from '../services/configService';
+import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ConfigSecretsInterface } from '../interfaces/environmentInterfaces';
+import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { AppLogger } from '../utils/appLogger';
-
-export interface SecretsDependencies {
-	execSync: typeof execSync;
-	getDirectoryPath: () => string;
-	appLogger: AppLogger;
-}
-
-export interface SecretsMap {
-	[key: string]: string;
-}
+import { AppLogger } from '../services/appLogger';
+import { ErrorLoggerInterface } from 'src/interfaces/serviceInterfaces';
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
@@ -66,10 +59,10 @@ export class SecretsStore {
 	}
 
 	public async loadSecrets(
-		dependencies: SecretsDependencies,
-		gpgPassphrase: string
+		dependencies: ConfigSecretsInterface
 	): Promise<void> {
-		const { execSync, getDirectoryPath, appLogger } = dependencies;
+		const { execSync, getDirectoryPath, appLogger, gpgPassphrase } =
+			dependencies;
 		const secretsPath = path.join(
 			getDirectoryPath(),
 			configService.getEnvVariables().secretsFilePath1
@@ -87,7 +80,7 @@ export class SecretsStore {
 				);
 				this.secrets.set(key, {
 					encryptedValue,
-					hash: await argon2.hash(secrets[key]),
+					hash: await argon2.hash(secrets[key], hashConfig),
 					isDecrypted: false,
 					lastAccessed: Date.now()
 				});
@@ -106,10 +99,254 @@ export class SecretsStore {
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(secretsLoadError);
+			const details: Record<string, unknown> = {
+				requestId: 'N/A',
+				adminId: 'N/A',
+				action: 'secrets_load',
+				timestamp: new Date().toISOString(),
+				additionalInfo: {
+					ip: 'N/A',
+					userAgent: 'N/A'
+				}
+			};
+			errorLogger.logError(
+				secretsLoadError as AppError,
+				details,
+				appLogger,
+				ErrorSeverity.FATAL
+			);
 			processError(secretsLoadError);
 			throw secretsLoadError;
 		}
+	}
+
+	public async storeSecret(key: string, secret: string): Promise<void> {
+		const { encryptedValue, hash } = await this.encryptSecret(secret);
+		this.secrets.set(key, {
+			encryptedValue,
+			hash,
+			isDecrypted: false,
+			lastAccessed: Date.now()
+		});
+	}
+
+	public retrieveSecret(key: string, appLogger: AppLogger): string | null {
+		if (this.isRateLimited(key, appLogger)) {
+			appLogger.warn(`Rate limit exceeded for secret: ${key}`);
+			return null;
+		}
+
+		const secretData = this.secrets.get(key);
+
+		if (!secretData) return null;
+
+		const decryptedSecret = this.decryptSecret(secretData.encryptedValue);
+
+		secretData.isDecrypted = true;
+		secretData.lastAccessed = Date.now();
+
+		return decryptedSecret;
+	}
+
+	public retrieveSecrets(
+		secretKeys: string | string[],
+		appLogger: AppLogger
+	): Record<string, string | null> | string | null {
+		if (typeof secretKeys === 'string') {
+			secretKeys = [secretKeys];
+		}
+
+		const secretsResult: Record<string, string | null> = {};
+
+		for (const key of secretKeys) {
+			const secretData = this.secrets.get(key);
+
+			if (!secretData) {
+				appLogger.error(`Secret ${key} not found`);
+				secretsResult[key] = null;
+
+				continue;
+			}
+
+			if (secretData.isDecrypted) {
+				secretData.lastAccessed = Date.now();
+				secretsResult[key] = secretData.encryptedValue;
+			} else {
+				const decryptedSecret = this.decryptSecret(
+					secretData.encryptedValue
+				);
+
+				this.secrets.set(key, {
+					...secretData,
+					isDecrypted: true,
+					lastAccessed: Date.now()
+				});
+				secretsResult[key] = decryptedSecret;
+			}
+		}
+
+		return Array.isArray(secretKeys) && secretKeys.length === 1
+			? secretsResult[secretKeys[0]]
+			: secretsResult;
+	}
+
+	public async redactSecrets(
+		logData: string | Record<string, unknown> | unknown[]
+	): Promise<string | Record<string, unknown> | unknown[]> {
+		const secretHashes = this.getSecretsHashes();
+
+		if (typeof logData === 'string') {
+			return this.redactInString(logData, secretHashes);
+		}
+
+		return this.traverseAndRedact(logData, secretHashes);
+	}
+
+	public decrptTLSKeys(
+		appLogger: AppLogger,
+		errorLogger: ErrorLoggerInterface
+	): object {
+		try {
+			const decryptedPassphrase = this.decryptGPGPassphraseInMemory();
+			const decryptedKey = execSync(
+				`sops -d --passphrase ${decryptedPassphrase} ${configService.getEnvVariables().tlsKeyPath1}`
+			).toString();
+			const decryptedCert = execSync(
+				`sops -d --passphrase ${decryptedPassphrase} ${configService.getEnvVariables().tlsCertPath1}`
+			).toString();
+
+			this.encryptGPGPassphraseInMemory(decryptedPassphrase);
+
+			appLogger.debug('TLS keys decrypted successfully');
+			return { decryptedKey, decryptedCert };
+		} catch (tlsError) {
+			const tlsKeyDecryptionError =
+				new errorClasses.ConfigurationErrorFatal(
+					`Fatal error: Failed to decrypt TLS keys\n${tlsError instanceof Error ? tlsError.message : String(tlsError)}`,
+					{
+						originalError: tlsError,
+						statusCode: 500,
+						severity: ErrorSeverity.FATAL,
+						exposeToClient: false
+					}
+				);
+			const details: Record<string, unknown> = {
+				requestId: 'N/A',
+				action: 'tls_key_decryption',
+				timestamp: new Date().toISOString()
+			};
+			errorLogger.logError(
+				tlsKeyDecryptionError as AppError,
+				details,
+				appLogger,
+				ErrorSeverity.FATAL
+			);
+			processError(tlsKeyDecryptionError);
+			throw tlsKeyDecryptionError;
+		}
+	}
+
+	public async reEncryptSecret(secretKey: string): Promise<void> {
+		const secretData = this.secrets.get(secretKey);
+
+		if (!secretData || !secretData.isDecrypted) {
+			return;
+		}
+
+		const currentTime = Date.now();
+		const isTimeElapsed = currentTime - secretData.lastAccessed;
+
+		if (isTimeElapsed < this.reEncryptionCooldown) {
+			const { encryptedValue } = await this.encryptSecret(
+				secretData.encryptedValue
+			);
+
+			this.secrets.set(secretKey, {
+				...secretData,
+				encryptedValue,
+				isDecrypted: false,
+				lastAccessed: Date.now()
+			});
+		}
+	}
+
+	public async reEncryptSecrets(keys: string[]): Promise<void> {
+		const promises = keys.map(async key => {
+			await this.reEncryptSecret(key);
+		});
+
+		await Promise.all(promises);
+	}
+
+	public async batchReEncryptSecrets(
+		appLogger: AppLogger | Console = console
+	): Promise<void> {
+		const promises: Promise<void>[] = [];
+		this.secrets.forEach((secretData, key) => {
+			if (secretData.isDecrypted) {
+				promises.push(this.reEncryptSecret(key));
+			}
+		});
+
+		await Promise.all(promises);
+		appLogger.debug('Batch re-encryption completed');
+	}
+
+	public clearExpiredSecretsFromMemory(
+		appLogger: AppLogger | Console = console
+	): void {
+		const currentTime = Date.now();
+		this.secrets.forEach((secretData, key) => {
+			const isTimeElapsed = currentTime - secretData.lastAccessed;
+
+			if (
+				isTimeElapsed >= this.reEncryptionCooldown &&
+				secretData.isDecrypted
+			) {
+				this.secrets.set(key, {
+					...secretData,
+					isDecrypted: false
+				});
+				appLogger.debug(`Secret ${key} cleared from memory`);
+			}
+		});
+	}
+
+	public clearSecretsFromMemory(
+		secretKeys: string | string[],
+		appLogger: AppLogger | Console = console
+	): void {
+		const keysToClear = Array.isArray(secretKeys)
+			? secretKeys
+			: [secretKeys];
+
+		keysToClear.forEach(key => {
+			const secretData = this.secrets.get(key);
+
+			if (!secretData) {
+				appLogger.error(`Secret ${key} not found`);
+				return;
+			}
+
+			if (!secretData.isDecrypted) {
+				appLogger.debug(`Secret ${key} is already cleared from memory`);
+			}
+
+			this.secrets.set(key, {
+				...secretData,
+				isDecrypted: false
+			});
+
+			appLogger.debug(`Secret ${key} has been cleared from memory`);
+		});
+	}
+
+	public releaseSecret(secretKey: string): void {
+		this.reEncryptSecret(secretKey);
+	}
+
+	public refreshSecrets(dependencies: ConfigSecretsInterface): void {
+		this.loadSecrets(dependencies);
 	}
 
 	private async encryptSecret(
@@ -127,50 +364,9 @@ export class SecretsStore {
 		]);
 
 		const encryptedValue = `${iv.toString('hex')}:${encrypted.toString('hex')}`;
-		const hash = await argon2.hash(secret);
+		const hash = await argon2.hash(secret, hashConfig);
 
 		return { encryptedValue, hash };
-	}
-
-	public async storeSecret(key: string, secret: string): Promise<void> {
-		const { encryptedValue, hash } = await this.encryptSecret(secret);
-		this.secrets.set(key, {
-			encryptedValue,
-			hash,
-			isDecrypted: false,
-			lastAccessed: Date.now()
-		});
-	}
-
-	public retrieveSecret(
-		key: string,
-		appLogger: AppLogger | Console = console
-	): string | null {
-		if (this.isRateLimited(key, appLogger)) {
-			appLogger.warn(`Rate limit exceeded for secret: ${key}`);
-			return null;
-		}
-
-		const secretData = this.secrets.get(key);
-
-		if (!secretData) return null;
-
-		const decryptedSecret = this.decryptSecret(secretData.encryptedValue);
-		secretData.isDecrypted = true;
-		secretData.lastAccessed = Date.now();
-		return decryptedSecret;
-	}
-
-	public async redactSecrets(
-		logData: string | Record<string, unknown> | unknown[]
-	): Promise<string | Record<string, unknown> | unknown[]> {
-		const secretHashes = this.getSecretsHashes();
-
-		if (typeof logData === 'string') {
-			return this.redactInString(logData, secretHashes);
-		}
-
-		return this.traverseAndRedact(logData, secretHashes);
 	}
 
 	private getSecretsHashes(): string[] {
@@ -235,46 +431,7 @@ export class SecretsStore {
 		return data;
 	}
 
-	public decrptTLSKeys(
-		gpgPassphrase: string,
-		appLogger: AppLogger | Console = console
-	): object {
-		try {
-			const decryptedPassphrase = this.decryptGPGPassphraseInMemory();
-			const tlsKeyPath = configService.getEnvVariables().tlsKeyPath1;
-			const tlsCertPath = configService.getEnvVariables().tlsCertPath1;
-			const decryptedKey = execSync(
-				`sops -d --passphrase ${decryptedPassphrase} ${tlsKeyPath}`
-			).toString();
-			const decryptedCert = execSync(
-				`sops -d --passphrase ${decryptedPassphrase} ${tlsCertPath}`
-			).toString();
-
-			this.encryptGPGPassphraseInMemory(decryptedPassphrase);
-
-			appLogger.debug('TLS keys decrypted successfully');
-			return { decryptedKey, decryptedCert };
-		} catch (tlsError) {
-			const tlsKeyDecryptionError =
-				new errorClasses.ConfigurationErrorFatal(
-					`Fatal error: Failed to decrypt TLS keys\n${tlsError instanceof Error ? tlsError.message : String(tlsError)}`,
-					{
-						originalError: tlsError,
-						statusCode: 500,
-						severity: ErrorSeverity.FATAL,
-						exposeToClient: false
-					}
-				);
-			ErrorLogger.logError(tlsKeyDecryptionError);
-			processError(tlsKeyDecryptionError);
-			throw tlsKeyDecryptionError;
-		}
-	}
-
-	private isRateLimited(
-		key: string,
-		appLogger: AppLogger | Console = console
-	): boolean {
+	private isRateLimited(key: string, appLogger: AppLogger): boolean {
 		const currentTime = Date.now();
 		let rateData = this.secretAccessAttempts.get(key);
 
@@ -357,135 +514,6 @@ export class SecretsStore {
 		return createHash('sha256').update(this.encryptionKey!).digest();
 	}
 
-	public retrieveSecrets(
-		secretKeys: string | string[],
-		appLogger: AppLogger | Console = console
-	): Record<string, string | null> | string | null {
-		if (typeof secretKeys === 'string') {
-			secretKeys = [secretKeys];
-		}
-
-		const secretsResult: Record<string, string | null> = {};
-
-		for (const key of secretKeys) {
-			const secretData = this.secrets.get(key);
-
-			if (!secretData) {
-				appLogger.error(`Secret ${key} not found`);
-				secretsResult[key] = null;
-
-				continue;
-			}
-
-			if (secretData.isDecrypted) {
-				secretData.lastAccessed = Date.now();
-				secretsResult[key] = secretData.encryptedValue;
-			} else {
-				const decryptedSecret = this.decryptSecret(
-					secretData.encryptedValue
-				);
-
-				this.secrets.set(key, {
-					...secretData,
-					isDecrypted: true,
-					lastAccessed: Date.now()
-				});
-				secretsResult[key] = decryptedSecret;
-			}
-		}
-
-		return Array.isArray(secretKeys) && secretKeys.length === 1
-			? secretsResult[secretKeys[0]]
-			: secretsResult;
-	}
-
-	public async reEncryptSecret(secretKey: string): Promise<void> {
-		const secretData = this.secrets.get(secretKey);
-
-		if (!secretData || !secretData.isDecrypted) {
-			return;
-		}
-
-		const currentTime = Date.now();
-		const isTimeElapsed = currentTime - secretData.lastAccessed;
-
-		if (isTimeElapsed < this.reEncryptionCooldown) {
-			const { encryptedValue } = await this.encryptSecret(
-				secretData.encryptedValue
-			);
-
-			this.secrets.set(secretKey, {
-				...secretData,
-				encryptedValue,
-				isDecrypted: false,
-				lastAccessed: Date.now()
-			});
-		}
-	}
-
-	public async batchReEncryptSecrets(
-		appLogger: AppLogger | Console = console
-	): Promise<void> {
-		const promises: Promise<void>[] = [];
-		this.secrets.forEach((secretData, key) => {
-			if (secretData.isDecrypted) {
-				promises.push(this.reEncryptSecret(key));
-			}
-		});
-
-		await Promise.all(promises);
-		appLogger.debug('Batch re-encryption completed');
-	}
-
-	public clearExpiredSecretsFromMemory(
-		appLogger: AppLogger | Console = console
-	): void {
-		const currentTime = Date.now();
-		this.secrets.forEach((secretData, key) => {
-			const isTimeElapsed = currentTime - secretData.lastAccessed;
-
-			if (
-				isTimeElapsed >= this.reEncryptionCooldown &&
-				secretData.isDecrypted
-			) {
-				this.secrets.set(key, {
-					...secretData,
-					isDecrypted: false
-				});
-				appLogger.debug(`Secret ${key} cleared from memory`);
-			}
-		});
-	}
-
-	public clearSecretsFromMemory(
-		secretKeys: string | string[],
-		appLogger: AppLogger | Console = console
-	): void {
-		const keysToClear = Array.isArray(secretKeys)
-			? secretKeys
-			: [secretKeys];
-
-		keysToClear.forEach(key => {
-			const secretData = this.secrets.get(key);
-
-			if (!secretData) {
-				appLogger.error(`Secret ${key} not found`);
-				return;
-			}
-
-			if (!secretData.isDecrypted) {
-				appLogger.debug(`Secret ${key} is already cleared from memory`);
-			}
-
-			this.secrets.set(key, {
-				...secretData,
-				isDecrypted: false
-			});
-
-			appLogger.debug(`Secret ${key} has been cleared from memory`);
-		});
-	}
-
 	private reEncryptSecretsFile(
 		secretsPath: string,
 		decryptedGPGPassphrase: string,
@@ -503,17 +531,6 @@ export class SecretsStore {
 			);
 			throw error;
 		}
-	}
-
-	public releaseSecret(secretKey: string): void {
-		this.reEncryptSecret(secretKey);
-	}
-
-	public refreshSecrets(
-		dependencies: SecretsDependencies,
-		gpgPassphrase: string
-	): void {
-		this.loadSecrets(dependencies, gpgPassphrase);
 	}
 }
 

@@ -1,52 +1,44 @@
-import argon2 from 'argon2';
-import { execSync } from 'child_process';
-import { Request, Response } from 'express';
-import { createJwtUtil } from '../auth/jwtUtil';
-import sops from '../environment/envSecrets';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError, sendClientErrorResponse } from '../errors/processError';
-import createUserModel from '../models/UserModelFile';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { AuthController } from '../interfaces/controllerInterfaces';
 
-interface AuthDependencies {
-	logger: Logger;
-	UserModel: ReturnType<typeof createUserModel>;
-	jwtUtil: ReturnType<typeof createJwtUtil>;
-	argon2: typeof argon2;
-}
-
-export function login({
-	logger,
+export function userLogin({
+	argon2,
+	execSync,
+	jwt,
+	req,
+	res,
+	appLogger,
+	createJwt,
+	errorClasses,
+	ErrorLogger,
+	ErrorSeverity,
+	processError,
+	sendClientErrorResponse,
 	UserModel,
-	jwtUtil,
-	argon2
-}: AuthDependencies) {
+	validateDependencies
+}: AuthController) {
 	return async (req: Request, res: Response): Promise<Response | void> => {
 		try {
 			validateDependencies(
 				[
-					{ name: 'logger', instance: logger },
+					{ name: 'appLogger', instance: appLogger },
 					{ name: 'UserModel', instance: UserModel },
-					{ name: 'jwtUtil', instance: jwtUtil },
-					{ name: 'argon2', instance: argon2 },
-					{ name: 'secrets', instance: sops }
+					{ name: 'jwt', instance: jwt },
+					{ name: 'argon2', instance: argon2 }
 				],
-				logger || console
+				appLogger
 			);
 			const { username, password } = req.body;
 
 			const user = await UserModel.findOne({ where: { username } });
 			if (!user) {
-				logger.debug(
+				appLogger.debug(
 					`Login attempt failed - user not found: ${username}`
 				);
 				const clientError = new errorClasses.ClientAuthenticationError(
 					'Login attempt failed - please try again',
 					{ exposeToClient: true }
 				);
-				sendClientErrorResponse(clientError, res);
+				sendClientErrorResponse(String(clientError), 404, res);
 				return;
 			}
 

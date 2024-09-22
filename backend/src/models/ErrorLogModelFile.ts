@@ -6,11 +6,11 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
-import { ConfigService } from '../config/configService';
+import { ConfigService } from '../services/configService';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { validateDependencies } from '../utils/helpers';
 
 interface ErrorLogAttributes {
 	id: CreationOptional<number>; // primary key, auto-incremented

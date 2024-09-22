@@ -129,22 +129,32 @@ async function promptAdminSecret(promptMessage: string): Promise<string> {
 	});
 }
 
-function getAdminCredentials(): { [key: string]: string | undefined } {
-	const adminCredentials: { [key: string]: string | undefined } = {};
+function getAdminCredentials(): {
+	usernameToPasswordMap: { [key: string]: string | undefined };
+	usernameToAdminIdMap: { [key: string]: string | undefined };
+} {
+	const usernameToPasswordMap: { [key: string]: string | undefined } = {};
+	const usernameToAdminIdMap: { [key: string]: string | undefined } = {};
 
 	Object.keys(process.env).forEach(key => {
 		if (key.startsWith('ADMIN_USERNAME_')) {
 			const adminNumber = key.split('_')[2];
 			const associatedPasswordKey = `ADMIN_PASSWORD_${adminNumber}`;
+			const associatedAdminIdKey = `ADMIN_ID_${adminNumber}`;
 
 			if (process.env[key] && process.env[associatedPasswordKey]) {
-				adminCredentials[process.env[key] as string] =
+				usernameToPasswordMap[process.env[key] as string] =
 					process.env[associatedPasswordKey];
+				usernameToAdminIdMap[process.env[key] as string] =
+					process.env[associatedAdminIdKey];
 			}
 		}
 	});
 
-	return adminCredentials;
+	return {
+		usernameToPasswordMap,
+		usernameToAdminIdMap
+	};
 }
 
 async function validateCredentials(
@@ -202,15 +212,18 @@ async function logAttempt(
 export async function login(): Promise<{
 	encryptionKey: string | null;
 	gpgPassphrase: string | null;
+	adminId: number | null;
 }> {
 	let retries = 3;
 	let attempts = 0;
+	let rawAdminId: string | null = null;
 	let rawEncryptionKey: string | null = null;
 	let rawGPGPassphrase: string | null = null;
 
-	const adminCredentials = getAdminCredentials();
+	const { usernameToPasswordMap, usernameToAdminIdMap } =
+		getAdminCredentials();
 
-	if (Object.keys(adminCredentials).length === 0) {
+	if (Object.keys(usernameToPasswordMap).length === 0) {
 		console.error('No admin credentials found.\nShutting down...');
 		process.exit(1);
 	}
@@ -221,11 +234,18 @@ export async function login(): Promise<{
 			const valid = await validateCredentials(
 				username,
 				password,
-				adminCredentials
+				usernameToPasswordMap
 			);
 			attempts++;
 
 			if (valid) {
+				rawAdminId = usernameToAdminIdMap[username] || null;
+
+				if (!rawAdminId) {
+					console.error('Admin ID not found.');
+					process.exit(1);
+				}
+
 				for (let keyAttempts = 0; keyAttempts < 3; keyAttempts++) {
 					const encryptionKey = await promptAdminSecret(
 						'Enter Encryption Key: '
@@ -270,9 +290,13 @@ export async function login(): Promise<{
 									'gpg-passphrase-validation'
 								);
 								rl.close();
+
+								const adminId = parseInt(rawAdminId, 10);
+
 								return {
 									encryptionKey: rawEncryptionKey,
-									gpgPassphrase: rawGPGPassphrase
+									gpgPassphrase: rawGPGPassphrase,
+									adminId
 								};
 							} else {
 								console.log(

@@ -1,25 +1,22 @@
 import os from 'os';
 import { createClient, RedisClientType } from 'redis';
-import { ConfigService } from '../config/configService';
-import { featureFlags } from '../environment/envVars';
 import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from './errorLogger';
 import { processError } from '../errors/processError';
+import {
+	FlushRedisMemoryCache,
+	GetRedisClient,
+	RedisService
+} from '../interfaces/serviceInterfaces';
 import { createMemoryMonitor } from '../middleware/memoryMonitor';
-import { validateDependencies } from '../utils/validateDependencies';
-
-interface RedisDependencies {
-  createRedisClient: typeof createClient;
-  redisUrl: string;
-}
+import { validateDependencies } from '../utils/helpers';
 
 let redisClient: RedisClientType | null = null;
 
 export async function connectRedis({
-  createRedisClient,
-  redisUrl
-}: RedisDependencies): Promise<RedisClientType | null> {
-	const configService = ConfigService.getInstance();
+	redisUrl,
+	createRedisClient
+}: RedisService): Promise<RedisClientType | null> {
 	const appLogger = configService.getLogger();
 	const featureFlags = configService.getFeatureFlags();
 
@@ -33,7 +30,7 @@ export async function connectRedis({
     );
 
     if (!featureFlags.enableRedis) {
-      appLogger.info(`Redis is disabled based on REDIS_FLAG`);
+      appLogger.debug('Redis is disabled');
       return null;
     }
 
@@ -43,7 +40,7 @@ export async function connectRedis({
         socket: {
           reconnectStrategy: (retries) => {
 			const retryAfter = Math.min(retries * 100, 3000);
-            ErrorLogger.logWarning(`Redis retry attempt: ${retries}`, appLogger, { retries, redisUrl});
+            ErrorLogger.logWarning(`Redis retry attempt: ${retries}`, { retries, redisUrl});
             if (retries >= 10) {
 							const serviceError = new errorClasses.ServiceUnavailableError(
 								retryAfter,
@@ -54,13 +51,13 @@ export async function connectRedis({
 									exposeToClient: false
 								}
 							)
-              ErrorLogger.logError(serviceError, appLogger, {
+              ErrorLogger.logError(serviceError, {
 								retries,
 								redisUrl });
 							processError(serviceError, appLogger);
               appLogger.error('Max retries reached when trying to initialize Redis. Falling back to custom memory monitor');
 
-							createMemoryMonitor({ appLogger, os, process, setInterval });
+							createMemoryMonitor({ os, process, setInterval });
             }
 
 						return retryAfter;
@@ -86,10 +83,6 @@ export async function connectRedis({
 }
 
 export async function getRedisClient(createRedisClient: typeof createClient): Promise<RedisClientType | null> {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
-	const envVariables = configService.getEnvVariables();
-
 	const redisUrl = envVariables.redisUrl;
 
 	if (redisClient) {
@@ -102,11 +95,7 @@ export async function getRedisClient(createRedisClient: typeof createClient): Pr
 	return redisClient;
 }
 
-export async function flushInMemoryCache(): Promise<void> {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
-	const featureFlags = configService.getFeatureFlags();
-
+export async function flushRedisMemoryCache(): Promise<void> {
 	appLogger.info('Flushing in-memory cache');
 	const redisClient = await getRedisClient(createClient);
 

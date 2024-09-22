@@ -1,8 +1,8 @@
 import csrf from 'csrf';
 import { NextFunction, Request, Response } from 'express';
-import { ConfigService } from '../config/configService';
+import { ConfigService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
 
 export function initializeCsrfMiddleware() {

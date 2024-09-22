@@ -1,20 +1,20 @@
 import { NextFunction, Request, Response } from 'express';
 import { AppError, ClientError, ErrorSeverity } from './errorClasses';
-import { ErrorLogger } from './errorLogger';
-import { envVariables } from '../environment/envVars';
-import { configService } from '../config/configService';
-import { isAppLogger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { AppLogger } from '../services/appLogger';
+import { blankRequest } from '../utils/helpers';
 
 export function processCriticalError(
-	error: AppError | unknown,
+	appLogger: AppLogger,
+	ConfigService: typeof import('../services/configService').ConfigService,
+	fallbackLogger: Console,
+	isAppLogger: typeof import('../services/appLogger').isAppLogger,
+	error: AppError | ClientError | Error | unknown,
 	req?: Request,
 	details: Record<string, unknown> = {}
 ): void {
-	const appLogger = configService.getLogger() || console;
-	const effectiveLogger = isAppLogger(appLogger) ? appLogger : console;
 	const errorMessage = error instanceof Error ? error.message : String(error);
 	const errorStack = error instanceof Error ? error.stack : undefined;
+	const effectiveLogger = isAppLogger(appLogger) ? appLogger : fallbackLogger;
 
 	const logDetails = {
 		method: req?.method ?? 'Unknown method',
@@ -37,27 +37,25 @@ export function processCriticalError(
 					: String(loggingError)
 		});
 	} finally {
-		if (envVariables.nodeEnv === 'production') {
+		if (
+			ConfigService.getInstance().getEnvVariables().nodeEnv ===
+			'production'
+		) {
 			process.exit(1);
 		}
 	}
 }
 
-export function processError(error: unknown, req?: Request): void {
-	const appLogger = configService.getLogger();
-	const fallbackLogger = console;
-	const effectiveLogger = isAppLogger(appLogger) ? appLogger : fallbackLogger;
-
+export function processError(
+	appLogger: AppLogger,
+	ConfigService: typeof import('../services/configService').ConfigService,
+	errorLogger: typeof import('../services/errorLogger').errorLogger,
+	errorLoggerDetails: typeof import('../utils/helpers').errorLoggerDetails,
+	fallbackLogger: Console,
+	isAppLogger: typeof import('../services/appLogger').isAppLogger,
+	error: AppError | ClientError | Error | unknown
+): void {
 	try {
-		validateDependencies(
-			[
-				{ name: 'error', instance: error },
-				{ name: req ? 'req' : 'undefined', instance: req },
-				{ name: 'fallbackLogger', instance: fallbackLogger }
-			],
-			effectiveLogger
-		);
-
 		let appError: AppError;
 		if (error instanceof AppError) {
 			appError = error;
@@ -67,13 +65,33 @@ export function processError(error: unknown, req?: Request): void {
 			appError = new AppError(`Unknown error: ${String(error)}`);
 		}
 
-		ErrorLogger.logError(appError);
+		errorLogger.logError(
+			appError as AppError,
+			errorLoggerDetails(
+				() => 'processError',
+				blankRequest,
+				'PROCESS_ERROR'
+			),
+			appLogger,
+			ErrorSeverity.FATAL
+		);
 
 		if (appError.severity === ErrorSeverity.FATAL) {
-			processCriticalError(error, req, { stack: appError.stack });
+			processCriticalError(
+				appLogger,
+				ConfigService,
+				fallbackLogger,
+				isAppLogger,
+				{ stack: appError.stack },
+				blankRequest
+			);
 		}
 	} catch (loggingError) {
-		fallbackLogger.error('Failed to log the original error', {
+		const effectiveLogger = isAppLogger(appLogger)
+			? appLogger
+			: fallbackLogger;
+
+		effectiveLogger.error('Failed to log the original error', {
 			originalError: error,
 			loggingError:
 				loggingError instanceof Error
@@ -88,9 +106,7 @@ export async function sendClientErrorResponse(
 	statusCode: number = 400,
 	res: Response
 ): Promise<void> {
-	const clientResponse = message;
-
-	res.status(statusCode).json(clientResponse);
+	res.status(statusCode).json(message);
 }
 
 export function expressErrorHandler() {
@@ -99,10 +115,24 @@ export function expressErrorHandler() {
 		req: Request,
 		res: Response,
 		next: NextFunction,
+		appLogger: AppLogger,
+		ConfigService: typeof import('../services/configService').ConfigService,
+		errorLogger: typeof import('../services/errorLogger').errorLogger,
+		errorLoggerDetails: typeof import('../utils/helpers').errorLoggerDetails,
+		fallbackLogger: Console,
+		isAppLogger: typeof import('../services/appLogger').isAppLogger,
 		errorResponse?: string
 	): void {
 		try {
-			processError(expressError, req);
+			processError(
+				appLogger,
+				ConfigService,
+				errorLogger,
+				errorLoggerDetails,
+				fallbackLogger,
+				isAppLogger,
+				expressError
+			);
 
 			const customResponse: string =
 				errorResponse ||
@@ -135,8 +165,20 @@ export function expressErrorHandler() {
 					message: customResponse
 				});
 			}
+
+			next();
 		} catch (error) {
-			processError(error, req);
+			const expressError =
+				error instanceof Error ? error : new Error(String(error));
+			processError(
+				appLogger,
+				ConfigService,
+				errorLogger,
+				errorLoggerDetails,
+				fallbackLogger,
+				isAppLogger,
+				expressError
+			);
 			res.status(500).json({
 				status: 'error',
 				message: 'Internal server error: expressErrorHandler() failed'

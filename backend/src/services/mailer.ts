@@ -1,28 +1,7 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import { ConfigService } from '../config/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
-
-export interface MailerSecrets {
-	readonly EMAIL_HOST: string;
-	readonly EMAIL_PORT: number;
-	readonly EMAIL_SECURE: boolean;
-	readonly SMTP_TOKEN: string;
-}
-
-export interface MailerDependencies {
-	readonly nodemailer: typeof nodemailer;
-	readonly emailUser: string;
-}
-
 async function createTransporter({
 	nodemailer,
 	emailUser
 }: MailerDependencies): Promise<Transporter> {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
 	const secrets = configService.getSecrets() as MailerSecrets;
 
 	try {

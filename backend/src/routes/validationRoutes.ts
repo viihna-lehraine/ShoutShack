@@ -2,8 +2,8 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { validationResult } from 'express-validator';
 import { processError } from '../errors/processError';
 import { initializeValidatorMiddleware } from '../middleware/validator';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 
 interface ValidationRouteDependencies {
 	appLogger: Logger;

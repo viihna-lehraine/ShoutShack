@@ -8,8 +8,8 @@ import {
 import { User } from './UserModelFile';
 import { errorClasses } from '../errors/errorClasses';
 import { processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
+import { Logger } from '../services/appLogger';
+import { validateDependencies } from '../utils/helpers';
 import { ErrorLogger } from 'src/errors/errorLogger';
 
 interface AuditLogAttributes {

@@ -1,73 +1,73 @@
 import { Request, Response } from 'express';
-import { Model, WhereOptions } from 'sequelize';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
-import { validateDependencies } from '../utils/validateDependencies';
-
-interface ModelType extends Model {
-	id?: number | string;
-}
-
-interface ModelControllerDependencies {
-	logger: Logger;
-}
+import { WhereOptions } from 'sequelize';
+import { ModelController } from '../interfaces/controllerInterfaces';
+import { ModelOperations, ModelType } from '../interfaces/modelInterfaces';
 
 export const getEntries =
 	<T extends ModelType>(
-		Model: { new (): T; findAll: () => Promise<T[]> },
-		{ logger }: ModelControllerDependencies
+		Model: ModelOperations<T>,
+		{
+			appLogger,
+			errorClasses,
+			ErrorSeverity,
+			ErrorLogger,
+			processError
+		}: ModelController
 	) =>
 	async (req: Request, res: Response): Promise<void> => {
 		try {
-			validateDependencies(
-				[{ name: 'logger', instance: logger }],
-				logger || console
-			);
 			const entries = await Model.findAll();
 			res.status(200).json(entries);
-			logger.debug(`Fetched all entries from ${Model.name}`);
+			appLogger.debug(`Fetched all entries from ${Model.name}`);
 		} catch (missingResourceError) {
 			const resource: string = Model.name;
 			const utility: string = 'modelController - getEntries()';
 			const resourceError = new errorClasses.MissingResourceError(
 				`No ${resource} entries found: ${missingResourceError instanceof Error ? missingResourceError.message : ''}`,
-				{ utility, exposeToClient: false }
+				{
+					utility,
+					originalError: missingResourceError,
+					statusCode: 404,
+					severity: ErrorSeverity.INFO,
+					exposeToClient: false
+				}
 			);
-			ErrorLogger.logWarning(resourceError.message, logger);
-			processError(resourceError, logger);
+			ErrorLogger.logWarning(resourceError.message);
+			processError(resourceError);
 		}
 	};
 
 export const createEntry =
 	<T extends ModelType>(
-		Model: { new (): T; create: (values: Partial<T>) => Promise<T> },
-		{ logger }: ModelControllerDependencies
+		Model: ModelOperations<T>,
+		{ appLogger, errorClasses, ErrorLogger, processError }: ModelController
 	) =>
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const newEntry = await Model.create(req.body);
 			res.status(201).json(newEntry);
-			logger.debug(`Created a new entry in ${Model.name}`);
+			appLogger.debug(`Created a new entry in ${Model.name}`);
 		} catch (utilError) {
 			const utility: string = 'modelController - createEntry()';
 			const utilityError = new errorClasses.UtilityErrorRecoverable(
 				`Error occurred with dependency ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
 				{ exposeToClient: false }
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 		}
 	};
 
 export const deleteEntry =
 	<T extends ModelType>(
-		Model: {
-			new (): T;
-			destroy: (options: { where: WhereOptions<T> }) => Promise<number>;
-		},
-		{ logger }: ModelControllerDependencies
+		Model: ModelOperations<T>,
+		{
+			appLogger,
+			errorClasses,
+			ErrorLogger,
+			ErrorSeverity,
+			processError
+		}: ModelController
 	) =>
 	async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -76,21 +76,26 @@ export const deleteEntry =
 				where: { id } as WhereOptions<T>
 			});
 			if (!deleted) {
-				logger.debug(`${Model.name} entry with id ${id} not found`);
+				appLogger.debug(`${Model.name} entry with id ${id} not found`);
 				res.status(404).json({
 					error: `${Model.name} entry not found`
 				});
 				return;
 			}
 			res.status(200).json({ message: `${Model.name} entry deleted` });
-			logger.info(`Deleted ${Model.name} entry with id ${id}`);
-		} catch (utiLError) {
-			const utility: string = 'modelController - deleteEntry()';
+			appLogger.info(`Deleted ${Model.name} entry with id ${id}`);
+		} catch (utilError) {
 			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Error occurred with dependency ${utility}: ${utiLError instanceof Error ? utiLError.message : String(utiLError)}`,
-				{ exposeToClient: false }
+				`Error occurred with dependency 'modelController - deleteEntry()\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
+				{
+					utility: 'modelController - deleteEntry()',
+					originalError: utiLError,
+					statusCode: 500,
+					severity: ErrorSeverity.RECOVERABLE,
+					exposeToClient: false
+				}
 			);
-			ErrorLogger.logError(utilityError, logger);
-			processError(utilityError, logger);
+			ErrorLogger.logError(utilityError);
+			processError(utilityError);
 		}
 	};

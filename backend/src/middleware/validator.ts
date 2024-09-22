@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import validator from 'validator';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
-import { Logger } from '../utils/appLogger';
+import { Logger } from '../services/appLogger';
 
 interface ValidatorDependencies {
 	appLogger: Logger;

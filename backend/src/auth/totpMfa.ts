@@ -1,37 +1,17 @@
-import QRCode from 'qrcode';
-import { ConfigService } from 'src/config/configService';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { TOTPMFA, TOTPSecret } from '../interfaces/authInterfaces';
 
-interface TOTPSecret {
-	ascii: string;
-	hex: string;
-	base32: string;
-	otpauth_url: string;
-}
-
-interface TOTPUtilDependencies {
-	speakeasy: typeof import('speakeasy');
-	QRCode: typeof QRCode;
-}
-
-export function createTOTPUtil({ speakeasy, QRCode }: TOTPUtilDependencies): {
+export function createTOTPUtil({ speakeasy, QRCode }: TOTPMFA): {
 	generateTOTPSecret: () => TOTPSecret;
 	generateTOTPToken: (secret: string) => string;
 	verifyTOTPToken: (secret: string, token: string) => boolean;
 	generateQRCode: (otpauth_url: string) => Promise<string>;
 } {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
-
 	validateDependencies(
 		[
 			{ name: 'speakeasy', instance: speakeasy },
 			{ name: 'QRCode', instance: QRCode }
 		],
-		appLogger || console
+		appLogger
 	);
 
 	function generateTOTPSecret(): TOTPSecret {

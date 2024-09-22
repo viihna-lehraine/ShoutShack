@@ -1,4 +1,5 @@
 1. get gpg passphrase working in app.ts startup
+
 1. use batchReEncryptSecrets method during server shutdown FileProcessingError
 
 2. create new cron job to run batchReEncryptSecrets at set intervals
@@ -8,8 +9,6 @@
 3. ensure AdminSecrets are ALWAYS MASKED AND WILL NEVER PRINT NO MATTER WHAT THE FUCK ANYONE DOES
 
 4. write a listening function that will check if they STILL somehow got printed and then throw every goddamn alert I can come up with
-
-5. fix secrets masking in logger configs
 
 6. ensure secrets, env vars, and logger instances initialize in the correct order
 

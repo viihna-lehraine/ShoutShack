@@ -1,6 +1,13 @@
 import readline from 'readline';
 import argon2 from 'argon2';
 
+const hashConfig = {
+	type: argon2.argon2id,
+	memoryCost: 48640,
+	timeCost: 4,
+	parallelism: 1
+};
+
 function askHiddenQuestion(query) {
 	const rl = readline.createInterface({
 		input: process.stdin,
@@ -26,7 +33,7 @@ async function hashAdminSecret() {
 	try {
 		const key = await askHiddenQuestion('Enter secret to hash: ');
 
-		const hashedKey = await argon2.hash(key);
+		const hashedKey = await argon2.hash(key, hashConfig);
 
 		console.log(`\nHashed key: ${hashedKey}`);
 	} catch (err) {

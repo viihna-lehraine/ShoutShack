@@ -1,7 +1,7 @@
 import { Application, Request, Response, NextFunction, Router } from 'express';
-import { ConfigService } from '../config/configService';
+import { ConfigService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { ErrorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
 
 interface TestRouteDependencies {

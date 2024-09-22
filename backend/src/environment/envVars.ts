@@ -1,27 +1,22 @@
 import { config } from 'dotenv';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { configService } from '../config/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
+import { configService } from '../services/configService';
+import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import {
+	FeatureEnabler,
+	FeatureFlagTypes
+} from '../interfaces/environmentInterfaces';
+import { AppLogger } from '../services/appLogger';
+import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/validateDependencies';
+import { blankRequest, parseBoolean } from '../utils/helpers';
+import { errorLoggerDetails, getCallerInfo } from '../utils/helpers';
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
-interface FeatureEnabler {
-	enableFeatureBasedOnFlag: (
-		flag: boolean,
-		description: string,
-		callback: () => void
-	) => void;
-	enableFeatureWithProdOverride: (
-		flag: boolean,
-		description: string,
-		callback: () => void
-	) => void;
-}
+const appLogger: AppLogger = configService.getAppLogger();
 
 export function loadEnv(): void {
 	try {
@@ -32,16 +27,16 @@ export function loadEnv(): void {
 		config({ path: masterEnvPath });
 
 		const envType = process.env.ENV_TYPE || 'dev';
-		console.log(`envType = ${envType}`);
+		console.debug(`envType = ${envType}`);
 		const envFile =
 			envType === 'docker' ? 'backend.docker-dev.env' : 'backend.dev.env';
 		const envPath = path.join(process.cwd(), `./config/env/${envFile}`);
-		console.log(`Loading environment variables from ${envFile}`);
+		console.debug(`Loading environment variables from ${envFile}`);
 
 		config({ path: envPath });
 	} catch (configError) {
 		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to load environment variables from .env files using loadEnv()\n${configError instanceof Error ? configError.message : configError}`,
+			`Failed to load environment variables from .env file\n${configError instanceof Error ? configError.message : configError}\nShutting down...`,
 			{
 				originalError: configError,
 				statusCode: 404,
@@ -49,238 +44,14 @@ export function loadEnv(): void {
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logError(configurationError);
+		errorLogger.logError(
+			configurationError as AppError,
+			errorLoggerDetails(getCallerInfo, blankRequest, 'LOAD_ENV'),
+			appLogger,
+			ErrorSeverity.FATAL
+		);
 		processError(configError);
 		throw configurationError;
-	}
-}
-
-export interface EnvVariableTypes {
-	batchReEncryptSecretsInterval: number;
-	clearExpiredSecretsInterval: number;
-	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
-	dbName: string;
-	dbUser: string;
-	emailHost: string;
-	emailPort: number;
-	emailSecure: boolean;
-	emailUser: string;
-	featureApiRoutesCsrf: boolean;
-	featureDbSync: boolean;
-	featureEnableIpBlacklist: boolean;
-	featureEnableJwtAuth: boolean;
-	featureEnableLogStash: boolean;
-	featureEnableRateLimit: boolean;
-	featureEnableRedis: boolean;
-	featureEnableSession: boolean;
-	featureEnableSsl: boolean;
-	featureEncryptSecretsStore: boolean;
-	featureHonorCipherOrder: boolean;
-	featureHttpsRedirect: boolean;
-	featureLoadTestRoutes: boolean;
-	featureSequelizeLogging: boolean;
-	fidoAuthRequireResidentKey: boolean;
-	fidoAuthUserVerification:
-		| 'required'
-		| 'preferred'
-		| 'discouraged'
-		| 'enterprise';
-	fidoChallengeSize: number;
-	fidoCryptoParams: number[];
-	frontendSecretsPath: string;
-	logExportPath: string;
-	loggerLevel: string;
-	logLevel: 'debug' | 'info' | 'warn' | 'error';
-	logStashHost: string;
-	logStashNode: string;
-	logStashPort: number;
-	memoryMonitorInterval: number;
-	npmLogPath: string;
-	nodeEnv: 'development' | 'testing' | 'production';
-	primaryLogPath: string;
-	rateLimiterBaseDuration: string;
-	rateLimiterBasePoints: string;
-	redisUrl: string;
-	rpName: string;
-	rpIcon: string;
-	rpId: string;
-	secretsFilePath1: string;
-	secretsRateLimitMaxAttempts: number;
-	secretsRateLimitWindow: number;
-	secretsReEncryptionCooldown: number;
-	serverDataFilePath1: string;
-	serverDataFilePath2: string;
-	serverDataFilePath3: string;
-	serverDataFilePath4: string;
-	serverPort: number;
-	serviceName: string;
-	staticRootPath: string;
-	tlsCertPath1: string;
-	tlsKeyPath1: string;
-	yubicoApiUrl: string;
-}
-
-const fidoCryptoParams = process.env.FIDO_CRYPTO_PARAMS;
-
-const parsedFidoCryptoParams: number[] = JSON.parse(fidoCryptoParams || '[]');
-const parsedFidoAuthRequireResidentKey = parseBoolean(
-	process.env.FIDO_AUTH_REQUIRE_RESIDENT_KEY
-);
-const parsedEmailSecure = parseBoolean(process.env.EMAIL_SECURE);
-
-export const envVariables: EnvVariableTypes = {
-	batchReEncryptSecretsInterval: parseInt(
-		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!,
-		10
-	),
-	clearExpiredSecretsInterval: parseInt(
-		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!,
-		10
-	),
-	dbName: process.env.DB_NAME!,
-	dbDialect: process.env.DB_DIALECT! as
-		| 'mariadb'
-		| 'mssql'
-		| 'mysql'
-		| 'postgres'
-		| 'sqlite',
-	dbUser: process.env.DB_USER!,
-	emailHost: process.env.EMAIL_HOST!,
-	emailPort: parseInt(process.env.EMAIL_PORT!, 10),
-	emailSecure: parsedEmailSecure!,
-	emailUser: process.env.EMAIL_USER!,
-	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
-	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
-	featureEnableIpBlacklist:
-		process.env.FEATURE_ENABLE_IP_BLACKLIST === 'true',
-	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
-	featureEnableLogStash: process.env.FEATURE_ENABLE_LOGSTASH === 'true',
-	featureEnableRateLimit: process.env.FEATURE_ENABLE_RATE_LIMIT === 'true',
-	featureEnableRedis: process.env.FEATURE_ENABLE_REDIS! === 'true',
-	featureEnableSession: process.env.FEATURE_ENABLE_SESSION! === 'true',
-	featureEnableSsl: process.env.FEATURE_ENABLE_SSL! === 'true',
-	featureEncryptSecretsStore: process.env.FEATURE_ENCRYPTS_STORE! === 'true',
-	featureHttpsRedirect: process.env.FEATURE_HTTPS_REDIRECT! === 'true',
-	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES! === 'true',
-	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING! === 'true',
-	featureHonorCipherOrder: process.env.FEATURE_HONOR_CIPHER_ORDER! === 'true',
-	fidoAuthRequireResidentKey: parsedFidoAuthRequireResidentKey!,
-	fidoAuthUserVerification: process.env
-		.FIDO_AUTHENTICATOR_USER_VERIFICATION! as
-		| 'required'
-		| 'preferred'
-		| 'discouraged'
-		| 'enterprise',
-	fidoChallengeSize: parseInt(process.env.FIDO_CHALLENGE_SIZE!, 10),
-	fidoCryptoParams: parsedFidoCryptoParams!,
-	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH!,
-	logExportPath: process.env.LOG_EXPORT_PATH!,
-	loggerLevel: process.env.LOGGER!,
-	logLevel: process.env.LOG_LEVEL! as 'debug' | 'info' | 'warn' | 'error',
-	logStashHost: process.env.LOGSTASH_HOST!,
-	logStashNode: process.env.LOGSTASH_NODE!,
-	logStashPort: parseInt(process.env.LOGSTASH_PORT!, 10),
-	memoryMonitorInterval: parseInt(process.env.MEMORY_MONITOR_INTERVAL!, 10),
-	nodeEnv: process.env.NODE_ENV! as 'development' | 'testing' | 'production',
-	npmLogPath: process.env.SERVER_NPM_LOG_PATH!,
-	primaryLogPath: process.env.SERVER_LOG_PATH!,
-	rateLimiterBaseDuration: process.env.RATE_LIMITER_BASE_DURATION!,
-	rateLimiterBasePoints: process.env.RATE_LIMITER_BASE_POINTS!,
-	redisUrl: process.env.REDIS_URL!,
-	rpName: process.env.RP_NAME!,
-	rpIcon: process.env.RP_ICON!,
-	rpId: process.env.RP_ID!,
-	secretsFilePath1: process.env.SECRETS_FILE_PATH_1!,
-	secretsRateLimitMaxAttempts: parseInt(
-		process.env.SECRETS_RATE_LIMIT_MAX_ATTEMPTS!,
-		10
-	),
-	secretsRateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW!, 10),
-	secretsReEncryptionCooldown: parseInt(
-		process.env.SECRETS_RE_ENCRYPTION_COOLDOWN!,
-		10
-	),
-	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1!,
-	serverDataFilePath2: process.env.SERVER_DATA_FILE_PATH_2!,
-	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3!,
-	serverDataFilePath4: process.env.SERVER_DATA_FILE_PATH_4!,
-	serverPort: parseInt(process.env.SERVER_PORT!, 10),
-	serviceName: process.env.SERVICE_NAME!,
-	staticRootPath: process.env.STATIC_ROOT_PATH!,
-	tlsCertPath1: process.env.TLS_CERT_PATH_1!,
-	tlsKeyPath1: process.env.TLS_KEY_PATH_1!,
-	yubicoApiUrl: process.env.YUBICO_API_URL!
-};
-
-export const FeatureFlagNames = {
-	API_ROUTES_CSR: 'FEATURE_API_ROUTES_CSRF',
-	DB_SYNC: 'FEATURE_DB_SYNC',
-	ENABLE_CSRF: 'FEATURE_ENABLE_CSRF',
-	ENABLE_IP_BLACKLIST: 'FEATURE_ENABLE_IP_BLACKLIST',
-	ENABLE_JWT_AUTH: 'FEATURE_ENABLE_JWT_AUTH',
-	ENABLE_LOG_STASH: 'FEATURE_ENABLE_LOG_STASH',
-	ENABLE_RATE_LIMIT: 'FEATURE_ENABLE_RATE_LIMIT',
-	ENABLE_REDIS: 'FEATURE_ENABLE_REDIS',
-	ENABLE_TLS: 'FEATURE_ENABLE_TLS',
-	ENCRYPT_SECRETS_STORE: 'FEATURE_ENCRYPT_SECRETS_STORE',
-	HONOR_CIPHER_ORDER: 'FEATURE_HONOR_CIPHER_ORDER',
-	HTTPS_REDIRECT: 'FEATURE_HTTPS_REDIRECT',
-	LOAD_TEST_ROUTES: 'FEATURE_LOAD_TEST_ROUTES',
-	SECURE_HEADERS: 'FEATURE_SECURE_HEADERS',
-	SEQUELIZE_LOGGING: 'FEATURE_SEQUELIZE_LOGGING'
-} as const;
-
-export type FeatureFlagNamesType = keyof typeof FeatureFlagNames;
-
-export type FeatureFlagValueType =
-	(typeof FeatureFlagNames)[FeatureFlagNamesType];
-
-export interface FeatureFlagTypes {
-	apiRoutesCsrf: boolean;
-	dbSync: boolean;
-	enableIpBlacklist: boolean;
-	enableJwtAuth: boolean;
-	enableLogStash: boolean;
-	enableRateLimit: boolean;
-	enableRedis: boolean;
-	enableTLS: boolean;
-	encryptSecretsStore: boolean;
-	honorCipherOrder: boolean;
-	httpsRedirect: boolean;
-	loadTestRoutes: boolean;
-	sequelizeLogging: boolean;
-}
-
-export function parseBoolean(value: string | boolean | undefined): boolean {
-	const appLogger = configService.getAppLogger() || console;
-
-	try {
-		validateDependencies([{ name: 'value', instance: value }], appLogger);
-
-		if (value === undefined) {
-			appLogger.warn(
-				'Feature flag value is undefined. Defaulting to false'
-			);
-			return false;
-		}
-		if (typeof value === 'string') {
-			return value.toLowerCase() === 'true';
-		}
-		return value === true;
-	} catch (utilError) {
-		const utilityError = new errorClasses.UtilityErrorFatal(
-			`Fatal error: Unable to parse boolean value ${value} using 'parseBoolean()'\n${utilError instanceof Error ? utilError.message : utilError}`,
-			{
-				utility: 'parseBoolean()',
-				originalError: utilError,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(utilityError);
-		processError(utilityError);
-		throw utilityError;
 	}
 }
 
@@ -288,8 +59,6 @@ export function getFeatureFlags(
 	env: Partial<NodeJS.ProcessEnv> = process.env
 ): FeatureFlagTypes {
 	try {
-		validateDependencies([{ name: 'env', instance: env }], console);
-
 		return {
 			apiRoutesCsrf: parseBoolean(env.FEATURE_API_ROUTES_CSRF),
 			dbSync: parseBoolean(env.FEATURE_DB_SYNC),
@@ -311,7 +80,16 @@ export function getFeatureFlags(
 			`Failed to get feature flags using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
 			{ utility, exposeToClient: false }
 		);
-		ErrorLogger.logError(utilityError);
+		errorLogger.logError(
+			utilityError as AppError,
+			errorLoggerDetails(
+				getCallerInfo,
+				blankRequest,
+				'GET_FEATURE_FLAGS'
+			),
+			appLogger,
+			ErrorSeverity.RECOVERABLE
+		);
 		processError(utilityError);
 		return {
 			apiRoutesCsrf: false,
@@ -379,7 +157,16 @@ export function createFeatureEnabler(): FeatureEnabler {
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logError(utilityError);
+		errorLogger.logError(
+			utilityError as AppError,
+			errorLoggerDetails(
+				getCallerInfo,
+				blankRequest,
+				'CREATE_FEATURE_ENABLER'
+			),
+			appLogger,
+			ErrorSeverity.RECOVERABLE
+		);
 		processError(utilityError);
 		return {
 			enableFeatureBasedOnFlag: (): void => {},
@@ -389,14 +176,12 @@ export function createFeatureEnabler(): FeatureEnabler {
 }
 
 export function displayEnvAndFeatureFlags(): void {
-	const featureFlags = configService.getFeatureFlags();
-
 	try {
 		console.log('Environment Variables:');
-		console.table(envVariables);
+		console.table(configService.getEnvVariables());
 
 		console.log('\nFeature Flags:');
-		console.table(featureFlags);
+		console.table(configService.getFeatureFlags());
 	} catch (displayError) {
 		const displayUtility = 'displayEnvAndFeatureFlags()';
 		const displayErrorObj = new errorClasses.UtilityErrorRecoverable(
@@ -408,7 +193,12 @@ export function displayEnvAndFeatureFlags(): void {
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logError(displayErrorObj);
+		errorLogger.logError(
+			displayErrorObj as AppError,
+			errorLoggerDetails(getCallerInfo, blankRequest, 'DISPLAY_ENV'),
+			appLogger,
+			ErrorSeverity.RECOVERABLE
+		);
 		processError(displayErrorObj);
 	}
 }

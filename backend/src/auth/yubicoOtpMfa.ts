@@ -1,39 +1,9 @@
-import { execSync } from 'child_process';
-import yub from 'yub';
-import getSecrets, { SecretsMap } from '../environment/envSecrets';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../errors/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../utils/appLogger.js';
-import { validateDependencies } from '../utils/validateDependencies';
-
-import '../../types/custom/yub';
-
-interface YubClient {
-	verify(
-		otp: string,
-		callback: (err: Error | null, data: YubResponse) => void
-	): void;
-}
-
-interface YubResponse {
-	status: string;
-	[key: string]: string | number | boolean | object | null | undefined;
-}
-
-interface YubicoOtpOptions {
-	clientId: number;
-	apiKey: string;
-	apiUrl: string;
-}
-
-interface YubicoUtilDependencies {
-	yub: typeof yub;
-	getSecrets: typeof getSecrets.getSecrets;
-	logger: Logger;
-	execSync: typeof execSync;
-	getDirectoryPath: () => string;
-}
+import {
+	YubClient,
+	YubicoOtpMFA,
+	YubicoOtpOptions,
+	YubResponse
+} from '../interfaces/authInterfaces';
 
 export default function createYubicoOtpUtil({
 	yub,
