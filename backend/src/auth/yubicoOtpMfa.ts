@@ -3,7 +3,7 @@ import {
 	YubicoOtpMFA,
 	YubicoOtpOptions,
 	YubResponse
-} from '../interfaces/authInterfaces';
+} from '../index/interfaces';
 
 export default function createYubicoOtpUtil({
 	yub,

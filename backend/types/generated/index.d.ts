@@ -10,7 +10,7 @@ import errorHandler from './middleware/expressErrorHandler';
 import setupSecurityHeaders from './middleware/securityHeaders';
 import slowdownMiddleware from './middleware/slowdown';
 import { csrfMiddleware } from './middleware/csrf';
-import { addToBlacklist, initializeIpBlacklist, ipBlacklistMiddleware, loadBlacklist, removeFromBlacklist } from './middleware/ipBlacklist';
+import { addToBlacklist, initializeIpBlacklist, ipBlacklistMiddleware, loadBlacklist, removeFromBlacklist } from './middleware/blacklist';
 import { rateLimitMiddleware } from './middleware/rateLimit';
 import { registrationValidationRules, validateEntry } from './middleware/validator';
 import { generateBackupCodes, getBackupCodesFromDatabase, saveBackupCodesToDatabase, verifyBackupCode } from './auth/backupCode';

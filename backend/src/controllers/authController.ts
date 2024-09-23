@@ -1,4 +1,4 @@
-import { AuthController } from '../interfaces/controllerInterfaces';
+import { AuthController } from '../index/controllerInterfaces';
 
 export function userLogin({
 	argon2,

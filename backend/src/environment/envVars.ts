@@ -6,7 +6,8 @@ import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import {
 	FeatureEnabler,
 	FeatureFlagTypes
-} from '../interfaces/environmentInterfaces';
+} from '../index/environmentInterfaces';
+import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
 import { AppLogger } from '../services/appLogger';
 import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
@@ -50,47 +51,77 @@ export function loadEnv(): void {
 			appLogger,
 			ErrorSeverity.FATAL
 		);
-		processError(configError);
+		const processErrorParams = {
+			...ProcessErrorStaticParameters,
+			error: configurationError,
+			req: blankRequest,
+			details: {
+				reason: 'Failed to load environment variables from .env file'
+			}
+		};
+		processError(processErrorParams);
 		throw configurationError;
 	}
 }
 
-export function getFeatureFlags(
-	env: Partial<NodeJS.ProcessEnv> = process.env
-): FeatureFlagTypes {
+export function getFeatureFlags(): FeatureFlagTypes {
 	try {
 		return {
-			apiRoutesCsrf: parseBoolean(env.FEATURE_API_ROUTES_CSRF),
-			dbSync: parseBoolean(env.FEATURE_DB_SYNC),
-			enableIpBlacklist: parseBoolean(env.FEATURE_ENABLE_IP_BLACKLIST),
-			enableJwtAuth: parseBoolean(env.FEATURE_ENABLE_JWT_AUTH),
-			enableLogStash: parseBoolean(env.FEATURE_ENABLE_LOGSTASH),
-			enableRateLimit: parseBoolean(env.FEATURE_ENABLE_RATE_LIMIT),
-			enableRedis: parseBoolean(env.FEATURE_ENABLE_REDIS),
-			enableTLS: parseBoolean(env.FEATURE_ENABLE_SSL),
-			encryptSecretsStore: parseBoolean(env.FEATURE_ENCRYPT_STORE),
-			honorCipherOrder: parseBoolean(env.FEATURE_HONOR_CIPHER_ORDER),
-			httpsRedirect: parseBoolean(env.FEATURE_HTTPS_REDIRECT),
-			loadTestRoutes: parseBoolean(env.FEATURE_LOAD_TEST_ROUTES),
-			sequelizeLogging: parseBoolean(env.FEATURE_SEQUELIZE_LOGGING)
+			apiRoutesCsrf: parseBoolean(process.env.FEATURE_API_ROUTES_CSRF),
+			dbSync: parseBoolean(process.env.FEATURE_DB_SYNC),
+			enableIpBlacklist: parseBoolean(
+				process.env.FEATURE_ENABLE_IP_BLACKLIST
+			),
+			enableJwtAuth: parseBoolean(process.env.FEATURE_ENABLE_JWT_AUTH),
+			enableLogStash: parseBoolean(process.env.FEATURE_ENABLE_LOGSTASH),
+			enableRateLimit: parseBoolean(
+				process.env.FEATURE_ENABLE_RATE_LIMIT
+			),
+			enableRedis: parseBoolean(process.env.FEATURE_ENABLE_REDIS),
+			enableTLS: parseBoolean(process.env.FEATURE_ENABLE_SSL),
+			encryptSecretsStore: parseBoolean(
+				process.env.FEATURE_ENCRYPT_STORE
+			),
+			honorCipherOrder: parseBoolean(
+				process.env.FEATURE_HONOR_CIPHER_ORDER
+			),
+			httpsRedirect: parseBoolean(process.env.FEATURE_HTTPS_REDIRECT),
+			loadTestRoutes: parseBoolean(process.env.FEATURE_LOAD_TEST_ROUTES),
+			sequelizeLogging: parseBoolean(
+				process.env.FEATURE_SEQUELIZE_LOGGING
+			)
 		};
 	} catch (utilError) {
-		const utility: string = 'getFeatureFlags()';
 		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Failed to get feature flags using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
-			{ utility, exposeToClient: false }
+			`Failed to get feature flags using the utility 'getFeatureFlags()\n${utilError instanceof Error ? utilError.message : utilError}`,
+			{
+				utility: 'getFeatureFlags()',
+				originalError: utilError,
+				statusCode: 500,
+				severity: ErrorSeverity.RECOVERABLE,
+				exposeToClient: false
+			}
 		);
+
+		// Log the error
 		errorLogger.logError(
 			utilityError as AppError,
 			errorLoggerDetails(
-				getCallerInfo,
+				() => 'getFeatureFlags()',
 				blankRequest,
 				'GET_FEATURE_FLAGS'
 			),
 			appLogger,
 			ErrorSeverity.RECOVERABLE
 		);
-		processError(utilityError);
+
+		processError({
+			...ProcessErrorStaticParameters,
+			error: utilityError,
+			req: blankRequest,
+			details: { reason: 'Failed to retrieve feature flags' }
+		});
+
 		return {
 			apiRoutesCsrf: false,
 			dbSync: false,
@@ -146,11 +177,10 @@ export function createFeatureEnabler(): FeatureEnabler {
 			}
 		};
 	} catch (utilError) {
-		const utility: string = 'createFeatureEnabler()';
 		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Failed to create feature enabler using the utility ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
+			`Failed to create feature enabler using the utility 'displayEnvAndFeatureFlags()'\n${utilError instanceof Error ? utilError.message : utilError}`,
 			{
-				utility,
+				utility: 'createFeatureEnabler()',
 				originalError: utilError,
 				statusCode: 500,
 				severity: ErrorSeverity.RECOVERABLE,
@@ -167,7 +197,12 @@ export function createFeatureEnabler(): FeatureEnabler {
 			appLogger,
 			ErrorSeverity.RECOVERABLE
 		);
-		processError(utilityError);
+		processError({
+			...ProcessErrorStaticParameters,
+			error: utilityError,
+			req: blankRequest,
+			details: { reason: 'Failed to create feature enabler' }
+		});
 		return {
 			enableFeatureBasedOnFlag: (): void => {},
 			enableFeatureWithProdOverride: (): void => {}
@@ -183,10 +218,10 @@ export function displayEnvAndFeatureFlags(): void {
 		console.log('\nFeature Flags:');
 		console.table(configService.getFeatureFlags());
 	} catch (displayError) {
-		const displayUtility = 'displayEnvAndFeatureFlags()';
 		const displayErrorObj = new errorClasses.UtilityErrorRecoverable(
-			`Error displaying environment variables and feature flags using ${displayUtility}: ${displayError instanceof Error ? displayError.message : displayError}`,
+			`Error displaying environment variables and feature flags using 'displayEnvAndFeatureFlags()'\n${displayError instanceof Error ? displayError.message : displayError}`,
 			{
+				utility: 'displayEnvAndFeatureFlags()',
 				originalError: displayError,
 				statusCode: 500,
 				severity: ErrorSeverity.RECOVERABLE,
@@ -199,6 +234,13 @@ export function displayEnvAndFeatureFlags(): void {
 			appLogger,
 			ErrorSeverity.RECOVERABLE
 		);
-		processError(displayErrorObj);
+		processError({
+			...ProcessErrorStaticParameters,
+			error: displayError,
+			req: blankRequest,
+			details: {
+				reason: 'Unable to display env variables and feature flags'
+			}
+		});
 	}
 }

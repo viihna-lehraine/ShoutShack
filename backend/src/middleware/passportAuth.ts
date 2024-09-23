@@ -1,15 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { AuthenticateOptions, PassportStatic } from 'passport';
 import { ConfigService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../services/errorLogger';
 import { expressErrorHandler } from '../errors/processError';
 import { validateDependencies } from '../utils/helpers';
-
-interface PassportAuthMiddlewareDependencies {
-	passport: PassportStatic;
-	authenticateOptions: AuthenticateOptions;
-}
 
 export const initializePassportAuthMiddleware = ({
 	passport,

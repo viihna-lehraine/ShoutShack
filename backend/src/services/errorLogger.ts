@@ -1,6 +1,6 @@
-import { ErrorLoggerInterface } from '../interfaces/serviceInterfaces';
-import { ValidateDependencies } from '../interfaces/utilityInterfaces';
-import { ConfigServiceInterface } from '../interfaces/environmentInterfaces';
+import { ErrorLoggerInterface } from '../index/serviceInterfaces';
+import { ValidateDependenciesInterface } from '../index/utilityInterfaces';
+import { ConfigServiceInterface } from '../index/environmentInterfaces';
 import { ConfigService } from './configService';
 import { validateDependencies } from '../utils/helpers';
 import { ErrorSeverity } from '../errors/errorClasses';
@@ -11,11 +11,11 @@ const errorCounts = new Map<string, number>();
 
 export class ErrorLogger implements ErrorLoggerInterface {
 	private configService: ConfigServiceInterface;
-	private validationService: ValidateDependencies;
+	private validationService: ValidateDependenciesInterface;
 
 	constructor(
 		configService: ConfigServiceInterface,
-		validationService: ValidateDependencies
+		validationService: ValidateDependenciesInterface
 	) {
 		this.configService = configService;
 		this.validationService = validationService;

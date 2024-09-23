@@ -3,7 +3,7 @@ import { configService } from '../services/configService';
 import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { ErrorLogger } from '../services/errorLogger';
 import { processError, sendClientErrorResponse } from '../errors/processError';
-import { BackupCode, BackupCodeService } from '../interfaces/authInterfaces';
+import { BackupCode, BackupCodeService } from '../index/interfaces';
 import { AppLogger } from '../services/appLogger';
 import { validateDependencies } from '../utils/helpers';
 

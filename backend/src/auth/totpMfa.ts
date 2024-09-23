@@ -1,4 +1,4 @@
-import { TOTPMFA, TOTPSecret } from '../interfaces/authInterfaces';
+import { TOTPMFA, TOTPSecret } from '../index/interfaces';
 
 export function createTOTPUtil({ speakeasy, QRCode }: TOTPMFA): {
 	generateTOTPSecret: () => TOTPSecret;

@@ -1,5 +1,5 @@
 import { isAppLogger, AppLogger } from '../services/appLogger';
-import { Dependency } from '../interfaces/utilityInterfaces';
+import { DependencyInterface } from '../index/utilityInterfaces';
 import { configService } from '../services/configService';
 import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
@@ -7,6 +7,7 @@ import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { v4 as uuidv4 } from 'uuid';
 import { Request } from 'express';
 import { Socket } from 'net';
+import { ProcessErrorStaticParameters } from 'src/parameters/errorParameters';
 
 export const blankRequest: Request = {
 	headers: {},
@@ -18,8 +19,8 @@ export const blankRequest: Request = {
 
 export function errorLoggerDetails(
 	getCallerInfo: () => string,
-	req?: Request,
-	actionManual?: string
+	actionManual?: string,
+	req?: Request
 ): Record<string, unknown> {
 	const adminIdVal = configService.getAdminId() || null;
 	const ipDetails =
@@ -44,7 +45,6 @@ export function errorLoggerDetails(
 	return details;
 }
 
-// *DEV-NOTE* implement this in middleware
 export function generateRequestId(): string {
 	return uuidv4();
 }
@@ -91,17 +91,22 @@ export function parseBoolean(value: string | boolean | undefined): boolean {
 		const severity: string = ErrorSeverity.FATAL;
 		errorLogger.logError(
 			utilityError as AppError,
-			errorLoggerDetails(getCallerInfo, blankRequest, actionVal),
+			errorLoggerDetails(getCallerInfo, actionVal, blankRequest),
 			appLogger,
 			severity
 		);
-		processError(utilityError);
+		processError({
+			...ProcessErrorStaticParameters,
+			error: utilityError,
+			appLogger,
+			details: { reason: 'Failed to parse data to type boolean' }
+		});
 		throw utilityError;
 	}
 }
 
 export function validateDependencies(
-	dependencies: Dependency[],
+	dependencies: DependencyInterface[],
 	appLogger: AppLogger
 ): void {
 	const logInfo = isAppLogger(appLogger) ? appLogger.info : console.info;

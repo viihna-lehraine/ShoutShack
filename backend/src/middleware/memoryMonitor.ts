@@ -1,33 +1,24 @@
-import os from 'os';
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/helpers';
-
-interface MemoryStats {
-	rss: string; // MB
-	heapTotal: string; // MB
-	heapUsed: string; // MB
-	external: string; // MB
-	available: string; // MB
-}
-
-interface MemoryMonitorDependencies {
-	os: typeof os;
-	process: NodeJS.Process;
-	setInterval: typeof setInterval;
-}
+import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
+import {
+	MemoryMonitorInterface,
+	MemoryMonitorStats
+} from '../index/middlewareInterfaces';
 
 export function createMemoryMonitor({
 	os,
 	process,
-	setInterval
-}: MemoryMonitorDependencies): {
+	setInterval,
+	appLogger,
+	configService,
+	errorClasses,
+	ErrorSeverity,
+	errorLogger,
+	processError,
+	validateDependencies
+}: MemoryMonitorInterface): {
 	startMemoryMonitor: () => NodeJS.Timeout;
 } {
-	const appLogger = ConfigService.getInstance().getLogger();
-	const envVariables = ConfigService.getInstance().getEnvVariables();
+	const envVariables = configService.getEnvVariables();
 
 	try {
 		validateDependencies(
@@ -35,14 +26,14 @@ export function createMemoryMonitor({
 				{ name: 'process', instance: process },
 				{ name: 'setInterval', instance: setInterval }
 			],
-			appLogger || console
+			appLogger
 		);
 
 		function logMemoryUsage(): void {
 			try {
 				const memoryUsage = process.memoryUsage();
-				const memoryStats: MemoryStats = {
-					rss: (memoryUsage.rss / 1024 / 1024).toFixed(2), // convert bytes to MB
+				const memoryStats: MemoryMonitorStats = {
+					rss: (memoryUsage.rss / 1024 / 1024).toFixed(2),
 					heapTotal: (memoryUsage.heapTotal / 1024 / 1024).toFixed(2),
 					heapUsed: (memoryUsage.heapUsed / 1024 / 1024).toFixed(2),
 					external: (memoryUsage.external / 1024 / 1024).toFixed(2),
@@ -67,8 +58,18 @@ export function createMemoryMonitor({
 						exposeToClient: false
 					}
 				);
-				ErrorLogger.logWarning(utilityError.message);
-				processError(utilityError);
+				errorLogger.logWarning(
+					utilityError.message,
+					{},
+					appLogger,
+					ErrorSeverity.RECOVERABLE
+				);
+				processError({
+					...ProcessErrorStaticParameters,
+					error: utilityError,
+					appLogger,
+					details: { reason: 'Failed to log memory usage' }
+				});
 			}
 		}
 
@@ -93,8 +94,18 @@ export function createMemoryMonitor({
 				exposeToClient: false
 			}
 		);
-		ErrorLogger.logWarning(utilityError.message);
-		processError(utilityError);
+		errorLogger.logWarning(
+			utilityError.message,
+			{},
+			appLogger,
+			ErrorSeverity.RECOVERABLE
+		);
+		processError({
+			...ProcessErrorStaticParameters,
+			error: utilityError,
+			appLogger,
+			details: { reason: 'Failed to create and start memory monitor' }
+		});
 		return { startMemoryMonitor: () => setInterval(() => {}, 0) }; // no-op function
 	}
 }

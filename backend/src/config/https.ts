@@ -1,5 +1,5 @@
 import { constants as cryptoConstants } from 'crypto';
-import { DeclareWebServerOptionsInterface, WebServerOptions } from '../interfaces/webServerInterfaces';
+import { DeclareWebServerOptionsInterface, WebServerOptions } from '../index/webServerInterfaces';
 import { AppError } from '../errors/errorClasses';
 import { ConfigService } from '../services/configService';
 import { isAppLogger } from '../services/appLogger';

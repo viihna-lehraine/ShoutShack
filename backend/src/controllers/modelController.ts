@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { WhereOptions } from 'sequelize';
-import { ModelController } from '../interfaces/controllerInterfaces';
-import { ModelOperations, ModelType } from '../interfaces/modelInterfaces';
+import { ModelController } from '../index/controllerInterfaces';
+import { ModelOperations, ModelType } from '../index/modelInterfaces';
 
 export const getEntries =
 	<T extends ModelType>(

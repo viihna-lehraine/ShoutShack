@@ -1,20 +1,23 @@
-import csrf from 'csrf';
-import { NextFunction, Request, Response } from 'express';
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { expressErrorHandler } from '../errors/processError';
+import {
+	CsrfMiddlewareInterface,
+	InitCsrfInterface
+} from '../index/middlewareInterfaces';
 
-export function initializeCsrfMiddleware() {
+export function initCsrf({
+	csrf,
+	appLogger,
+	errorClasses,
+	errorLogger,
+	ErrorSeverity,
+	expressErrorHandler
+}: InitCsrfInterface) {
 	const csrfProtection = new csrf();
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
 
-	return function csrfMiddleware(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): void {
+	return function csrfMiddleware({
+		req,
+		res,
+		next
+	}: CsrfMiddlewareInterface): void {
 		try {
 			appLogger.info('CSRF middleware enabled');
 
@@ -42,12 +45,21 @@ export function initializeCsrfMiddleware() {
 			}
 			next();
 		} catch (expressError) {
-			const middleware: string = 'CSRF Middleware';
 			const expressMiddlewareError = new errorClasses.ExpressError(
-				`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
-				{ severity: ErrorSeverity.FATAL, exposeToClient: false }
+				`Error occurred when initializing 'CSRF Middleware'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
+				{
+					originalError: expressError,
+					statusCode: 500,
+					severity: ErrorSeverity.FATAL,
+					exposeToClient: false
+				}
 			);
-			ErrorLogger.logError(expressMiddlewareError, appLogger);
+			errorLogger.logError(
+				expressMiddlewareError,
+				{},
+				appLogger,
+				ErrorSeverity.FATAL
+			);
 			expressErrorHandler();
 			next(expressError);
 		}

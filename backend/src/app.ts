@@ -37,6 +37,11 @@ import { AppLogger, handleCriticalError } from './services/appLogger';
 import { errorLoggerDetails } from './utils/helpers';
 import { getCallerInfo } from './utils/helpers';
 import { blankRequest } from './utils/helpers';
+import { ProcessErrorStaticParameters } from './parameters/errorParameters';
+import { InitializeDatabaseStaticParameters } from './parameters/databaseParameters';
+import { Sequelize } from 'sequelize';
+
+let sequelize: Sequelize;
 
 async function start(): Promise<void> {
 	try {
@@ -99,11 +104,16 @@ async function start(): Promise<void> {
 						appLogger,
 						ErrorSeverity.RECOVERABLE
 					);
-					processError(memoryMonitorError);
+					processError({
+						...ProcessErrorStaticParameters,
+						error: memoryMonitorError,
+						req: blankRequest,
+						details: { reason: 'Failed to start memory monitor' }
+					});
 				}
 			})
 			.then(() => {
-				return initializeDatabase()
+				return initializeDatabase(InitializeDatabaseStaticParameters)
 					.then(sequelize => {
 						initializeModels(sequelize, appLogger);
 
@@ -113,7 +123,7 @@ async function start(): Promise<void> {
 								'production'
 						) {
 							appLogger.info('Synchronizing database');
-							return sequelize.sync();
+							return sequelize.sync().then(() => void 0);
 						}
 
 						return Promise.resolve();
@@ -139,7 +149,12 @@ async function start(): Promise<void> {
 							appLogger,
 							ErrorSeverity.FATAL
 						);
-						processError(databaseErrorFatal);
+						processError({
+							...ProcessErrorStaticParameters,
+							error: databaseErrorFatal,
+							req: blankRequest,
+							details: { reason: 'Failed to initialize database' }
+						});
 						throw databaseErrorFatal;
 					});
 			})
@@ -153,9 +168,9 @@ async function start(): Promise<void> {
 						new errorClasses.DependencyErrorFatal(
 							`Error occurred during passport configuration\n${passportConfigError instanceof Error ? passportConfigError.message : String(passportConfigError)}`,
 							{
+								originalError: passportConfigError,
 								statusCode: 500,
 								severity: ErrorSeverity.FATAL,
-								originalError: passportConfigError,
 								exposeToClient: false
 							}
 						);
@@ -169,7 +184,12 @@ async function start(): Promise<void> {
 						appLogger,
 						ErrorSeverity.FATAL
 					);
-					processError(passportConfigErrorFatal);
+					processError({
+						...ProcessErrorStaticParameters,
+						error: passportConfigErrorFatal,
+						req: blankRequest,
+						details: { reason: 'Failed to configure Passport' }
+					});
 					throw passportConfigErrorFatal;
 				});
 			})
@@ -181,7 +201,7 @@ async function start(): Promise<void> {
 								new errorClasses.DependencyErrorRecoverable(
 									`Failed to get Redis client. Redis client is null\n${String(Error)}`,
 									{
-										originalError: String(Error),
+										originalError: Error,
 										statusCode: 500,
 										severity: ErrorSeverity.RECOVERABLE,
 										exposeToClient: false
@@ -197,7 +217,14 @@ async function start(): Promise<void> {
 								appLogger,
 								ErrorSeverity.RECOVERABLE
 							);
-							processError(redisError);
+							processError({
+								...ProcessErrorStaticParameters,
+								error: redisError,
+								req: blankRequest,
+								details: {
+									reason: 'Failed to get Redis client'
+								}
+							});
 						}
 					})
 					.catch(initRedisErrorRecoverable => {
@@ -221,7 +248,12 @@ async function start(): Promise<void> {
 							appLogger,
 							ErrorSeverity.RECOVERABLE
 						);
-						processError(initRedisError);
+						processError({
+							...ProcessErrorStaticParameters,
+							error: initRedisError,
+							req: blankRequest,
+							details: { reason: 'Failed to initialize Redis' }
+						});
 					});
 			})
 			.then(() => {
@@ -279,7 +311,12 @@ async function start(): Promise<void> {
 						appLogger,
 						ErrorSeverity.FATAL
 					);
-					processError(appInitErrorFatal);
+					processError({
+						...ProcessErrorStaticParameters,
+						error: appInitErrorFatal,
+						req: blankRequest,
+						details: { reason: 'Fatal error during APP_INIT' }
+					});
 					throw appInitErrorFatal;
 				} else {
 					handleCriticalError(appInitError);

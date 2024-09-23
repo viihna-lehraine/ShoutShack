@@ -1,8 +1,8 @@
-import { ConfigSecretsInterface } from '../interfaces/environmentInterfaces';
+import { ConfigSecretsInterface } from '../index/environmentInterfaces';
 import {
 	EnvVariableTypes,
 	FeatureFlagTypes
-} from '../interfaces/environmentInterfaces';
+} from '../index/environmentInterfaces';
 import { SecretsStore } from './envSecrets';
 import { ConfigService } from '../services/configService';
 

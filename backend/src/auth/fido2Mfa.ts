@@ -21,9 +21,11 @@ import {
 	FidoUser,
 	GeneratePasskeyAuthenticationOptions,
 	VerifyPasskeyAuthentication
-} from '../interfaces/authInterfaces';
+} from '../index/interfaces';
 import { Logger } from '../services/appLogger';
 import { validateDependencies } from '../utils/helpers';
+
+import '../../types/custom/yub.js';
 
 let fido2: Fido2Lib | null = null;
 let secrets: SecretsMap;

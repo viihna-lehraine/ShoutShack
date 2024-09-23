@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { FileFilterCallback, Multer } from 'multer';
-import { MulterService } from '../interfaces/serviceInterfaces';
+import { MulterService } from '../index/serviceInterfaces';
 
 export function createMulterUpload({
 	multer,

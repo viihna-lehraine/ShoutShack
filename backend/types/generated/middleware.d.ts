@@ -13,7 +13,7 @@ import { getRedisClient } from './services/redis';
 import { SecretsMap } from './environment/sops';
 import { initializeCsrfMiddleware } from './middleware/csrf';
 import { expressErrorHandler } from './middleware/expressErrorHandler';
-import { ipBlacklistMiddleware } from './middleware/ipBlacklist';
+import { ipBlacklistMiddleware } from './middleware/blacklist';
 import { initializeJwtAuthMiddleware } from './middleware/jwtAuth';
 import { initializePassportAuthMiddleware } from './middleware/passportAuth';
 import { initializeRateLimitMiddleware } from './middleware/rateLimit';

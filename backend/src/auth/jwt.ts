@@ -1,45 +1,38 @@
-import { execSync } from 'child_process';
-import jwt from 'jsonwebtoken';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { CreateJwt, JwtUser } from '../interfaces/authInterfaces';
-import { validateDependencies } from '../utils/helpers';
+import { CreateJwtInterface, JwtUserInterface } from '../index/interfaces';
+import { CreateJwtParameters } from '../index/parameters';
 
-export function createJwt(logger: Logger): {
+export function createJwt(paramsObject: CreateJwtInterface): {
 	generateJwt: (user: JwtUser) => Promise<string>;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 } {
-	let secrets: Secrets;
+	const params: CreateJwtInterface = CreateJwtParameters;
 
-	const loadSecrets = async (): Promise<Secrets> => {
+	const loadJwtSecret = async (): Promise<string> => {
 		try {
-			validateDependencies(
-				[{ name: 'execSync', instance: execSync }],
-				logger
+			const secret = params.envSecretsStore.retrieveSecret(
+				'JWT_SECRET',
+				params.appLogger
 			);
 
-			const secrets = await sops.getSecrets({
-				logger,
-				execSync,
-				getDirectoryPath: () => process.cwd()
-			});
+			if (!secret) {
+				throw new Error('JWT_SECRET is not available.');
+			}
 
-			validateDependencies(
-				[{ name: 'secrets.JWT_SECRET', instance: secrets.JWT_SECRET }],
-				logger
-			);
-
-			return secrets;
+			return secret;
 		} catch (utilError) {
-			const utility: string = 'jwtUtil - loadSecrets()';
-			const utilityError = new errorClasses.UtilityErrorFatal(
-				`Failed to load secrets in ${utility}: ${utilError instanceof Error ? utilError.message : utilError} ; Shutting down...`,
+			const utilityError = new params.errorClasses.UtilityErrorFatal(
+				`Failed to load secrets in 'jwtUtil - loadJwtSecret()'\n${utilError instanceof Error ? utilError.message : utilError}\nShutting down...`,
 				{
+					originalError: utilError,
+					statusCode: 500,
+					ErrorSeverity: params.ErrorSeverity.FATAL,
 					exposeToClient: false
 				}
 			);
-			ErrorLogger.logError(utilityError, logger);
+			params.errorLogger.logError(
+				utilityError.message,
+				params.errorLoggerDetails(getCallerInfo, 'JWT_INIT'),
+			);
 			processError(utilityError, logger);
 			process.exit(1);
 		}
@@ -50,7 +43,7 @@ export function createJwt(logger: Logger): {
 			validateDependencies([{ name: 'user', instance: user }], logger);
 
 			if (!secrets) {
-				secrets = await loadSecrets();
+				secrets = await loadJwtSecret();
 			}
 
 			if (!secrets.JWT_SECRET) {

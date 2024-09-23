@@ -4,13 +4,7 @@ import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/helpers';
 import { ErrorLogger } from '../services/errorLogger';
-
-export const hashConfig = {
-	type: argon2.argon2id,
-	memoryCost: 48640,
-	timeCost: 4,
-	parallelism: 1
-};
+import { hashConfig } from '../index/parameters';
 
 export async function hashPassword(password: string): Promise<string> {
 	const appLogger = configService.getAppLogger();

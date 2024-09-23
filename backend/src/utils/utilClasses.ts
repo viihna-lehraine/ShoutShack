@@ -1,15 +1,18 @@
 import { AppLogger } from '../services/appLogger';
 import {
-	Dependency,
-	ValidateDependencies
-} from '../interfaces/utilityInterfaces';
+	DependencyInterface,
+	ValidateDependenciesInterface
+} from '../index/utilityInterfaces';
+import { validateDependencies } from '../utils/helpers';
 
-export class DependencyValidationService implements ValidateDependencies {
+export class DependencyValidationService
+	implements ValidateDependenciesInterface
+{
 	validateDependencies(
-		dependencies: Dependency[],
+		dependencies: DependencyInterface[],
 		appLogger: AppLogger
 	): void {
-		this.validateDependencies(dependencies, appLogger);
+		validateDependencies(dependencies, appLogger);
 	}
 }
 

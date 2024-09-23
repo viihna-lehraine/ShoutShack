@@ -10,11 +10,12 @@ import path from 'path';
 import { hashConfig } from '../auth/hash';
 import { configService } from '../services/configService';
 import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ConfigSecretsInterface } from '../interfaces/environmentInterfaces';
+import { ConfigSecretsInterface } from '../index/environmentInterfaces';
 import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
 import { AppLogger } from '../services/appLogger';
-import { ErrorLoggerInterface } from 'src/interfaces/serviceInterfaces';
+import { ErrorLoggerInterface } from '../index/serviceInterfaces';
+import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
@@ -115,7 +116,11 @@ export class SecretsStore {
 				appLogger,
 				ErrorSeverity.FATAL
 			);
-			processError(secretsLoadError);
+			processError({
+				...ProcessErrorStaticParameters,
+				error: secretsLoadError,
+				appLogger
+			});
 			throw secretsLoadError;
 		}
 	}
@@ -241,7 +246,11 @@ export class SecretsStore {
 				appLogger,
 				ErrorSeverity.FATAL
 			);
-			processError(tlsKeyDecryptionError);
+			processError({
+				...ProcessErrorStaticParameters,
+				error: tlsKeyDecryptionError,
+				appLogger
+			});
 			throw tlsKeyDecryptionError;
 		}
 	}

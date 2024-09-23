@@ -1,93 +1,97 @@
 import { Options, Sequelize } from 'sequelize';
-import { InitializeDatabase } from '../interfaces/databaseInterfaces';
+import { InitializeDatabaseInterface } from '../index/databaseInterfaces';
 import { AppError } from '../errors/errorClasses';
-import { configService } from '../services/configService';
+import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
+import { envVariables } from '../parameters/environmentParameters';
 
-const dbInitMaxRetries = 5;
-const dbInitRetryAfter = 2000; // in ms
-let sequelize: Sequelize | null = null;
+let sequelizeInstance: Sequelize;
 
-export async function initializeDatabase({ appLogger, blankRequest, dbInitMaxRetries, dbInitRetryAfter, envSecretsStore, envVariables, errorClasses, errorLoggerDetails, ErrorSeverity, errorLogger, featureFlags, getCallerInfo, processError }: InitializeDatabase): Promise<Sequelize> {
+export async function initializeDatabase(params: InitializeDatabaseInterface): Promise<Sequelize> {
 	let attempt = 0;
 
 	async function tryInitDB(): Promise<Sequelize> {
-		appLogger.info('Initializing database connection...');
+		params.appLogger.info('Initializing database connection...');
 
 		try {
-			if (!sequelize) {
-				appLogger.info(
-					`Sequelize logging set to ${featureFlags.sequelizeLogging}`
-				);
+			if (!sequelizeInstance) {
+				params.appLogger.info(`Sequelize logging set to ${params.featureFlags.sequelizeLogging}`);
 
 				const sequelizeOptions: Options = {
-					host: envVariables.dbHost,
-					dialect: envVariables.dbDialect,
-					logging: featureFlags.sequelizeLogging ? (msg: string) => appLogger.info(msg) : false,
+					host: params.envVariables.dbHost,
+					dialect: params.envVariables.dbDialect,
+					logging: params.featureFlags.sequelizeLogging ? (msg: string) => params.appLogger.info(msg) : false,
 				};
 
-				const dbPassword = envSecretsStore.retrieveSecret('dbPassword', appLogger);
+				const dbPassword = params.envSecretsStore.retrieveSecret('dbPassword', params.appLogger);
 
-				sequelize = new Sequelize(
-					envVariables.dbName,
-					envVariables.dbUser,
+				sequelizeInstance = new Sequelize(
+					params.envVariables.dbName,
+					params.envVariables.dbUser,
 					dbPassword!,
 					sequelizeOptions
 				);
 
-				await sequelize.authenticate();
-				appLogger.info('Connection has been established successfully.');
-				envSecretsStore.reEncryptSecret(dbPassword!);
+				await sequelizeInstance.authenticate();
+				params.appLogger.info('Connection has been established successfully.');
+
+				params.envSecretsStore.reEncryptSecret(dbPassword!);
+				params.appLogger.debug('Database password re-encrypted.');
 			} else {
-				appLogger.info('Database connection already initialized.');
-				return sequelize;
+				params.appLogger.info('Database connection already initialized.');
+				return sequelizeInstance;
 			}
 
-			return sequelize;
+			return sequelizeInstance;
 		} catch (dbError: unknown) {
 			attempt += 1;
 			const errorMessage = dbError instanceof Error ? dbError.message : 'Unknown error';
 
-			if (attempt < dbInitMaxRetries) {
-				const recoverableError: AppError = new errorClasses.DatabaseErrorRecoverable(
+			if (attempt < params.dbInitMaxRetries) {
+				const recoverableError: AppError = new params.errorClasses.DatabaseErrorRecoverable(
 					`Database error connection attempt ${attempt} failed\nRetrying...`,
 					{
-						dbHost: 'REDACTED',
-						dbDialect: 'REDACTED',
+						dbHost: envVariables.dbHost,
+						dbDialect: envVariables.dbDialect,
 						originalError: dbError,
 						statusCode: 500,
-						severity: ErrorSeverity.RECOVERABLE,
+						severity: params.ErrorSeverity.RECOVERABLE,
 						exposeToClient: false
 					}
 				);
-				errorLogger.logError(
+				params.errorLogger.logError(
 					recoverableError,
-					errorLoggerDetails(getCallerInfo, blankRequest, 'DATABASE_INIT'),
-					appLogger,
-					ErrorSeverity.RECOVERABLE
+					params.errorLoggerDetails(params.getCallerInfo, 'DATABASE_INIT', params.blankRequest),
+					params.appLogger,
+					params.ErrorSeverity.RECOVERABLE
 				);
-				processError(recoverableError);
-
-				appLogger.warn(`Retrying database connection in ${dbInitRetryAfter / 1000} seconds...`);
-				await new Promise(resolve => setTimeout(resolve, dbInitRetryAfter));
+				const processErrorParams = {
+					...ProcessErrorStaticParameters,
+					error: recoverableError,
+					req: params.blankRequest,
+					details: { reason: 'Failed to initialize database' }
+				};
+				params.processError(processErrorParams);
+				params.appLogger.warn(`Retrying database connection in ${params.dbInitRetryAfter / 1000} seconds...`);
+				await new Promise(resolve => setTimeout(resolve, params.dbInitRetryAfter));
 				return tryInitDB();
 			} else {
-				const fatalError = new errorClasses.DatabaseErrorFatal(
-					`Failed to authenticate database connection after ${dbInitMaxRetries} attempts: ${errorMessage}`,
+				const fatalError = new params.errorClasses.DatabaseErrorFatal(
+					`Failed to authenticate database connection after ${params.dbInitMaxRetries} attempts: ${errorMessage}`,
 					{
-						dbHost: 'Hidden for security',
-						dbDialect: 'Hidden for security',
+						dbHost: envVariables.dbHost,
+						dbDialect: envVariables.dbDialect,
 						originalError: dbError,
 						statusCode: 500,
-						severity: ErrorSeverity.FATAL,
+						severity: params.ErrorSeverity.FATAL,
 						exposeToClient: false
 					}
 				);
 
-				errorLogger.logError(
+				params.errorLogger.logError(
 					fatalError as AppError,
-					errorLoggerDetails(getCallerInfo, blankRequest, 'DATABASE_INIT'),
-					appLogger,
-					ErrorSeverity.FATAL
+					params.errorLoggerDetails(params.getCallerInfo, 'DATABASE_INIT', params.blankRequest),
+					params.appLogger,
+					params.ErrorSeverity.FATAL
 				);
 				throw fatalError;
 			}
@@ -97,4 +101,4 @@ export async function initializeDatabase({ appLogger, blankRequest, dbInitMaxRet
 	return tryInitDB();
 }
 
-export { sequelize };
+export { sequelizeInstance };

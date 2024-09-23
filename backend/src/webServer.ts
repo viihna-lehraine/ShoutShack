@@ -11,12 +11,13 @@ import { AppError } from './errors/errorClasses';
 import {
 	SetUpWebServerInterface,
 	SetUpWebServerReturn
-} from './interfaces/webServerInterfaces';
+} from './index/webServerInterfaces';
 import {
 	DeclareWebServerOptionsParameters,
-	SetUpWebServerParameters as setUpWebServerParameters
+	SetUpWebServerParameters
 } from './parameters/webServerParameters';
 import { SecureContextOptions } from 'tls';
+import { configService } from './services/configService';
 
 export async function setUpWebServer(
 	SetUpWebServerParameters: SetUpWebServerInterface
@@ -68,7 +69,10 @@ export async function setUpWebServer(
 					appLogger,
 					ErrorSeverity.FATAL
 				);
-				processError(ConfigError);
+				processError(
+					configService
+					ConfigError
+				);
 				throw ConfigError;
 			}
 

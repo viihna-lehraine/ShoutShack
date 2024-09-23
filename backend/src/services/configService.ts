@@ -6,7 +6,7 @@ import {
 	EnvVariableTypes,
 	FeatureFlagTypes,
 	SecretsMap
-} from '../interfaces/environmentInterfaces';
+} from '../index/environmentInterfaces';
 import { loadEnv } from '../environment/envVars';
 import { AppLogger, createRedactedLogger, setUpLogger } from './appLogger';
 

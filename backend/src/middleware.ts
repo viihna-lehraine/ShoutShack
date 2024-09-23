@@ -12,7 +12,7 @@ import {
 import { errorClasses, ErrorSeverity } from './errors/errorClasses';
 import { ErrorLogger } from './services/errorLogger';
 import { processError } from './errors/processError';
-import { initializeExpressMiddlwareParams } from './interfaces/appInitInterfaces';
+import { initializeExpressMiddlwareParams } from './index/appInitInterfaces';
 import {
 	initializeSlowdownMiddleware,
 	slowdownThreshold

@@ -1,5 +1,5 @@
 import { JwtPayload } from 'jsonwebtoken';
-import { EmailMFA } from '../interfaces/authInterfaces';
+import { EmailMFA } from '../index/interfaces';
 
 export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 	generateEmail2FACode: () => Promise<{
