@@ -1,5 +1,5 @@
-import { appErrorClasses } from './appErrorClasses';
-import { clientErrorClasses } from './clientErrorClasses';
+import { AppErrorClasses } from './appErrorClasses';
+import { ClientErrorClasses } from './clientErrorClasses';
 import { ERROR_CODES } from './errorCodes';
 
 export interface ErrorDetails {
@@ -78,9 +78,9 @@ export class ClientError extends RootError {
 	}
 }
 
-export const errorClasses = {
-	...appErrorClasses,
-	...clientErrorClasses
+export const ErrorClasses = {
+	...AppErrorClasses,
+	...ClientErrorClasses
 };
 
 export const defaultRetryAfter = 60;

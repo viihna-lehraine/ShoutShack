@@ -4,7 +4,7 @@ import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
 import { logger, Logger } from './appLogger';
-import { getSequelizeInstance } from '../config/database';
+import { getSequelizeInstance } from './database';
 import { ErrorLogger } from './errorLogger';
 import { processError } from '../errors/processError';
 import { validateDependencies } from '../utils/helpers';

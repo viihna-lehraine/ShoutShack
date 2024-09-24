@@ -1,4 +1,3 @@
-import argon2 from 'argon2';
 import * as cryptoConstants from 'constants';
 import { execSync } from 'child_process';
 import RedisStore from 'connect-redis';
@@ -15,18 +14,10 @@ import { inRange } from 'range_check';
 import { createClient } from 'redis';
 import sequelize from 'sequelize';
 import { configService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { expressErrorHandler, processError } from '../errors/processError';
-import { errorLogger } from '../services/errorLogger';
-import {
-	blankRequest,
-	errorLoggerDetails,
-	getCallerInfo,
-	parseBoolean,
-	validateDependencies
-} from '../utils/helpers';
+import { errorHandler as expressErrorHandler } from '../services/errorHandler';
+import { getCallerInfo, validateDependencies } from '../utils/helpers';
+import { blankRequest } from '../utils/constants';
 import { envSecretsStore } from '../environment/envSecrets';
-import { isAppLogger } from '../services/appLogger';
 import { createJwt } from '../auth/jwt';
 import * as interfaces from './interfaces';
 import { getRedisClient } from '../services/redis';
@@ -36,36 +27,13 @@ import { initializeRateLimitMiddleware } from 'src/middleware/rateLimit';
 import { initializeSecurityHeaders } from 'src/middleware/securityHeaders';
 import { initializeSlowdownMiddleware } from 'src/middleware/slowdown';
 import { initializeValidatorMiddleware } from 'src/middleware/validator';
-
-// ***** UTILITY CONSTANTS ***** //
-
-export const tlsCiphers: string[] = [
-	'ECDHE-ECDSA-AES256-GCM-SHA384',
-	'ECDHE-RSA-AES256-GCM-SHA384',
-	'ECDHE-ECDSA-CHACHA20-POLY1305',
-	'ECDHE-RSA-CHACHA20-POLY1305',
-	'ECDHE-ECDSA-AES128-GCM-SHA256',
-	'ECDHE-RSA-AES128-GCM-SHA256',
-	'ECDHE-ECDSA-AES256-SHA384',
-	'ECDHE-RSA-AES256-SHA384',
-	'ECDHE-ECDSA-AES128-SHA256',
-	'ECDHE-RSA-AES128-SHA256'
-];
-
-const parsedEmailSecure = parseBoolean(process.env.EMAIL_SECURE);
-const parsedFidoAuthRequireResidentKey = parseBoolean(
-	process.env.FIDO_AUTH_REQUIRE_RESIDENT_KEY
-);
-const parsedFidoCryptoParams: number[] = JSON.parse(
-	process.env.FIDO_CRYPTO_PARAMS || '[]'
-);
-
-export const hashConfig = {
-	type: argon2.argon2id,
-	memoryCost: 48640,
-	timeCost: 4,
-	parallelism: 1
-};
+import {
+	fidoAuthRequireResidentKeyAsBoolean,
+	fidoCryptoParamsAsArray,
+	emailSecureAsBoolean,
+	tlsCiphers
+} from '../utils/constants';
+import { errorHandler } from '../services/errorHandler';
 
 // ****** PARAMETER OBJECTS ****** //
 
@@ -74,25 +42,16 @@ export const AddIpToBlacklistStaticParameters: Omit<
 	'ip'
 > = {
 	appLogger: configService.getAppLogger(),
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
+	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorClasses,
-	ErrorSeverity,
-	processError,
+	errorHandler,
 	validateDependencies
 };
 
 export const CreateFeatureEnablerParameters: interfaces.CreateFeatureEnablerInterface =
 	{
 		appLogger: configService.getAppLogger(),
-		errorClasses,
-		ErrorSeverity,
-		errorLogger,
-		errorLoggerDetails,
-		getCallerInfo,
-		processError
+		errorLogger: configService.getErrorLogger()
 	};
 
 export const CreateJwtParameters: interfaces.CreateJwtInterface = {
@@ -100,29 +59,22 @@ export const CreateJwtParameters: interfaces.CreateJwtInterface = {
 	execSync,
 	configService,
 	appLogger: configService.getAppLogger(),
-	errorClasses,
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
-	ErrorSeverity,
-	processError,
+	errorLogger: configService.getErrorLogger(),
+	errorHandler,
 	validateDependencies,
 	envSecretsStore
 };
 
 export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServerOptionsInterface =
 	{
-		appLogger: configService.getAppLogger(),
+		logger: configService.getAppLogger(),
 		blankRequest,
 		configService,
 		constants: cryptoConstants,
 		fs: fs.promises,
-		errorClasses,
-		errorLogger,
-		errorLoggerDetails,
-		ErrorSeverity,
+		errorLogger: configService.getErrorLogger(),
 		getCallerInfo,
-		processError,
+		errorHandler,
 		tlsCiphers,
 		validateDependencies
 	};
@@ -136,6 +88,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!,
 		10
 	),
+	cronLoggerSetting: parseInt(process.env.CRON_LOGGER_SETTING!),
 	dbDialect: process.env.DB_DIALECT! as
 		| 'mariadb'
 		| 'mssql'
@@ -147,9 +100,10 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	dbInitRetryAfter: parseInt(process.env.DB_INIT_RETRY_AFTER!, 10),
 	dbName: process.env.DB_NAME!,
 	dbUser: process.env.DB_USER!,
+	diskPath: process.env.DISK_PATH!,
 	emailHost: process.env.EMAIL_HOST!,
 	emailPort: parseInt(process.env.EMAIL_PORT!, 10),
-	emailSecure: parsedEmailSecure!,
+	emailSecure: emailSecureAsBoolean!,
 	emailUser: process.env.EMAIL_USER!,
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
 	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
@@ -166,7 +120,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES! === 'true',
 	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING! === 'true',
 	featureHonorCipherOrder: process.env.FEATURE_HONOR_CIPHER_ORDER! === 'true',
-	fidoAuthRequireResidentKey: parsedFidoAuthRequireResidentKey!,
+	fidoAuthRequireResidentKey: fidoAuthRequireResidentKeyAsBoolean!,
 	fidoAuthUserVerification: process.env
 		.FIDO_AUTHENTICATOR_USER_VERIFICATION! as
 		| 'required'
@@ -174,14 +128,15 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		| 'discouraged'
 		| 'enterprise',
 	fidoChallengeSize: parseInt(process.env.FIDO_CHALLENGE_SIZE!, 10),
-	fidoCryptoParams: parsedFidoCryptoParams!,
+	fidoCryptoParams: fidoCryptoParamsAsArray!,
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH!,
 	logExportPath: process.env.LOG_EXPORT_PATH!,
-	loggerLevel: process.env.LOGGER!,
 	logLevel: process.env.LOG_LEVEL! as 'debug' | 'info' | 'warn' | 'error',
+	loggerServiceName: process.env.LOG_SERVICE_NAME!,
 	logStashHost: process.env.LOGSTASH_HOST!,
 	logStashNode: process.env.LOGSTASH_NODE!,
 	logStashPort: parseInt(process.env.LOGSTASH_PORT!, 10),
+	memoryLimit: parseInt(process.env.MEMORY_LIMIT!, 10),
 	memoryMonitorInterval: parseInt(process.env.MEMORY_MONITOR_INTERVAL!, 10),
 	nodeEnv: process.env.NODE_ENV! as 'development' | 'testing' | 'production',
 	npmLogPath: process.env.SERVER_NPM_LOG_PATH!,
@@ -207,8 +162,8 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3!,
 	serverDataFilePath4: process.env.SERVER_DATA_FILE_PATH_4!,
 	serverPort: parseInt(process.env.SERVER_PORT!, 10),
-	serviceName: process.env.SERVICE_NAME!,
 	staticRootPath: process.env.STATIC_ROOT_PATH!,
+	tempDir: process.env.TEMP_DIR!,
 	tlsCertPath1: process.env.TLS_CERT_PATH_1!,
 	tlsKeyPath1: process.env.TLS_KEY_PATH_1!,
 	yubicoApiUrl: process.env.YUBICO_API_URL!
@@ -217,10 +172,8 @@ export const envVariables: interfaces.EnvVariableTypes = {
 export const ExpressErrorHandlerStaticParameters = {
 	appLogger: configService.getAppLogger(),
 	configService,
-	errorLogger,
-	errorLoggerDetails,
-	fallbackLogger: console,
-	isAppLogger
+	errorLogger: configService.getErrorLogger(),
+	fallbackLogger: console
 };
 
 export const FeatureFlagNames = {
@@ -243,25 +196,30 @@ export const FeatureFlagNames = {
 
 export const GetFeatureFlagsStaticParameters = {
 	blankRequest,
-	errorClasses,
-	errorLogger,
-	errorLoggerDetails,
-	processError
+	errorLogger: configService.getErrorLogger()
+};
+
+export const HandleCriticalErrorStaticParameters = {
+	appLogger: configService.getAppLogger(),
+	configService,
+	fallbackLogger: console
+};
+
+export const HandleErrorStaticParameters = {
+	appLogger: configService.getAppLogger(),
+	configService,
+	errorLogger: configService.getErrorLogger(),
+	fallbackLogger: console
 };
 
 export const InitializeDatabaseStaticParameters: interfaces.InitializeDatabaseInterface =
 	{
 		dbInitMaxRetries: configService.getEnvVariables().dbInitMaxRetries,
 		dbInitRetryAfter: configService.getEnvVariables().dbInitRetryAfter,
-		appLogger: configService.getAppLogger(),
-		envVariables: configService.getEnvVariables(),
-		featureFlags: configService.getFeatureFlags(),
-		errorClasses,
-		errorLoggerDetails,
-		ErrorSeverity,
-		errorLogger,
-		getCallerInfo,
-		processError,
+		logger: configService.getAppLogger(),
+		errorLogger: configService.getErrorLogger(),
+		configService,
+		errorHandler,
 		envSecretsStore,
 		blankRequest
 	};
@@ -269,27 +227,18 @@ export const InitializeDatabaseStaticParameters: interfaces.InitializeDatabaseIn
 export const InitIpBlacklistParameters: interfaces.InitIpBlacklistInterface = {
 	fsModule: fs,
 	inRange,
-	appLogger: configService.getAppLogger(),
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorClasses,
-	ErrorSeverity,
-	expressErrorHandler,
+	errorHandler,
 	validateDependencies
 };
 
 export const InitJwtAuthParameters: interfaces.InitJwtAuthInterface = {
 	verifyJwt: createJwt().verifyJwt,
-	appLogger: configService.getAppLogger(),
-	errorClasses,
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
-	ErrorSeverity,
-	expressErrorHandler,
-	processError,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
+	errorHandler,
 	validateDependencies
 };
 
@@ -314,7 +263,7 @@ export const InitMiddlewareStaticParameters = {
 	initializeValidatorMiddleware,
 	morgan,
 	passport,
-	processError,
+	errorHandler,
 	session,
 	randomBytes,
 	redisClient: () => getRedisClient(createClient),
@@ -324,84 +273,47 @@ export const InitMiddlewareStaticParameters = {
 
 export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {
 	fsModule: fsPromises,
-	appLogger: configService.getAppLogger(),
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorClasses,
-	processError,
-	ErrorSeverity,
 	validateDependencies
 };
 
 export const PreInitIpBlacklistParameters: interfaces.PreInitIpBlacklistInterface =
 	{
 		fsModule: fsPromises,
-		appLogger: configService.getAppLogger(),
-		errorLogger,
-		errorLoggerDetails,
-		errorClasses,
-		getCallerInfo,
-		ErrorSeverity,
+		logger: configService.getAppLogger(),
+		errorLogger: configService.getErrorLogger(),
 		configService,
-		processError,
+		errorHandler,
 		validateDependencies
 	};
-
-export const ProcessCriticalErrorStaticParameters = {
-	appLogger: configService.getAppLogger(),
-	configService,
-	fallbackLogger: console,
-	isAppLogger
-};
-
-export const ProcessErrorStaticParameters = {
-	appLogger: configService.getAppLogger(),
-	configService,
-	errorLogger,
-	errorLoggerDetails,
-	fallbackLogger: console,
-	isAppLogger
-};
 
 export const RemoveIpFromBlacklistStaticParameters: Omit<
 	interfaces.RemoveIpFromBlacklistInterface,
 	'ip'
 > = {
-	appLogger: configService.getAppLogger(),
-	errorLogger,
-	errorLoggerDetails,
-	getCallerInfo,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorClasses,
-	ErrorSeverity,
-	processError,
+	errorHandler,
 	validateDependencies
 };
 
 export const SaveIpBlacklistParameters: interfaces.SaveIpBlacklistInterface = {
 	fsModule: fsPromises,
-	appLogger: configService.getAppLogger(),
-	errorLogger,
-	getCallerInfo,
-	errorLoggerDetails,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorClasses,
-	ErrorSeverity,
-	processError,
+	errorHandler,
 	validateDependencies
 };
 
 export const SetUpDatabaseParameters: interfaces.SetUpDatabaseInterface = {
-	appLogger: configService.getAppLogger(),
-	errorLoggerDetails,
-	getCallerInfo,
-	processError,
+	logger: configService.getAppLogger(),
+	errorLogger: configService.getErrorLogger(),
+	errorHandler,
 	configService,
-	errorLogger,
-	errorClasses,
-	ErrorSeverity,
 	envSecretsStore,
 	blankRequest
 };
@@ -412,10 +324,9 @@ export const SetUpWebServerParameters: interfaces.SetUpWebServerInterface = {
 	blankRequest,
 	DeclareWebServerOptionsStaticParameters,
 	envVariables: configService.getEnvVariables(),
-	errorLogger,
-	errorLoggerDetails,
+	errorLogger: configService.getErrorLogger(),
 	featureFlags: configService.getFeatureFlags(),
 	getCallerInfo,
-	processError,
+	errorHandler,
 	sequelize
 };

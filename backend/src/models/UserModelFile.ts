@@ -45,7 +45,7 @@ export class User
 	public username!: string;
 	public password!: string;
 	public email!: string;
-	public isAccountVerified!: boolean;
+	public isVerified!: boolean;
 	public resetPasswordToken!: string | null;
 	public resetPasswordExpires!: Date | null;
 	public isMfaEnabled!: boolean;

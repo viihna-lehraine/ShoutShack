@@ -2,7 +2,7 @@ import { constants as cryptoConstants } from 'crypto';
 import { DeclareWebServerOptionsInterface, WebServerOptions } from '../index/webServerInterfaces';
 import { AppError } from '../errors/errorClasses';
 import { ConfigService } from '../services/configService';
-import { isAppLogger } from '../services/appLogger';
+import { AppLogger } from '../services/logger';
 
 export async function declareWebServerOptions(params: DeclareWebServerOptionsInterface): Promise<WebServerOptions> {
 	const {
@@ -20,6 +20,7 @@ export async function declareWebServerOptions(params: DeclareWebServerOptionsInt
 		validateDependencies
 	} = params;
 
+	const appLogger = new AppLogger.getRedactedLogger();
 	const webServerSecureOptions = cryptoConstants.SSL_OP_NO_TLSv1 | cryptoConstants.SSL_OP_NO_TLSv1_1;
 
 	try {

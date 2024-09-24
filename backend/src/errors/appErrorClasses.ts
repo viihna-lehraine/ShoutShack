@@ -592,7 +592,7 @@ export class ValidationError extends AppError {
 	}
 }
 
-export const appErrorClasses = {
+export const AppErrorClasses = {
 	AppAuthenticationError,
 	ConfigurationError,
 	ConfigurationErrorFatal,

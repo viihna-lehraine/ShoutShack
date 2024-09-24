@@ -363,7 +363,7 @@ export class UserRegistrationError extends ClientError {
 	}
 }
 
-export const clientErrorClasses = {
+export const ClientErrorClasses = {
 	AutoCorrectedInputWarning,
 	ClientAuthenticationError,
 	DeprecatedApiWarning,

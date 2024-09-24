@@ -1,52 +1,33 @@
-import { isAppLogger, AppLogger } from '../services/appLogger';
-import { DependencyInterface } from '../index/utilityInterfaces';
+import { DependencyInterface } from '../index/interfaces';
 import { configService } from '../services/configService';
-import { errorLogger } from '../services/errorLogger';
 import { processError } from '../errors/processError';
-import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { v4 as uuidv4 } from 'uuid';
-import { Request } from 'express';
-import { Socket } from 'net';
-import { ProcessErrorStaticParameters } from 'src/parameters/errorParameters';
+import { AppError, ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ProcessErrorStaticParameters } from '../index/parameters';
+import { blankRequest } from './constants';
 
-export const blankRequest: Request = {
-	headers: {},
-	ip: '',
-	socket: {
-		remoteAddress: '0.0.0.0'
-	} as Socket
-} as Request;
-
-export function errorLoggerDetails(
-	getCallerInfo: () => string,
-	actionManual?: string,
-	req?: Request
+export function sanitizeRequestBody(
+	body: Record<string, unknown>
 ): Record<string, unknown> {
-	const adminIdVal = configService.getAdminId() || null;
-	const ipDetails =
-		req?.ip ||
-		req?.headers['x-forwarded-for'] ||
-		req?.socket.remoteAddress ||
-		null;
-	const userAgentDetails = req?.headers['user-agent'] || null;
-	const details: Record<string, unknown> = {
-		requestId: 'N/A',
-		adminId: adminIdVal,
-		userId: 'N/A',
-		action: actionManual || 'unknown',
-		caller: String(getCallerInfo()),
-		timestamp: Date.now(),
-		additionalInfo: {
-			ip: ipDetails,
-			userAgent: userAgentDetails
+	const sanitizedBody = new Map(Object.entries(body));
+	const sensitiveFields = [
+		'email',
+		'key',
+		'newPassword',
+		'oldPassword',
+		'passphrase',
+		'password',
+		'secret',
+		'token',
+		'username'
+	];
+
+	sensitiveFields.forEach(field => {
+		if (sanitizedBody.has(field)) {
+			sanitizedBody.set(field, '[REDACTED]');
 		}
-	};
+	});
 
-	return details;
-}
-
-export function generateRequestId(): string {
-	return uuidv4();
+	return Object.fromEntries(sanitizedBody);
 }
 
 export function getCallerInfo(): string {
@@ -76,18 +57,15 @@ export function parseBoolean(value: string | boolean | undefined): boolean {
 		}
 		return value === true;
 	} catch (utilError) {
-		const utilityError = new errorClasses.UtilityErrorFatal(
+		const utilityError = new ErrorClasses.UtilityErrorFatal(
 			`
 			Fatal error: Unable to parse boolean value ${value} using 'parseBoolean()\n${utilError instanceof Error ? utilError.message : utilError}`,
 			{
 				utility: 'parseBoolean()',
-				originalError: utilError,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
+				originalError: utilError
 			}
 		);
-		const actionVal: string = 'parse_data_to_type_boolean';
+		const actionVal: string = 'Parse value to boolean';
 		const severity: string = ErrorSeverity.FATAL;
 		errorLogger.logError(
 			utilityError as AppError,

@@ -6,9 +6,10 @@ import {
 	EnvVariableTypes,
 	FeatureFlagTypes,
 	SecretsMap
-} from '../index/environmentInterfaces';
+} from '../index/interfaces';
 import { loadEnv } from '../environment/envVars';
-import { AppLogger, createRedactedLogger, setUpLogger } from './appLogger';
+import { AppLogger, ErrorLogger } from './logger';
+import { AppLoggerInterface } from '../index/interfaces';
 
 export class ConfigService implements ConfigServiceInterface {
 	private static instance: ConfigService;
@@ -16,11 +17,11 @@ export class ConfigService implements ConfigServiceInterface {
 	private encryptionKey: string | null = null;
 	private gpgPassphrase: string | undefined;
 	private adminId: number | null = null;
-	private logger: AppLogger;
+	public logger: AppLoggerInterface;
 
 	private constructor() {
 		loadEnv();
-		this.logger = createRedactedLogger(setUpLogger());
+		this.logger = AppLogger.getInstance().getRedactedLogger();
 	}
 
 	public initialize(
@@ -34,7 +35,7 @@ export class ConfigService implements ConfigServiceInterface {
 		this.initializeSecrets({
 			execSync,
 			getDirectoryPath: () => process.cwd(),
-			appLogger: this.logger,
+			logger: this.getAppLogger(),
 			gpgPassphrase: this.gpgPassphrase
 		});
 	}
@@ -46,12 +47,20 @@ export class ConfigService implements ConfigServiceInterface {
 		return ConfigService.instance;
 	}
 
-	public getAdminId(): number | null {
-		return this.adminId;
+	public initializeLogger(): void {
+		AppLogger.getInstance().getRedactedLogger().info('Logger initialized');
 	}
 
-	public getAppLogger(): AppLogger {
-		return this.logger!;
+	public getAppLogger(): AppLoggerInterface {
+		return this.logger;
+	}
+
+	public getErrorLogger(): AppLoggerInterface {
+		return ErrorLogger.getInstance().getRedactedLogger();
+	}
+
+	public getAdminId(): number | null {
+		return this.adminId;
 	}
 
 	public getEnvVariables(): EnvVariableTypes {
@@ -64,7 +73,7 @@ export class ConfigService implements ConfigServiceInterface {
 
 	public getSecrets(
 		keys: keyof SecretsMap | (keyof SecretsMap)[],
-		appLogger: AppLogger
+		appLogger: AppLoggerInterface
 	): Record<string, string | undefined> | string | undefined {
 		let result = envSecretsStore.retrieveSecrets(
 			Array.isArray(keys)
@@ -86,7 +95,7 @@ export class ConfigService implements ConfigServiceInterface {
 				`Secret(s) not found, attempting to refresh secrets.`
 			);
 			this.refreshSecrets({
-				appLogger: this.logger,
+				logger: this.getAppLogger(),
 				execSync,
 				getDirectoryPath: () => process.cwd(),
 				gpgPassphrase: this.gpgPassphrase
