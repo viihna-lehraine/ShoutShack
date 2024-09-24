@@ -1,11 +1,22 @@
-import { CreateJwtInterface, JwtUserInterface } from '../index/interfaces';
+import {
+	AppLoggerInterface,
+	CreateJwtInterface,
+	JwtUserInterface
+} from '../index/interfaces';
 import { CreateJwtParameters } from '../index/parameters';
+import { configService } from '../services/configService';
+import { envSecretsStore } from '../environment/envSecrets';
+import { errorHandler } from '../services/errorHandler';
+import { validateDependencies } from '../utils/helpers';
+import jwt from 'jsonwebtoken';
 
-export function createJwt(paramsObject: CreateJwtInterface): {
-	generateJwt: (user: JwtUser) => Promise<string>;
+export function createJwt(): {
+	generateJwt: (user: JwtUserInterface) => Promise<string>;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 } {
 	const params: CreateJwtInterface = CreateJwtParameters;
+	const logger: AppLoggerInterface = configService.getErrorLogger();
+	const errorLogger: AppLoggerInterface = configService.getErrorLogger();
 
 	const loadJwtSecret = async (): Promise<string> => {
 		try {
@@ -20,52 +31,41 @@ export function createJwt(paramsObject: CreateJwtInterface): {
 
 			return secret;
 		} catch (utilError) {
-			const utilityError = new params.errorClasses.UtilityErrorFatal(
-				`Failed to load secrets in 'jwtUtil - loadJwtSecret()'\n${utilError instanceof Error ? utilError.message : utilError}\nShutting down...`,
-				{
-					originalError: utilError,
-					statusCode: 500,
-					ErrorSeverity: params.ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			params.errorLogger.logError(
-				utilityError.message,
-				params.errorLoggerDetails(getCallerInfo, 'JWT_INIT'),
-			);
-			processError(utilityError, logger);
+			const utilityError =
+				new errorHandler.ErrorClasses.UtilityErrorFatal(
+					`Failed to load secrets in 'jwtUtil - loadJwtSecret()'\n${utilError instanceof Error ? utilError.message : utilError}\nShutting down...`
+				);
+			params.errorLogger.logError(utilityError.message);
+			errorHandler.handleError({ error: utilityError });
 			process.exit(1);
+		} finally {
+			params.appLogger.debug('JWT secret loaded successfully');
+			params.envSecretsStore.reEncryptSecret('JWT	_SECRET');
 		}
 	};
 
-	const generateJwt = async (user: JwtUser): Promise<string> => {
+	const generateJwt = async (user: JwtUserInterface): Promise<string> => {
 		try {
 			validateDependencies([{ name: 'user', instance: user }], logger);
 
-			if (!secrets) {
-				secrets = await loadJwtSecret();
-			}
+			const pepper = await loadJwtSecret();
 
-			if (!secrets.JWT_SECRET) {
+			if (!pepper) {
 				logger.error('JWT_SECRET is not available.');
 				throw new Error('JWT_SECRET is not available.');
 			}
 
-			return jwt.sign(
-				{ id: user.id, username: user.username },
-				secrets.JWT_SECRET,
-				{ expiresIn: '1h' }
-			);
+			return jwt.sign({ id: user.id, username: user.username }, pepper, {
+				expiresIn: '1h'
+			});
 		} catch (utilError) {
 			const utility: string = 'generateJwt()';
-			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Failed to generate JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
-				{
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			const utilityError =
+				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Failed to generate JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`
+				);
+			errorLogger.logWarn(utilityError.message);
+			errorHandler.handleError({ error: utilityError });
 			return '';
 		}
 	};
@@ -76,26 +76,25 @@ export function createJwt(paramsObject: CreateJwtInterface): {
 		try {
 			validateDependencies([{ name: 'token', instance: token }], logger);
 
-			if (!secrets) {
-				secrets = await loadSecrets();
-			}
+			const pepper = await envSecretsStore.retrieveSecret(
+				'JWT_SECRET',
+				logger
+			);
 
-			if (!secrets.JWT_SECRET) {
+			if (!pepper) {
 				logger.error('JWT_SECRET is not available.');
 				throw new Error('JWT_SECRET is not available.');
 			}
 
-			return jwt.verify(token, secrets.JWT_SECRET);
+			return jwt.verify(token, pepper);
 		} catch (utilError) {
 			const utility: string = 'verifyJwt()';
-			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Failed to verify JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`,
-				{
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logWarning(utilityError.message, logger);
-			processError(utilityError, logger);
+			const utilityError =
+				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Failed to verify JWT in ${utility}: ${utilError instanceof Error ? utilError.message : utilError}`
+				);
+			errorLogger.logWarn(utilityError.message);
+			errorHandler.handleError({ error: utilityError });
 			return null;
 		}
 	};

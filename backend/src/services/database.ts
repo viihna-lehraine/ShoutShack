@@ -1,15 +1,8 @@
 import { Options, Sequelize } from 'sequelize';
-import { InitializeDatabaseInterface } from '../index/interfaces';
 import { AppError } from '../errors/errorClasses';
-import {
-	envVariables,
-	ProcessErrorStaticParameters
-} from '../index/parameters';
 import { configService } from './configService';
-import { AppLoggerInterface } from '../index/interfaces';
 import { envSecretsStore } from '../environment/envSecrets';
 import { errorHandler } from './errorHandler';
-import { blankRequest } from '../utils/constants';
 
 export class DatabaseService {
 	private static instance: DatabaseService;
@@ -17,8 +10,10 @@ export class DatabaseService {
 	private pool: Record<string, unknown> = {};
 	private attempt = 0;
 	private configService = configService;
+	private envSecretsStore = envSecretsStore;
 	private logger = configService.getAppLogger();
 	private errorLogger = configService.getErrorLogger();
+	private errorHandler = errorHandler;
 
 	constructor() {
 		this.logger = configService.getAppLogger();
@@ -59,9 +54,6 @@ export class DatabaseService {
 				throw sequelizeInitError;
 			}
 			await this.sequelizeInstance.authenticate();
-			this.logger.logInfo(
-				'Database connection has been established successfully.'
-			);
 		} catch (dbError: unknown) {
 			const dbConnectionError =
 				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
@@ -75,6 +67,8 @@ export class DatabaseService {
 				}
 			});
 			throw dbConnectionError;
+		} finally {
+			this.logger.logDebug('Database connection initialized');
 		}
 	}
 
@@ -87,40 +81,36 @@ export class DatabaseService {
 		try {
 			if (!this.sequelizeInstance) {
 				this.logger.info(
-					`Sequelize logging set to ${this.featureFlags.sequelizeLogging}`
+					`Sequelize logging set to ${this.configService.getFeatureFlags().sequelizeLogging}`
 				);
 
 				const sequelizeOptions: Options = {
 					host: this.configService.getEnvVariables.dbHost,
-					dialect: this.params.envVariables.dbDialect,
-					logging: this.params.featureFlags.sequelizeLogging
-						? (msg: string) => this.params.appLogger.info(msg)
+					dialect: this.configService.getEnvVariables().dbDialect,
+					logging: this.configService.getFeatureFlags()
+						.sequelizeLogging
+						? (msg: string) => this.logger.info(msg)
 						: false
 				};
 
-				const dbPassword = this.params.envSecretsStore.retrieveSecret(
+				const dbPassword = this.envSecretsStore.retrieveSecret(
 					'dbPassword',
-					this.params.appLogger
+					this.logger
 				);
 
 				this.sequelizeInstance = new Sequelize(
-					this.params.envVariables.dbName,
-					this.params.envVariables.dbUser,
+					this.configService.getEnvVariables().dbName,
+					this.configService.getEnvVariables().dbUser,
 					dbPassword!,
 					sequelizeOptions
 				);
 
 				await this.sequelizeInstance.authenticate();
-				this.params.appLogger.info(
+				this.logger.info(
 					'Connection has been established successfully.'
 				);
-
-				this.params.envSecretsStore.reEncryptSecret(dbPassword!);
-				this.params.appLogger.debug('Database password re-encrypted.');
 			} else {
-				this.params.appLogger.info(
-					'Database connection already initialized.'
-				);
+				this.logger.info('Database connection already initialized.');
 				return this.sequelizeInstance;
 			}
 
@@ -130,73 +120,44 @@ export class DatabaseService {
 			const errorMessage =
 				dbError instanceof Error ? dbError.message : 'Unknown error';
 
-			if (this.attempt < this.params.dbInitMaxRetries) {
+			if (
+				this.attempt <
+				this.configService.getEnvVariables().dbInitMaxRetries
+			) {
 				const recoverableError: AppError =
-					new this.params.errorClasses.DatabaseErrorRecoverable(
+					new this.errorHandler.ErrorClasses.DatabaseErrorRecoverable(
 						`Database connection attempt ${this.attempt} failed\nRetrying...`,
-						{
-							dbHost: envVariables.dbHost,
-							dbDialect: envVariables.dbDialect,
-							originalError: dbError,
-							statusCode: 500,
-							severity: this.params.ErrorSeverity.RECOVERABLE,
-							exposeToClient: false
-						}
+						{ originalError: dbError }
 					);
-				this.params.errorLogger.logError(
-					recoverableError,
-					this.params.errorLoggerDetails(
-						this.params.getCallerInfo,
-						'DATABASE_INIT',
-						this.params.blankRequest
-					),
-					this.params.appLogger,
-					this.params.ErrorSeverity.RECOVERABLE
-				);
-				const processErrorParams = {
-					...ProcessErrorStaticParameters,
-					error: recoverableError,
-					req: this.params.blankRequest,
-					details: { reason: 'Failed to initialize database' }
-				};
-				this.params.processError(processErrorParams);
-				this.params.appLogger.warn(
-					`Retrying database connection in ${this.params.dbInitRetryAfter / 1000} seconds...`
+				this.errorLogger.logError(recoverableError.message);
+				this.errorHandler.handleError({ error: recoverableError });
+				this.logger.warn(
+					`Retrying database connection in ${this.configService.getEnvVariables().dbInitRetryAfter / 1000} seconds...`
 				);
 				await new Promise(resolve =>
-					setTimeout(resolve, this.params.dbInitRetryAfter)
+					setTimeout(
+						resolve,
+						this.configService.getEnvVariables().dbInitRetryAfter
+					)
 				);
 				return this.tryInitDB();
 			} else {
 				const fatalError =
-					new this.params.errorClasses.DatabaseErrorFatal(
-						`Failed to authenticate database connection after ${this.params.dbInitMaxRetries} attempts: ${errorMessage}`,
-						{
-							dbHost: envVariables.dbHost,
-							dbDialect: envVariables.dbDialect,
-							originalError: dbError,
-							statusCode: 500,
-							severity: this.params.ErrorSeverity.FATAL,
-							exposeToClient: false
-						}
+					new this.errorHandler.ErrorClasses.DatabaseErrorFatal(
+						`Failed to authenticate database connection after ${this.configService.getEnvVariables().dbInitMaxRetries} attempts: ${errorMessage}`,
+						{ originalError: dbError }
 					);
-
-				this.params.errorLogger.logError(
-					fatalError as AppError,
-					this.params.errorLoggerDetails(
-						this.params.getCallerInfo,
-						'DATABASE_INIT',
-						this.params.blankRequest
-					),
-					this.params.appLogger,
-					this.params.ErrorSeverity.FATAL
-				);
+				this.configService
+					.getErrorLogger()
+					.logError(fatalError.message);
 				throw fatalError;
 			}
+		} finally {
+			this.envSecretsStore.reEncryptSecret('DB_PASSWORD'!);
+			this.logger.debug('Database password re-encrypted.');
 		}
 	}
 
-	// Return the existing Sequelize instance (singleton)
 	public getInstance(): Sequelize | null {
 		return this.sequelizeInstance;
 	}

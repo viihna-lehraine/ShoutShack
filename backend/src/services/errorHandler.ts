@@ -204,9 +204,9 @@ export class ErrorHandler {
 
 	public async sendClientErrorResponse({
 		message,
-		statusCode = 400,
 		res,
-		responseId
+		responseId,
+		statusCode = 400
 	}: {
 		message: string;
 		statusCode?: number;

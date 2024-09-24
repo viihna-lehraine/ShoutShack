@@ -1,7 +1,14 @@
 import { JwtPayload } from 'jsonwebtoken';
-import { EmailMFA } from '../index/interfaces';
+import { EmailMFAInterface } from '../index/interfaces';
+import { validateDependencies } from '../utils/helpers';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
+import { envSecretsStore } from '../environment/envSecrets';
 
-export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
+export async function createEmail2FAUtil({
+	bcrypt,
+	jwt
+}: EmailMFAInterface): Promise<{
 	generateEmail2FACode: () => Promise<{
 		email2FACode: string;
 		email2FAToken: string;
@@ -11,14 +18,14 @@ export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
-	const appLogger = configService.getLogger();
+	const logger = configService.getAppLogger();
 
 	validateDependencies(
 		[
 			{ name: 'bcrypt', instance: bcrypt },
 			{ name: 'jwt', instance: jwt }
 		],
-		appLogger || console
+		logger
 	);
 
 	async function generateEmail2FACode(): Promise<{
@@ -26,30 +33,33 @@ export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 		email2FAToken: string;
 	}> {
 		try {
-			const email2FACode = await bcrypt.genSalt(6); // generates a 6-character salt (2FA code)
+			const email2FACode = await bcrypt.genSalt(6);
 			const email2FAToken = jwt.sign(
 				{ email2FACode },
-				secrets.EMAIL_2FA_KEY,
+				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY', logger)!,
 				{
 					expiresIn: '30m'
 				}
 			);
 
 			return {
-				email2FACode, // raw 2FA code
-				email2FAToken // JWT containing the 2FA code
+				email2FACode,
+				email2FAToken
 			};
 		} catch (utilError) {
 			const utility: string = 'generateEmail2FACode()';
-			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Error occured with ${utility}. Failed to generate email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
-			);
-			ErrorLogger.logError(utilityError);
-			processError(utilityError);
+			const utilityError =
+				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error occured with ${utility}. Failed to generate email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
+				);
+			configService.getErrorLogger().logError(utilityError.message);
+			errorHandler.handleError({ error: utilityError });
 			return {
 				email2FACode: '',
 				email2FAToken: ''
 			};
+		} finally {
+			envSecretsStore.reEncryptSecret('EMAIL_2FA_KEY');
 		}
 	}
 
@@ -60,11 +70,11 @@ export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 		try {
 			const decoded = jwt.verify(
 				token,
-				secrets.EMAIL_2FA_KEY
+				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY', logger)!
 			) as JwtPayload;
 
 			if (!decoded || typeof decoded.email2FACode !== 'string') {
-				appLogger.warn(
+				logger.warn(
 					'Invalid token structure during email 2FA verification'
 				);
 				return false;
@@ -73,12 +83,15 @@ export async function createEmail2FAUtil({ bcrypt, jwt }: EmailMFA): Promise<{
 			return decoded.email2FACode === email2FACode;
 		} catch (utilError) {
 			const utility: string = 'verifyEmail2FACode()';
-			const utilityError = new errorClasses.UtilityErrorRecoverable(
-				`Error occured with dependency ${utility}. Failed to verify email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
-			);
-			ErrorLogger.logError(utilityError);
-			processError(utilityError);
+			const utilityError =
+				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error occured with dependency ${utility}. Failed to verify email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
+				);
+			configService.getErrorLogger().logError(utilityError.message);
+			errorHandler.handleError({ error: utilityError });
 			return false;
+		} finally {
+			envSecretsStore.reEncryptSecret('EMAIL_2FA_KEY');
 		}
 	}
 

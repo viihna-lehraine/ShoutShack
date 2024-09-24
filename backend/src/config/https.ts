@@ -1,36 +1,22 @@
 import { constants as cryptoConstants } from 'crypto';
-import { DeclareWebServerOptionsInterface, WebServerOptions } from '../index/webServerInterfaces';
-import { AppError } from '../errors/errorClasses';
-import { ConfigService } from '../services/configService';
-import { AppLogger } from '../services/logger';
+import { AppLoggerInterface, DeclareWebServerOptionsInterface, WebServerOptions } from '../index/interfaces';
+import { tlsCiphers } from '../utils/constants';
 
 export async function declareWebServerOptions(params: DeclareWebServerOptionsInterface): Promise<WebServerOptions> {
 	const {
-		constants,
-		blankRequest,
-		fs,
-		appLogger,
 		configService,
-		errorClasses,
-		errorLoggerDetails,
 		errorLogger,
-		ErrorSeverity,
-		getCallerInfo,
-		processError,
+		errorHandler,
 		validateDependencies
 	} = params;
 
-	const appLogger = new AppLogger.getRedactedLogger();
+	const logger: AppLoggerInterface = configService.getAppLogger();
 	const webServerSecureOptions = cryptoConstants.SSL_OP_NO_TLSv1 | cryptoConstants.SSL_OP_NO_TLSv1_1;
 
 	try {
 		validateDependencies(
-			[
-				{ name: 'constants', instance: constants },
-				{ name: 'fs', instance: fs },
-				{ name: 'tlsCiphers', instance: tlsCiphers }
-			],
-			appLogger
+			[{ name: 'tlsCiphers', instance: tlsCiphers }],
+			logger
 		);
 
 		return {
@@ -41,31 +27,15 @@ export async function declareWebServerOptions(params: DeclareWebServerOptionsInt
 			honorCipherOrder: configService.getFeatureFlags().honorCipherOrder!,
 		};
 	} catch (error) {
-		const serviceError = new errorClasses.ServiceUnavailableErrorFatal(
+		const serviceError = new errorHandler.ErrorClasses.ServiceUnavailableErrorFatal(
 			'HTTP/HTTPS Server',
 			{
 				message: `Failed to declare options required for HTTP/HTTPS server\n${error instanceof Error ? error.message : error}`,
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
+				originalError: error
 			}
 		);
-		errorLogger.logError(
-			serviceError as AppError,
-			errorLoggerDetails(getCallerInfo, blankRequest, 'DECLARE_HTTPS_OPTIONS'),
-			appLogger,
-			ErrorSeverity.FATAL
-		);
-		processError(
-			appLogger,
-			ConfigService,
-			errorLogger,
-			errorLoggerDetails,
-			console,
-			isAppLogger,
-			error
-		);
+		errorLogger.logError(serviceError.message);
+		errorHandler.handleError({ error: serviceError });
 		throw serviceError;
 	}
 }

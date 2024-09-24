@@ -2,22 +2,15 @@ import { config } from 'dotenv';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { configService } from '../services/configService';
-import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import {
-	FeatureEnabler,
-	FeatureFlagTypes
-} from '../index/environmentInterfaces';
-import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
-import { AppLogger } from '../services/appLogger';
-import { errorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { blankRequest, parseBoolean } from '../utils/helpers';
-import { errorLoggerDetails, getCallerInfo } from '../utils/helpers';
+import { FeatureEnabler, FeatureFlagTypes } from '../index/interfaces';
+import { HandleErrorStaticParameters } from '../index/parameters';
+import { errorHandler } from '../services/errorHandler';
+import { parseBoolean } from '../utils/helpers';
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
-const appLogger: AppLogger = configService.getAppLogger();
+const errorLogger = configService.getErrorLogger();
 
 export function loadEnv(): void {
 	try {
@@ -36,30 +29,20 @@ export function loadEnv(): void {
 
 		config({ path: envPath });
 	} catch (configError) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to load environment variables from .env file\n${configError instanceof Error ? configError.message : configError}\nShutting down...`,
-			{
-				originalError: configError,
-				statusCode: 404,
-				severity: ErrorSeverity.FATAL,
-				exposeToClient: false
-			}
-		);
-		errorLogger.logError(
-			configurationError as AppError,
-			errorLoggerDetails(getCallerInfo, blankRequest, 'LOAD_ENV'),
-			appLogger,
-			ErrorSeverity.FATAL
-		);
+		const configurationError =
+			new errorHandler.ErrorClasses.ConfigurationError(
+				`Failed to load environment variables from .env file\n${configError instanceof Error ? configError.message : configError}\nShutting down...`,
+				{ originalError: configError }
+			);
+		errorLogger.logError(configurationError.message);
 		const processErrorParams = {
-			...ProcessErrorStaticParameters,
+			...HandleErrorStaticParameters,
 			error: configurationError,
-			req: blankRequest,
 			details: {
 				reason: 'Failed to load environment variables from .env file'
 			}
 		};
-		processError(processErrorParams);
+		errorHandler.handleError(processErrorParams);
 		throw configurationError;
 	}
 }
@@ -92,33 +75,19 @@ export function getFeatureFlags(): FeatureFlagTypes {
 			)
 		};
 	} catch (utilError) {
-		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Failed to get feature flags using the utility 'getFeatureFlags()\n${utilError instanceof Error ? utilError.message : utilError}`,
-			{
-				utility: 'getFeatureFlags()',
-				originalError: utilError,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
+		const utilityError =
+			new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`Failed to get feature flags using the utility 'getFeatureFlags()\n${utilError instanceof Error ? utilError.message : utilError}`,
+				{
+					utility: 'getFeatureFlags()',
+					originalError: utilError
+				}
+			);
 
-		// Log the error
-		errorLogger.logError(
-			utilityError as AppError,
-			errorLoggerDetails(
-				() => 'getFeatureFlags()',
-				blankRequest,
-				'GET_FEATURE_FLAGS'
-			),
-			appLogger,
-			ErrorSeverity.RECOVERABLE
-		);
-
-		processError({
-			...ProcessErrorStaticParameters,
+		errorLogger.logError(utilityError.message);
+		errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: utilityError,
-			req: blankRequest,
 			details: { reason: 'Failed to retrieve feature flags' }
 		});
 
@@ -140,7 +109,6 @@ export function getFeatureFlags(): FeatureFlagTypes {
 	}
 }
 
-// *DEV-NOTE* this is unused, and should be implemented
 export function createFeatureEnabler(): FeatureEnabler {
 	const appLogger = configService.getAppLogger() || console;
 
@@ -177,30 +145,18 @@ export function createFeatureEnabler(): FeatureEnabler {
 			}
 		};
 	} catch (utilError) {
-		const utilityError = new errorClasses.UtilityErrorRecoverable(
-			`Failed to create feature enabler using the utility 'displayEnvAndFeatureFlags()'\n${utilError instanceof Error ? utilError.message : utilError}`,
-			{
-				utility: 'createFeatureEnabler()',
-				originalError: utilError,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		errorLogger.logError(
-			utilityError as AppError,
-			errorLoggerDetails(
-				getCallerInfo,
-				blankRequest,
-				'CREATE_FEATURE_ENABLER'
-			),
-			appLogger,
-			ErrorSeverity.RECOVERABLE
-		);
-		processError({
-			...ProcessErrorStaticParameters,
+		const utilityError =
+			new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`Failed to create feature enabler using the utility 'displayEnvAndFeatureFlags()'\n${utilError instanceof Error ? utilError.message : utilError}`,
+				{
+					utility: 'createFeatureEnabler()',
+					originalError: utilError
+				}
+			);
+		errorLogger.logError(utilityError.message);
+		errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: utilityError,
-			req: blankRequest,
 			details: { reason: 'Failed to create feature enabler' }
 		});
 		return {
@@ -218,26 +174,18 @@ export function displayEnvAndFeatureFlags(): void {
 		console.log('\nFeature Flags:');
 		console.table(configService.getFeatureFlags());
 	} catch (displayError) {
-		const displayErrorObj = new errorClasses.UtilityErrorRecoverable(
-			`Error displaying environment variables and feature flags using 'displayEnvAndFeatureFlags()'\n${displayError instanceof Error ? displayError.message : displayError}`,
-			{
-				utility: 'displayEnvAndFeatureFlags()',
-				originalError: displayError,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		errorLogger.logError(
-			displayErrorObj as AppError,
-			errorLoggerDetails(getCallerInfo, blankRequest, 'DISPLAY_ENV'),
-			appLogger,
-			ErrorSeverity.RECOVERABLE
-		);
-		processError({
-			...ProcessErrorStaticParameters,
+		const displayErrorObj =
+			new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`Error displaying environment variables and feature flags using 'displayEnvAndFeatureFlags()'\n${displayError instanceof Error ? displayError.message : displayError}`,
+				{
+					utility: 'displayEnvAndFeatureFlags()',
+					originalError: displayError
+				}
+			);
+		errorLogger.logError(displayErrorObj.message);
+		errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: displayError,
-			req: blankRequest,
 			details: {
 				reason: 'Unable to display env variables and feature flags'
 			}

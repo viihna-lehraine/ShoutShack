@@ -6,18 +6,18 @@ import {
 	VerifiedCallback
 } from 'passport-jwt';
 import { configService } from '../services/configService';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
-import { PassportServiceInterface } from 'src/index/serviceInterfaces';
+import { PassportServiceInterface } from '../index/interfaces';
+import { envSecretsStore } from '../environment/envSecrets';
 
 export async function configurePassport({
 	passport,
 	UserModel,
 	argon2
 }: PassportServiceInterface): Promise<void> {
-	const appLogger = configService.getAppLogger();
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
 
 	try {
 		validateDependencies(
@@ -26,15 +26,14 @@ export async function configurePassport({
 				{ name: 'UserModel', instance: UserModel },
 				{ name: 'argon2', instance: argon2 }
 			],
-			appLogger || console
+			logger
 		);
 
 		const opts: StrategyOptions = {
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			secretOrKey: secrets.jwtSecrets
+			secretOrKey: envSecretsStore.retrieveSecret('JWT_SECRET', logger)!
 		};
 
-		// implement JWT strategy
 		passport.use(
 			new JwtStrategy(
 				opts,
@@ -46,16 +45,18 @@ export async function configurePassport({
 								{ name: 'jwtPayload', instance: jwtPayload },
 								{ name: 'done', instance: done }
 							],
-							appLogger || console
+							logger
 						);
+
 						const user = await UserModel.findByPk(jwtPayload.id);
+
 						if (user) {
-							appLogger.info(
+							logger.info(
 								`JWT authentication successful for user: ${user.username}`
 							);
 							return done(null, user);
 						} else {
-							appLogger.warn(
+							logger.warn(
 								'JWT authentication failed: User not found'
 							);
 							return done(null, false, {
@@ -65,12 +66,11 @@ export async function configurePassport({
 					} catch (depError) {
 						const dependency: string = 'passportJwtStrategy()';
 						const dependencyError =
-							new errorClasses.DependencyErrorRecoverable(
-								dependency,
-								{ exposeToClient: false }
+							new errorHandler.ErrorClasses.DependencyErrorRecoverable(
+								`Failed to execute dependency: ${dependency}\n${depError instanceof Error ? depError.message : depError}`
 							);
-						errorLogger.logError(dependencyError);
-						processError(dependencyError);
+						errorLogger.logError(dependencyError.message);
+						errorHandler.handleError({ error: dependencyError });
 						return done(
 							new Error(
 								dependencyError instanceof Error
@@ -84,7 +84,6 @@ export async function configurePassport({
 			)
 		);
 
-		// implement local strategy for username and password login
 		passport.use(
 			new LocalStrategy(async (username, password, done) => {
 				try {
@@ -94,14 +93,14 @@ export async function configurePassport({
 							{ name: 'password', instance: password },
 							{ name: 'done', instance: done }
 						],
-						appLogger || console
+						logger
 					);
 
 					const user = await UserModel.findOne({
 						where: { username }
 					});
 					if (!user) {
-						appLogger.warn(
+						logger.warn(
 							`Local authentication failed: User not found: ${username}`
 						);
 						return done(null, false, { message: 'User not found' });
@@ -113,12 +112,12 @@ export async function configurePassport({
 					);
 
 					if (isMatch) {
-						appLogger.info(
+						logger.info(
 							`Local authentication successful for user: ${username}`
 						);
 						return done(null, user);
 					} else {
-						appLogger.warn(
+						logger.warn(
 							`Local authentication failed: Incorrect password for user: ${username}`
 						);
 						return done(null, false, {
@@ -126,14 +125,13 @@ export async function configurePassport({
 						});
 					}
 				} catch (err) {
-					const dependency: string = 'passportLocalStrategy()';
 					const dependencyError =
-						new errorClasses.DependencyErrorRecoverable(
-							dependency,
+						new errorHandler.ErrorClasses.DependencyErrorRecoverable(
+							`Failed to execute dependency: Passport, Use Local Stratgegy\n${err instanceof Error ? err.message : err}`,
 							{ exposeToClient: false }
 						);
-					errorLogger.logError(dependencyError);
-					processError(dependencyError);
+					errorLogger.logError(dependencyError.message);
+					errorHandler.handleError({ error: dependencyError });
 					return done(
 						new Error(
 							err instanceof Error ? err.message : String(err)
@@ -143,15 +141,15 @@ export async function configurePassport({
 			})
 		);
 
-		appLogger.info('Passport configured successfully');
+		logger.info('Passport configured successfully');
 	} catch (depError) {
-		const dependency: string = 'configurePassport()';
-		const dependencyError = new errorClasses.DependencyErrorFatal(
-			dependency,
-			{ exposeToClient: false }
-		);
-		processError(dependencyError);
-		errorLogger.logError(dependencyError);
+		const dependencyError =
+			new errorHandler.ErrorClasses.DependencyErrorFatal(
+				`Failed to execute dependency: configurePassport()\n${depError instanceof Error ? depError.message : depError}`,
+				{ exposeToClient: false }
+			);
+		errorHandler.handleError({ error: dependencyError });
+		errorLogger.logError(dependencyError.message);
 		throw new Error(
 			dependencyError instanceof Error
 				? dependencyError.message

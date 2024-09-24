@@ -95,7 +95,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		| 'mysql'
 		| 'postgres'
 		| 'sqlite',
-	dbHost: process.env.DB_HOST!,
+	dbHost: process.env.DB_HOST! || 'localhost',
 	dbInitMaxRetries: parseInt(process.env.DB_INIT_MAX_RETRIES!, 10),
 	dbInitRetryAfter: parseInt(process.env.DB_INIT_RETRY_AFTER!, 10),
 	dbName: process.env.DB_NAME!,

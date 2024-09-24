@@ -6,11 +6,9 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { errorClasses } from '../errors/errorClasses';
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { errorHandler } from '../services/errorHandler';
+import { configService } from '../services/configService';
 import { validateDependencies } from '../utils/helpers';
-import { ErrorLogger } from 'src/errors/errorLogger';
 
 interface AuditLogAttributes {
 	auditId: string;
@@ -44,16 +42,15 @@ class AuditLog
 }
 
 export default function createAuditLogModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof AuditLog | null {
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
 		);
 
 		AuditLog.init(
@@ -140,14 +137,15 @@ export default function createAuditLogModel(
 		logger.debug('AuditLog model initialized successfully');
 		return AuditLog;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize AuditLog model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize AuditLog model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }

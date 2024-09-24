@@ -7,15 +7,15 @@ import {
 	randomBytes
 } from 'crypto';
 import path from 'path';
-import { hashConfig } from '../auth/hash';
+import { hashConfig } from '../utils/constants';
 import { configService } from '../services/configService';
-import { AppError, errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ConfigSecretsInterface } from '../index/environmentInterfaces';
-import { errorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { AppLogger } from '../services/appLogger';
-import { ErrorLoggerInterface } from '../index/serviceInterfaces';
-import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
+import {
+	ConfigSecretsInterface,
+	ErrorHandlerInterface
+} from '../index/interfaces';
+import { ErrorHandler, errorHandler } from '../services/errorHandler';
+import { HandleErrorStaticParameters } from '../index/parameters';
+import { AppLogger, ErrorLogger } from '../services/logger';
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
@@ -44,6 +44,13 @@ export class SecretsStore {
 		string,
 		{ attempts: number; lastAttempt: number }
 	> = new Map();
+	private logger: import('../index/interfaces').AppLoggerInterface =
+		configService.getAppLogger();
+	private errorLogger = configService.getErrorLogger();
+	private errorHandler: ErrorHandlerInterface = ErrorHandler.getInstance(
+		new AppLogger(),
+		new ErrorLogger()
+	);
 
 	private constructor() {}
 
@@ -62,8 +69,7 @@ export class SecretsStore {
 	public async loadSecrets(
 		dependencies: ConfigSecretsInterface
 	): Promise<void> {
-		const { execSync, getDirectoryPath, appLogger, gpgPassphrase } =
-			dependencies;
+		const { execSync, getDirectoryPath, gpgPassphrase } = dependencies;
 		const secretsPath = path.join(
 			getDirectoryPath(),
 			configService.getEnvVariables().secretsFilePath1
@@ -87,19 +93,15 @@ export class SecretsStore {
 				});
 			}
 
-			appLogger.debug('Secrets loaded successfully');
-			this.reEncryptSecretsFile(secretsPath, gpgPassphrase, appLogger);
+			this.logger.debug('Secrets loaded successfully');
+			this.reEncryptSecretsFile(secretsPath, gpgPassphrase);
 			this.encryptGPGPassphraseInMemory(gpgPassphrase);
 		} catch (error) {
-			const secretsLoadError = new errorClasses.ConfigurationError(
-				`Failed to load secrets: ${error instanceof Error ? error.message : String(error)}`,
-				{
-					originalError: error,
-					statusCode: 500,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
+			const secretsLoadError =
+				new errorHandler.ErrorClasses.ConfigurationError(
+					`Failed to load secrets: ${error instanceof Error ? error.message : String(error)}`,
+					{ originalError: error }
+				);
 			const details: Record<string, unknown> = {
 				requestId: 'N/A',
 				adminId: 'N/A',
@@ -110,16 +112,12 @@ export class SecretsStore {
 					userAgent: 'N/A'
 				}
 			};
-			errorLogger.logError(
-				secretsLoadError as AppError,
-				details,
-				appLogger,
-				ErrorSeverity.FATAL
+			this.errorLogger.logError(
+				`{ ${secretsLoadError.message}\n${details} }`
 			);
-			processError({
-				...ProcessErrorStaticParameters,
-				error: secretsLoadError,
-				appLogger
+			this.errorHandler.handleError({
+				...HandleErrorStaticParameters,
+				error: secretsLoadError
 			});
 			throw secretsLoadError;
 		}
@@ -135,9 +133,9 @@ export class SecretsStore {
 		});
 	}
 
-	public retrieveSecret(key: string, appLogger: AppLogger): string | null {
-		if (this.isRateLimited(key, appLogger)) {
-			appLogger.warn(`Rate limit exceeded for secret: ${key}`);
+	public retrieveSecret(key: string): string | null {
+		if (this.isRateLimited(key)) {
+			this.logger.warn(`Rate limit exceeded for secret: ${key}`);
 			return null;
 		}
 
@@ -154,8 +152,7 @@ export class SecretsStore {
 	}
 
 	public retrieveSecrets(
-		secretKeys: string | string[],
-		appLogger: AppLogger
+		secretKeys: string | string[]
 	): Record<string, string | null> | string | null {
 		if (typeof secretKeys === 'string') {
 			secretKeys = [secretKeys];
@@ -167,7 +164,7 @@ export class SecretsStore {
 			const secretData = this.secrets.get(key);
 
 			if (!secretData) {
-				appLogger.error(`Secret ${key} not found`);
+				this.logger.error(`Secret ${key} not found`);
 				secretsResult[key] = null;
 
 				continue;
@@ -208,8 +205,7 @@ export class SecretsStore {
 	}
 
 	public decrptTLSKeys(
-		appLogger: AppLogger,
-		errorLogger: ErrorLoggerInterface
+		logger: import('../index/interfaces').AppLoggerInterface
 	): object {
 		try {
 			const decryptedPassphrase = this.decryptGPGPassphraseInMemory();
@@ -222,34 +218,25 @@ export class SecretsStore {
 
 			this.encryptGPGPassphraseInMemory(decryptedPassphrase);
 
-			appLogger.debug('TLS keys decrypted successfully');
+			logger.debug('TLS keys decrypted successfully');
 			return { decryptedKey, decryptedCert };
 		} catch (tlsError) {
 			const tlsKeyDecryptionError =
-				new errorClasses.ConfigurationErrorFatal(
+				new errorHandler.ErrorClasses.ConfigurationErrorFatal(
 					`Fatal error: Failed to decrypt TLS keys\n${tlsError instanceof Error ? tlsError.message : String(tlsError)}`,
-					{
-						originalError: tlsError,
-						statusCode: 500,
-						severity: ErrorSeverity.FATAL,
-						exposeToClient: false
-					}
+					{ originalError: tlsError }
 				);
 			const details: Record<string, unknown> = {
 				requestId: 'N/A',
 				action: 'tls_key_decryption',
 				timestamp: new Date().toISOString()
 			};
-			errorLogger.logError(
-				tlsKeyDecryptionError as AppError,
-				details,
-				appLogger,
-				ErrorSeverity.FATAL
+			this.errorLogger.logError(
+				`${tlsKeyDecryptionError.message}\n${details}`
 			);
-			processError({
-				...ProcessErrorStaticParameters,
-				error: tlsKeyDecryptionError,
-				appLogger
+			errorHandler.handleError({
+				...HandleErrorStaticParameters,
+				error: tlsKeyDecryptionError
 			});
 			throw tlsKeyDecryptionError;
 		}
@@ -287,9 +274,7 @@ export class SecretsStore {
 		await Promise.all(promises);
 	}
 
-	public async batchReEncryptSecrets(
-		appLogger: AppLogger | Console = console
-	): Promise<void> {
+	public async batchReEncryptSecrets(): Promise<void> {
 		const promises: Promise<void>[] = [];
 		this.secrets.forEach((secretData, key) => {
 			if (secretData.isDecrypted) {
@@ -298,12 +283,10 @@ export class SecretsStore {
 		});
 
 		await Promise.all(promises);
-		appLogger.debug('Batch re-encryption completed');
+		this.logger.debug('Batch re-encryption completed');
 	}
 
-	public clearExpiredSecretsFromMemory(
-		appLogger: AppLogger | Console = console
-	): void {
+	public clearExpiredSecretsFromMemory(): void {
 		const currentTime = Date.now();
 		this.secrets.forEach((secretData, key) => {
 			const isTimeElapsed = currentTime - secretData.lastAccessed;
@@ -316,15 +299,12 @@ export class SecretsStore {
 					...secretData,
 					isDecrypted: false
 				});
-				appLogger.debug(`Secret ${key} cleared from memory`);
+				this.logger.debug(`Secret ${key} cleared from memory`);
 			}
 		});
 	}
 
-	public clearSecretsFromMemory(
-		secretKeys: string | string[],
-		appLogger: AppLogger | Console = console
-	): void {
+	public clearSecretsFromMemory(secretKeys: string | string[]): void {
 		const keysToClear = Array.isArray(secretKeys)
 			? secretKeys
 			: [secretKeys];
@@ -333,12 +313,14 @@ export class SecretsStore {
 			const secretData = this.secrets.get(key);
 
 			if (!secretData) {
-				appLogger.error(`Secret ${key} not found`);
+				this.logger.error(`Secret ${key} not found`);
 				return;
 			}
 
 			if (!secretData.isDecrypted) {
-				appLogger.debug(`Secret ${key} is already cleared from memory`);
+				this.logger.debug(
+					`Secret ${key} is already cleared from memory`
+				);
 			}
 
 			this.secrets.set(key, {
@@ -346,7 +328,7 @@ export class SecretsStore {
 				isDecrypted: false
 			});
 
-			appLogger.debug(`Secret ${key} has been cleared from memory`);
+			this.logger.debug(`Secret ${key} has been cleared from memory`);
 		});
 	}
 
@@ -440,7 +422,7 @@ export class SecretsStore {
 		return data;
 	}
 
-	private isRateLimited(key: string, appLogger: AppLogger): boolean {
+	private isRateLimited(key: string): boolean {
 		const currentTime = Date.now();
 		let rateData = this.secretAccessAttempts.get(key);
 
@@ -460,7 +442,7 @@ export class SecretsStore {
 		}
 
 		if (rateData.attempts >= this.MAX_ATTEMPTS) {
-			appLogger.warn(`Rate limit exceeded for key: ${key}`);
+			this.logger.warn(`Rate limit exceeded for key: ${key}`);
 			return true;
 		}
 
@@ -525,15 +507,14 @@ export class SecretsStore {
 
 	private reEncryptSecretsFile(
 		secretsPath: string,
-		decryptedGPGPassphrase: string,
-		appLogger: AppLogger | Console = console
+		decryptedGPGPassphrase: string
 	): void {
 		try {
 			this.decryptGPGPassphraseInMemory();
 			execSync(
 				`sops -e passphrase ${decryptedGPGPassphrase} ${secretsPath}`
 			);
-			appLogger.debug(`Secrets file re-enrypted successfully`);
+			this.logger.debug(`Secrets file re-enrypted successfully`);
 		} catch (error) {
 			console.error(
 				`Failed to re-encrypt secrets file\n${error instanceof Error ? error.message : String(error)}`

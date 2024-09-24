@@ -87,13 +87,18 @@ export interface AppLoggerInterface extends WinstonLogger {
 export interface AuthControllerInterface {
 	argon2: typeof import('argon2');
 	execSync: typeof import('child_process').execSync;
-	jwt: typeof import('jsonwebtoken');
+	jwt: typeof import('../auth/jwt').createJwt;
 	req: import('express').Request;
 	res: import('express').Response;
-	appLogger: AppLoggerInterface;
-	errorLogger: AppLoggerInterface;
+	configService: typeof import('../services/configService').configService;
+	errorHandler: typeof import('../services/errorHandler').errorHandler;
+	envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 	createJwt: typeof import('../auth/jwt').createJwt;
 	UserModel: typeof import('../models/UserModelFile').User;
+	validateDependencies: (
+		dependencies: DependencyInterface[],
+		logger: AppLoggerInterface
+	) => void;
 }
 
 export interface BackupCodeInterface {
@@ -137,12 +142,12 @@ export interface CreateJwtInterface {
 	jwt: typeof import('jsonwebtoken');
 	execSync: typeof import('child_process').execSync;
 	configService: typeof import('../services/configService').configService;
-	appLogger: AppLoggerType;
-	errorLogger: AppLoggerType;
+	appLogger: AppLoggerInterface;
+	errorLogger: AppLoggerInterface;
 	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
-		logger: import('../services/logger').AppLoggerType
+		logger: AppLoggerInterface
 	) => void;
 	envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 }
@@ -385,7 +390,6 @@ export interface FidoUserInterface {
 }
 
 export interface FlushRedisMemoryCacheInterface {
-	readonly createMemoryMonitor: typeof import('../services/resourceManager').createMemoryMonitor;
 	readonly configService: typeof import('../services/configService').configService;
 	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
 	readonly createRedisClient: typeof import('redis').createClient;
@@ -412,7 +416,6 @@ export interface GeneratePasskeyInterface {
 
 export interface GetRedisClientInterface {
 	readonly createRedisClient: typeof import('redis').createClient;
-	readonly createMemoryMonitor: typeof import('../services/resourceManager').createMemoryMonitor;
 	readonly configService: typeof import('../services/configService').configService;
 	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
@@ -634,7 +637,6 @@ export interface PreInitIpBlacklistInterface {
 }
 
 export interface RedisServiceInterface {
-	readonly createMemoryMonitor: typeof import('../services/resourceManager').createMemoryMonitor;
 	readonly configService: typeof import('../services/configService').configService;
 	readonly createRedisClient: typeof import('redis').createClient;
 	readonly validateDependencies: (

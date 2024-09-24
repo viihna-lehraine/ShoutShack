@@ -7,10 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { errorHandler } from '../services/errorHandler';
+import { configService } from '../services/configService';
 import { validateDependencies } from '../utils/helpers';
 
 interface DataShareOptionsAttributes {
@@ -46,16 +44,15 @@ class DataShareOptions
 }
 
 export default function createDataShareOptionsModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof DataShareOptions | null {
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
 		);
 
 		DataShareOptions.init(
@@ -127,14 +124,15 @@ export default function createDataShareOptionsModel(
 		logger.info('DataShareOptions model initialized successfully');
 		return DataShareOptions;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize DataShareOptions model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize DataShareOptions model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }

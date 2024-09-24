@@ -1,81 +1,74 @@
-import { AuthController } from '../index/controllerInterfaces';
+import { AuthControllerInterface } from '../index/interfaces';
 
 export function userLogin({
 	argon2,
-	execSync,
 	jwt,
-	req,
-	res,
-	appLogger,
-	createJwt,
-	errorClasses,
-	ErrorLogger,
-	ErrorSeverity,
-	processError,
-	sendClientErrorResponse,
+	configService,
 	UserModel,
-	validateDependencies
-}: AuthController) {
+	validateDependencies,
+	errorHandler
+}: AuthControllerInterface) {
 	return async (req: Request, res: Response): Promise<Response | void> => {
+		const logger = configService.getAppLogger();
+		const errorLogger = configService.getErrorLogger();
+
 		try {
 			validateDependencies(
 				[
-					{ name: 'appLogger', instance: appLogger },
 					{ name: 'UserModel', instance: UserModel },
 					{ name: 'jwt', instance: jwt },
 					{ name: 'argon2', instance: argon2 }
 				],
-				appLogger
+				logger
 			);
 			const { username, password } = req.body;
 
 			const user = await UserModel.findOne({ where: { username } });
 			if (!user) {
-				appLogger.debug(
+				logger.debug(
 					`Login attempt failed - user not found: ${username}`
 				);
-				const clientError = new errorClasses.ClientAuthenticationError(
-					'Login attempt failed - please try again',
-					{ exposeToClient: true }
-				);
-				sendClientErrorResponse(String(clientError), 404, res);
+				const clientError =
+					new errorHandler.ErrorClasses.ClientAuthenticationError(
+						'Login attempt failed - please try again',
+						{ exposeToClient: true }
+					);
+				errorHandler.sendClientErrorResponse({
+					message: 'Login attempt failed. Please try again',
+					res
+				});
+				errorHandler.handleError({ error: clientError });
 				return;
 			}
 
-			const secrets = await sops.getSecrets({
-				logger,
-				execSync,
-				getDirectoryPath: () => process.cwd()
-			});
-
 			const isPasswordValid = await user.comparePassword(
 				password,
-				argon2,
-				secrets,
-				logger
+				argon2
 			);
 			if (!isPasswordValid) {
 				logger.debug(
 					`Login attempt failed - invalid password for user: ${username}`
 				);
-				const clientError = new errorClasses.ClientAuthenticationError(
-					'Login attempt failed - please try again',
-					{ exposeToClient: true }
-				);
-				sendClientErrorResponse(clientError, res);
+				const clientError =
+					new errorHandler.ErrorClasses.ClientAuthenticationError(
+						'Login attempt failed - please try again',
+						{ exposeToClient: false }
+					);
+				errorHandler.sendClientErrorResponse(clientError, res);
 			}
 
-			const token = await jwtUtil.generateJwt(user);
+			const token = await jwt.generateJwt(user);
 			logger.info(`User logged in successfully: ${username}`);
 			return res.json({ token });
 		} catch (depError) {
 			const dependency: string = 'authController - login()';
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				`Dependency error: ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
-				{ exposeToClient: false }
-			);
-			ErrorLogger.logError(dependencyError, logger);
-			processError(dependencyError, logger || console);
+			const dependencyError =
+				new errorHandler.ErrorClasses.DependencyErrorRecoverable(
+					`Dependency error: ${dependency}: ${depError instanceof Error ? depError.message : depError}`,
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(dependencyError.message);
+			errorHandler.handleError({ error: dependencyError });
 		}
 	};
 }

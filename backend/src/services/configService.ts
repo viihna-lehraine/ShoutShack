@@ -72,14 +72,12 @@ export class ConfigService implements ConfigServiceInterface {
 	}
 
 	public getSecrets(
-		keys: keyof SecretsMap | (keyof SecretsMap)[],
-		appLogger: AppLoggerInterface
+		keys: keyof SecretsMap | (keyof SecretsMap)[]
 	): Record<string, string | undefined> | string | undefined {
 		let result = envSecretsStore.retrieveSecrets(
 			Array.isArray(keys)
 				? keys.map(key => key.toString())
-				: keys.toString(),
-			appLogger
+				: keys.toString()
 		);
 
 		if (!this.gpgPassphrase) {
@@ -104,8 +102,7 @@ export class ConfigService implements ConfigServiceInterface {
 			result = envSecretsStore.retrieveSecrets(
 				Array.isArray(keys)
 					? keys.map(key => key.toString())
-					: keys.toString(),
-				appLogger
+					: keys.toString()
 			);
 		}
 

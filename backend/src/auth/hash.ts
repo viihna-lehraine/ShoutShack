@@ -1,49 +1,46 @@
 import argon2 from 'argon2';
 import { configService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { processError } from '../errors/processError';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
-import { ErrorLogger } from '../services/errorLogger';
-import { hashConfig } from '../index/parameters';
+import { hashConfig } from '../utils/constants';
+import { envSecretsStore } from '../environment/envSecrets';
 
 export async function hashPassword(password: string): Promise<string> {
-	const appLogger = configService.getAppLogger();
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
 
 	try {
 		validateDependencies(
 			[{ name: 'password', instance: password }],
-			appLogger || console
+			logger || console
 		);
 
-		if (!secrets || !secrets.PEPPER) {
-			const hashConfigError = new errorClasses.ConfigurationError(
-				`Error occurred when retrieving pepper from secrets`,
-				{
-					statusCode: 404,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(hashConfigError);
-			processError(hashConfigError);
-			appLogger.error('Failed to retrieve pepper from secrets');
+		const pepper = envSecretsStore.retrieveSecret('PEPPER', logger);
+
+		if (pepper) {
+			const hashConfigError =
+				new errorHandler.ErrorClasses.ConfigurationError(
+					`Unable to retrieve pepper from secrets. Password cannoty not be hashed.`,
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(hashConfigError.message);
+			errorHandler.handleError({ error: hashConfigError });
+			logger.error('Failed to retrieve pepper from secrets');
 			throw hashConfigError;
 		}
 
-		return await argon2.hash(password + secrets.PEPPER, hashConfig);
+		return await argon2.hash(password + pepper, hashConfig);
 	} catch (hashUtilEror) {
-		const utility: string = 'hashPassword()';
-		const hashUtilityError = new errorClasses.UtilityErrorRecoverable(
-			utility,
-			{
-				originalError: hashUtilEror,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(hashUtilityError, appLogger || console);
-		processError(hashUtilityError, appLogger || console);
+		const hashUtilityError =
+			new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`${hashUtilEror instanceof Error ? hashUtilEror.message : hashUtilEror}`
+			);
+		errorLogger.logError(hashUtilityError.message);
+		errorHandler.handleError({ error: hashUtilityError });
 		return '';
+	} finally {
+		logger.debug('Password hashed successfully');
+
+		envSecretsStore.reEncryptSecret('PEPPER');
 	}
 }
