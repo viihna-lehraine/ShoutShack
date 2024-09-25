@@ -36,7 +36,7 @@ export async function createEmail2FAUtil({
 			const email2FACode = await bcrypt.genSalt(6);
 			const email2FAToken = jwt.sign(
 				{ email2FACode },
-				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY', logger)!,
+				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY')!,
 				{
 					expiresIn: '30m'
 				}
@@ -70,7 +70,7 @@ export async function createEmail2FAUtil({
 		try {
 			const decoded = jwt.verify(
 				token,
-				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY', logger)!
+				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY')!
 			) as JwtPayload;
 
 			if (!decoded || typeof decoded.email2FACode !== 'string') {

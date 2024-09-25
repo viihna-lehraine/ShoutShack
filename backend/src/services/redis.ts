@@ -1,169 +1,211 @@
-import os from 'os';
 import { RedisClientType } from 'redis';
 import {
+	AppLoggerInterface,
+	DependencyInterface,
 	FlushRedisMemoryCacheInterface,
 	GetRedisClientInterface,
+	RedisServiceDeps,
 	RedisServiceInterface
 } from '../index/interfaces';
-import { ProcessErrorStaticParameters } from '../index/parameters';
-import { AppError } from '../errors/errorClasses';
+import { HandleErrorStaticParameters } from '../index/parameters';
 import { validateDependencies } from '../utils/helpers';
-import { blankRequest } from '../utils/constants';
 
-let redisClient: RedisClientType | null = null;
+export class RedisService implements RedisServiceInterface {
+	private static instance: RedisService | null = null;
+	private redisClient: RedisClientType | null = null;
 
-export async function connectRedis({
-	createMemoryMonitor,
-	createRedisClient,
-	configService,
-	validateDependencies,
-	errorHandler
-}: RedisServiceInterface): Promise<RedisClientType | null> {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	private constructor(
+		private readonly configService: typeof import('../services/configService').configService,
+		private readonly createRedisClient: typeof import('redis').createClient,
+		private readonly validateDependencies: (
+			dependencies: DependencyInterface[],
+			logger: AppLoggerInterface
+		) => void,
+		private readonly errorHandler: typeof import('../services/errorHandler').errorHandler
+	) {}
 
-	try {
-		validateDependencies(
-			[{ name: 'createRedisClient', instance: createRedisClient }],
-			logger
-		);
+	public static getInstance(deps: RedisServiceDeps): RedisService {
+		if (!RedisService.instance) {
+			// Validate dependencies
+			deps.validateDependencies(
+				[
+					{
+						name: 'createRedisClient',
+						instance: deps.createRedisClient
+					}
+				],
+				deps.configService.getAppLogger()
+			);
 
-		if (!configService.getFeatureFlags().enableRedis) {
-			logger.debug('Redis is disabled');
+			RedisService.instance = new RedisService(
+				deps.configService,
+				deps.createRedisClient,
+				deps.validateDependencies,
+				deps.errorHandler
+			);
+		}
+		return RedisService.instance;
+	}
+
+	public async connectRedis({
+		req,
+		res,
+		next,
+		blankRequest
+	}: RedisServiceDeps): Promise<RedisClientType | null> {
+		const logger = this.configService.getAppLogger();
+		const errorLogger = this.configService.getErrorLogger();
+
+		try {
+			validateDependencies(
+				[
+					{
+						name: 'createRedisClient',
+						instance: this.createRedisClient
+					}
+				],
+				logger
+			);
+
+			if (!this.redisClient) {
+				const client: RedisClientType = this.createRedisClient({
+					url: this.configService.getEnvVariables().redisUrl,
+					socket: {
+						reconnectStrategy: retries => {
+							const retryAfter = Math.min(retries * 100, 3000);
+							errorLogger.logWarn(
+								`reason: Error connecting to Redis instance at ${this.configService.getEnvVariables().redisUrl}, retrying in ${retryAfter}ms. ${retries} retries so far`,
+								{}
+							);
+							if (retries >= 10) {
+								const serviceError =
+									new this.errorHandler.ErrorClasses.ServiceUnavailableError(
+										retryAfter,
+										'Redis Service',
+										{
+											retries,
+											redisUrl:
+												this.configService.getEnvVariables()
+													.redisUrl,
+											exposeToClient: false
+										}
+									);
+								errorLogger.logError(serviceError.message, {});
+								this.errorHandler.handleError({
+									error:
+										serviceError ||
+										Error ||
+										'Redis Service Error',
+									details: {
+										reason: 'Failed to initialize Redis'
+									}
+								});
+
+								logger.error(
+									'Max retries reached when trying to initialize Redis.'
+								);
+							}
+
+							return retryAfter;
+						}
+					}
+				});
+
+				client.on('error', error => {
+					this.errorHandler.expressErrorHandler()(
+						error,
+						req || blankRequest,
+						res,
+						next
+					);
+				});
+
+				await client.connect();
+				logger.info('Connected to Redis');
+
+				this.redisClient = client;
+			}
+
+			return this.redisClient;
+		} catch (serviceError) {
+			const redisServiceError =
+				new this.errorHandler.ErrorClasses.ServiceUnavailableError(
+					20,
+					`Failed to connect to Redis instance at ${this.configService.getEnvVariables().redisUrl}`
+				);
+			errorLogger.logError(redisServiceError.message);
+			this.errorHandler.handleError({
+				...HandleErrorStaticParameters,
+				error:
+					redisServiceError ||
+					serviceError ||
+					Error ||
+					'Redis Service Unavailable'
+			});
 			return null;
 		}
-
-		if (!redisClient) {
-			const client: RedisClientType = createRedisClient({
-				url: configService.getEnvVariables().redisUrl,
-				socket: {
-					reconnectStrategy: retries => {
-						const retryAfter = Math.min(retries * 100, 3000);
-						errorLogger.logWarn(
-							`reason: Error connecting to Redis instance at ${configService.getEnvVariables().redisUrl}, retrying in ${retryAfter}ms. ${retries} retries so far`,
-							{}
-						);
-						if (retries >= 10) {
-							const serviceError =
-								new errorHandler.ErrorClasses.ServiceUnavailableError(
-									retryAfter,
-									'Redis Service',
-									{
-										retries,
-										redisUrl:
-											configService.getEnvVariables()
-												.redisUrl,
-										exposeToClient: false
-									}
-								);
-							errorLogger.logError(serviceError.message, {});
-							errorHandler.handleError({
-								...ProcessErrorStaticParameters,
-								error: serviceError as unknown as AppError,
-								req: blankRequest,
-								details: {
-									reason: 'Failed to initialize Redis'
-								}
-							});
-
-							logger.error(
-								'Max retries reached when trying to initialize Redis. Falling back to custom memory monitor'
-							);
-
-							createMemoryMonitor({
-								os,
-								process,
-								setInterval,
-								configService,
-								errorLogger,
-								validateDependencies
-							});
-						}
-
-						return retryAfter;
-					}
-				}
-			});
-
-			client.on('error', error => {
-				errorHandler.handleError(error);
-			});
-
-			await client.connect();
-			logger.info('Connected to Redis');
-
-			redisClient = client;
-		}
-
-		return redisClient;
-	} catch (serviceError) {
-		const redisServiceError =
-			new errorHandler.ErrorClasses.ServiceUnavailableError(
-				20,
-				`Failed to connect to Redis instance at ${configService.getEnvVariables().redisUrl}`
-			);
-		errorHandler.handleError({
-			...ProcessErrorStaticParameters,
-			error: serviceError as unknown as AppError,
-			req: blankRequest,
-			details: { reason: 'Failed to connect to Redis' }
-		});
-		return null;
 	}
-}
 
-export async function getRedisClient({
-	createRedisClient,
-	createMemoryMonitor,
-	configService,
-	errorHandler
-}: GetRedisClientInterface): Promise<RedisClientType | null> {
-	const appLogger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
-
-	if (redisClient) {
-		errorLogger.logInfo('Redis client is already connected', {});
-	} else {
-		errorLogger.logWarn(
-			'Redis client is not connected. Calling connectRedis()',
-			{}
-		);
-		await connectRedis({
-			createMemoryMonitor,
-			createRedisClient,
-			configService,
-			blankRequest,
-			validateDependencies,
-			errorHandler
-		});
-	}
-	return redisClient;
-}
-
-export async function flushRedisMemoryCache({
-	createMemoryMonitor,
-	configService,
-	errorHandler,
-	createRedisClient,
-	blankRequest
-}: FlushRedisMemoryCacheInterface): Promise<void> {
-	const logger = configService.getAppLogger();
-
-	logger.info('Flushing in-memory cache');
-	const redisClient = await getRedisClient({
+	public async getRedisClient({
+		req,
+		res,
+		next,
+		blankRequest,
 		createRedisClient,
-		createMemoryMonitor,
 		configService,
 		errorHandler
-	});
+	}: GetRedisClientInterface): Promise<RedisClientType | null> {
+		const logger = configService.getAppLogger();
+		const errorLogger = configService.getErrorLogger();
 
-	if (configService.getFeatureFlags().enableRedis) {
+		if (this.redisClient) {
+			logger.info('Redis client is already connected', {});
+		} else {
+			errorLogger.logWarn(
+				'Redis client is not connected. Calling connectRedis()',
+				{}
+			);
+			await this.connectRedis({
+				req,
+				res,
+				next,
+				blankRequest,
+				createRedisClient,
+				configService,
+				validateDependencies,
+				errorHandler
+			});
+		}
+		return this.redisClient;
+	}
+
+	public async flushRedisMemoryCache({
+		req,
+		res,
+		next,
+		blankRequest,
+		configService,
+		errorHandler,
+		createRedisClient
+	}: FlushRedisMemoryCacheInterface): Promise<void> {
+		const logger = configService.getAppLogger();
+
+		logger.info('Flushing in-memory cache');
+		const redisClient = await this.getRedisClient({
+			req,
+			res,
+			next,
+			blankRequest,
+			createRedisClient,
+			configService,
+			errorHandler
+		});
+
 		if (redisClient) {
 			try {
 				await redisClient.flushAll();
 				logger.info('In-memory cache flushed');
 			} catch (utilError) {
-				const utility: string = 'flushInMemoryCache()';
 				const utilityError =
 					new errorHandler.ErrorClasses.UtilityErrorRecoverable(
 						'flushInMemoryCache()',
@@ -175,19 +217,15 @@ export async function flushRedisMemoryCache({
 				configService
 					.getErrorLogger()
 					.logError(utilityError.message, {});
-				errorHandler.handleError(
-					`${utilityError instanceof Error ? utilityError.message : utilityError}`,
-
-				);
+				errorHandler.handleError({
+					error:
+						utilityError || Error || 'Unable to flush Redis cache'
+				});
 			}
 		} else {
 			configService
 				.getErrorLogger()
 				.logWarn('Redis client is not available for cache flush\n', {});
 		}
-	} else {
-		configService
-			.getErrorLogger()
-			.logInfo('No cache to flush, as Redis is disabled\n', {});
 	}
 }

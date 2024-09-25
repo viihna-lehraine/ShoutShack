@@ -8,14 +8,11 @@ import {
 	Sequelize
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { configService } from '../services/configService';
 import { hashPassword } from '../auth/hash';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError, sendClientErrorResponse } from '../errors/processError';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
+import { envSecretsStore } from '../environment/envSecrets';
 import { initializeRateLimitMiddleware } from '../middleware/rateLimit';
-import { Logger } from '../services/appLogger';
-import { ensureSecrets } from '../utils/ensureSecrets';
 import { validateDependencies } from '../utils/helpers';
 
 interface UserAttributes {
@@ -24,7 +21,7 @@ interface UserAttributes {
 	username: string;
 	password: string;
 	email: string;
-	isAccountVerified: boolean;
+	isVerified: boolean;
 	resetPasswordToken?: string | null;
 	resetPasswordExpires?: Date | null;
 	isMfaEnabled: boolean;
@@ -35,6 +32,9 @@ interface UserModelDependencies {
 	argon2: typeof import('argon2');
 	uuidv4: typeof uuidv4;
 }
+
+const logger = configService.getAppLogger();
+const errorLogger = configService.getErrorLogger();
 
 export class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
@@ -55,39 +55,39 @@ export class User
 		password: string,
 		argon2: typeof import('argon2')
 	): Promise<boolean | null> {
-		const appLogger = configService.getLogger();
-		const secrets = ensureSecrets({ subSecrets: ['pepper'] });
-
 		try {
 			validateDependencies(
 				[
 					{ name: 'password', instance: password },
 					{ name: 'argon2', instance: argon2 }
 				],
-				appLogger || console
+				logger
 			);
 
-			return await argon2.verify(
-				this.password,
-				password + secrets.pepper
-			);
+			const pepper = envSecretsStore.retrieveSecret('PEPPER');
+			return await argon2.verify(this.password, password + pepper);
 		} catch (passwordError) {
 			const passwordValidationError =
-				new errorClasses.PasswordValidationError(
+				new errorHandler.ErrorClasses.PasswordValidationError(
 					'Passwords do not match',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message);
-			processError(passwordError || passwordValidationError);
+			errorLogger.logInfo(passwordValidationError.message);
+			errorHandler.handleError({
+				error: passwordError || passwordValidationError
+			});
 			return null;
+		} finally {
+			logger.debug('Password verified successfully');
+			envSecretsStore.reEncryptSecret('PEPPER');
 		}
 	}
 
-	static validatePassword(password: string, appLogger: Logger): boolean {
+	static validatePassword(password: string): boolean {
 		try {
 			validateDependencies(
 				[{ name: 'password', instance: password }],
-				appLogger || console
+				logger
 			);
 
 			const isValidLength =
@@ -106,12 +106,14 @@ export class User
 			);
 		} catch (passwordError) {
 			const passwordValidationError =
-				new errorClasses.PasswordValidationError(
+				new errorHandler.ErrorClasses.PasswordValidationError(
 					'Error validating password',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message);
-			processError(passwordError || passwordValidationError);
+			errorLogger.logInfo(passwordValidationError.message);
+			errorHandler.handleError({
+				error: passwordError || passwordValidationError
+			});
 			return false;
 		}
 	}
@@ -123,8 +125,6 @@ export class User
 		password: string,
 		email: string
 	): Promise<User | null> {
-		const appLogger = configService.getLogger();
-
 		try {
 			validateDependencies(
 				[
@@ -134,7 +134,7 @@ export class User
 					{ name: 'password', instance: password },
 					{ name: 'email', instance: email }
 				],
-				appLogger || console
+				logger
 			);
 
 			const rateLimiter = initializeRateLimitMiddleware();
@@ -145,24 +145,29 @@ export class User
 				rateLimiter(req, res, err => (err ? reject(err) : resolve()));
 			});
 
-			const isValidPassword = User.validatePassword(password, appLogger);
+			const isValidPassword = User.validatePassword(password);
 			if (!isValidPassword) {
-				appLogger.warn(
+				logger.warn(
 					'Password does not meet the security requirements.'
 				);
 
 				const validationError =
-					new errorClasses.PasswordValidationError(
-						'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.',
+					new errorHandler.ErrorClasses.PasswordValidationError(
+						`Client password validation error: Password does not meet security requirements\n${Error instanceof Error ? Error.message : 'Unknown error'}`,
 						{
-							exposeToClient: true
+							exposeToClient: false
 						}
 					);
-				await sendClientErrorResponse(validationError, res);
+				await errorHandler.sendClientErrorResponse({
+					message:
+						'Password does not meet security requirements. Please make sure your password is between 8 and 128 characters long, contains at least one uppercase letter, one lowercase letter, one number, and one special character.',
+					statusCode: 400,
+					res
+				});
 				throw validationError;
 			}
 
-			const hashedPassword = await hashPassword({ password });
+			const hashedPassword = await hashPassword(password);
 
 			const newUser = await User.create({
 				id: uuidv4(),
@@ -170,7 +175,7 @@ export class User
 				username,
 				password: hashedPassword,
 				email,
-				isAccountVerified: false,
+				isVerified: false,
 				resetPasswordToken: null,
 				resetPasswordExpires: null,
 				isMfaEnabled: false,
@@ -180,12 +185,14 @@ export class User
 			return newUser;
 		} catch (regisrationError) {
 			const userRegistrationError =
-				new errorClasses.UserRegistrationError(
+				new errorHandler.ErrorClasses.UserRegistrationError(
 					'There was an error creating your account. Please try again. If the issue persists, please contact support.',
 					{ exposeToClient: true }
 				);
-			ErrorLogger.logWarning(userRegistrationError.message);
-			processError(regisrationError || userRegistrationError);
+			errorLogger.logWarn(userRegistrationError.message);
+			errorHandler.handleError({
+				error: regisrationError || userRegistrationError
+			});
 			return null;
 		}
 	}
@@ -195,30 +202,29 @@ export class User
 		password: string,
 		argon2: typeof import('argon2')
 	): Promise<boolean | null> {
-		const appLogger = configService.getLogger();
-		const secrets = ensureSecrets({ subSecrets: ['pepper'] });
-
 		try {
 			validateDependencies(
 				[{ name: 'argon2', instance: argon2 }],
-				appLogger || console
+				logger
 			);
 
+			const pepper = envSecretsStore.retrieveSecret('PEPPER');
 			const isValid = await argon2.verify(
 				hashedPassword,
-				password + secrets.pepper
+				password + pepper
 			);
-
-			appLogger.debug('Password verified successfully');
+			envSecretsStore.reEncryptSecret('PEPPER');
 			return isValid;
 		} catch (passwordError) {
 			const passwordValidationError =
-				new errorClasses.PasswordValidationError(
+				new errorHandler.ErrorClasses.PasswordValidationError(
 					'Error verifying password',
-					{ exposeToClient: true }
+					{ exposeToClient: false }
 				);
-			ErrorLogger.logInfo(passwordValidationError.message);
-			processError(passwordError);
+			errorLogger.logInfo(passwordValidationError.message);
+			errorHandler.handleError({
+				error: passwordValidationError || passwordError
+			});
 			return null;
 		}
 	}
@@ -226,7 +232,7 @@ export class User
 
 export function createUserModel(sequelize: Sequelize): typeof User {
 	try {
-		const appLogger = configService.getLogger();
+		const appLogger = configService.getAppLogger();
 
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
@@ -262,7 +268,7 @@ export function createUserModel(sequelize: Sequelize): typeof User {
 					allowNull: false,
 					unique: true
 				},
-				isAccountVerified: {
+				isVerified: {
 					type: DataTypes.BOOLEAN,
 					allowNull: false,
 					defaultValue: false
@@ -295,23 +301,21 @@ export function createUserModel(sequelize: Sequelize): typeof User {
 
 		User.addHook('beforeCreate', async (user: User) => {
 			try {
-				user.password = await hashPassword({ password: user.password });
+				user.password = await hashPassword(user.password);
 			} catch (dbError) {
-				const databaseError = new errorClasses.DatabaseErrorRecoverable(
-					`Failed to create hashed password: ${
-						dbError instanceof Error
-							? dbError.message
-							: 'Unknown error'
-					}`,
-					{
-						originalError: dbError,
-						statusCode: 500,
-						severity: ErrorSeverity.RECOVERABLE,
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logInfo(databaseError.message);
-				processError(databaseError);
+				const databaseError =
+					new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+						`Failed to create hashed password: ${
+							dbError instanceof Error
+								? dbError.message
+								: 'Unknown error'
+						}`,
+						{
+							originalError: dbError
+						}
+					);
+				errorLogger.logInfo(databaseError.message);
+				errorHandler.handleError({ error: databaseError || dbError });
 				throw databaseError;
 			}
 		});
@@ -321,13 +325,10 @@ export function createUserModel(sequelize: Sequelize): typeof User {
 				const { UserMfa } = await import('./UserMfaModelFile');
 
 				if (!UserMfa) {
-					throw new errorClasses.DependencyErrorRecoverable(
+					throw new errorHandler.ErrorClasses.DependencyErrorRecoverable(
 						`UserModelFile is missing UserMfa model. Unable to update MFA status\n${Error instanceof Error ? Error.message : 'Unknown error'}`,
 						{
-							originalError: Error || null,
-							statusCode: 500,
-							severity: ErrorSeverity.FATAL,
-							exposeToClient: false
+							originalError: Error || null
 						}
 					);
 				}
@@ -340,54 +341,46 @@ export function createUserModel(sequelize: Sequelize): typeof User {
 					appLogger.debug('MFA status updated successfully');
 				} else {
 					const databaseError =
-						new errorClasses.DatabaseErrorRecoverable(
+						new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
 							`UserMfa update method is not available\n${Error instanceof Error ? Error.message : 'Unknown error'}`,
-							{
-								originalError: Error || null,
-								statusCode: 500,
-								severity: ErrorSeverity.RECOVERABLE,
-								exposeToClient: false
-							}
+							{ originalError: Error || null }
 						);
-					ErrorLogger.logInfo(databaseError.message);
-					processError(databaseError);
+					errorLogger.logInfo(databaseError.message);
+					errorHandler.handleError({
+						error: databaseError || Error || null
+					});
 					throw databaseError;
 				}
 			} catch (dbError) {
-				const databaseError = new errorClasses.DatabaseErrorRecoverable(
-					`Failed to update MFA status\n${
-						dbError instanceof Error
-							? dbError.message
-							: 'Unknown error'
-					}`,
-					{
-						originalError: dbError,
-						statusCode: 500,
-						severity: ErrorSeverity.RECOVERABLE,
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logError(databaseError);
-				processError(databaseError);
+				const databaseError =
+					new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+						`Failed to update MFA status\n${
+							dbError instanceof Error
+								? dbError.message
+								: 'Unknown error'
+						}`,
+						{ originalError: dbError }
+					);
+				errorLogger.logError(databaseError.message);
+				errorHandler.handleError({
+					error: databaseError || dbError || Error || null
+				});
 			}
 		});
 
 		return User;
 	} catch (dbError) {
 		const databaseRecoverableError =
-			new errorClasses.DatabaseErrorRecoverable(
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
 				`Failed to initialize User model: ${
 					dbError instanceof Error ? dbError.message : 'Unknown error'
 				}`,
-				{
-					originalError: dbError,
-					statusCode: 500,
-					severity: ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
-				}
+				{ originalError: dbError || Error || null }
 			);
-		ErrorLogger.logInfo(databaseRecoverableError.message);
-		processError(databaseRecoverableError);
+		errorLogger.logInfo(databaseRecoverableError.message);
+		errorHandler.handleError({
+			error: databaseRecoverableError || dbError || Error || null
+		});
 		throw databaseRecoverableError;
 	}
 }

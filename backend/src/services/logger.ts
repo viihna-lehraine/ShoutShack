@@ -1,53 +1,84 @@
-import { Op, Sequelize } from 'sequelize';
-import { AppError, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLoggerInterface } from '../index/interfaces';
-import fs from 'fs';
-import {
-	addColors,
-	createLogger,
-	format,
-	Logger as WinstonLogger,
-	transports
-} from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
-import LogStashTransport from 'winston-logstash';
 import TransportStream from 'winston-transport';
-import { configService } from './configService';
-import { envSecretsStore } from '../environment/envSecrets';
-import { ErrorClasses } from '../errors/errorClasses';
-import { ProcessErrorStaticParameters } from 'src/index/parameters';
+import {
+	AppLoggerServiceDeps,
+	AppLoggerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces';
+import { Op } from 'sequelize';
+import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';
-import { sanitizeRequestBody } from '../utils/helpers';
-import { v4 as uuidv4 } from 'uuid';
-import { errorHandler } from '../services/errorHandler';
-import { AppLoggerInterface } from '../index/interfaces';
 
-import '../../types/custom/winston-logstash';
+export class AppLoggerService
+	extends WinstonLogger
+	implements AppLoggerServiceInterface
+{
+	public static instance: AppLoggerService | null = null;
+	protected _deps: AppLoggerServiceDeps;
 
-export type AppLoggerType = WinstonLogger;
-
-export class AppLogger {
-	public static instance: AppLogger;
-	public logger: AppLoggerInterface;
-
-	constructor(logLevel?: string, serviceName?: string) {
+	constructor(
+		deps: AppLoggerServiceDeps,
+		logLevel?: string,
+		serviceName?: string
+	) {
+		const { format, transports, addColors } = deps.winston;
 		const { colorize, combine, errors, json, printf, timestamp } = format;
+
 		const resolvedLogLevel =
-			logLevel || configService.getEnvVariables().logLevel || 'info';
+			logLevel || deps.configService.getEnvVariables().logLevel || 'info';
 		const resolvedServiceName =
 			serviceName ||
-			configService.getEnvVariables().loggerServiceName ||
+			deps.configService.getEnvVariables().loggerServiceName ||
 			'Log Service';
 		const isProduction =
-			configService.getEnvVariables().nodeEnv === 'production';
-		const defaultLogLevel = isProduction ? 'info' : 'debug';
+			deps.configService.getEnvVariables().nodeEnv === 'production';
 		const logDirectory = './data/logs/server/main/';
-
 		const logFormat = printf(({ level, message, timestamp, stack }) => {
 			return `${timestamp} ${level}: ${stack || message}`;
 		});
 
-		const customLevels = {
+		if (!deps.fs.existsSync(logDirectory)) {
+			deps.fs.mkdirSync(logDirectory, { recursive: true });
+		}
+
+		const loggerTransports: TransportStream[] = [
+			new transports.Console({
+				format: combine(colorize(), logFormat),
+				level: isProduction ? 'info' : resolvedLogLevel
+			}),
+			new deps.DailyRotateFile({
+				filename: 'server-%DATE%.log',
+				dirname: logDirectory,
+				datePattern: 'YYYY-MM-DD',
+				zippedArchive: true,
+				maxSize: '20m',
+				maxFiles: '30d',
+				format: combine(
+					timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+					logFormat
+				),
+				level: resolvedLogLevel
+			})
+		];
+
+		super({
+			levels: AppLoggerService.getCustomLogLevels().levels,
+			level: resolvedLogLevel,
+			format: combine(errors({ stack: true }), json()),
+			defaultMeta: { service: resolvedServiceName },
+			transports: loggerTransports
+		});
+
+		this.addLogstashTransport(loggerTransports);
+
+		this._deps = deps;
+		addColors(AppLoggerService.getCustomLogLevels().colors);
+	}
+
+	public static getCustomLogLevels(): {
+		levels: Record<string, number>;
+		colors: Record<string, string>;
+	} {
+		return {
 			levels: {
 				critical: 0,
 				error: 1,
@@ -65,74 +96,25 @@ export class AppLogger {
 				notice: 'magenta'
 			}
 		};
-
-		if (!fs.existsSync(logDirectory)) {
-			fs.mkdirSync(logDirectory, { recursive: true });
-		}
-
-		const loggerTransports: TransportStream[] = [
-			new transports.Console({
-				format: combine(colorize(), logFormat),
-				level: isProduction ? 'info' : resolvedLogLevel
-			}),
-			new DailyRotateFile({
-				filename: 'server-%DATE%.log',
-				dirname: logDirectory,
-				datePattern: 'YYYY-MM-DD',
-				zippedArchive: true,
-				maxSize: '20m',
-				maxFiles: '30d',
-				format: combine(
-					timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-					logFormat
-				),
-				level: resolvedLogLevel
-			})
-		];
-
-		this.addLogstashTransport(loggerTransports);
-
-		const winstonLogger: WinstonLogger = createLogger({
-			levels: customLevels.levels,
-			level: defaultLogLevel,
-			format: combine(
-				errors({ stack: true }),
-				timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-				json()
-			),
-			defaultMeta: { service: resolvedServiceName },
-			transports: loggerTransports
-		});
-
-		this.logger = Object.assign(winstonLogger, {
-			getRedactedLogger: this.createRedactedLogger.bind(this),
-			logDebug: this.logDebug.bind(this),
-			logInfo: this.logInfo.bind(this),
-			logNotice: this.logNotice.bind(this),
-			logWarn: this.logWarn.bind(this),
-			logError: this.logError.bind(this),
-			logCritical: this.logCritical.bind(this),
-			cleanUpOldLogs: this.cleanUpOldLogs.bind(this),
-			getErrorDetails: this.getErrorDetails.bind(this),
-			createRedactedLogger: this.createRedactedLogger.bind(this),
-			isAppLogger: AppLogger.isAppLogger.bind(this)
-		});
-
-		addColors(customLevels.colors);
 	}
 
 	public static getInstance(
+		deps: AppLoggerServiceDeps,
 		logLevel?: string,
 		serviceName?: string
-	): AppLoggerInterface {
-		if (!AppLogger.instance) {
-			AppLogger.instance = new AppLogger(logLevel, serviceName);
+	): AppLoggerServiceInterface {
+		if (!AppLoggerService.instance) {
+			AppLoggerService.instance = new AppLoggerService(
+				deps,
+				logLevel,
+				serviceName
+			);
 		}
-		return AppLogger.instance.logger;
+		return AppLoggerService.instance;
 	}
 
-	private createRedactedLogger(): AppLoggerInterface {
-		const redactedLogger: AppLoggerType = Object.create(this.logger);
+	private createRedactedLogger(): AppLoggerServiceInterface {
+		const redactedLogger: AppLoggerServiceInterface = Object.create(this);
 
 		const levels: (
 			| 'debug'
@@ -144,7 +126,7 @@ export class AppLogger {
 		)[] = ['debug', 'info', 'notice', 'warn', 'error', 'crit'];
 
 		levels.forEach(level => {
-			const originalMethod = this.logger[level].bind(this.logger);
+			const originalMethod = this[level].bind(this);
 
 			redactedLogger[level] = ((
 				message: string,
@@ -152,36 +134,27 @@ export class AppLogger {
 			): void => {
 				const redactedMeta =
 					typeof meta === 'object'
-						? envSecretsStore.redactSecrets(meta)
+						? this._deps.envSecretsStore.redactSecrets(meta)
 						: meta;
 				originalMethod(message, redactedMeta);
 			}) as typeof originalMethod;
 		});
 
 		return Object.assign(redactedLogger, {
-			getRedactedLogger: this.getRedactedLogger.bind(this),
-			logDebug: this.logDebug.bind(this),
-			logInfo: this.logInfo.bind(this),
-			logNotice: this.logNotice.bind(this),
-			logWarn: this.logWarn.bind(this),
-			logError: this.logError.bind(this),
-			logCritical: this.logCritical.bind(this),
-			cleanUpOldLogs: this.cleanUpOldLogs.bind(this),
-			getErrorDetails: this.getErrorDetails.bind(this),
-			isAppLogger: AppLogger.isAppLogger.bind(this)
-		}) as AppLoggerInterface;
+			getRedactedLogger: this.getRedactedLogger.bind(this)
+		}) as AppLoggerServiceInterface;
 	}
 
-	public getLogger(): AppLoggerInterface {
-		return this.logger;
+	public getLogger(): AppLoggerServiceInterface {
+		return this as AppLoggerServiceInterface;
 	}
 
-	public getRedactedLogger(): AppLoggerInterface {
+	public getRedactedLogger(): AppLoggerServiceInterface {
 		return this.createRedactedLogger();
 	}
 
 	private addLogstashTransport(transportsArray: TransportStream[]): void {
-		if (configService.getFeatureFlags().enableLogStash) {
+		if (this._deps.configService.getFeatureFlags().enableLogStash) {
 			const logStashTransport = this.createLogstashTransport();
 			if (logStashTransport) {
 				transportsArray.push(logStashTransport);
@@ -191,25 +164,27 @@ export class AppLogger {
 
 	private createLogstashTransport(): TransportStream | null {
 		try {
-			return new LogStashTransport({
-				port: configService.getEnvVariables().logStashPort,
-				node_name: configService.getEnvVariables().logStashNode,
-				host: configService.getEnvVariables().logStashHost
+			return new this._deps.LogStashTransport({
+				port: this._deps.configService.getEnvVariables().logStashPort,
+				node_name:
+					this._deps.configService.getEnvVariables().logStashNode,
+				host: this._deps.configService.getEnvVariables().logStashHost
 			}) as unknown as TransportStream;
 		} catch (error) {
-			const logstashError = new ErrorClasses.ServiceUnavailableError(
-				60,
-				'Application Logger Service',
-				{
-					message:
-						'Logger Service Error: Failed to create Logstash transport'
-				}
-			);
+			const logstashError =
+				new this._deps.ErrorClasses.ServiceUnavailableError(
+					60,
+					'Application Logger Service',
+					{
+						message:
+							'Logger Service Error: Failed to create Logstash transport'
+					}
+				);
 			this.logError(
 				`Logstash error: ${error instanceof Error ? error.message : error}`
 			);
-			errorHandler.handleError({
-				...ProcessErrorStaticParameters,
+			this._deps.errorHandler.handleError({
+				...this._deps.HandleErrorStaticParameters,
 				error: logstashError,
 				details: { reason: 'Failed to create Logstash transport' }
 			});
@@ -218,30 +193,30 @@ export class AppLogger {
 	}
 
 	public logDebug(message: string, details?: Record<string, unknown>): void {
-		this.logger.error(message, details);
+		this.debug(message, details);
 	}
 
 	public logInfo(message: string, details?: Record<string, unknown>): void {
-		this.logger.error(message, details);
+		this.info(message, details);
 	}
 
 	public logNotice(message: string, details?: Record<string, unknown>): void {
-		this.logger.error(message, details);
+		this.notice(message, details);
 	}
 
 	public logWarn(message: string, details?: Record<string, unknown>): void {
-		this.logger.error(message, details);
+		this.warn(message, details);
 	}
 
 	public logError(message: string, details?: Record<string, unknown>): void {
-		this.logger.error(message, details);
+		this.error(message, details);
 	}
 
 	public logCritical(
 		message: string,
 		details?: Record<string, unknown>
 	): void {
-		this.logger.error(message, details);
+		this.crit(message, details);
 	}
 
 	public async cleanUpOldLogs(
@@ -260,11 +235,11 @@ export class AppLogger {
 					}
 				}
 			});
-			this.logger.info(
+			this.info(
 				`Old logs older than ${retentionPeriodDays} days have been deleted.`
 			);
 		} catch (cleanupError) {
-			this.logger.error('Failed to clean up old logs', cleanupError);
+			this.error('Failed to clean up old logs', cleanupError);
 		}
 	}
 
@@ -276,8 +251,8 @@ export class AppLogger {
 		additionalData?: Record<string, unknown>
 	): Record<string, unknown> {
 		const details: Record<string, unknown> = {
-			requestId: req?.headers['x-request-id'] || uuidv4(),
-			adminId: configService.getAdminId() || null,
+			requestId: req?.headers['x-request-id'] || this._deps.uuidv4(),
+			adminId: this._deps.configService.getAdminId() || null,
 			userId: userId || null,
 			action: action || 'unknown',
 			caller: String(getCallerInfo()),
@@ -295,7 +270,9 @@ export class AppLogger {
 					req?.headers['referer'] || req?.headers['referrer'] || null,
 				query: req?.query || null,
 				params: req?.params || null,
-				body: req?.body ? sanitizeRequestBody(req?.body) : null
+				body: req?.body
+					? this._deps.sanitizeRequestBody(req?.body)
+					: null
 			},
 			...additionalData
 		};
@@ -303,9 +280,9 @@ export class AppLogger {
 		return details;
 	}
 
-	public static isAppLogger(
-		logger: AppLoggerType | Console | undefined
-	): logger is AppLoggerType {
+	public isAppLogger(
+		logger: AppLoggerServiceInterface | Console | undefined
+	): logger is AppLoggerServiceInterface {
 		return (
 			logger !== undefined &&
 			logger !== null &&
@@ -316,42 +293,89 @@ export class AppLogger {
 			typeof logger.log === 'function'
 		);
 	}
+
+	protected get __deps(): AppLoggerServiceDeps {
+		return this._deps;
+	}
 }
 
-export class ErrorLogger extends AppLogger implements ErrorLoggerInterface {
-	public static override instance: ErrorLogger;
+export class ErrorLoggerService
+	extends AppLoggerService
+	implements ErrorLoggerServiceInterface
+{
+	public static override instance: ErrorLoggerService;
 	private errorCounts: Map<string, number>;
 
-	constructor(logLevel?: string, serviceName?: string) {
-		super(logLevel, serviceName);
+	constructor(
+		deps: AppLoggerServiceDeps,
+		logLevel?: string,
+		serviceName?: string
+	) {
+		super(deps, logLevel, serviceName);
 		this.errorCounts = new Map<string, number>();
 	}
 
 	public static override getInstance(
+		deps: AppLoggerServiceDeps,
 		logLevel?: string,
 		serviceName?: string
-	): AppLoggerInterface {
-		if (!ErrorLogger.instance) {
-			ErrorLogger.instance = new ErrorLogger(logLevel, serviceName);
+	): AppLoggerServiceInterface {
+		if (!ErrorLoggerService.instance) {
+			ErrorLoggerService.instance = new ErrorLoggerService(
+				deps,
+				logLevel,
+				serviceName
+			);
 		}
-		return Object.assign(ErrorLogger.instance.logger, {
-			logAppError: ErrorLogger.instance.logAppError.bind(
-				ErrorLogger.instance
+		return Object.assign(ErrorLoggerService.instance, {
+			logAppError: ErrorLoggerService.instance.logAppError.bind(
+				ErrorLoggerService.instance
 			),
-			getErrorCount: ErrorLogger.instance.getErrorCount.bind(
-				ErrorLogger.instance
+			getErrorCount: ErrorLoggerService.instance.getErrorCount.bind(
+				ErrorLoggerService.instance
+			),
+			getRedactedLogger:
+				ErrorLoggerService.instance.getRedactedLogger.bind(
+					ErrorLoggerService.instance
+				),
+			logDebug: ErrorLoggerService.instance.logDebug.bind(
+				ErrorLoggerService.instance
+			),
+			logInfo: ErrorLoggerService.instance.logInfo.bind(
+				ErrorLoggerService.instance
+			),
+			logNotice: ErrorLoggerService.instance.logNotice.bind(
+				ErrorLoggerService.instance
+			),
+			logWarn: ErrorLoggerService.instance.logWarn.bind(
+				ErrorLoggerService.instance
+			),
+			logError: ErrorLoggerService.instance.logError.bind(
+				ErrorLoggerService.instance
+			),
+			logCritical: ErrorLoggerService.instance.logCritical.bind(
+				ErrorLoggerService.instance
+			),
+			cleanUpOldLogs: ErrorLoggerService.instance.cleanUpOldLogs.bind(
+				ErrorLoggerService.instance
+			),
+			getErrorDetails: ErrorLoggerService.instance.getErrorDetails.bind(
+				ErrorLoggerService.instance
+			),
+			isAppLogger: ErrorLoggerService.instance.isAppLogger.bind(
+				ErrorLoggerService.instance
 			)
-		});
+		}) as AppLoggerServiceInterface;
 	}
 
 	public logAppError(
-		error: AppError,
-		sequelize?: Sequelize,
+		error: import('../errors/errorClasses').AppError,
+		sequelize?: import('sequelize').Sequelize,
 		details: Record<string, unknown> = {}
 	): void {
 		if (sequelize) {
 			this.logToDatabase(error, sequelize).catch(databaseError => {
-				this.logger.warn(
+				this.warn(
 					`Could not log error to database: ${databaseError.message || databaseError}`
 				);
 			});
@@ -364,19 +388,19 @@ export class ErrorLogger extends AppLogger implements ErrorLoggerInterface {
 		const errorCount = this.errorCounts.get(error.name) || 0;
 		this.errorCounts.set(error.name, errorCount + 1);
 
-		if (error.severity === ErrorSeverity.FATAL) {
+		if (error.severity === this.__deps.ErrorSeverity.FATAL) {
 			this.logError(`FATAL: ${error.message}`, {
 				...details,
 				severity: error.severity
 			});
-		} else if (error.severity === ErrorSeverity.RECOVERABLE) {
+		} else if (error.severity === this.__deps.ErrorSeverity.RECOVERABLE) {
 			this.logWarn(`RECOVERABLE: ${error.message}`, { ...details });
 		}
 	}
 
 	public async logToDatabase(
-		error: AppError,
-		sequelize: Sequelize,
+		error: import('../errors/errorClasses').AppError,
+		sequelize: import('sequelize').Sequelize,
 		retryCount: number = 3
 	): Promise<void> {
 		try {
@@ -389,11 +413,9 @@ export class ErrorLogger extends AppLogger implements ErrorLoggerInterface {
 				timestamp: new Date(),
 				count: this.errorCounts.get(error.name) || 1
 			});
-			this.logger.info('Error logged to database');
+			this.info('Error logged to database');
 		} catch (databaseError) {
-			this.logger.error(
-				`Failed to log error to the database: ${databaseError}`
-			);
+			this.error(`Failed to log error to the database: ${databaseError}`);
 			if (retryCount > 0) {
 				setTimeout(
 					() => {

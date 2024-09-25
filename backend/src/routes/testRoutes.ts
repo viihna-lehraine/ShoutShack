@@ -1,17 +1,12 @@
-import { Application, Request, Response, NextFunction, Router } from 'express';
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
+import { Request, Response, NextFunction, Router } from 'express';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
+import { TestRoutesInterface } from 'src/index/interfaces';
 
-interface TestRouteDependencies {
-	app: Application;
-}
-
-export function initializeTestRoutes({ app }: TestRouteDependencies): Router {
+export function initializeTestRoutes({ app }: TestRoutesInterface): Router {
 	const router = Router();
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
 	const envVariables = configService.getEnvVariables();
 
 	try {
@@ -26,58 +21,62 @@ export function initializeTestRoutes({ app }: TestRouteDependencies): Router {
 				'/test',
 				(req: Request, res: Response, next: NextFunction) => {
 					try {
-						appLogger.info('Test route accessed.');
+						logger.info('Test route accessed.');
 						res.send('Test route is working!');
 					} catch (error) {
 						const expressRouteError =
-							new errorClasses.ExpressRouteError(
+							new errorHandler.ErrorClasses.ExpressRouteError(
 								`Error occurred when accessing test route: ${error instanceof Error ? error.message : String(error)}`,
-								{
-									statusCode: 500,
-									exposeToClient: false,
-									severity: ErrorSeverity.WARNING
-								}
+								{ exposeToClient: false }
 							);
-						ErrorLogger.logError(expressRouteError, appLogger);
-						processError(expressRouteError, appLogger, req);
+						errorLogger.logError(expressRouteError.message);
+						errorHandler.expressErrorHandler()(
+							expressRouteError,
+							req,
+							res,
+							next
+						);
 						next(new Error('Internal server error on test route'));
 					}
 				}
 			);
 		}
 
-		router.use((error: unknown, req: Request, res: Response) => {
-			if (error instanceof Error) {
-				appLogger.error(
-					`Unexpected error on test route: ${error.stack}`
-				);
-				processError(error, appLogger, req);
-			} else {
-				appLogger.error(
-					'Unexpected non-error thrown on test route',
-					error
-				);
-				processError(
-					new Error('Unexpected test route error'),
-					appLogger,
+		router.use(
+			(
+				error: unknown,
+				req: Request,
+				res: Response,
+				next: NextFunction
+			) => {
+				if (error instanceof Error) {
+					logger.error('Unexpected error on test route');
+					errorHandler.expressErrorHandler()(error, req, res, next);
+				} else {
+					logger.error(
+						'Unexpected non-error thrown on test route',
+						error
+					);
+					errorHandler.handleError({
+						error: error as string,
+						req
+					});
+				}
+				res.status(500).json({
+					error: 'Internal routing error'
+				});
+				errorHandler.handleError({
+					error: 'Internal server error on test route',
 					req
-				);
+				});
 			}
-			res.status(500).json({
-				error: 'Internal server error on test route'
-			});
-			processError(
-				new Error('Unexpected test route error'),
-				appLogger,
-				req
-			);
-		});
+		);
 
 		app.use('/test', router);
-		appLogger.info('Test routes loaded successfully.');
+		logger.info('Test routes loaded successfully.');
 		return router;
 	} catch (error) {
-		processError(error as Error, appLogger);
+		errorHandler.handleError({ error: error as Error });
 		throw new Error(
 			`Failed to initialize test routes: ${error instanceof Error ? error.message : String(error)}`
 		);

@@ -1,4 +1,5 @@
 import { AuthControllerInterface } from '../index/interfaces';
+import { Request, Response } from 'express';
 
 export function userLogin({
 	argon2,
@@ -54,7 +55,10 @@ export function userLogin({
 						'Login attempt failed - please try again',
 						{ exposeToClient: false }
 					);
-				errorHandler.sendClientErrorResponse(clientError, res);
+				errorHandler.sendClientErrorResponse({
+					message: clientError.message,
+					res
+				});
 			}
 
 			const token = await jwt.generateJwt(user);

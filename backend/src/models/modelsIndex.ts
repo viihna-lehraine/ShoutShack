@@ -1,71 +1,70 @@
 import { Sequelize } from 'sequelize';
 import { loadModels, Models } from './loadModels';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { logger, Logger } from '../services/appLogger';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+
+const logger = configService.getAppLogger();
+const errorLogger = configService.getErrorLogger();
 
 let models: Models | null = null;
 let sequelize: Sequelize;
 
-export async function initializeModels(
-	sequelize: Sequelize,
-	appLogger: Logger
-): Promise<Models> {
+export async function initializeModels(sequelize: Sequelize): Promise<Models> {
 	try {
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
-			appLogger || console
+			logger
 		);
 
-		appLogger.info('Initializing and loading models');
+		logger.info('Initializing and loading models');
 
 		if (!models) {
-			models = await loadModels(sequelize, logger);
-			appLogger.info('Models loaded');
+			models = await loadModels(sequelize);
+			logger.info('Models loaded');
 		} else {
-			appLogger.info('Models loaded');
+			logger.info('Models loaded');
 		}
 
 		return models as Models;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Error occurred while attempting to initialize model files using initializeModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Error occurred while attempting to initialize model files using initializeModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
+				{ exposeToClient: false }
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({
+			error: databaseError || dbError || Error || 'Unknown error'
+		});
 
-		appLogger.debug('Returning empty object in lieu of models');
+		logger.debug('Returning empty object in lieu of models');
 
 		return {} as Models;
 	}
 }
 
-export async function getModels(appLogger: Logger): Promise<Models> {
+export async function getModels(): Promise<Models> {
 	try {
 		if (!models) {
-			appLogger.error('Models have not been initialized');
+			logger.error('Models have not been initialized');
 			try {
-				appLogger.info('Attempting to load models');
-				models = await initializeModels(sequelize, logger);
+				logger.info('Attempting to load models');
+				models = await initializeModels(sequelize);
 				if (models) {
-					appLogger.info('Models loaded');
+					logger.info('Models loaded');
 					return models;
 				}
 			} catch (dbError) {
-				const databaseError = new errorClasses.DatabaseErrorRecoverable(
-					`Error occurred within getModels() - models were uninitialized when function was called and getModels() failed to initialize them: ${dbError instanceof Error ? dbError.message : dbError}`,
-					{
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logInfo(databaseError.message, logger);
-				processError(databaseError, logger);
-
+				const databaseError =
+					new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+						`Error occurred within getModels() - models were uninitialized when function was called and getModels() failed to initialize them: ${dbError instanceof Error ? dbError.message : dbError}`,
+						{ exposeToClient: false }
+					);
+				errorLogger.logInfo(databaseError.message);
+				errorHandler.handleError({
+					error: databaseError || dbError || Error || 'Unknown error'
+				});
 				logger.debug('Returning empty object in lieu of models');
 
 				return {} as Models;
@@ -73,14 +72,15 @@ export async function getModels(appLogger: Logger): Promise<Models> {
 		}
 		return models as Models;
 	} catch (dbError) {
-		const DatabaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Error occurred while attempting to retrieve models using getModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(DatabaseError.message, logger);
-		processError(DatabaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Error occurred while attempting to retrieve models using getModels(): ${dbError instanceof Error ? dbError.message : dbError}`,
+				{ exposeToClient: false }
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({
+			error: databaseError || dbError || Error || 'Unknown error'
+		});
 
 		logger.debug('Returning empty object in lieu of models');
 		return {} as Models;

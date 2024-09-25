@@ -7,10 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 
 interface DeviceAttributes {
@@ -45,16 +43,14 @@ class Device
 }
 
 export default function createDeviceModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof Device | null {
+	const logger = configService.getAppLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
 		);
 
 		Device.init(
@@ -134,14 +130,15 @@ export default function createDeviceModel(
 		logger.info('Device model initialized successfully');
 		return Device;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize Device model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize Device model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		configService.getErrorLogger().logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }

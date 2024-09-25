@@ -1,4 +1,4 @@
-import { ProcessErrorStaticParameters } from '../index/parameters';
+import { HandleErrorStaticParameters } from '../index/parameters';
 import {
 	AppLoggerInterface,
 	ErrorHandlerInterface,
@@ -89,7 +89,7 @@ export class ResourceManager {
 			return this.redisClient;
 		} catch (error) {
 			this.errorHandler.handleError({
-				...ProcessErrorStaticParameters,
+				...HandleErrorStaticParameters,
 				error,
 				details: { reason: 'Failed to connect to Redis' }
 			});
@@ -193,13 +193,12 @@ export class ResourceManager {
 
 	private clearCaches(): void {
 		this.logger.info('Clearing application caches...');
-		// For example, if you have a cache object, you can clear it like this:
-		// myCache.clear();
+		// myCache.clear(); or whatever
 	}
 
 	private closeIdleConnections(): void {
 		this.logger.info('Closing idle database connections...');
-		// Implement logic to close idle database connections or connections that are not used frequently
+		// logic to close idle database connections or connections that are not used frequently
 	}
 
 	private removeTemporaryFiles(): void {

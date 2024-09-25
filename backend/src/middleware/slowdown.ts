@@ -1,41 +1,31 @@
-import { NextFunction, Request, Response } from 'express';
-import { Session } from 'express-session';
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { expressErrorHandler, processError } from '../errors/processError';
+import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { validateDependencies } from '../utils/helpers';
+import {
+	AppLoggerInterface,
+	SlowdownSessionInterface
+} from '../index/interfaces';
 
-export const slowdownThreshold = 100; // in ms
-
-interface SlowdownConfig {
-	slowdownThreshold: number;
-}
-
-interface SlowdownSession extends Session {
-	lastRequestTime?: number;
-}
-
-export function initializeSlowdownMiddleware({
-	slowdownThreshold
-}: SlowdownConfig) {
-	const appLogger = ConfigService.getInstance().getLogger();
-
+export function initializeSlowdownMiddleware(
+	slowdownThreshold: number,
+	logger: AppLoggerInterface,
+	errorLogger: AppLoggerInterface,
+	errorHandler: typeof import('../services/errorHandler').errorHandler
+): RequestHandler {
 	try {
 		validateDependencies(
 			[{ name: 'slowdownThreshold', instance: slowdownThreshold }],
-			appLogger || console
+			logger
 		);
 
 		return function slowdownMiddleware(
-			req: Request & { session: SlowdownSession },
+			req: Request & { session: SlowdownSessionInterface },
 			res: Response,
 			next: NextFunction
 		): void {
 			const requestTime = Date.now();
 
 			if (!req.session) {
-				appLogger.warn(
+				logger.warn(
 					'Session is undefined; proceeding without slowdown'
 				);
 				next();
@@ -44,7 +34,7 @@ export function initializeSlowdownMiddleware({
 
 			try {
 				if (!req.session.lastRequestTime) {
-					appLogger.info(
+					logger.info(
 						`First request from IP: ${req.ip}, proceeding without delay`
 					);
 					req.session.lastRequestTime = requestTime;
@@ -54,18 +44,18 @@ export function initializeSlowdownMiddleware({
 
 					if (timeDiff < slowdownThreshold) {
 						const waitTime = slowdownThreshold - timeDiff;
-						appLogger.warn(
+						logger.warn(
 							`Rapid request detected from IP: ${req.ip}. Delaying response by ${waitTime} ms`
 						);
 						setTimeout(() => {
 							req.session.lastRequestTime = requestTime;
-							appLogger.info(
+							logger.info(
 								`Resuming delayed request from IP: ${req.ip}`
 							);
 							next();
 						}, waitTime);
 					} else {
-						appLogger.info(
+						logger.info(
 							`Request from IP: ${req.ip} within acceptable time frame. Proceeding`
 						);
 						req.session.lastRequestTime = requestTime;
@@ -74,37 +64,36 @@ export function initializeSlowdownMiddleware({
 				}
 			} catch (expressError) {
 				const middleware = 'slowdownMiddleware()';
-				const errorResponse = 'Internal Server Error';
-				const expressMiddlewareError = new errorClasses.ExpressError(
-					`Fatal error occured when attempting to execute ${middleware}: ${
-						expressError instanceof Error
-							? expressError.message
-							: 'Unknown error'
-					} ; Shutting down...`,
-					{
-						middleware,
-						severity: ErrorSeverity.FATAL,
-						exposeToClient: false
-					}
-				);
-				ErrorLogger.logError(expressMiddlewareError);
-				expressErrorHandler()(
+				const expressMiddlewareError =
+					new errorHandler.ErrorClasses.ExpressError(
+						`Fatal error occured when attempting to execute ${middleware}: ${
+							expressError instanceof Error
+								? expressError.message
+								: 'Unknown error'
+						} ; Shutting down...`,
+						{
+							middleware,
+							exposeToClient: false
+						}
+					);
+				errorLogger.logError(expressMiddlewareError.message);
+				errorHandler.expressErrorHandler()(
 					expressMiddlewareError,
 					req,
 					res,
-					next,
-					errorResponse
+					next
 				);
 				next();
 			}
 		};
 	} catch (depError) {
 		const dependency: string = 'initializeSlowdownMiddleware()';
-		const dependencyError = new errorClasses.DependencyErrorRecoverable(
-			`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
-			{ exposeToClient: false }
-		);
-		processError(dependencyError);
+		const dependencyError =
+			new errorHandler.ErrorClasses.DependencyErrorRecoverable(
+				`Fatal error occured when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
+				{ exposeToClient: false }
+			);
+		errorHandler.handleError({ error: dependencyError });
 		throw dependencyError;
 	}
 }

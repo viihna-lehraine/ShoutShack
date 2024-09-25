@@ -6,10 +6,8 @@ import {
 	InferCreationAttributes,
 	Sequelize
 } from 'sequelize';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 
 interface FeedbackSurveyAttributes {
@@ -69,16 +67,15 @@ class FeedbackSurvey
 }
 
 export default function createFeedbackSurveyModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof FeedbackSurvey | null {
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
 		);
 
 		FeedbackSurvey.init(
@@ -229,14 +226,15 @@ export default function createFeedbackSurveyModel(
 		logger.info('FeedbackSurvey model initialized successfully');
 		return FeedbackSurvey;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize FeedbackSurvey model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize FeedbackSurvey model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }

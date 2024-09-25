@@ -20,10 +20,7 @@ export function createJwt(): {
 
 	const loadJwtSecret = async (): Promise<string> => {
 		try {
-			const secret = params.envSecretsStore.retrieveSecret(
-				'JWT_SECRET',
-				params.appLogger
-			);
+			const secret = params.envSecretsStore.retrieveSecret('JWT_SECRET');
 
 			if (!secret) {
 				throw new Error('JWT_SECRET is not available.');
@@ -76,10 +73,7 @@ export function createJwt(): {
 		try {
 			validateDependencies([{ name: 'token', instance: token }], logger);
 
-			const pepper = await envSecretsStore.retrieveSecret(
-				'JWT_SECRET',
-				logger
-			);
+			const pepper = await envSecretsStore.retrieveSecret('JWT_SECRET');
 
 			if (!pepper) {
 				logger.error('JWT_SECRET is not available.');

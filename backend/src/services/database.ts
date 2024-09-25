@@ -3,27 +3,40 @@ import { AppError } from '../errors/errorClasses';
 import { configService } from './configService';
 import { envSecretsStore } from '../environment/envSecrets';
 import { errorHandler } from './errorHandler';
+import {
+	AppLoggerServiceInterface,
+	DatabaseServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces';
+import { ServiceFactory } from '../index/serviceFactory';
+import { Logger } from 'winston';
 
-export class DatabaseService {
+export class DatabaseService implements DatabaseServiceInterface {
 	private static instance: DatabaseService;
 	private sequelizeInstance: Sequelize | null = null;
 	private pool: Record<string, unknown> = {};
 	private attempt = 0;
 	private configService = configService;
 	private envSecretsStore = envSecretsStore;
-	private logger = configService.getAppLogger();
-	private errorLogger = configService.getErrorLogger();
-	private errorHandler = errorHandler;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	constructor() {
-		this.logger = configService.getAppLogger();
+	private constructor() {
+		this.logger = ServiceFactory.createService(
+			'logger'
+		) as AppLoggerServiceInterface;
+		this.errorLogger = ServiceFactory.createService(
+			'errorLogger'
+		) as ErrorLoggerServiceInterface;
+		this.errorHandler = ServiceFactory.createService(
+			'errorHandler'
+		) as ErrorHandlerServiceInterface;
 		const dbConfig: Options = {
 			host: configService.getEnvVariables().dbHost,
 			username: configService.getEnvVariables().dbUser,
-			password: envSecretsStore.retrieveSecret(
-				'dbPassword',
-				this.logger
-			)!,
+			password: envSecretsStore.retrieveSecret('dbPassword')!,
 			database: configService.getEnvVariables().dbName,
 			dialect: configService.getEnvVariables().dbDialect,
 			pool: {
@@ -38,6 +51,13 @@ export class DatabaseService {
 		this.sequelizeInstance = new Sequelize(dbConfig);
 
 		this.connect();
+	}
+
+	public static getInstance(): DatabaseService {
+		if (!DatabaseService.instance) {
+			DatabaseService.instance = new DatabaseService(); // Create the instance if not exists
+		}
+		return DatabaseService.instance;
 	}
 
 	private async connect(): Promise<void> {
@@ -85,18 +105,16 @@ export class DatabaseService {
 				);
 
 				const sequelizeOptions: Options = {
-					host: this.configService.getEnvVariables.dbHost,
+					host: this.configService.getEnvVariables().dbHost,
 					dialect: this.configService.getEnvVariables().dbDialect,
 					logging: this.configService.getFeatureFlags()
 						.sequelizeLogging
-						? (msg: string) => this.logger.info(msg)
+						? (msg: string): Logger => this.logger.info(msg)
 						: false
 				};
 
-				const dbPassword = this.envSecretsStore.retrieveSecret(
-					'dbPassword',
-					this.logger
-				);
+				const dbPassword =
+					this.envSecretsStore.retrieveSecret('dbPassword');
 
 				this.sequelizeInstance = new Sequelize(
 					this.configService.getEnvVariables().dbName,

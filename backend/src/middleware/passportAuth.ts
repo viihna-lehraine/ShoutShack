@@ -1,22 +1,20 @@
 import { NextFunction, Request, Response } from 'express';
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { expressErrorHandler } from '../errors/processError';
-import { validateDependencies } from '../utils/helpers';
+import { PassportAuthMiddlewareDependencies } from '../index/interfaces';
 
 export const initializePassportAuthMiddleware = ({
 	passport,
-	authenticateOptions
+	authenticateOptions,
+	logger,
+	errorLogger,
+	errorHandler,
+	validateDependencies
 }: PassportAuthMiddlewareDependencies) => {
-	const appLogger = ConfigService.getInstance().getLogger();
-
 	validateDependencies(
 		[
 			{ name: 'passport', instance: passport },
 			{ name: 'authenticateOptions', instance: authenticateOptions }
 		],
-		appLogger || console
+		logger
 	);
 
 	return (req: Request, res: Response, next: NextFunction): void => {
@@ -26,7 +24,7 @@ export const initializePassportAuthMiddleware = ({
 				authenticateOptions,
 				(err: Error | null, user: Express.User | false) => {
 					if (err) {
-						appLogger.error(
+						logger.error(
 							`Passport authentication error: ${err.message}`
 						);
 						res.status(500).json({
@@ -35,7 +33,7 @@ export const initializePassportAuthMiddleware = ({
 						return;
 					}
 					if (!user) {
-						appLogger.warn('Unauthorized access attempt');
+						logger.warn('Unauthorized access attempt');
 						res.status(401).json({ error: 'Unauthorized' });
 						return;
 					}
@@ -45,24 +43,20 @@ export const initializePassportAuthMiddleware = ({
 			)(req, res, next);
 		} catch (expressError) {
 			const middleware: string = 'initializePassportAuthMiddleware()';
-			const errorResponse: string = 'Internal Server Error';
-			const expressMiddlewareError = new errorClasses.ExpressError(
-				`Fatal error: Execution of ${middleware} failed\nShutting down...\n${expressError instanceof Error ? expressError.message : 'Unknown error'} ;`,
-				{
-					utility: middleware,
-					originalError: expressError,
-					statusCode: 500,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			ErrorLogger.logError(expressMiddlewareError);
-			expressErrorHandler()(
+			const expressMiddlewareError =
+				new errorHandler.ErrorClasses.ExpressError(
+					`Fatal error: Execution of ${middleware} failed\nShutting down...\n${expressError instanceof Error ? expressError.message : 'Unknown error'} ;`,
+					{
+						utility: middleware,
+						originalError: expressError
+					}
+				);
+			errorLogger.logError(expressMiddlewareError.message);
+			errorHandler.expressErrorHandler()(
 				expressMiddlewareError,
 				req,
 				res,
-				next,
-				errorResponse
+				next
 			);
 			res.status(500).json({ error: 'Internal Server Error' });
 			process.exit(1);

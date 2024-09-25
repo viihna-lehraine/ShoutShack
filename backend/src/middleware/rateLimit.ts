@@ -1,26 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
-import { ConfigService } from 'src/config/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { expressErrorHandler } from '../errors/processError';
-import { ensureSecrets } from '../utils/ensureSecrets';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 
 const MAX_RECOVERABLE_LIMITS: number = 5;
 const recoverableLimitCounts = new Map<string, number>();
 
-const {
-	RateLimitErrorFatal,
-	RateLimitErrorRecoverable,
-	RateLimitErrorWarning
-} = errorClasses;
-
 export const initializeRateLimitMiddleware = () => {
-	const appLogger = ConfigService.getInstance().getLogger();
-	const secrets = ensureSecrets({
-		subSecrets: ['rateLimiterBasePoints', 'rateLimiterBaseDuration']
-	});
-	const points = secrets.rateLimiterBasePoints;
-	const duration = secrets.rateLimiterBaseDuration;
+	const logger = configService.getAppLogger();
+	const points = configService.getEnvVariables().rateLimiterBasePoints;
+	const duration = configService.getEnvVariables().rateLimiterBaseDuration;
 	const rateLimiter = new RateLimiterMemory({
 		points,
 		duration
@@ -41,11 +30,11 @@ export const initializeRateLimitMiddleware = () => {
 				rateLimitInfo.remainingPoints <= 2 &&
 				rateLimitInfo.remainingPoints > 0
 			) {
-				appLogger.info(
+				logger.info(
 					`Rate limit warning for IP ${ip}. Remaining points: ${rateLimitInfo.remainingPoints}`
 				);
 				next(
-					new RateLimitErrorWarning(
+					new errorHandler.ErrorClasses.RateLimitErrorWarning(
 						Math.ceil(rateLimitInfo.msBeforeNext / 1000)
 					)
 				);
@@ -59,20 +48,20 @@ export const initializeRateLimitMiddleware = () => {
 				const currentCount = recoverableLimitCounts.get(ip) || 0;
 
 				if (currentCount >= MAX_RECOVERABLE_LIMITS) {
-					appLogger.error(`Fatal rate limit exceeded for IP ${ip}`);
+					logger.error(`Fatal rate limit exceeded for IP ${ip}`);
 					recoverableLimitCounts.delete(ip);
 					next(
-						new RateLimitErrorFatal(
+						new errorHandler.ErrorClasses.RateLimitErrorFatal(
 							Math.ceil(error.msBeforeNext / 1000)
 						)
 					);
 				} else {
 					recoverableLimitCounts.set(ip, currentCount + 1);
-					appLogger.warn(
+					logger.warn(
 						`Rate limit exceeded for IP ${ip}. Remaining points: ${error.remainingPoints}`
 					);
 					next(
-						new RateLimitErrorRecoverable(
+						new errorHandler.ErrorClasses.RateLimitErrorRecoverable(
 							Math.ceil(error.msBeforeNext / 1000)
 						)
 					);
@@ -80,18 +69,20 @@ export const initializeRateLimitMiddleware = () => {
 			} else {
 				const middleware = 'initializeRateLimitMiddleware()';
 				const expressMiddlewareError =
-					new errorClasses.DependencyErrorFatal(
+					new errorHandler.ErrorClasses.DependencyErrorFatal(
 						`Fatal error occurred when executing 'initializeRateLimitMiddleware()': Unable to initialize ${middleware}:\n${error instanceof Error ? error.message : 'Unknown error'}`,
 						{
 							dependency: middleware,
-							originalError: error,
-							statusCode: 500,
-							severity: ErrorSeverity.FATAL,
-							exposeToClient: false
+							originalError: error
 						}
 					);
 
-				expressErrorHandler()(expressMiddlewareError, req, res);
+				errorHandler.expressErrorHandler()(
+					expressMiddlewareError,
+					req,
+					res,
+					next
+				);
 			}
 		}
 	};

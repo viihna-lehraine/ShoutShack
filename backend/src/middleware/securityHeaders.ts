@@ -1,29 +1,22 @@
 import { Application, NextFunction, Request, Response } from 'express';
-import helmet, { HelmetOptions } from 'helmet';
+import helmet from 'helmet';
 import {
 	contentSecurityPolicyOptions,
 	helmetOptions as defaultHelmetOptions,
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { expressErrorHandler, processError } from '../errors/processError';
-import { logger } from '../services/appLogger';
-import { validateDependencies } from '../utils/helpers';
-
-interface SecurityHeadersDependencies {
-	helmetOptions?: HelmetOptions;
-	permissionsPolicyOptions?: {
-		[key: string]: string[];
-	};
-}
+import { SecurityHeadersInterface } from '../index/interfaces';
 
 export function initializeSecurityHeaders(
 	app: Application,
 	{
 		helmetOptions = defaultHelmetOptions,
-		permissionsPolicyOptions = defaultPermissionsPolicyOptions
-	}: SecurityHeadersDependencies
+		permissionsPolicyOptions = defaultPermissionsPolicyOptions,
+		logger,
+		errorLogger,
+		errorHandler,
+		validateDependencies
+	}: SecurityHeadersInterface
 ): void {
 	try {
 		validateDependencies(
@@ -41,12 +34,13 @@ export function initializeSecurityHeaders(
 		app.use(helmet(helmetOptions));
 		logger.info('Helmet middleware applied successfully');
 	} catch (configError) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to apply application security headers using Helmet middleware: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
-			{ exposeToClient: false }
-		);
-		ErrorLogger.logWarning(configurationError.message, logger);
-		processError(configurationError, logger);
+		const configurationError =
+			new errorHandler.ErrorClasses.ConfigurationError(
+				`Failed to apply application security headers using Helmet middleware: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
+				{ exposeToClient: false }
+			);
+		errorLogger.logWarn(configurationError.message);
+		errorHandler.handleError({ error: configurationError });
 	}
 
 	if (
@@ -66,17 +60,17 @@ export function initializeSecurityHeaders(
 				logger.info('Permissions-Policy header set successfully');
 			} catch (expressError) {
 				const middleware: string = 'Permissions-Policy Middleware';
-				const errorResponse: string = 'Internal Server Error';
-				const expressMiddlewareError = new errorClasses.ExpressError(
-					`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
-					{ severity: ErrorSeverity.FATAL, exposeToClient: false }
-				);
-				ErrorLogger.logError(expressMiddlewareError, logger);
-				expressErrorHandler({ logger })(
+				const expressMiddlewareError =
+					new errorHandler.ErrorClasses.ExpressError(
+						`Error occurred when initializing ${middleware}: ${expressError instanceof Error ? expressError.message : String(expressError)}`,
+						{ exposeToClient: false }
+					);
+				errorLogger.logError(expressMiddlewareError.message);
+				errorHandler.expressErrorHandler()(
 					expressMiddlewareError,
 					req,
 					res,
-					errorResponse
+					next
 				);
 				res.status(500).json({ error: 'Internal Server Error' });
 				process.exit(1);
@@ -96,12 +90,13 @@ export function initializeSecurityHeaders(
 		);
 		logger.info('Content Security Policy applied successfully');
 	} catch (configError) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to apply Content Security Policy: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
-			{ exposeToClient: false }
-		);
-		ErrorLogger.logError(configurationError, logger);
-		processError(configError, logger);
+		const configurationError =
+			new errorHandler.ErrorClasses.ConfigurationError(
+				`Failed to apply Content Security Policy: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
+				{ exposeToClient: false }
+			);
+		errorLogger.logError(configurationError.message);
+		errorHandler.handleError({ error: configError });
 		process.exit(1);
 	}
 
@@ -112,11 +107,12 @@ export function initializeSecurityHeaders(
 			next();
 		});
 	} catch (configError) {
-		const configurationError = new errorClasses.ConfigurationError(
-			`Failed to apply Expect-CT header: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
-			{ exposeToClient: false }
-		);
-		ErrorLogger.logError(configurationError, logger);
-		processError(configError, logger);
+		const configurationError =
+			new errorHandler.ErrorClasses.ConfigurationError(
+				`Failed to apply Expect-CT header: ${configError instanceof Error ? configError.message : 'Unknown error'}`,
+				{ exposeToClient: false }
+			);
+		errorLogger.logError(configurationError.message);
+		errorHandler.handleError({ error: configError });
 	}
 }

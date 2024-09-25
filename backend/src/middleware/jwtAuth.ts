@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
-import { InitJwtAuthInterface } from '../index/middlewareInterfaces';
-import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
+import { InitJwtAuthInterface } from '../index/interfaces';
+import { HandleErrorStaticParameters } from '../index/parameters';
 
 export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 	const params: InitJwtAuthInterface = InitJwtAuthParameters;
 
 	params.validateDependencies(
 		[{ name: 'verifyJwt', instance: params.verifyJwt }],
-		params.appLogger
+		params.logger
 	);
 
 	return async (
@@ -20,7 +20,7 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 			const token = authHeader?.split(' ')[1];
 
 			if (!token) {
-				params.appLogger.warn(
+				params.logger.warn(
 					'No JWT token found in the authorization header'
 				);
 				res.sendStatus(403);
@@ -29,7 +29,7 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 
 			const user = await params.verifyJwt(token);
 			if (!user) {
-				params.appLogger.warn('Invalid JWT token');
+				params.logger.warn('Invalid JWT token');
 				res.sendStatus(403);
 				return;
 			}
@@ -37,31 +37,26 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 			req.user = user;
 			next();
 		} catch (expressError) {
-			const expressMiddlewareError = new params.errorClasses.ExpressError(
-				`Error occurred when attempting to use JWT authentication via middleware 'initJwtAuth()'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
-				{
-					middleware: 'initJwtAuth()',
-					originalError: expressError,
-					statusCode: 500,
-					severity: params.ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			params.errorLogger.logError(
-				expressMiddlewareError,
-				params.errorLoggerDetails(
-					params.getCallerInfo,
-					'INIT_JWT_AUTH_MIDDLEWEARE'
-				),
-				params.appLogger,
-				params.ErrorSeverity.FATAL
-			);
+			const expressMiddlewareError =
+				new params.errorHandler.ErrorClasses.ExpressError(
+					`Error occurred when attempting to use JWT authentication via middleware 'initJwtAuth()'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
+					{
+						middleware: 'initJwtAuth()',
+						originalError: expressError
+					}
+				);
+			params.errorLogger.logError(expressMiddlewareError.message);
 
 			if (expressError instanceof Error) {
-				params.expressErrorHandler()({ expressError, req, res, next });
+				params.errorHandler.expressErrorHandler()(
+					expressError,
+					req,
+					res,
+					next
+				);
 			} else {
-				params.processError({
-					...ProcessErrorStaticParameters,
+				params.errorHandler.handleError({
+					...HandleErrorStaticParameters,
 					error: expressMiddlewareError
 				});
 			}

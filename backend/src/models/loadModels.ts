@@ -15,10 +15,8 @@ import createSupportRequestModel from './SupportRequestModelFile';
 import createUserMfaModel from './UserMfaModelFile';
 import { createUserModel } from './UserModelFile';
 import createUserSessionModel from './UserSessionModelFile';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError, sendClientErrorResponse } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 
 let res: Response;
@@ -45,40 +43,28 @@ export interface Models {
 	UserSession: ReturnType<typeof createUserSessionModel>;
 }
 
-export async function loadModels(
-	sequelize: Sequelize,
-	logger: Logger
-): Promise<Models | null> {
-	validateDependencies(
-		[
-			{ name: 'sequelize', instance: sequelize },
-			{ name: 'logger', instance: logger }
-		],
-		logger || console
-	);
+export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
+
+	validateDependencies([{ name: 'sequelize', instance: sequelize }], logger);
 	try {
 		const models: Models = {
-			AuditLog: createAuditLogModel(sequelize, logger),
-			DataShareOptions: createDataShareOptionsModel(sequelize, logger),
-			Device: createDeviceModel(sequelize, logger),
-			ErrorLog: createErrorLogModel(sequelize, logger),
-			FailedLoginAttempts: createFailedLoginAttemptsModel(
-				sequelize,
-				logger
-			),
-			FeatureRequest: createFeatureRequestModel(sequelize, logger),
-			FeedbackSurvey: createFeedbackSurveyModel(sequelize, logger),
-			GuestbookEntry: createGuestbookEntryModel(sequelize, logger),
-			MultiFactorAuthSetup: createMultiFactorAuthSetupModel(
-				sequelize,
-				logger
-			),
-			RecoveryMethod: createRecoveryMethodModel(sequelize, logger),
-			SecurityEvent: createSecurityEventModel(sequelize, logger),
-			SupportRequest: createSupportRequestModel(sequelize, logger),
-			User: createUserModel(sequelize, logger),
-			UserMfa: createUserMfaModel(sequelize, logger),
-			UserSession: createUserSessionModel(sequelize, logger)
+			AuditLog: createAuditLogModel(sequelize),
+			DataShareOptions: createDataShareOptionsModel(sequelize),
+			Device: createDeviceModel(sequelize),
+			ErrorLog: createErrorLogModel(sequelize),
+			FailedLoginAttempts: createFailedLoginAttemptsModel(sequelize),
+			FeatureRequest: createFeatureRequestModel(sequelize),
+			FeedbackSurvey: createFeedbackSurveyModel(sequelize),
+			GuestbookEntry: createGuestbookEntryModel(sequelize),
+			MultiFactorAuthSetup: createMultiFactorAuthSetupModel(sequelize),
+			RecoveryMethod: createRecoveryMethodModel(sequelize),
+			SecurityEvent: createSecurityEventModel(sequelize),
+			SupportRequest: createSupportRequestModel(sequelize),
+			User: createUserModel(sequelize),
+			UserMfa: createUserMfaModel(sequelize),
+			UserSession: createUserSessionModel(sequelize)
 		};
 
 		for (const [modelName, modelInstance] of Object.entries(models)) {
@@ -169,30 +155,24 @@ export async function loadModels(
 		});
 
 		return models;
-	} catch (DB_ERROR_RECOVERABLE) {
+	} catch (dbError) {
 		const dbUtil = 'loadModels()';
 		const databaseRecoverableError =
-			new errorClasses.DatabaseErrorRecoverable(
-				`Error occurred when attempting to execute ${dbUtil}: ${DB_ERROR_RECOVERABLE instanceof Error ? DB_ERROR_RECOVERABLE.message : 'Unknown error'};`,
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Error occurred when attempting to execute ${dbUtil}: ${dbError instanceof Error ? dbError.message : 'Unknown error'};`,
 				{ exposeToClient: false }
 			);
-		ErrorLogger.logError(databaseRecoverableError, logger);
+		errorLogger.logError(databaseRecoverableError.message);
 
-		const clientResponse = {
+		await errorHandler.sendClientErrorResponse({
 			message: 'Internal Server Error',
-			statusCode: 500
-		};
-
-		await sendClientErrorResponse(
-			{
-				message: clientResponse.message,
-				statusCode: clientResponse.statusCode,
-				severity: ErrorSeverity.RECOVERABLE,
-				name: 'Model Load Error'
-			},
+			statusCode: 500,
 			res
-		);
-		processError(databaseRecoverableError, logger);
+		});
+		errorHandler.handleError({
+			error:
+				databaseRecoverableError || dbError || Error || 'Unknown error'
+		});
 
 		return null;
 	}

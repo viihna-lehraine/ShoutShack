@@ -7,10 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { errorClasses } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { configService } from '../services/configService';
+import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 
 interface GuestbookEntryAttributes {
@@ -38,16 +36,15 @@ class GuestbookEntry
 }
 
 export default function createGuestbookEntryModel(
-	sequelize: Sequelize,
-	logger: Logger
+	sequelize: Sequelize
 ): typeof GuestbookEntry | null {
+	const logger = configService.getAppLogger();
+	const errorLogger = configService.getErrorLogger();
+
 	try {
 		validateDependencies(
-			[
-				{ name: 'sequelize', instance: sequelize },
-				{ name: 'logger', instance: logger }
-			],
-			logger || console
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
 		);
 
 		GuestbookEntry.init(
@@ -104,14 +101,15 @@ export default function createGuestbookEntryModel(
 		logger.info('GuestbookEntry model initialized successfully');
 		return GuestbookEntry;
 	} catch (dbError) {
-		const databaseError = new errorClasses.DatabaseErrorRecoverable(
-			`Failed to initialize GuestbookEntry model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-			{
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logInfo(databaseError.message, logger);
-		processError(databaseError, logger);
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize GuestbookEntry model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }

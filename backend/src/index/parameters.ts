@@ -11,8 +11,6 @@ import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
 import passport, { session } from 'passport';
 import { inRange } from 'range_check';
-import { createClient } from 'redis';
-import sequelize from 'sequelize';
 import { configService } from '../services/configService';
 import { errorHandler as expressErrorHandler } from '../services/errorHandler';
 import { getCallerInfo, validateDependencies } from '../utils/helpers';
@@ -20,7 +18,6 @@ import { blankRequest } from '../utils/constants';
 import { envSecretsStore } from '../environment/envSecrets';
 import { createJwt } from '../auth/jwt';
 import * as interfaces from './interfaces';
-import { getRedisClient } from '../services/redis';
 import { initCsrf } from '../middleware/csrf';
 import { initIpBlacklist } from '../middleware/ipBlacklist';
 import { initializeRateLimitMiddleware } from 'src/middleware/rateLimit';
@@ -33,7 +30,14 @@ import {
 	emailSecureAsBoolean,
 	tlsCiphers
 } from '../utils/constants';
+import { createLogger, format, transports, addColors } from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import LogStashTransport from 'winston-logstash';
+import { ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { errorHandler } from '../services/errorHandler';
+import { v4 as uuidv4 } from 'uuid';
+import { sanitizeRequestBody } from '../utils/helpers';
+import { Sequelize } from 'sequelize';
 
 // ****** PARAMETER OBJECTS ****** //
 
@@ -41,18 +45,13 @@ export const AddIpToBlacklistStaticParameters: Omit<
 	interfaces.AddIpToBlacklistInterface,
 	'ip'
 > = {
-	appLogger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
 	configService,
 	errorHandler,
 	validateDependencies
 };
 
 export const CreateFeatureEnablerParameters: interfaces.CreateFeatureEnablerInterface =
-	{
-		appLogger: configService.getAppLogger(),
-		errorLogger: configService.getErrorLogger()
-	};
+	{ configService };
 
 export const CreateJwtParameters: interfaces.CreateJwtInterface = {
 	jwt,
@@ -112,9 +111,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
 	featureEnableLogStash: process.env.FEATURE_ENABLE_LOGSTASH === 'true',
 	featureEnableRateLimit: process.env.FEATURE_ENABLE_RATE_LIMIT === 'true',
-	featureEnableRedis: process.env.FEATURE_ENABLE_REDIS! === 'true',
 	featureEnableSession: process.env.FEATURE_ENABLE_SESSION! === 'true',
-	featureEnableSsl: process.env.FEATURE_ENABLE_SSL! === 'true',
 	featureEncryptSecretsStore: process.env.FEATURE_ENCRYPTS_STORE! === 'true',
 	featureHttpsRedirect: process.env.FEATURE_HTTPS_REDIRECT! === 'true',
 	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES! === 'true',
@@ -138,11 +135,17 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	logStashPort: parseInt(process.env.LOGSTASH_PORT!, 10),
 	memoryLimit: parseInt(process.env.MEMORY_LIMIT!, 10),
 	memoryMonitorInterval: parseInt(process.env.MEMORY_MONITOR_INTERVAL!, 10),
+	multerFileSizeLimit: parseInt(process.env.MULTER_FILE_SIZE_LIMIT!, 10),
+	multerStorageDir: process.env.MULTER_STORAGE_DIR!,
+	multerUploadDir: process.env.UPLOAD_DIR!,
 	nodeEnv: process.env.NODE_ENV! as 'development' | 'testing' | 'production',
 	npmLogPath: process.env.SERVER_NPM_LOG_PATH!,
 	primaryLogPath: process.env.SERVER_LOG_PATH!,
-	rateLimiterBaseDuration: process.env.RATE_LIMITER_BASE_DURATION!,
-	rateLimiterBasePoints: process.env.RATE_LIMITER_BASE_POINTS!,
+	rateLimiterBaseDuration: parseInt(
+		process.env.RATE_LIMITER_BASE_DURATION!,
+		10
+	),
+	rateLimiterBasePoints: parseInt(process.env.RATE_LIMITER_BASE_POINTS!, 10),
 	redisUrl: process.env.REDIS_URL!,
 	rpName: process.env.RP_NAME!,
 	rpIcon: process.env.RP_ICON!,
@@ -162,6 +165,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3!,
 	serverDataFilePath4: process.env.SERVER_DATA_FILE_PATH_4!,
 	serverPort: parseInt(process.env.SERVER_PORT!, 10),
+	slowdownThreshold: parseInt(process.env.SLOWDOWN_THRESHOLD!, 10),
 	staticRootPath: process.env.STATIC_ROOT_PATH!,
 	tempDir: process.env.TEMP_DIR!,
 	tlsCertPath1: process.env.TLS_CERT_PATH_1!,
@@ -184,7 +188,6 @@ export const FeatureFlagNames = {
 	ENABLE_JWT_AUTH: 'FEATURE_ENABLE_JWT_AUTH',
 	ENABLE_LOG_STASH: 'FEATURE_ENABLE_LOG_STASH',
 	ENABLE_RATE_LIMIT: 'FEATURE_ENABLE_RATE_LIMIT',
-	ENABLE_REDIS: 'FEATURE_ENABLE_REDIS',
 	ENABLE_TLS: 'FEATURE_ENABLE_TLS',
 	ENCRYPT_SECRETS_STORE: 'FEATURE_ENCRYPT_SECRETS_STORE',
 	HONOR_CIPHER_ORDER: 'FEATURE_HONOR_CIPHER_ORDER',
@@ -206,7 +209,7 @@ export const HandleCriticalErrorStaticParameters = {
 };
 
 export const HandleErrorStaticParameters = {
-	appLogger: configService.getAppLogger(),
+	logger: configService.getAppLogger(),
 	configService,
 	errorLogger: configService.getErrorLogger(),
 	fallbackLogger: console
@@ -251,12 +254,12 @@ export const InitMiddlewareStaticParameters = {
 	express,
 	expressErrorHandler,
 	fsModule: fs,
-	getRedisClient,
+	// getRedisClient,
 	hpp,
 	initCsrf,
 	initIpBlacklist,
-	initJwtAuth: () => passport.authenticate('jwt', { session: false }),
-	initializePassportAuthMiddleware: () => passport.authenticate('local'),
+	// initJwtAuth: () => passport.authenticate('jwt', { session: false }),
+	// initializePassportAuthMiddleware: () => passport.authenticate('local'),
 	initializeRateLimitMiddleware,
 	initializeSecurityHeaders,
 	initializeSlowdownMiddleware,
@@ -266,27 +269,22 @@ export const InitMiddlewareStaticParameters = {
 	errorHandler,
 	session,
 	randomBytes,
-	redisClient: () => getRedisClient(createClient),
+	// redisClient: () => getRedisClient(createClient),
 	RedisStore,
 	verifyJwt: passport.authenticate('jwt', { session: false })
 };
 
 export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {
 	fsModule: fsPromises,
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
 	configService,
-	validateDependencies
+	errorHandler
 };
 
 export const PreInitIpBlacklistParameters: interfaces.PreInitIpBlacklistInterface =
 	{
 		fsModule: fsPromises,
-		logger: configService.getAppLogger(),
-		errorLogger: configService.getErrorLogger(),
 		configService,
-		errorHandler,
-		validateDependencies
+		errorHandler
 	};
 
 export const RemoveIpFromBlacklistStaticParameters: Omit<
@@ -302,11 +300,8 @@ export const RemoveIpFromBlacklistStaticParameters: Omit<
 
 export const SaveIpBlacklistParameters: interfaces.SaveIpBlacklistInterface = {
 	fsModule: fsPromises,
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
 	configService,
-	errorHandler,
-	validateDependencies
+	errorHandler
 };
 
 export const SetUpDatabaseParameters: interfaces.SetUpDatabaseInterface = {
@@ -318,15 +313,44 @@ export const SetUpDatabaseParameters: interfaces.SetUpDatabaseInterface = {
 	blankRequest
 };
 
+/*
 export const SetUpWebServerParameters: interfaces.SetUpWebServerInterface = {
 	app: express(),
-	appLogger: configService.getAppLogger(),
+	logger: configService.getAppLogger(),
 	blankRequest,
 	DeclareWebServerOptionsStaticParameters,
 	envVariables: configService.getEnvVariables(),
 	errorLogger: configService.getErrorLogger(),
 	featureFlags: configService.getFeatureFlags(),
 	getCallerInfo,
+	errorHandler
+	// sequelize
+};
+*/
+
+//
+///
+//// ***** SERVICE FACTORY PARAMETER OBJECTS ***** ////
+///
+//
+
+export const AppLoggerServiceParameters = {
+	winston: {
+		createLogger,
+		format,
+		transports,
+		addColors
+	},
+	DailyRotateFile,
+	LogStashTransport,
+	configService,
+	envSecretsStore,
+	ErrorClasses,
+	ErrorSeverity,
+	HandleErrorStaticParameters,
 	errorHandler,
-	sequelize
+	uuidv4,
+	sanitizeRequestBody,
+	fs,
+	Sequelize
 };

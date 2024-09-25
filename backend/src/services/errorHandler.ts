@@ -6,31 +6,43 @@ import {
 	ErrorSeverityType
 } from '../errors/errorClasses';
 import { NextFunction, Request, Response } from 'express';
-import { AppLogger, ErrorLogger } from '../services/logger';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
 import { sanitizeRequestBody } from '../utils/helpers';
+import { AppLoggerService, ErrorLoggerService } from './logger';
+import { AppLoggerServiceParameters } from '../index/parameters';
 
-export class ErrorHandler {
-	private static instance: ErrorHandler;
-	private appLogger: AppLogger;
-	private errorLogger: ErrorLogger;
+export class ErrorHandlerService implements ErrorHandlerServiceInterface {
+	private static instance: ErrorHandlerService;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
 	public ErrorClasses = ErrorClasses;
 	public ErrorSeverity = ErrorSeverity;
 
-	constructor(appLogger: AppLogger, errorLogger: ErrorLogger) {
-		this.appLogger = appLogger;
+	constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface
+	) {
+		this.logger = logger;
 		this.errorLogger = errorLogger;
 	}
 
 	public static getInstance(
-		appLogger: AppLogger,
-		errorLogger: ErrorLogger
-	): ErrorHandler {
-		if (!ErrorHandler.instance) {
-			ErrorHandler.instance = new ErrorHandler(appLogger, errorLogger);
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface
+	): ErrorHandlerService {
+		if (!ErrorHandlerService.instance) {
+			ErrorHandlerService.instance = new ErrorHandlerService(
+				logger,
+				errorLogger
+			);
 		}
-		return ErrorHandler.instance;
+		return ErrorHandlerService.instance;
 	}
 
 	public handleError(params: {
@@ -73,16 +85,13 @@ export class ErrorHandler {
 		if (sequelize) {
 			this.errorLogger.logAppError(appError, sequelize, errorDetails);
 		} else {
-			this.appLogger.logError('Error occurred.', errorDetails);
+			this.logger.logError('Error occurred.', errorDetails);
 		}
 
 		if (severity === ErrorSeverity.FATAL) {
-			this.appLogger.logCritical('A fatal error occurred.', errorDetails);
+			this.logger.logCritical('A fatal error occurred.', errorDetails);
 		} else {
-			this.appLogger.logError(
-				'A recoverable error occurred.',
-				errorDetails
-			);
+			this.logger.logError('A recoverable error occurred.', errorDetails);
 		}
 	}
 
@@ -164,7 +173,7 @@ export class ErrorHandler {
 				});
 			}
 
-			this.appLogger.logInfo(
+			this.logger.logInfo(
 				`Error response sent to client. Response ID: ${responseId} | Status Code: ${statusCode} | Message: ${message}`,
 				logDetails
 			);
@@ -190,7 +199,7 @@ export class ErrorHandler {
 			...details
 		};
 
-		this.appLogger.logCritical(`CriticalError: ${errorMessage}`, {
+		this.logger.logCritical(`CriticalError: ${errorMessage}`, {
 			stack: errorStack,
 			...logDetails
 		});
@@ -223,14 +232,18 @@ export class ErrorHandler {
 			responseId
 		});
 
-		this.appLogger.logInfo(
+		this.logger.logInfo(
 			`Client error response sent. Response ID: ${responseId}\nMessage: ${message}`,
 			{ statusCode, responseId }
 		);
 	}
 }
 
-export const errorHandler = ErrorHandler.getInstance(
-	new AppLogger(),
-	new ErrorLogger()
+export const errorHandler = ErrorHandlerService.getInstance(
+	AppLoggerService.getInstance(
+		AppLoggerServiceParameters
+	) as AppLoggerServiceInterface,
+	ErrorLoggerService.getInstance(
+		AppLoggerServiceParameters
+	) as ErrorLoggerServiceInterface
 );

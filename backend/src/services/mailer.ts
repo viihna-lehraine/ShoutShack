@@ -1,103 +1,142 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import { AppLogger } from './logger';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
-import { configService } from './configService';
-import { MailerDependencies, MailerSecrets } from '../index/serviceInterfaces';
-import { processError } from '../errors/processError';
+import { ConfigService } from './configService';
+import {
+	AppLoggerInterface,
+	EnvVariableTypes,
+	ErrorHandlerInterface,
+	MailerServiceDeps,
+	MailerServiceInterface
+} from '../index/interfaces';
+import { envSecretsStore } from '../environment/envSecrets';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
-export class MailerService {
+export class MailerService implements MailerServiceInterface {
+	private static instance: MailerService | null = null;
 	private transporter: Transporter | null = null;
-	private appLogger: AppLogger;
+	private logger: AppLoggerInterface;
+	private errorLogger: AppLoggerInterface;
+	private envVariables: EnvVariableTypes;
+	private errorHandler: ErrorHandlerInterface;
 
-	constructor(
+	private constructor(
 		private nodemailer: typeof import('nodemailer'),
 		private emailUser: string,
-		appLogger: AppLogger
+		logger: AppLoggerInterface,
+		errorLogger: AppLoggerInterface,
+		configService: ConfigService,
+		errorHandler: ErrorHandlerInterface
 	) {
-		this.appLogger = appLogger;
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.envVariables = configService.getEnvVariables();
+		this.errorHandler = errorHandler;
 	}
 
-	// Validate necessary dependencies
-	private validateMailerDependencies(): void {
+	public static getInstance(deps: MailerServiceDeps): MailerService {
+		deps.validateDependencies(
+			[
+				{ name: 'nodemailer', instance: deps.nodemailer },
+				{ name: 'emailUser', instance: deps.emailUser }
+			],
+			deps.logger
+		);
+
+		if (!MailerService.instance) {
+			MailerService.instance = new MailerService(
+				deps.nodemailer,
+				deps.emailUser,
+				deps.logger,
+				deps.errorLogger,
+				deps.configService,
+				deps.errorHandler
+			);
+		}
+
+		return MailerService.instance;
+	}
+
+	public validateMailerDependencies(): void {
 		validateDependencies(
 			[
 				{ name: 'nodemailer', instance: this.nodemailer },
 				{ name: 'emailUser', instance: this.emailUser }
 			],
-			this.appLogger
+			this.logger
 		);
 	}
 
 	// Create a new transporter instance
-	private async createTransporter(): Promise<Transporter> {
-		const secrets = configService.getSecrets() as MailerSecrets;
-
+	public async createMailTransporter(): Promise<Transporter> {
 		try {
 			this.validateMailerDependencies();
 
-			if (!secrets) {
-				const loadSecretsError = new errorClasses.ConfigurationError(
-					`Error occurred when retrieving secrets`,
-					{
-						statusCode: 404,
-						severity: ErrorSeverity.FATAL,
-						exposeToClient: false
-					}
-				);
-				this.appLogger.logError(loadSecretsError);
-				processError(loadSecretsError, this.appLogger);
-				throw loadSecretsError;
+			const smtpToken = envSecretsStore.retrieveSecret('SMTP_TOKEN');
+
+			if (!smtpToken) {
+				const dependencyError =
+					new this.errorHandler.ErrorClasses.DependencyErrorRecoverable(
+						'Unable to retrieve SMTP token for Mailer Service transport creation',
+						{ exposeToClient: false }
+					);
+				this.errorLogger.logError(dependencyError.message);
+				this.errorHandler.handleError({
+					error: dependencyError || Error || 'Secret not found'
+				});
+				throw dependencyError;
 			}
 
-			return this.nodemailer.createTransport({
-				host: secrets.EMAIL_HOST,
-				port: secrets.EMAIL_PORT,
-				secure: secrets.EMAIL_SECURE,
+			const transportOptions: SMTPTransport.Options = {
+				host: this.envVariables.emailHost,
+				port: this.envVariables.emailPort,
+				secure: this.envVariables.emailSecure,
 				auth: {
 					user: this.emailUser,
-					pass: secrets.SMTP_TOKEN
+					pass: smtpToken
 				}
-			});
+			};
+
+			return this.nodemailer.createTransport(transportOptions);
 		} catch (depError) {
-			const dependency: string = 'createTransporter()';
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				dependency,
-				{
-					statusCode: 500,
-					severity: ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
-				}
-			);
-			this.appLogger.logError(dependencyError);
-			processError(dependencyError, this.appLogger);
+			const dependencyError =
+				new this.errorHandler.ErrorClasses.DependencyErrorRecoverable(
+					`Unable to create transporter for Mailer Service\n${depError instanceof Error ? depError.message : 'Unknown error'};`,
+					{ exposeToClient: false }
+				);
+			this.errorLogger.logError(dependencyError.message);
+			this.errorHandler.handleError({
+				error:
+					dependencyError ||
+					depError ||
+					Error ||
+					'Unable to create transporter for Mailer Service'
+			});
 			throw dependencyError;
 		}
 	}
 
-	// Get the transporter instance (singleton)
 	public async getTransporter(): Promise<Transporter> {
 		try {
 			this.validateMailerDependencies();
 
 			if (!this.transporter) {
-				this.transporter = await this.createTransporter();
+				this.transporter = await this.createMailTransporter();
 			}
-			return this.transporter;
+			return this.transporter!;
 		} catch (depError) {
-			const dependency: string = 'getTransporter()';
-			const dependencyError = new errorClasses.DependencyErrorRecoverable(
-				`Fatal error occurred when attempting to execute ${dependency}: ${depError instanceof Error ? depError.message : 'Unknown error'};`,
-				{
-					dependency,
-					originalError: depError,
-					statusCode: 500,
-					severity: ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
-				}
-			);
-			this.appLogger.logError(dependencyError);
-			processError(dependencyError, this.appLogger);
+			const dependencyError =
+				new this.errorHandler.ErrorClasses.DependencyErrorRecoverable(
+					`Unable to retrieve transporter for Mailer Service\n${depError instanceof Error ? depError.message : 'Unknown error'};`,
+					{
+						dependency: 'getTransporter()',
+						originalError: depError,
+						exposeToClient: false
+					}
+				);
+			this.logger.logError(dependencyError.message);
+			this.errorHandler.handleError({
+				error: dependencyError || depError || Error || 'Unknown error'
+			});
 			throw dependencyError;
 		}
 	}

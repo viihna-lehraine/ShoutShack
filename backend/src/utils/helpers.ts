@@ -140,3 +140,9 @@ export function validateDependencies(
 		throw error;
 	}
 }
+
+export function isErrorLoggerService(
+	service: LoggerService
+): service is ErrorLoggerService {
+	return (service as ErrorLoggerService).logAppError !== undefined;
+}

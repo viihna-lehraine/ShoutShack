@@ -1,19 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
-import validator from 'validator';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { expressErrorHandler } from '../errors/processError';
-import { Logger } from '../services/appLogger';
-
-interface ValidatorDependencies {
-	appLogger: Logger;
-	validator: typeof validator;
-}
+import { ValidatorInterface } from '../index/interfaces';
 
 export function initializeValidatorMiddleware({
-	appLogger,
-	validator
-}: ValidatorDependencies): {
+	validator,
+	logger,
+	errorLogger,
+	errorHandler
+}: ValidatorInterface): {
 	validateEntry: (req: Request, res: Response, next: NextFunction) => void;
 	registrationValidationRules: (
 		req: Request,
@@ -37,14 +30,14 @@ export function initializeValidatorMiddleware({
 		}
 
 		if (errors.length) {
-			appLogger.warn(
+			logger.warn(
 				`Validation failed for entry creation: ${JSON.stringify(errors)}`
 			);
 			res.status(400).json({ errors });
 			return;
 		}
 
-		appLogger.info('Validation passed for entry creation');
+		logger.info('Validation passed for entry creation');
 		next();
 	};
 
@@ -117,31 +110,32 @@ export function initializeValidatorMiddleware({
 			}
 
 			if (errors.length) {
-				appLogger.info(
+				logger.info(
 					`Validation failed for registration: ${JSON.stringify(errors)}`
 				);
 				res.status(400).json({ errors });
 				return;
 			}
 
-			appLogger.info('Validation passed for registration');
+			logger.info('Validation passed for registration');
 			next();
 		} catch (expessError) {
-			const middleware: string = 'registrationValidationRules()';
-			const expressMiddlewareError = new errorClasses.ExpressError(
-				`Fatal error occured when attempting to execute ${middleware}: ${
-					expessError instanceof Error
-						? expessError.message
-						: 'Unknown error'
-				} ; Shutting down...`,
-				{
-					statusCode: 500,
-					severity: ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
+			const expressMiddlewareError =
+				new errorHandler.ErrorClasses.ExpressError(
+					`Fatal error occured when attempting to execute 'registrationValidationRules()': ${
+						expessError instanceof Error
+							? expessError.message
+							: 'Unknown error'
+					} ; Shutting down...`,
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(expressMiddlewareError.message);
+			errorHandler.expressErrorHandler()(
+				expressMiddlewareError,
+				req,
+				res,
+				next
 			);
-			ErrorLogger.logError(expressMiddlewareError, appLogger);
-			expressErrorHandler({ appLogger })(expressMiddlewareError, req, res);
 		}
 	};
 

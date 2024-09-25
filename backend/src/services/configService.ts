@@ -8,8 +8,11 @@ import {
 	SecretsMap
 } from '../index/interfaces';
 import { loadEnv } from '../environment/envVars';
-import { AppLogger, ErrorLogger } from './logger';
-import { AppLoggerInterface } from '../index/interfaces';
+import {
+	AppLoggerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces';
+import { ServiceFactory } from 'src/index/serviceFactory';
 
 export class ConfigService implements ConfigServiceInterface {
 	private static instance: ConfigService;
@@ -17,11 +20,13 @@ export class ConfigService implements ConfigServiceInterface {
 	private encryptionKey: string | null = null;
 	private gpgPassphrase: string | undefined;
 	private adminId: number | null = null;
-	public logger: AppLoggerInterface;
+	public logger: AppLoggerServiceInterface;
 
 	private constructor() {
 		loadEnv();
-		this.logger = AppLogger.getInstance().getRedactedLogger();
+		this.logger = ServiceFactory.createService(
+			'logger'
+		) as AppLoggerServiceInterface;
 	}
 
 	public initialize(
@@ -35,7 +40,7 @@ export class ConfigService implements ConfigServiceInterface {
 		this.initializeSecrets({
 			execSync,
 			getDirectoryPath: () => process.cwd(),
-			logger: this.getAppLogger(),
+			logger: this.getLogger(),
 			gpgPassphrase: this.gpgPassphrase
 		});
 	}
@@ -48,15 +53,17 @@ export class ConfigService implements ConfigServiceInterface {
 	}
 
 	public initializeLogger(): void {
-		AppLogger.getInstance().getRedactedLogger().info('Logger initialized');
+		this.logger.getRedactedLogger().info('Logger initialized');
 	}
 
-	public getAppLogger(): AppLoggerInterface {
+	public getLogger(): AppLoggerServiceInterface {
 		return this.logger;
 	}
 
-	public getErrorLogger(): AppLoggerInterface {
-		return ErrorLogger.getInstance().getRedactedLogger();
+	public getErrorLogger(): ErrorLoggerServiceInterface {
+		return ServiceFactory.createService(
+			'errorLogger'
+		) as ErrorLoggerServiceInterface;
 	}
 
 	public getAdminId(): number | null {
@@ -93,7 +100,7 @@ export class ConfigService implements ConfigServiceInterface {
 				`Secret(s) not found, attempting to refresh secrets.`
 			);
 			this.refreshSecrets({
-				logger: this.getAppLogger(),
+				logger: this.getLogger(),
 				execSync,
 				getDirectoryPath: () => process.cwd(),
 				gpgPassphrase: this.gpgPassphrase

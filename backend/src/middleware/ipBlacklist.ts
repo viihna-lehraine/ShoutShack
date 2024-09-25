@@ -6,14 +6,14 @@ import {
 	PreInitIpBlacklistInterface,
 	RemoveIpFromBlacklistInterface,
 	SaveIpBlacklistInterface
-} from '../index/middlewareInterfaces';
-import { ProcessErrorStaticParameters } from '../parameters/errorParameters';
+} from '../index/interfaces';
 import {
 	AddIpToBlacklistStaticParameters,
+	HandleErrorStaticParameters,
 	LoadIpBlacklistParameters,
 	RemoveIpFromBlacklistStaticParameters,
 	SaveIpBlacklistParameters
-} from '../parameters/middlewareParameters';
+} from '../index/parameters';
 
 let blacklist: string[] = [];
 
@@ -21,11 +21,7 @@ export const loadIpBlacklist = async (
 	LoadIpBlacklistParameters: LoadIpBlacklistInterface
 ): Promise<void> => {
 	const params = LoadIpBlacklistParameters;
-
-	params.validateDependencies(
-		[{ name: 'fsModule', instance: params.fsModule }],
-		params.appLogger
-	);
+	const logger = params.configService.getAppLogger();
 
 	const filePath = params.configService.getEnvVariables().serverDataFilePath2;
 
@@ -33,30 +29,23 @@ export const loadIpBlacklist = async (
 		if (await params.fsModule.stat(filePath)) {
 			const data = await params.fsModule.readFile(filePath, 'utf8');
 			blacklist = JSON.parse(data);
-			params.appLogger.info('Blacklist loaded successfully');
+			logger.info('Blacklist loaded successfully');
 		}
 	} catch (utilError) {
 		const expressMiddlwareError =
-			new params.errorClasses.UtilityErrorRecoverable(
+			new params.errorHandler.ErrorClasses.UtilityErrorRecoverable(
 				`Error occured when attempting to load IP blacklist with utility 'loadIpBlacklist()'\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
 				{
 					utility: 'loadIpBlacklist()',
-					originalError: utilError,
-					statusCode: 500,
-					ErrorSeverity: params.ErrorSeverity.RECOVERABLE,
-					exposeToClient: false
+					originalError: utilError
 				}
 			);
-		params.errorLogger.logWarning(
-			expressMiddlwareError.message,
-			{},
-			params.appLogger,
-			params.ErrorSeverity.WARNING
-		);
-		params.processError({
-			...ProcessErrorStaticParameters,
+		params.configService
+			.getErrorLogger()
+			.logWarn(expressMiddlwareError.message);
+		params.errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: expressMiddlwareError,
-			appLogger: params.appLogger,
 			details: { reason: 'Failed to load IP blacklist' }
 		});
 	}
@@ -66,11 +55,8 @@ const saveIpBlacklist = async (
 	SaveIpBlacklistParameters: SaveIpBlacklistInterface
 ): Promise<void> => {
 	const params = SaveIpBlacklistParameters;
-
-	params.validateDependencies(
-		[{ name: 'fsModule', instance: params.fsModule }],
-		params.appLogger
-	);
+	const logger = params.configService.getAppLogger();
+	const errorLogger = params.configService.getErrorLogger();
 
 	if (params.configService.getFeatureFlags().enableIpBlacklist) {
 		const filePath =
@@ -80,25 +66,18 @@ const saveIpBlacklist = async (
 				filePath,
 				JSON.stringify(blacklist)
 			);
-			params.appLogger.info('Blacklist saved successfully');
+			logger.info('Blacklist saved successfully');
 		} catch (utilError) {
 			const utility: string = 'saveIpBlacklist()';
 			const utilityError =
-				new params.errorClasses.UtilityErrorRecoverable(
+				new params.errorHandler.ErrorClasses.UtilityErrorRecoverable(
 					`Error occured when attempting to save IP blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
 					{ exposeToClient: false }
 				);
-			const actionManual: string = 'save_ip_blacklist';
-			params.errorLogger.logWarning(
-				utilityError.message,
-				params.errorLoggerDetails(params.getCallerInfo, actionManual),
-				params.appLogger,
-				params.ErrorSeverity.WARNING
-			);
-			params.processError({
-				...ProcessErrorStaticParameters,
+			errorLogger.logWarn(utilityError.message);
+			params.errorHandler.handleError({
+				...HandleErrorStaticParameters,
 				error: utilityError,
-				appLogger: params.appLogger,
 				details: { reason: 'Failed to save IP blacklist' }
 			});
 		}
@@ -109,51 +88,33 @@ export const preInitIpBlacklist = async (
 	PreInitIpBlacklistParameters: PreInitIpBlacklistInterface
 ): Promise<void> => {
 	const params = PreInitIpBlacklistParameters;
-
-	params.validateDependencies(
-		[{ name: 'fsModule', instance: params.fsModule }],
-		params.appLogger
-	);
+	const logger = params.configService.getAppLogger();
 
 	if (params.configService.getFeatureFlags().enableIpBlacklist) {
-		params.appLogger.info(
+		logger.info(
 			'IP blacklist middleware is enabled. Initializing blacklist'
 		);
 		try {
 			await loadIpBlacklist(LoadIpBlacklistParameters);
-			params.appLogger.info(
-				'Blacklist and range_check module loaded successfully'
-			);
+			logger.info('Blacklist and range_check module loaded successfully');
 		} catch (utilError) {
 			const utilityError =
-				new params.errorClasses.UtilityErrorRecoverable(
+				new params.errorHandler.ErrorClasses.UtilityErrorRecoverable(
 					`Error occured when initializing IP blacklist:\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
 					{
 						utiliy: 'initializeIpBlacklist()',
-						originalError: utilError,
-						statusCode: 500,
-						severity: params.ErrorSeverity.RECOVERABLE,
-						exposeToClient: false
+						originalError: utilError
 					}
 				);
-			params.errorLogger.logWarning(
-				utilityError.message,
-				params.errorLoggerDetails(
-					params.getCallerInfo,
-					'INIT_IP_BLACKLIST'
-				),
-				params.appLogger,
-				params.ErrorSeverity.WARNING
-			);
-			params.processError({
-				...ProcessErrorStaticParameters,
+			params.configService.getErrorLogger().logWarn(utilityError.message);
+			params.errorHandler.handleError({
+				...HandleErrorStaticParameters,
 				error: utilityError,
-				appLogger: params.appLogger,
 				details: { reason: 'Failed to initialize IP blacklist' }
 			});
 		}
 	} else {
-		params.appLogger.debug('IP blacklist middleware is disabled');
+		logger.debug('IP blacklist middleware is disabled');
 	}
 };
 
@@ -162,49 +123,34 @@ export const addIpToBlacklist = async (ip: string): Promise<void> => {
 		...AddIpToBlacklistStaticParameters,
 		ip
 	};
+	const logger = params.configService.getAppLogger();
 
-	params.validateDependencies(
-		[{ name: 'ip', instance: ip }],
-		params.appLogger
-	);
+	params.validateDependencies([{ name: 'ip', instance: ip }], logger);
 
 	try {
 		if (params.configService.getFeatureFlags().enableIpBlacklist) {
-			params.appLogger.info(
-				'IP Blacklist is enabled. Adding IP to blacklist'
-			);
+			logger.info('IP Blacklist is enabled. Adding IP to blacklist');
 			if (!blacklist.includes(ip)) {
 				blacklist.push(ip);
 				await saveIpBlacklist(SaveIpBlacklistParameters);
-				params.appLogger.info(`IP ${ip} added to blacklist`);
+				logger.info(`IP ${ip} added to blacklist`);
 			} else {
-				params.appLogger.info('IP already in blacklist');
+				logger.info('IP already in blacklist');
 			}
 		} else {
-			params.appLogger.info('IP Blacklist is disabled');
+			logger.info('IP Blacklist is disabled');
 		}
 	} catch (utilError) {
 		const utility: string = 'addToBlacklist()';
-		const utilityError = new params.errorClasses.UtilityErrorRecoverable(
-			`Error occured when attempting to add IP address ${ip} to blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
-			{
-				severity: params.ErrorSeverity.WARNING,
-				exposeToClient: false
-			}
-		);
-		params.errorLogger.logWarning(
-			utilityError.message,
-			params.errorLoggerDetails(
-				params.getCallerInfo,
-				'ADD_IP_TO_BLACKLIST'
-			),
-			params.appLogger,
-			params.ErrorSeverity.WARNING
-		);
-		params.processError({
-			...ProcessErrorStaticParameters,
+		const utilityError =
+			new params.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`Error occured when attempting to add IP address ${ip} to blacklist using the utility ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
+				{ exposeToClient: false }
+			);
+		params.configService.getErrorLogger().logWarn(utilityError.message);
+		params.errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: utilityError,
-			appLogger: params.appLogger,
 			details: { reason: 'Failed to add IP address to blacklist' }
 		});
 	}
@@ -215,42 +161,29 @@ export const removeIpFromBlacklist = async (ip: string): Promise<void> => {
 		...RemoveIpFromBlacklistStaticParameters,
 		ip
 	};
+	const logger = params.configService.getAppLogger();
 
-	params.validateDependencies(
-		[{ name: 'ip', instance: ip }],
-		params.appLogger
-	);
+	params.validateDependencies([{ name: 'ip', instance: ip }], logger);
 
 	try {
 		if (params.configService.getFeatureFlags().enableIpBlacklist) {
 			blacklist = blacklist.filter(range => range !== ip);
 			await saveIpBlacklist(SaveIpBlacklistParameters);
-			params.appLogger.info(`IP ${ip} removed from blacklist`);
+			logger.info(`IP ${ip} removed from blacklist`);
 		}
 	} catch (utilError) {
-		const utilityError = new params.errorClasses.UtilityErrorRecoverable(
-			`Error occured when removing IP address ${ip} from blacklist\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
-			{
-				utility: 'removeFromBlacklist()',
-				originalError: utilError,
-				statusCode: 500,
-				severity: params.ErrorSeverity.WARNING,
-				exposeToClient: false
-			}
-		);
-		params.errorLogger.logWarning(
-			utilityError.message,
-			params.errorLoggerDetails(
-				params.getCallerInfo,
-				'IP_BLACKLIST_REMOVE_ENTRY'
-			),
-			params.appLogger,
-			params.ErrorSeverity.WARNING
-		);
-		params.processError({
-			...ProcessErrorStaticParameters,
+		const utilityError =
+			new params.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+				`Error occured when removing IP address ${ip} from blacklist\n${utilError instanceof Error ? utilError.message : String(utilError)}`,
+				{
+					utility: 'removeFromBlacklist()',
+					originalError: utilError
+				}
+			);
+		params.configService.getErrorLogger().logWarn(utilityError.message);
+		params.errorHandler.handleError({
+			...HandleErrorStaticParameters,
 			error: utilityError,
-			appLogger: params.appLogger,
 			details: { reason: 'Failed to remove IP address from blacklist' }
 		});
 	}
@@ -263,51 +196,41 @@ export const initIpBlacklist =
 
 		params.validateDependencies(
 			[{ name: 'fsModule', instance: params.fsModule }],
-			params.appLogger
+			params.logger
 		);
 
 		try {
 			if (params.configService.getFeatureFlags().enableIpBlacklist) {
-				params.appLogger.info('IP Blacklist middleware enabled');
+				params.logger.info('IP Blacklist middleware enabled');
 				const clientIp = req.ip;
 
 				if (!clientIp) {
-					params.appLogger.info('Client IP not found');
+					params.logger.info('Client IP not found');
 					res.status(500).json({ error: 'Bad request' });
 					return;
 				}
 
 				if (blacklist.some(range => params.inRange(clientIp, range))) {
-					params.appLogger.info(
+					params.logger.info(
 						`Blocked request from blacklisted IP: ${clientIp}`
 					);
 					res.status(403).json({ error: 'Access denied' });
 					return;
 				}
 			} else {
-				params.appLogger.debug('IP Blacklist middleware disabled');
+				params.logger.debug('IP Blacklist middleware disabled');
 			}
 		} catch (expressError) {
-			const expressMiddlewareError = new params.errorClasses.ExpressError(
-				`Error occurred when initializing 'initIpBlacklist()'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
-				{
-					middleware: 'initializeIpBlacklistMiddleware()',
-					originalError: expressError,
-					statusCode: 500,
-					severity: params.ErrorSeverity.FATAL,
-					exposeToClient: false
-				}
-			);
-			params.errorLogger.logError(
-				expressMiddlewareError,
-				params.errorLoggerDetails(
-					params.getCallerInfo,
-					'INIT_IP_BLACKLIST_MIDDLEWARE'
-				),
-				params.appLogger,
-				params.ErrorSeverity.FATAL
-			);
-			params.expressErrorHandler();
+			const expressMiddlewareError =
+				new params.errorHandler.ErrorClasses.ExpressError(
+					`Error occurred when initializing 'initIpBlacklist()'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
+					{
+						middleware: 'initializeIpBlacklistMiddleware()',
+						originalError: expressError
+					}
+				);
+			params.errorLogger.logError(expressMiddlewareError.message);
+			params.errorHandler.expressErrorHandler();
 		}
 
 		next();
