@@ -1,14 +1,20 @@
 import { Response } from 'express';
-import { errorHandler } from '../services/errorHandler';
-import { configService } from '../services/configService';
 import {
+	AppLoggerServiceInterface,
 	BackupCodeInterface,
-	BackupCodeServiceInterface
+	BackupCodeServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
 } from '../index/interfaces';
 import { validateDependencies } from '../utils/helpers';
-import { AppLoggerInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
-const logger: AppLoggerInterface = configService.getAppLogger();
+const logger: AppLoggerServiceInterface = ServiceFactory.getLoggerService();
+const errorLogger: ErrorLoggerServiceInterface =
+	ServiceFactory.getErrorLoggerService();
+const errorHandler: ErrorHandlerServiceInterface =
+	ServiceFactory.getErrorHandlerService();
+
 let res: Response;
 
 export default function createBackupCodeService({
@@ -51,7 +57,7 @@ export default function createBackupCodeService({
 					`Error occured with dependency ${utility}. Failed to generate backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 					{ exposeToClient: false }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			return [''];
 		}
@@ -61,8 +67,6 @@ export default function createBackupCodeService({
 		id: string,
 		inputCode: string
 	): Promise<boolean> {
-		const logger = configService.getAppLogger();
-
 		try {
 			validateDependencies(
 				[
@@ -75,9 +79,7 @@ export default function createBackupCodeService({
 			const storedCodes = await getBackupCodesFromDatabase(id);
 
 			if (!storedCodes || storedCodes.length === 0) {
-				configService
-					.getErrorLogger()
-					.logInfo(`No backup codes found for user ${id}`);
+				logger.logInfo(`No backup codes found for user ${id}`);
 				const message = 'No backup codes found';
 				const clientAuthError =
 					new errorHandler.ErrorClasses.ClientAuthenticationError(
@@ -85,9 +87,7 @@ export default function createBackupCodeService({
 						{ originalError: Error || 'Unknown error occurred' }
 					);
 				errorHandler.sendClientErrorResponse({ message, res });
-				configService
-					.getErrorLogger()
-					.logError(clientAuthError.message);
+				errorLogger.logError(clientAuthError.message);
 				errorHandler.handleError({ error: clientAuthError });
 				return false;
 			}
@@ -106,17 +106,13 @@ export default function createBackupCodeService({
 							{ originalError: Error || 'Unknown error occurred' }
 						);
 					errorHandler.sendClientErrorResponse({ message, res });
-					configService
-						.getErrorLogger()
-						.logError(clientAuthError.message);
+					errorLogger.logError(clientAuthError.message);
 					errorHandler.handleError({ error: clientAuthError });
 					return false;
 				}
 			}
 
-			configService
-				.getErrorLogger()
-				.logDebug(`Backup code verification failed for user ${id}`);
+			logger.logDebug(`Backup code verification failed for user ${id}`);
 			return false;
 		} catch (utilError) {
 			const utilityError =
@@ -124,7 +120,7 @@ export default function createBackupCodeService({
 					`Error occured with dependency 'verifyBackupCode()': Failed to verify backup code for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 					{ originalError: utilError }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			return false;
 		}
@@ -154,9 +150,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
-				configService
-					.getErrorLogger()
-					.logError(clientAuthError.message);
+				errorLogger.logError(clientAuthError.message);
 				errorHandler.sendClientErrorResponse({
 					message: clientAuthError.message,
 					res
@@ -176,7 +170,7 @@ export default function createBackupCodeService({
 					`Error occured with dependency ${utility}. Failed to save backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 					{ exposeToClient: false }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 		}
 	}
@@ -198,9 +192,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: User with ID ${id} not found.`
 						}
 					);
-				configService
-					.getErrorLogger()
-					.logError(clientAuthError.message);
+				errorLogger.logError(clientAuthError.message);
 				errorHandler.sendClientErrorResponse({
 					message: clientAuthError.message,
 					res
@@ -216,9 +208,7 @@ export default function createBackupCodeService({
 							message: `Client Auth Error: No backup codes found for user ${id}`
 						}
 					);
-				configService
-					.getErrorLogger()
-					.logError(clientAuthError.message);
+				errorLogger.logError(clientAuthError.message);
 				errorHandler.sendClientErrorResponse({
 					message: clientAuthError.message,
 					res
@@ -236,7 +226,7 @@ export default function createBackupCodeService({
 					`Error occured with dependency ${utility}. Failed to get backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 					{ exposeToClient: false }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			return [];
 		}
@@ -262,9 +252,7 @@ export default function createBackupCodeService({
 					new errorHandler.ErrorClasses.ClientAuthenticationError(
 						`Client Auth Error: User with ID ${id} not found.`
 					);
-				configService
-					.getErrorLogger()
-					.logError(clientAuthError.message);
+				errorLogger.logError(clientAuthError.message);
 				errorHandler.sendClientErrorResponse({
 					message: clientAuthError.message,
 					res
@@ -284,7 +272,7 @@ export default function createBackupCodeService({
 					`Error occured with dependency ${utility}. Failed to update backup codes for user ${id}: ${utilError instanceof Error ? utilError.message : utilError}`,
 					{ exposeToClient: false }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 		}
 	}

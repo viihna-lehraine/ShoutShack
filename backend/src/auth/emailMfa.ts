@@ -1,9 +1,20 @@
 import { JwtPayload } from 'jsonwebtoken';
-import { EmailMFAInterface } from '../index/interfaces';
 import { validateDependencies } from '../utils/helpers';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
-import { envSecretsStore } from '../environment/envSecrets';
+import { ServiceFactory } from '../index/factory';
+import {
+	AppLoggerServiceInterface,
+	EmailMFAInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces';
+import { SecretsStore } from '../services/secrets';
+
+const logger = ServiceFactory.getLoggerService() as AppLoggerServiceInterface;
+const errorLogger =
+	ServiceFactory.getErrorLoggerService() as ErrorLoggerServiceInterface;
+const errorHandler =
+	ServiceFactory.getErrorHandlerService() as ErrorHandlerServiceInterface;
+const secrets = ServiceFactory.getSecretsStore() as SecretsStore;
 
 export async function createEmail2FAUtil({
 	bcrypt,
@@ -18,8 +29,6 @@ export async function createEmail2FAUtil({
 		email2FACode: string
 	) => Promise<boolean>;
 }> {
-	const logger = configService.getAppLogger();
-
 	validateDependencies(
 		[
 			{ name: 'bcrypt', instance: bcrypt },
@@ -36,7 +45,7 @@ export async function createEmail2FAUtil({
 			const email2FACode = await bcrypt.genSalt(6);
 			const email2FAToken = jwt.sign(
 				{ email2FACode },
-				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY')!,
+				secrets.retrieveSecret('EMAIL_2FA_KEY')!,
 				{
 					expiresIn: '30m'
 				}
@@ -52,14 +61,14 @@ export async function createEmail2FAUtil({
 				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
 					`Error occured with ${utility}. Failed to generate email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			return {
 				email2FACode: '',
 				email2FAToken: ''
 			};
 		} finally {
-			envSecretsStore.reEncryptSecret('EMAIL_2FA_KEY');
+			secrets.reEncryptSecret('EMAIL_2FA_KEY');
 		}
 	}
 
@@ -70,7 +79,7 @@ export async function createEmail2FAUtil({
 		try {
 			const decoded = jwt.verify(
 				token,
-				envSecretsStore.retrieveSecret('EMAIL_2FA_KEY')!
+				secrets.retrieveSecret('EMAIL_2FA_KEY')!
 			) as JwtPayload;
 
 			if (!decoded || typeof decoded.email2FACode !== 'string') {
@@ -87,11 +96,11 @@ export async function createEmail2FAUtil({
 				new errorHandler.ErrorClasses.UtilityErrorRecoverable(
 					`Error occured with dependency ${utility}. Failed to verify email 2FA code: ${utilError instanceof Error ? utilError.message : utilError}`
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			return false;
 		} finally {
-			envSecretsStore.reEncryptSecret('EMAIL_2FA_KEY');
+			secrets.reEncryptSecret('EMAIL_2FA_KEY');
 		}
 	}
 

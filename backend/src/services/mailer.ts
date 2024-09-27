@@ -1,36 +1,36 @@
 import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
-import { ConfigService } from './configService';
 import {
-	AppLoggerInterface,
-	EnvVariableTypes,
-	ErrorHandlerInterface,
+	AppLoggerServiceInterface,
+	ConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
 	MailerServiceDeps,
-	MailerServiceInterface
+	MailerServiceInterface,
+	SecretsStoreInterface
 } from '../index/interfaces';
-import { envSecretsStore } from '../environment/envSecrets';
+import { ServiceFactory } from '../index/factory';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import {} from './config';
 
 export class MailerService implements MailerServiceInterface {
 	private static instance: MailerService | null = null;
 	private transporter: Transporter | null = null;
-	private logger: AppLoggerInterface;
-	private errorLogger: AppLoggerInterface;
-	private envVariables: EnvVariableTypes;
-	private errorHandler: ErrorHandlerInterface;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private configService: ConfigServiceInterface;
+	private secrets: SecretsStoreInterface;
 
 	private constructor(
 		private nodemailer: typeof import('nodemailer'),
-		private emailUser: string,
-		logger: AppLoggerInterface,
-		errorLogger: AppLoggerInterface,
-		configService: ConfigService,
-		errorHandler: ErrorHandlerInterface
+		private emailUser: string
 	) {
-		this.logger = logger;
-		this.errorLogger = errorLogger;
-		this.envVariables = configService.getEnvVariables();
-		this.errorHandler = errorHandler;
+		this.logger = ServiceFactory.getLoggerService();
+		this.errorLogger = ServiceFactory.getErrorLoggerService();
+		this.errorHandler = ServiceFactory.getErrorHandlerService();
+		this.configService = ServiceFactory.getConfigService();
+		this.secrets = ServiceFactory.getSecretsStore();
 	}
 
 	public static getInstance(deps: MailerServiceDeps): MailerService {
@@ -39,17 +39,13 @@ export class MailerService implements MailerServiceInterface {
 				{ name: 'nodemailer', instance: deps.nodemailer },
 				{ name: 'emailUser', instance: deps.emailUser }
 			],
-			deps.logger
+			ServiceFactory.getLoggerService()
 		);
 
 		if (!MailerService.instance) {
 			MailerService.instance = new MailerService(
 				deps.nodemailer,
-				deps.emailUser,
-				deps.logger,
-				deps.errorLogger,
-				deps.configService,
-				deps.errorHandler
+				deps.emailUser
 			);
 		}
 
@@ -66,17 +62,25 @@ export class MailerService implements MailerServiceInterface {
 		);
 	}
 
-	// Create a new transporter instance
 	public async createMailTransporter(): Promise<Transporter> {
 		try {
 			this.validateMailerDependencies();
 
-			const smtpToken = envSecretsStore.retrieveSecret('SMTP_TOKEN');
+			const smtpToken = this.secrets.retrieveSecrets('SMTP_TOKEN');
 
-			if (!smtpToken) {
+			let smtpTokenValue: string;
+			if (typeof smtpToken === 'string') {
+				smtpTokenValue = smtpToken;
+			} else if (
+				smtpToken &&
+				typeof smtpToken === 'object' &&
+				smtpToken.SMTP_TOKEN
+			) {
+				smtpTokenValue = smtpToken.SMTP_TOKEN;
+			} else {
 				const dependencyError =
 					new this.errorHandler.ErrorClasses.DependencyErrorRecoverable(
-						'Unable to retrieve SMTP token for Mailer Service transport creation',
+						'Unable to retrieve a valid SMTP token for Mailer Service transport creation',
 						{ exposeToClient: false }
 					);
 				this.errorLogger.logError(dependencyError.message);
@@ -87,12 +91,12 @@ export class MailerService implements MailerServiceInterface {
 			}
 
 			const transportOptions: SMTPTransport.Options = {
-				host: this.envVariables.emailHost,
-				port: this.envVariables.emailPort,
-				secure: this.envVariables.emailSecure,
+				host: this.configService.getEnvVariable('emailHost'),
+				port: this.configService.getEnvVariable('emailPort'),
+				secure: this.configService.getEnvVariable('emailSecure'),
 				auth: {
 					user: this.emailUser,
-					pass: smtpToken
+					pass: smtpTokenValue
 				}
 			};
 

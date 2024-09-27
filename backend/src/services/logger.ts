@@ -14,6 +14,7 @@ export class AppLoggerService
 {
 	public static instance: AppLoggerService | null = null;
 	protected _deps: AppLoggerServiceDeps;
+	private adminId: number | null = null;
 
 	constructor(
 		deps: AppLoggerServiceDeps,
@@ -23,14 +24,10 @@ export class AppLoggerService
 		const { format, transports, addColors } = deps.winston;
 		const { colorize, combine, errors, json, printf, timestamp } = format;
 
-		const resolvedLogLevel =
-			logLevel || deps.configService.getEnvVariables().logLevel || 'info';
+		const resolvedLogLevel = logLevel || process.env.LOG_LEVEL || 'info';
 		const resolvedServiceName =
-			serviceName ||
-			deps.configService.getEnvVariables().loggerServiceName ||
-			'Log Service';
-		const isProduction =
-			deps.configService.getEnvVariables().nodeEnv === 'production';
+			serviceName || process.env.LOGGER_SERVICE_NAME || 'Log Service';
+		const isProduction = process.env.NODE_ENV === 'production';
 		const logDirectory = './data/logs/server/main/';
 		const logFormat = printf(({ level, message, timestamp, stack }) => {
 			return `${timestamp} ${level}: ${stack || message}`;
@@ -134,7 +131,7 @@ export class AppLoggerService
 			): void => {
 				const redactedMeta =
 					typeof meta === 'object'
-						? this._deps.envSecretsStore.redactSecrets(meta)
+						? this._deps.secretsStore.redactSecrets(meta)
 						: meta;
 				originalMethod(message, redactedMeta);
 			}) as typeof originalMethod;
@@ -154,21 +151,18 @@ export class AppLoggerService
 	}
 
 	private addLogstashTransport(transportsArray: TransportStream[]): void {
-		if (this._deps.configService.getFeatureFlags().enableLogStash) {
-			const logStashTransport = this.createLogstashTransport();
-			if (logStashTransport) {
-				transportsArray.push(logStashTransport);
-			}
+		const logStashTransport = this.createLogstashTransport();
+		if (logStashTransport) {
+			transportsArray.push(logStashTransport);
 		}
 	}
 
 	private createLogstashTransport(): TransportStream | null {
 		try {
 			return new this._deps.LogStashTransport({
-				port: this._deps.configService.getEnvVariables().logStashPort,
-				node_name:
-					this._deps.configService.getEnvVariables().logStashNode,
-				host: this._deps.configService.getEnvVariables().logStashHost
+				port: parseInt(process.env.LOGSTASH_PORT!, 10),
+				node_name: process.env.LOGSTASH_NODE!,
+				host: process.env.LOGSTASH_HOST!
 			}) as unknown as TransportStream;
 		} catch (error) {
 			const logstashError =
@@ -243,6 +237,20 @@ export class AppLoggerService
 		}
 	}
 
+	public getCallerInfo(): string {
+		const stack = new Error().stack;
+		if (stack) {
+			const stackLines = stack.split('\n');
+			const callerLine = stackLines[3]?.trim();
+			return callerLine || 'Unknown caller';
+		}
+		return 'No stack trace available';
+	}
+
+	public setAdminId(adminId: number): void {
+		this.adminId = adminId;
+	}
+
 	public getErrorDetails(
 		getCallerInfo: () => string,
 		action: string = 'unknown',
@@ -252,7 +260,7 @@ export class AppLoggerService
 	): Record<string, unknown> {
 		const details: Record<string, unknown> = {
 			requestId: req?.headers['x-request-id'] || this._deps.uuidv4(),
-			adminId: this._deps.configService.getAdminId() || null,
+			adminId: this.adminId || 'Unknown Admin',
 			userId: userId || null,
 			action: action || 'unknown',
 			caller: String(getCallerInfo()),
@@ -270,9 +278,7 @@ export class AppLoggerService
 					req?.headers['referer'] || req?.headers['referrer'] || null,
 				query: req?.query || null,
 				params: req?.params || null,
-				body: req?.body
-					? this._deps.sanitizeRequestBody(req?.body)
-					: null
+				body: req?.body ? this.sanitizeRequestBody(req?.body) : null
 			},
 			...additionalData
 		};
@@ -296,6 +302,31 @@ export class AppLoggerService
 
 	protected get __deps(): AppLoggerServiceDeps {
 		return this._deps;
+	}
+
+	private sanitizeRequestBody(
+		body: Record<string, unknown>
+	): Record<string, unknown> {
+		const sanitizedBody = new Map(Object.entries(body));
+		const sensitiveFields = [
+			'email',
+			'key',
+			'newPassword',
+			'oldPassword',
+			'passphrase',
+			'password',
+			'secret',
+			'token',
+			'username'
+		];
+
+		sensitiveFields.forEach(field => {
+			if (sanitizedBody.has(field)) {
+				sanitizedBody.set(field, '[REDACTED]');
+			}
+		});
+
+		return Object.fromEntries(sanitizedBody);
 	}
 }
 

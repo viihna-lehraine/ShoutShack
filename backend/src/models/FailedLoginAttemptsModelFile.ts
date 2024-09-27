@@ -6,8 +6,7 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
+import { ServiceFactory } from '../index/factory';
 import { validateDependencies } from '../utils/helpers';
 
 interface FailedLoginAttemptsAttributes {
@@ -37,7 +36,9 @@ class FailedLoginAttempts
 export default function createFailedLoginAttemptsModel(
 	sequelize: Sequelize
 ): typeof FailedLoginAttempts | null {
-	const logger = configService.getAppLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -101,7 +102,7 @@ export default function createFailedLoginAttemptsModel(
 					exposeToClient: false
 				}
 			);
-		configService.getErrorLogger().logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}

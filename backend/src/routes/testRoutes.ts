@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction, Router } from 'express';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
-import { TestRoutesInterface } from 'src/index/interfaces';
+import { TestRoutesInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 export function initializeTestRoutes({ app }: TestRoutesInterface): Router {
 	const router = Router();
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
-	const envVariables = configService.getEnvVariables();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const nodeEnv = ServiceFactory.getConfigService().getEnvVariable('nodeEnv');
 
 	try {
-		if (envVariables.nodeEnv === 'production') {
+		if (nodeEnv === 'production') {
 			router.use((_req: Request, res: Response) => {
 				res.status(404).json({
 					message: 'Test routes are not available in production.'

@@ -15,37 +15,39 @@ import { createClient } from 'redis';
 import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
 import { initializeRoutes } from './routes';
-import { configService } from './services/configService';
-import { initializeDatabase } from './services/database';
-import { AppError, errorClasses, ErrorSeverity } from './errors/errorClasses';
-import { errorLogger } from './services/errorLogger';
+import { configService } from './services/config';
+import { AppError, ErrorClasses, ErrorSeverity } from './errors/errorClasses';
 import { configurePassport } from './auth/passport';
-import { getRedisClient } from './services/redis';
-import { envSecretsStore } from './environment/envSecrets';
-import { displayEnvAndFeatureFlags } from './environment/envVars';
-import { expressErrorHandler, processError } from './errors/processError';
-import { initializeCsrfMiddleware } from './middleware/csrf';
-import { initializeIpBlacklistMiddleware } from './middleware/ipBlacklist';
-import { createMemoryMonitor } from './services/resourceManager';
+import { secretsStore } from './services/secrets';
+import { initCsrf } from './middleware/csrf';
+import { initIpBlacklist, preInitIpBlacklist } from './middleware/ipBlacklist';
 import { initializeRateLimitMiddleware } from './middleware/rateLimit';
 import { initializeSecurityHeaders } from './middleware/securityHeaders';
 import { initializeValidatorMiddleware } from './middleware/validator';
 import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
-import { AppLogger, handleCriticalError } from './services/appLogger';
-import { errorLoggerDetails } from './utils/helpers';
-import { getCallerInfo } from './utils/helpers';
-import { blankRequest } from './utils/helpers';
-import { ProcessErrorStaticParameters } from './parameters/errorParameters';
-import { InitializeDatabaseStaticParameters } from './parameters/databaseParameters';
+import { blankRequest } from './utils/constants';
+import { InitializeDatabaseStaticParameters } from './index/parameters';
 import { Sequelize } from 'sequelize';
+import {
+	AppLoggerServiceParameters,
+	HandleErrorStaticParameters
+} from './index/parameters';
+import { AppLoggerService, ErrorLoggerService } from './services/logger';
+import { ServiceFactory } from './index/factory';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from './index/interfaces';
 
 let sequelize: Sequelize;
 
 async function start(): Promise<void> {
 	try {
-		let appLogger: AppLogger;
+		let logger: AppLoggerServiceInterface;
+		let errorLogger: ErrorLoggerServiceInterface;
 
 		return login()
 			.then(({ encryptionKey, gpgPassphrase, adminId }) => {
@@ -57,21 +59,27 @@ async function start(): Promise<void> {
 					throw new Error('Admin ID not found. Shutting down...');
 				}
 
+				const logger = ServiceFactory.createService(
+					'logger'
+				) as AppLoggerServiceInterface;
+				const errorLogger = ServiceFactory.createService(
+					'errorLogger'
+				) as ErrorLoggerServiceInterface;
+				const errorHandler = ServiceFactory.createService(
+					'errorHandler'
+				) as ErrorHandlerServiceInterface;
+
 				configService.initialize(encryptionKey, gpgPassphrase, adminId);
 
-				appLogger = configService.getAppLogger();
-
-				displayEnvAndFeatureFlags();
-
 				setInterval(() => {
-					envSecretsStore.clearExpiredSecretsFromMemory(appLogger);
+					envSecretsStore.clearExpiredSecretsFromMemory();
 				}, configService.getEnvVariables().clearExpiredSecretsInterval);
 
 				setInterval(() => {
-					envSecretsStore.batchReEncryptSecrets(appLogger);
+					envSecretsStore.batchReEncryptSecrets();
 				}, configService.getEnvVariables().batchReEncryptSecretsInterval);
 
-				console.log(
+				logger.info(
 					`Secrets store initialized. READY TO ROCK AND ROLL!!!`
 				);
 			})
@@ -97,7 +105,6 @@ async function start(): Promise<void> {
 					errorLogger.logError(
 						memoryMonitorError as AppError,
 						errorLoggerDetails(
-							getCallerInfo,
 							blankRequest,
 							'start_memory_monitor'
 						),

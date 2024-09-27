@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { hashPassword } from '../auth/hash';
 import { configService } from '../services/configService';
 import { errorHandler } from '../services/errorHandler';
-import { envSecretsStore } from '../environment/envSecrets';
+import { envSecretsStore } from '../services/secrets';
 import { initializeRateLimitMiddleware } from '../middleware/rateLimit';
 import { validateDependencies } from '../utils/helpers';
 

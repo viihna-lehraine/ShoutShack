@@ -15,9 +15,8 @@ import createSupportRequestModel from './SupportRequestModelFile';
 import createUserMfaModel from './UserMfaModelFile';
 import { createUserModel } from './UserModelFile';
 import createUserSessionModel from './UserSessionModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 let res: Response;
 
@@ -44,8 +43,9 @@ export interface Models {
 }
 
 export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	validateDependencies([{ name: 'sequelize', instance: sequelize }], logger);
 	try {

@@ -1,17 +1,17 @@
 import { AuthControllerInterface } from '../index/interfaces';
 import { Request, Response } from 'express';
+import { ServiceFactory } from '../index/factory';
 
 export function userLogin({
 	argon2,
 	jwt,
-	configService,
 	UserModel,
-	validateDependencies,
-	errorHandler
+	validateDependencies
 }: AuthControllerInterface) {
 	return async (req: Request, res: Response): Promise<Response | void> => {
-		const logger = configService.getAppLogger();
-		const errorLogger = configService.getErrorLogger();
+		const logger = ServiceFactory.getLoggerService();
+		const errorLogger = ServiceFactory.getErrorLoggerService();
+		const errorHandler = ServiceFactory.getErrorHandlerService();
 
 		try {
 			validateDependencies(

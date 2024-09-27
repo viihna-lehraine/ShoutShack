@@ -28,7 +28,7 @@ The project stack includes the following
     * CSS3
 	* TypeScript
     * JavaScript
-    * Sass 1.77.8
+    * Sass
 
 * Server
     * Node.js 22.3.0
@@ -39,7 +39,7 @@ The project stack includes the following
     * PostgreSQL 16.3
         * Sequelize
 
-* Currently, TypeScript and JavaScript globally adhere to ES6 standards and use ES Modules syntax. I'll be exploring the idea of using a newer ES standard at a later time
+* TypeScript and JavaScript globally adhere to ES2022 standards and ES Modules syntax
 
 <br>
 
@@ -81,7 +81,7 @@ The project stack includes the following
 
 ## 4. Server Functions
 
-* Server initialization is defined in **[[server.js]](.backend/src/server.js)**
+* Server initialization is defined in **[[app.js]](.backend/src/app.js)**
 
 <br>
 
@@ -95,14 +95,10 @@ The project stack includes the following
 
 08/20/2024 - Backend and frontend have been completely converted from JavaScript to TypeScript, excluding a small number of JS files used in processes not intended for use in a production environment
 
+09/25/2024 - As I've been coding the backend, I've had to refactor and redesign so many times that I've lost track at this point. Work is now focused on refactoring needed backend services into classes to maintain state, as well as refining the flow of the app initialization process. I'll be honest, I haven't touched the frontend code in weeks or longer at this point.
+
 
 ## 6. To Do
-
-* logging
-
-	* ensure logging is done in a thorough and descriptive manner across the backend
-
-	* fix log write and log export functions
 
 * write unit tests
 
@@ -115,15 +111,13 @@ The project stack includes the following
 * fine tune IP blacklist and VPN/proxy/TOR exit relay lists and the mechanism that will update them from
 external sources; create functions allowing admin CRUD operations on these lists
 
-* create automated, secure backup mechanism for contents of backend/data/
-
-* configure SOPS for decrypting and reading backend/data/ files
+* create secure backup mechanism for backend/data/
 
 * add and configure hcaptcha
 
-* re-examine routes and ensure 
+* define and configure API routes
 
-* build user session functionality with JSON web tokens and test
+* build user session functionality with JSON web tokens
 
 * simulate user registration
 

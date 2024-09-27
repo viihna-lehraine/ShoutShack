@@ -1,14 +1,29 @@
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
-import { StaticRoutesInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 const router = express.Router();
-const logger = configService.getAppLogger();
-const errorLogger = configService.getErrorLogger();
-const envVariables = configService.getEnvVariables();
+const logger = ServiceFactory.getLoggerService();
+const errorLogger = ServiceFactory.getErrorLoggerService();
+const errorHandler = ServiceFactory.getErrorHandlerService();
+const configService = ServiceFactory.getConfigService();
+const staticRootPath = configService.getEnvVariable('staticRootPath');
+const secretsPath = configService.getEnvVariable('frontendSecretsPath');
+
+if (typeof staticRootPath !== 'string' || !staticRootPath) {
+	throw new errorHandler.ErrorClasses.ConfigurationError(
+		'Invalid staticRootPath: must be a non-empty string',
+		{ exposeToClient: false }
+	);
+}
+
+if (typeof secretsPath !== 'string' || !secretsPath) {
+	throw new errorHandler.ErrorClasses.ConfigurationError(
+		'Invalid secretsPath: must be a non-empty string',
+		{ exposeToClient: false }
+	);
+}
 
 function serveStaticFile(
 	filePath: string,
@@ -56,25 +71,13 @@ function serveStaticFile(
 	}
 }
 
-export function setUpStaticRoutes({
-	staticRootPath = envVariables.staticRootPath,
-	secretsPath = envVariables.frontendSecretsPath
-}: StaticRoutesInterface): express.Router {
+export function setUpStaticRoutes(): express.Router {
 	try {
-		validateDependencies(
-			[
-				{ name: 'staticRootPath', instance: staticRootPath },
-				{ name: 'secretsPath', instance: secretsPath }
-			],
-			logger
-		);
-
-		// serve files that exist outside of /frontend/public/ with Express
 		router.get(
 			'/secrets.json.gpg',
 			(_req: Request, res: Response, next: NextFunction) => {
 				serveStaticFile(
-					secretsPath,
+					secretsPath as string,
 					'/secrets.json.gpg',
 					_req,
 					res,
@@ -88,7 +91,10 @@ export function setUpStaticRoutes({
 			'/:page',
 			(req: Request, res: Response, next: NextFunction) => {
 				const page = req.params.page;
-				const filePath = path.join(staticRootPath, `${page}.html`);
+				const filePath = path.join(
+					staticRootPath as string,
+					`${page}.html`
+				); // Enforcing string type
 				serveStaticFile(filePath, `/${page}.html`, req, res, next);
 			}
 		);
@@ -108,10 +114,7 @@ export function setUpStaticRoutes({
 	}
 }
 
-export function initializeStaticRoutes(
-	app: express.Application,
-	staticRootPath: string
-): void {
+export function initializeStaticRoutes(app: express.Application): void {
 	try {
 		validateDependencies(
 			[
@@ -121,15 +124,7 @@ export function initializeStaticRoutes(
 			logger
 		);
 
-		const router = setUpStaticRoutes({
-			staticRootPath,
-			secretsPath: envVariables.frontendSecretsPath,
-			configService,
-			logger,
-			errorLogger,
-			errorHandler,
-			validateDependencies
-		});
+		const router = setUpStaticRoutes();
 
 		app.use('/', router);
 	} catch (configError) {

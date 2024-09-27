@@ -1,13 +1,17 @@
 import { NextFunction, Request, Response } from 'express';
 import { InitJwtAuthInterface } from '../index/interfaces';
 import { HandleErrorStaticParameters } from '../index/parameters';
+import { ServiceFactory } from '../index/factory';
 
 export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 	const params: InitJwtAuthInterface = InitJwtAuthParameters;
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	params.validateDependencies(
 		[{ name: 'verifyJwt', instance: params.verifyJwt }],
-		params.logger
+		logger
 	);
 
 	return async (
@@ -20,7 +24,7 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 			const token = authHeader?.split(' ')[1];
 
 			if (!token) {
-				params.logger.warn(
+				errorLogger.logWarn(
 					'No JWT token found in the authorization header'
 				);
 				res.sendStatus(403);
@@ -29,7 +33,7 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 
 			const user = await params.verifyJwt(token);
 			if (!user) {
-				params.logger.warn('Invalid JWT token');
+				logger.warn('Invalid JWT token');
 				res.sendStatus(403);
 				return;
 			}
@@ -38,24 +42,24 @@ export async function initJwtAuth(InitJwtAuthParameters: InitJwtAuthInterface) {
 			next();
 		} catch (expressError) {
 			const expressMiddlewareError =
-				new params.errorHandler.ErrorClasses.ExpressError(
+				new errorHandler.ErrorClasses.ExpressError(
 					`Error occurred when attempting to use JWT authentication via middleware 'initJwtAuth()'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
 					{
 						middleware: 'initJwtAuth()',
 						originalError: expressError
 					}
 				);
-			params.errorLogger.logError(expressMiddlewareError.message);
+			errorLogger.logError(expressMiddlewareError.message);
 
 			if (expressError instanceof Error) {
-				params.errorHandler.expressErrorHandler()(
+				errorHandler.expressErrorHandler()(
 					expressError,
 					req,
 					res,
 					next
 				);
 			} else {
-				params.errorHandler.handleError({
+				errorHandler.handleError({
 					...HandleErrorStaticParameters,
 					error: expressMiddlewareError
 				});

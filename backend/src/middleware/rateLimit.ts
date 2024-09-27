@@ -1,15 +1,32 @@
 import { NextFunction, Request, Response } from 'express';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
+import { ServiceFactory } from '../index/factory';
 
 const MAX_RECOVERABLE_LIMITS: number = 5;
 const recoverableLimitCounts = new Map<string, number>();
 
 export const initializeRateLimitMiddleware = () => {
-	const logger = configService.getAppLogger();
-	const points = configService.getEnvVariables().rateLimiterBasePoints;
-	const duration = configService.getEnvVariables().rateLimiterBaseDuration;
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const configService = ServiceFactory.getConfigService();
+	const points = configService.getEnvVariable('rateLimiterBasePoints');
+	const duration = configService.getEnvVariable('rateLimiterBaseDuration');
+
+	if (typeof points !== 'number' || typeof duration !== 'number') {
+		const errorMessage = `Invalid rate limiter configuration: points: ${points}, duration: ${duration}`;
+		const configError = new errorHandler.ErrorClasses.ConfigurationError(
+			errorMessage,
+			{
+				configuration: 'rateLimiterBasePoints, rateLimiterBaseDuration',
+				originalError: errorMessage
+			}
+		);
+		errorLogger.logError(configError.message);
+		errorHandler.handleError({ error: configError });
+		throw configError;
+	}
+
 	const rateLimiter = new RateLimiterMemory({
 		points,
 		duration

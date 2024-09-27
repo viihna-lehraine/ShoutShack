@@ -1,96 +1,71 @@
 import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
 import net from 'net';
-import { createClient } from 'redis';
-import { flushRedisMemoryCache, getRedisClient } from '../services/redis';
-import { declareWebServerOptions } from '../config/https';
-import { envSecretsStore } from '../environment/envSecrets';
-import { ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { validateDependencies } from '../utils/helpers';
-import { AppError } from '../errors/errorClasses';
-import { appLogger, errorLogger, AppLoggerType } from '../services/logger';
 import { Sequelize } from 'sequelize';
-import { SecureContextOptions } from 'tls';
-import { configService } from '../services/configService';
+import { Application, Request, Response, NextFunction } from 'express';
+import { constants as cryptoConstants } from 'crypto';
+import { validateDependencies } from '../utils/helpers';
+import {
+	AppLoggerServiceInterface,
+	ConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	RedisServiceInterface,
+	SecretsStoreInterface,
+	WebServerInterface,
+	WebServerOptions
+} from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 import { tlsCiphers } from '../utils/constants';
-import { Request } from 'express';
+import { createClient } from 'redis'; // ES module import
 
-export class WebServer {
+export class WebServer implements WebServerInterface {
 	public static instance: WebServer;
-	private app: Express.Application;
-	private appLogger: AppLoggerType;
-	private errorLogger: AppLoggerType;
-	private sequelize: Sequelize;
-	private featureFlags: Record<string, boolean>;
-	private port: number;
-	private options: SecureContextOptions | undefined;
-	private shuttingDown: boolean = false;
-	private connections: Set<net.Socket> = new Set();
 	private server: https.Server | null = null;
-	private tlsCiphers: string[];
+	private app: Application;
+	private sequelize: Sequelize;
+	private shuttingDown = false;
+	private connections: Set<net.Socket> = new Set();
+	private options: WebServerOptions | undefined;
+	private port: number;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private configService: ConfigServiceInterface;
+	private redis: RedisServiceInterface;
+	private secrets: SecretsStoreInterface;
 
-	constructor(
-		app: Express.Application,
-		appLogger: AppLoggerType,
-		errorLogger: AppLoggerType,
-		sequelize: Sequelize,
-		featureFlags: Record<string, boolean>,
-		port: number,
-		tlsCiphers: string[]
-	) {
+	constructor(app: Application, sequelize: Sequelize) {
 		this.app = app;
-		this.appLogger = appLogger;
-		this.errorLogger = errorLogger;
 		this.sequelize = sequelize;
-		this.featureFlags = configService.getFeatureFlags();
-		this.port = configService.getEnvVariables().serverPort;
-		this.tlsCiphers = tlsCiphers;
+		this.logger = ServiceFactory.getLoggerService();
+		this.errorLogger = ServiceFactory.getErrorLoggerService();
+		this.errorHandler = ServiceFactory.getErrorHandlerService();
+		this.configService = ServiceFactory.getConfigService();
+		this.redis = ServiceFactory.getRedisService();
+		this.secrets = ServiceFactory.getSecretsStore();
+		this.port = this.configService.getEnvVariable('serverPort');
 	}
 
 	public static getInstance(
-		app: Express.Application,
-		appLogger: AppLoggerType,
-		errorLogger: AppLoggerType,
-		sequelize: Sequelize,
-		featureFlags: Record<string, boolean>,
-		port: number
+		app: Application,
+		sequelize: Sequelize
 	): WebServer {
 		if (!WebServer.instance) {
-			WebServer.instance = new WebServer(
-				app,
-				appLogger,
-				errorLogger,
-				sequelize,
-				featureFlags,
-				port,
-				tlsCiphers
-			);
+			WebServer.instance = new WebServer(app, sequelize);
 		}
 		return WebServer.instance;
 	}
 
 	public async initialize(): Promise<void> {
 		try {
-			this.appLogger.debug('Initializing the web server...');
+			this.logger.debug('Initializing the web server...');
 			validateDependencies(
 				[{ name: 'sequelize', instance: this.sequelize }],
-				this.appLogger
+				this.logger
 			);
-			this.options = await declareWebServerOptions({
-				constants: cryptoConstants,
-				fs: typeof import('fs'),
-				appLogger: this.appLogger,
-				configService,
-				ErrorClasses,
-				errorLogger: this.errorLogger,
-				errorLoggerDetails: this.errorLogger.getErrorDetails.bind(
-					this.errorLogger
-				),
-				ErrorSeverity,
-				processError: () => {},
-				getCallerInfo: () => 'WebServer',
-				blankRequest: {} as Request
-			});
+
+			this.options = await this.declareWebServerOptions();
 
 			await this.startServer();
 		} catch (error) {
@@ -98,16 +73,53 @@ export class WebServer {
 		}
 	}
 
-	private async startServer(): Promise<void> {
+	private async declareWebServerOptions(): Promise<WebServerOptions> {
+		try {
+			validateDependencies(
+				[{ name: 'tlsCiphers', instance: tlsCiphers }],
+				this.logger
+			);
+
+			const tlsKeyPath1 =
+				this.configService.getEnvVariable('tlsKeyPath1');
+			const tlsCertPath1 =
+				this.configService.getEnvVariable('tlsCertPath1');
+
+			if (
+				typeof tlsKeyPath1 !== 'string' ||
+				typeof tlsCertPath1 !== 'string'
+			) {
+				throw new Error('TLS key or certificate path is not a string');
+			}
+
+			return {
+				key: tlsKeyPath1,
+				cert: tlsCertPath1,
+				secureOptions:
+					cryptoConstants.SSL_OP_NO_TLSv1 |
+					cryptoConstants.SSL_OP_NO_TLSv1_1,
+				ciphers: tlsCiphers.join(':'),
+				honorCipherOrder:
+					this.configService.getFeatureFlags().honorCipherOrder ===
+					true
+			};
+		} catch (error) {
+			const serviceError =
+				new this.errorHandler.ErrorClasses.ServiceUnavailableErrorFatal(
+					`Error declaring web server options: ${error instanceof Error ? error.message : error}`,
+					{ exposeToClient: false }
+				);
+			this.errorLogger.logError(serviceError.message);
+			this.errorHandler.handleError({ error: serviceError });
+			throw serviceError;
+		}
+	}
+
+	public async startServer(): Promise<void> {
 		try {
 			if (!this.options) {
-				throw new ErrorClasses.ConfigurationErrorFatal(
-					'HTTPS options are not set!',
-					{
-						message:
-							'Server options must be declared before starting the server.',
-						severity: ErrorSeverity.FATAL
-					}
+				throw new this.errorHandler.ErrorClasses.ConfigurationErrorFatal(
+					'Server options not set!'
 				);
 			}
 
@@ -121,7 +133,7 @@ export class WebServer {
 			});
 
 			this.server.listen(this.port, () => {
-				this.appLogger.info(`Server is running on port ${this.port}`);
+				this.logger.info(`Server is running on port ${this.port}`);
 			});
 
 			this.setupGracefulShutdown();
@@ -135,15 +147,15 @@ export class WebServer {
 			signals: 'SIGINT SIGTERM',
 			timeout: 30000,
 			onShutdown: async () => {
-				this.appLogger.info('Server shutting down...');
+				this.logger.info('Server shutting down...');
 				this.shuttingDown = true;
 
 				await this.cleanupResources();
 
-				this.appLogger.info('All resources cleaned up successfully.');
+				this.logger.info('All resources cleaned up successfully.');
 			},
 			finally: async () => {
-				this.appLogger.info(
+				this.logger.info(
 					'All connections closed. Shutting down the server...'
 				);
 				await this.closeConnections();
@@ -162,17 +174,23 @@ export class WebServer {
 	private async cleanupResources(): Promise<void> {
 		try {
 			await this.sequelize.close();
-			this.appLogger.info('Database connection closed.');
+			this.logger.info('Database connection closed.');
 		} catch (error) {
 			this.handleError(error, 'DATABASE_CLOSE');
 		}
 
-		if (this.featureFlags.enableRedis) {
+		if (this.configService.getFeatureFlags().enableRedis) {
 			try {
-				const redisClient = await getRedisClient(createClient);
+				const redisClient = await this.redis.getRedisClient({
+					req: {} as Request,
+					res: {} as Response,
+					next: (() => {}) as NextFunction,
+					blankRequest: {} as Request,
+					createRedisClient: createClient
+				});
 				if (redisClient) {
 					await redisClient.quit();
-					this.appLogger.info('Redis connection closed.');
+					this.logger.info('Redis connection closed.');
 				}
 			} catch (error) {
 				this.handleError(error, 'REDIS_CLOSE');
@@ -180,19 +198,36 @@ export class WebServer {
 		}
 
 		try {
-			await flushRedisMemoryCache();
-			this.appLogger.info('Redis memory cache flushed.');
+			await this.redis.flushRedisMemoryCache({
+				req: {} as Request,
+				res: {} as Response,
+				next: (() => {}) as NextFunction,
+				blankRequest: {} as Request,
+				createRedisClient: createClient
+			});
+			this.logger.info('Redis memory cache flushed.');
 		} catch (error) {
 			this.handleError(error, 'FLUSH_REDIS');
 		}
 
-		envSecretsStore.batchReEncryptSecrets();
+		this.secrets.batchReEncryptSecrets();
+	}
+
+	public async shutdownServer(): Promise<void> {
+		try {
+			this.logger.info('Initiating server shutdown...');
+			await this.cleanupResources();
+			await this.closeConnections();
+			this.logger.info('Server has shut down successfully.');
+		} catch (error) {
+			this.handleError(error, 'SHUTDOWN_SERVER');
+		}
 	}
 
 	private async closeConnections(): Promise<void> {
 		await new Promise<void>(resolve => {
 			const timeout = setTimeout(() => {
-				this.appLogger.warn('Force closing remaining connections...');
+				this.logger.warn('Force closing remaining connections...');
 				this.connections.forEach(conn => conn.destroy());
 				resolve();
 			}, 30000);
@@ -208,13 +243,12 @@ export class WebServer {
 	}
 
 	private handleError(error: unknown, action: string): void {
-		const appError = new AppError(
-			error instanceof Error ? error.message : String(error)
-		);
-		this.errorLogger.logError(appError, {
-			action,
-			details: { error }
-		});
+		const appError =
+			new this.errorHandler.ErrorClasses.ServiceDegradedError(
+				error instanceof Error ? error.message : String(error)
+			);
+		this.errorLogger.logError(`Error during action: ${action}`);
+		this.errorHandler.handleError({ error: appError });
 		process.exit(1);
 	}
 }

@@ -1,18 +1,13 @@
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { ServiceFactory } from '../index/factory';
 import { validateDependencies } from '../utils/helpers';
 
 const generateAccountDeletedConfirmationEmailTemplate = (
-	username: string,
-	logger: Logger
+	username: string
 ): string => {
-	validateDependencies(
-		[
-			{ name: 'username', instance: username },
-			{ name: 'logger', instance: logger }
-		],
-		logger
-	);
+	const logger = ServiceFactory.getLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
+	validateDependencies([{ name: 'username', instance: username }], logger);
 
 	try {
 		return `
@@ -76,7 +71,7 @@ const generateAccountDeletedConfirmationEmailTemplate = (
     	    </html>
     	`;
 	} catch (error) {
-		processError(error, logger);
+		errorHandler.handleError({ error });
 		throw new Error(
 			`Failed to generate account deleted confirmation email template: ${
 				error instanceof Error ? error.message : String(error)

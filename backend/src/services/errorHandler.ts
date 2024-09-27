@@ -13,18 +13,18 @@ import {
 } from '../index/interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
-import { sanitizeRequestBody } from '../utils/helpers';
 import { AppLoggerService, ErrorLoggerService } from './logger';
 import { AppLoggerServiceParameters } from '../index/parameters';
+import { sanitizeRequestBody } from '../utils/helpers';
 
 export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 	private static instance: ErrorHandlerService;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
 	public ErrorClasses = ErrorClasses;
 	public ErrorSeverity = ErrorSeverity;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
 
-	constructor(
+	private constructor(
 		logger: AppLoggerServiceInterface,
 		errorLogger: ErrorLoggerServiceInterface
 	) {
@@ -41,6 +41,7 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 				logger,
 				errorLogger
 			);
+			// ErrorHandlerService.instance.initializeGlobalErrorHandlers();
 		}
 		return ErrorHandlerService.instance;
 	}
@@ -71,7 +72,7 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 		} else if (error instanceof Error) {
 			appError = new AppError(error.message);
 		} else {
-			appError = new AppError(`Unknown error: ${String(error)}`);
+			appError = new AppError(`Unknown error type encountered\n${error}`);
 		}
 
 		const errorDetails = this.errorLogger.getErrorDetails(
@@ -205,8 +206,12 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 		});
 
 		if (process.env.NODE_ENV === 'production') {
-			process.exit(1);
+			process.exitCode = 1;
+			setTimeout(() => process.exit(1), 1500);
 		} else {
+			this.errorLogger.logCritical(
+				`Non-Prod environment: Critical error occurred\n${error}`
+			);
 			throw new Error(errorMessage);
 		}
 	}
@@ -237,6 +242,65 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 			{ statusCode, responseId }
 		);
 	}
+
+	/*
+	public initializeGlobalErrorHandlers(): void {
+		// Handle unhandled promise rejections
+		process.on('unhandledRejection', (reason, promise) => {
+			const rejectionMessage = `Unhandled promise rejection: ${reason}`;
+			const details = { reason, promise };
+
+			this.handleError({
+				error: new Error(rejectionMessage),
+				details,
+				action: 'unhandledRejection'
+			});
+
+			console.error(rejectionMessage);
+		});
+
+		process.on('uncaughtException', (error) => {
+			this.handleCriticalError({
+				error,
+				details: { action: 'uncaughtException' }
+			});
+
+			console.error('Uncaught Exception:', error);
+			// Optional: Exit the process after logging in production
+			if (process.env.NODE_ENV === 'production') {
+				process.exit(1);
+			}
+		});
+
+		// Handle graceful shutdown on SIGINT/SIGTERM
+		process.on('SIGINT', async () => {
+			console.log('Received SIGINT. Gracefully shutting down...');
+			await this.performGracefulShutdown();
+			process.exit(0);
+		});
+
+		process.on('SIGTERM', async () => {
+			console.log('Received SIGTERM. Gracefully shutting down...');
+			await this.performGracefulShutdown();
+			process.exit(0);
+		});
+	}
+	*/
+
+	/*
+	private async performGracefulShutdown(): Promise<void> {
+		try {
+			await someService.stop();
+			this.logger.logInfo('Services shut down successfully.');
+		} catch (error) {
+			this.handleCriticalError({
+				error,
+				details: { action: 'gracefulShutdown' }
+			});
+			process.exit(1);
+		}
+	}
+	*/
 }
 
 export const errorHandler = ErrorHandlerService.getInstance(

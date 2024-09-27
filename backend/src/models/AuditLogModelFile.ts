@@ -6,9 +6,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { errorHandler } from '../services/errorHandler';
-import { configService } from '../services/configService';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface AuditLogAttributes {
 	auditId: string;
@@ -44,8 +43,9 @@ class AuditLog
 export default function createAuditLogModel(
 	sequelize: Sequelize
 ): typeof AuditLog | null {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(

@@ -1,22 +1,20 @@
-import { ConfigService } from '../services/configService';
-import { errorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ErrorLogger } from '../services/errorLogger';
-import { processError } from '../errors/processError';
+import { ServiceFactory } from '../index/factory';
 import { validateDependencies } from '../utils/helpers';
 
 export const generateConfirmationEmailTemplate = (
 	username: string,
 	confirmationUrl: string
 ): string => {
-	const configService = ConfigService.getInstance();
-	const appLogger = configService.getLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	validateDependencies(
 		[
 			{ name: 'username', instance: username },
 			{ name: 'confirmationUrl', instance: confirmationUrl }
 		],
-		appLogger || console
+		logger || console
 	);
 
 	try {
@@ -95,18 +93,17 @@ export const generateConfirmationEmailTemplate = (
     	    </html>
     	`;
 	} catch (error) {
-		const templateError = new errorClasses.DependencyErrorRecoverable(
-			`Failed to generate confirmation email template: ${error instanceof Error ? error.message : String(error)}`,
-			{
-				dependency: 'generateConfirmationEmailTemplate()',
-				originalError: error,
-				statusCode: 500,
-				severity: ErrorSeverity.RECOVERABLE,
-				exposeToClient: false
-			}
-		);
-		ErrorLogger.logError(templateError, appLogger);
-		processError(templateError, appLogger);
+		const templateError =
+			new errorHandler.ErrorClasses.DependencyErrorRecoverable(
+				`Failed to generate confirmation email template: ${error instanceof Error ? error.message : String(error)}`,
+				{
+					dependency: 'generateConfirmationEmailTemplate()',
+					originalError: error,
+					exposeToClient: false
+				}
+			);
+		errorLogger.logError(templateError.message);
+		errorHandler.handleError({ error: templateError });
 		throw templateError;
 	}
 };

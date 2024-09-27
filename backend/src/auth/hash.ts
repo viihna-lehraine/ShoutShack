@@ -1,13 +1,13 @@
 import argon2 from 'argon2';
-import { configService } from '../services/configService';
 import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 import { hashConfig } from '../utils/constants';
-import { envSecretsStore } from '../environment/envSecrets';
+import { ServiceFactory } from '../index/factory';
 
 export async function hashPassword(password: string): Promise<string> {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const secrets = ServiceFactory.getSecretsStore();
 
 	try {
 		validateDependencies(
@@ -15,7 +15,7 @@ export async function hashPassword(password: string): Promise<string> {
 			logger || console
 		);
 
-		const pepper = envSecretsStore.retrieveSecret('PEPPER', logger);
+		const pepper = secrets.retrieveSecrets('PEPPER');
 
 		if (pepper) {
 			const hashConfigError =
@@ -41,6 +41,6 @@ export async function hashPassword(password: string): Promise<string> {
 	} finally {
 		logger.debug('Password hashed successfully');
 
-		envSecretsStore.reEncryptSecret('PEPPER');
+		secrets.reEncryptSecret('PEPPER');
 	}
 }

@@ -2,14 +2,13 @@ import {
 	CsrfMiddlewareInterface,
 	InitCsrfInterface
 } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
-export function initCsrf({
-	csrf,
-	configService,
-	errorHandler
-}: InitCsrfInterface) {
+export function initCsrf({ csrf }: InitCsrfInterface) {
 	const csrfProtection = new csrf();
-	const logger = configService.getAppLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	return function csrfMiddleware({
 		req,
@@ -48,9 +47,7 @@ export function initCsrf({
 					`Error occurred when initializing 'CSRF Middleware'\n${expressError instanceof Error ? expressError.message : String(expressError)}`,
 					{ originalError: expressError }
 				);
-			configService
-				.getErrorLogger()
-				.logError(expressMiddlewareError.message);
+			errorLogger.logError(expressMiddlewareError.message);
 			errorHandler.expressErrorHandler();
 			next(expressError);
 		}

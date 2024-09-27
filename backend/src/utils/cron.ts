@@ -3,15 +3,9 @@ import compressing from 'compressing';
 import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
-import { logger, Logger } from './appLogger';
-import { getSequelizeInstance } from './database';
-import { ErrorLogger } from './errorLogger';
-import { processError } from '../errors/processError';
-import { validateDependencies } from '../utils/helpers';
+import { ErrorHandlerService } from '../services/errorHandler';
 
-const sequelize = getSequelizeInstance({ logger });
-
-interface CronDependencies {
+export interface CronDependencies {
 	logger: Logger;
 	compressing: typeof compressing;
 	exec: typeof exec;
@@ -19,6 +13,7 @@ interface CronDependencies {
 	path: typeof path;
 	processEnv: NodeJS.ProcessEnv;
 	__dirname: string;
+	errorHandler: ErrorHandlerService;
 }
 
 export function createCronJobs({
@@ -31,20 +26,6 @@ export function createCronJobs({
 	__dirname
 }: CronDependencies): void {
 	try {
-		// Validate dependencies
-		validateDependencies(
-			[
-				{ name: 'logger', instance: logger },
-				{ name: 'compressing', instance: compressing },
-				{ name: 'exec', instance: exec },
-				{ name: 'fs', instance: fs },
-				{ name: 'path', instance: path },
-				{ name: 'processEnv', instance: processEnv },
-				{ name: '__dirname', instance: __dirname }
-			],
-			logger
-		);
-
 		if (
 			!processEnv.SERVER_LOG_PATH ||
 			!processEnv.SERVER_NPM_LOG_PATH ||

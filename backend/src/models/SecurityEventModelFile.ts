@@ -7,9 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface SecurityEventAttributes {
 	id: string; // UUID for security event, primary key (from User model)
@@ -42,8 +41,9 @@ class SecurityEvent
 export default function createSecurityEventModel(
 	sequelize: Sequelize
 ): typeof SecurityEvent | null {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(

@@ -1,17 +1,17 @@
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
+import { ServiceFactory } from 'src/index/factory';
 import { validateDependencies } from '../utils/helpers';
 
 const generate2FactorEmailTemplate = (
 	username: string,
-	emailVerificationCode: string,
-	logger: Logger
+	emailVerificationCode: string
 ): string => {
+	const logger = ServiceFactory.getLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
 	validateDependencies(
 		[
 			{ name: 'username', instance: username },
-			{ name: 'emailVerificationCode', instance: emailVerificationCode },
-			{ name: 'logger', instance: logger }
+			{ name: 'emailVerificationCode', instance: emailVerificationCode }
 		],
 		logger
 	);
@@ -90,7 +90,7 @@ const generate2FactorEmailTemplate = (
     	  </html>
     	`;
 	} catch (error) {
-		processError(error, logger);
+		errorHandler.handleError({ error });
 		throw new Error(
 			`Failed to generate 2-factor email template: ${
 				error instanceof Error ? error.message : String(error)

@@ -1,5 +1,4 @@
 import { execSync } from 'child_process';
-import { ConfigStore, envSecretsStore } from '../environment/envConfig';
 import {
 	ConfigSecretsInterface,
 	ConfigServiceInterface,
@@ -7,26 +6,32 @@ import {
 	FeatureFlagTypes,
 	SecretsMap
 } from '../index/interfaces';
-import { loadEnv } from '../environment/envVars';
 import {
 	AppLoggerServiceInterface,
 	ErrorLoggerServiceInterface
 } from '../index/interfaces';
-import { ServiceFactory } from 'src/index/serviceFactory';
+import { EnvironmentService } from './environment';
+import { secretsStore } from './secrets';
+import { AppLoggerService, ErrorLoggerService } from './logger';
+import { AppLoggerServiceParameters } from '../index/parameters';
 
 export class ConfigService implements ConfigServiceInterface {
 	private static instance: ConfigService;
-	private envVariablesStore = ConfigStore.getInstance();
+	private environmentService: EnvironmentService;
 	private encryptionKey: string | null = null;
 	private gpgPassphrase: string | undefined;
 	private adminId: number | null = null;
 	public logger: AppLoggerServiceInterface;
+	public errorLogger: ErrorLoggerServiceInterface;
 
 	private constructor() {
-		loadEnv();
-		this.logger = ServiceFactory.createService(
-			'logger'
+		this.environmentService = EnvironmentService.getInstance();
+		this.logger = AppLoggerService.getInstance(
+			AppLoggerServiceParameters
 		) as AppLoggerServiceInterface;
+		this.errorLogger = ErrorLoggerService.getInstance(
+			AppLoggerServiceParameters
+		) as ErrorLoggerServiceInterface;
 	}
 
 	public initialize(
@@ -37,6 +42,7 @@ export class ConfigService implements ConfigServiceInterface {
 		this.encryptionKey = encryptionKey;
 		this.gpgPassphrase = gpgPassphrase;
 		this.adminId = adminId;
+		this.logger.setAdminId(adminId);
 		this.initializeSecrets({
 			execSync,
 			getDirectoryPath: () => process.cwd(),
@@ -52,6 +58,10 @@ export class ConfigService implements ConfigServiceInterface {
 		return ConfigService.instance;
 	}
 
+	public getAdminId(): number | null {
+		return this.adminId;
+	}
+
 	public initializeLogger(): void {
 		this.logger.getRedactedLogger().info('Logger initialized');
 	}
@@ -61,27 +71,23 @@ export class ConfigService implements ConfigServiceInterface {
 	}
 
 	public getErrorLogger(): ErrorLoggerServiceInterface {
-		return ServiceFactory.createService(
-			'errorLogger'
-		) as ErrorLoggerServiceInterface;
+		return this.errorLogger;
 	}
 
-	public getAdminId(): number | null {
-		return this.adminId;
-	}
-
-	public getEnvVariables(): EnvVariableTypes {
-		return this.envVariablesStore.getEnvVariables();
+	public getEnvVariable<K extends keyof EnvVariableTypes>(
+		key: K
+	): EnvVariableTypes[K] {
+		return this.environmentService.getEnvVariable<K>(key);
 	}
 
 	public getFeatureFlags(): FeatureFlagTypes {
-		return this.envVariablesStore.getFeatureFlags();
+		return this.environmentService.getFeatureFlags();
 	}
 
 	public getSecrets(
 		keys: keyof SecretsMap | (keyof SecretsMap)[]
 	): Record<string, string | undefined> | string | undefined {
-		let result = envSecretsStore.retrieveSecrets(
+		let result = secretsStore.retrieveSecrets(
 			Array.isArray(keys)
 				? keys.map(key => key.toString())
 				: keys.toString()
@@ -106,7 +112,7 @@ export class ConfigService implements ConfigServiceInterface {
 				gpgPassphrase: this.gpgPassphrase
 			});
 
-			result = envSecretsStore.retrieveSecrets(
+			result = secretsStore.retrieveSecrets(
 				Array.isArray(keys)
 					? keys.map(key => key.toString())
 					: keys.toString()
@@ -133,22 +139,16 @@ export class ConfigService implements ConfigServiceInterface {
 	}
 
 	private initializeSecrets(dependencies: ConfigSecretsInterface): void {
-		if (
-			!this.encryptionKey ||
-			!this.gpgPassphrase ||
-			this.encryptionKey.length === 0 ||
-			this.gpgPassphrase.length === 0
-		) {
+		if (!this.encryptionKey || !this.gpgPassphrase) {
 			throw new Error('Encryption key or GPG passphrase is not set');
 		}
 
 		try {
-			envSecretsStore.initializeEncryptionKey(this.encryptionKey);
-			envSecretsStore.loadSecrets(dependencies);
+			secretsStore.initializeEncryptionKey(this.encryptionKey);
+			secretsStore.loadSecrets(dependencies);
 			this.logger.info('Secrets loaded and ready to go');
 		} catch (error) {
 			this.logger.error('Failed to load secrets', { error });
-
 			throw error;
 		}
 	}
@@ -159,11 +159,10 @@ export class ConfigService implements ConfigServiceInterface {
 		}
 
 		try {
-			envSecretsStore.refreshSecrets(dependencies);
+			secretsStore.refreshSecrets(dependencies);
 			this.logger.info('Secrets refreshed successfully');
 		} catch (error) {
 			this.logger.error('Failed to refresh secrets', { error });
-
 			throw error;
 		}
 	}

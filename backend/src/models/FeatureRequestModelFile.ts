@@ -6,9 +6,8 @@ import {
 	CreationOptional,
 	Sequelize
 } from 'sequelize';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface FeatureRequestAttributes {
 	featureRequestNumber: number;
@@ -41,8 +40,9 @@ class FeatureRequest
 export default function createFeatureRequestModel(
 	sequelize: Sequelize
 ): typeof FeatureRequest | null {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -105,7 +105,7 @@ export default function createFeatureRequestModel(
 					exposeToClient: false
 				}
 			);
-		errorLogger.logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}

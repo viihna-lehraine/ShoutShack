@@ -7,9 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface DeviceAttributes {
 	deviceId: number; // primary key, auto-incremented
@@ -45,7 +44,9 @@ class Device
 export default function createDeviceModel(
 	sequelize: Sequelize
 ): typeof Device | null {
-	const logger = configService.getAppLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -137,7 +138,7 @@ export default function createDeviceModel(
 					exposeToClient: false
 				}
 			);
-		configService.getErrorLogger().logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}

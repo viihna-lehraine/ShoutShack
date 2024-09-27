@@ -1,11 +1,11 @@
 import { Sequelize } from 'sequelize';
 import { loadModels, Models } from './loadModels';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
-const logger = configService.getAppLogger();
-const errorLogger = configService.getErrorLogger();
+const logger = ServiceFactory.getLoggerService();
+const errorLogger = ServiceFactory.getErrorLoggerService();
+const errorHandler = ServiceFactory.getErrorHandlerService();
 
 let models: Models | null = null;
 let sequelize: Sequelize;

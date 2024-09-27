@@ -6,18 +6,20 @@ import {
 	permissionsPolicyOptions as defaultPermissionsPolicyOptions
 } from '../config/securityOptions';
 import { SecurityHeadersInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 export function initializeSecurityHeaders(
 	app: Application,
 	{
 		helmetOptions = defaultHelmetOptions,
 		permissionsPolicyOptions = defaultPermissionsPolicyOptions,
-		logger,
-		errorLogger,
-		errorHandler,
 		validateDependencies
 	}: SecurityHeadersInterface
 ): void {
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
 	try {
 		validateDependencies(
 			[

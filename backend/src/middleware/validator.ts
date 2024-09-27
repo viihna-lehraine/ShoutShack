@@ -1,11 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { ValidatorInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 export function initializeValidatorMiddleware({
-	validator,
-	logger,
-	errorLogger,
-	errorHandler
+	validator
 }: ValidatorInterface): {
 	validateEntry: (req: Request, res: Response, next: NextFunction) => void;
 	registrationValidationRules: (
@@ -14,6 +12,10 @@ export function initializeValidatorMiddleware({
 		next: NextFunction
 	) => void;
 } {
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
 	const validateEntry = (
 		req: Request,
 		res: Response,

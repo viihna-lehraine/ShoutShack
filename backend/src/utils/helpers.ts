@@ -1,9 +1,4 @@
 import { DependencyInterface } from '../index/interfaces';
-import { configService } from '../services/configService';
-import { processError } from '../errors/processError';
-import { AppError, ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { ProcessErrorStaticParameters } from '../index/parameters';
-import { blankRequest } from './constants';
 
 export function sanitizeRequestBody(
 	body: Record<string, unknown>
@@ -30,62 +25,9 @@ export function sanitizeRequestBody(
 	return Object.fromEntries(sanitizedBody);
 }
 
-export function getCallerInfo(): string {
-	const stack = new Error().stack;
-	if (stack) {
-		const stackLines = stack.split('\n');
-		const callerLine = stackLines[3]?.trim();
-		return callerLine || 'Unknown caller';
-	}
-	return 'No stack trace available';
-}
-
-export function parseBoolean(value: string | boolean | undefined): boolean {
-	const appLogger = configService.getAppLogger() || console;
-
-	try {
-		validateDependencies([{ name: 'value', instance: value }], appLogger);
-
-		if (value === undefined) {
-			appLogger.warn(
-				'Feature flag value is undefined. Defaulting to false'
-			);
-			return false;
-		}
-		if (typeof value === 'string') {
-			return value.toLowerCase() === 'true';
-		}
-		return value === true;
-	} catch (utilError) {
-		const utilityError = new ErrorClasses.UtilityErrorFatal(
-			`
-			Fatal error: Unable to parse boolean value ${value} using 'parseBoolean()\n${utilError instanceof Error ? utilError.message : utilError}`,
-			{
-				utility: 'parseBoolean()',
-				originalError: utilError
-			}
-		);
-		const actionVal: string = 'Parse value to boolean';
-		const severity: string = ErrorSeverity.FATAL;
-		errorLogger.logError(
-			utilityError as AppError,
-			errorLoggerDetails(getCallerInfo, actionVal, blankRequest),
-			appLogger,
-			severity
-		);
-		processError({
-			...ProcessErrorStaticParameters,
-			error: utilityError,
-			appLogger,
-			details: { reason: 'Failed to parse data to type boolean' }
-		});
-		throw utilityError;
-	}
-}
-
 export function validateDependencies(
 	dependencies: DependencyInterface[],
-	appLogger: AppLogger
+	logger: AppLoggerServiceInterface
 ): void {
 	const logInfo = isAppLogger(appLogger) ? appLogger.info : console.info;
 	const logWarn = isAppLogger(appLogger) ? appLogger.warn : console.warn;

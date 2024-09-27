@@ -5,19 +5,19 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 import { PassportServiceInterface } from '../index/interfaces';
-import { envSecretsStore } from '../environment/envSecrets';
+import { ServiceFactory } from '../index/factory';
 
 export async function configurePassport({
 	passport,
 	UserModel,
 	argon2
 }: PassportServiceInterface): Promise<void> {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const secrets = ServiceFactory.getSecretsStore();
 
 	try {
 		validateDependencies(
@@ -29,9 +29,26 @@ export async function configurePassport({
 			logger
 		);
 
+		const secretResult = secrets.retrieveSecrets('JWT_SECRET');
+
+		let jwtSecret: string;
+
+		if (typeof secretResult === 'string') {
+			jwtSecret = secretResult;
+		} else if (
+			secretResult !== null &&
+			typeof secretResult === 'object' &&
+			secretResult.JWT_SECRET
+		) {
+			jwtSecret = secretResult.JWT_SECRET as string;
+		} else {
+			logger.error('JWT_SECRET is not available.');
+			throw new Error('JWT_SECRET is not available.');
+		}
+
 		const opts: StrategyOptions = {
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			secretOrKey: envSecretsStore.retrieveSecret('JWT_SECRET', logger)!
+			secretOrKey: jwtSecret // Ensure that this is always a valid string
 		};
 
 		passport.use(

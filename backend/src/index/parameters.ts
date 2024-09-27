@@ -11,11 +11,9 @@ import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
 import passport, { session } from 'passport';
 import { inRange } from 'range_check';
-import { configService } from '../services/configService';
-import { errorHandler as expressErrorHandler } from '../services/errorHandler';
-import { getCallerInfo, validateDependencies } from '../utils/helpers';
+import { validateDependencies } from '../utils/helpers';
 import { blankRequest } from '../utils/constants';
-import { envSecretsStore } from '../environment/envSecrets';
+import { secretsStore } from '../services/secrets';
 import { createJwt } from '../auth/jwt';
 import * as interfaces from './interfaces';
 import { initCsrf } from '../middleware/csrf';
@@ -36,8 +34,8 @@ import LogStashTransport from 'winston-logstash';
 import { ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
 import { errorHandler } from '../services/errorHandler';
 import { v4 as uuidv4 } from 'uuid';
-import { sanitizeRequestBody } from '../utils/helpers';
 import { Sequelize } from 'sequelize';
+import { sanitizeRequestBody } from '../utils/helpers';
 
 // ****** PARAMETER OBJECTS ****** //
 
@@ -45,35 +43,20 @@ export const AddIpToBlacklistStaticParameters: Omit<
 	interfaces.AddIpToBlacklistInterface,
 	'ip'
 > = {
-	configService,
-	errorHandler,
 	validateDependencies
 };
-
-export const CreateFeatureEnablerParameters: interfaces.CreateFeatureEnablerInterface =
-	{ configService };
 
 export const CreateJwtParameters: interfaces.CreateJwtInterface = {
 	jwt,
 	execSync,
-	configService,
-	appLogger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
-	errorHandler,
-	validateDependencies,
-	envSecretsStore
+	validateDependencies
 };
 
 export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServerOptionsInterface =
 	{
-		logger: configService.getAppLogger(),
 		blankRequest,
-		configService,
 		constants: cryptoConstants,
 		fs: fs.promises,
-		errorLogger: configService.getErrorLogger(),
-		getCallerInfo,
-		errorHandler,
 		tlsCiphers,
 		validateDependencies
 	};
@@ -174,9 +157,6 @@ export const envVariables: interfaces.EnvVariableTypes = {
 };
 
 export const ExpressErrorHandlerStaticParameters = {
-	appLogger: configService.getAppLogger(),
-	configService,
-	errorLogger: configService.getErrorLogger(),
 	fallbackLogger: console
 };
 
@@ -198,61 +178,38 @@ export const FeatureFlagNames = {
 } as const;
 
 export const GetFeatureFlagsStaticParameters = {
-	blankRequest,
-	errorLogger: configService.getErrorLogger()
+	blankRequest
 };
 
 export const HandleCriticalErrorStaticParameters = {
-	appLogger: configService.getAppLogger(),
-	configService,
 	fallbackLogger: console
 };
 
 export const HandleErrorStaticParameters = {
-	logger: configService.getAppLogger(),
-	configService,
-	errorLogger: configService.getErrorLogger(),
 	fallbackLogger: console
 };
 
 export const InitializeDatabaseStaticParameters: interfaces.InitializeDatabaseInterface =
 	{
-		dbInitMaxRetries: configService.getEnvVariables().dbInitMaxRetries,
-		dbInitRetryAfter: configService.getEnvVariables().dbInitRetryAfter,
-		logger: configService.getAppLogger(),
-		errorLogger: configService.getErrorLogger(),
-		configService,
-		errorHandler,
-		envSecretsStore,
 		blankRequest
 	};
 
 export const InitIpBlacklistParameters: interfaces.InitIpBlacklistInterface = {
 	fsModule: fs,
 	inRange,
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
-	configService,
-	errorHandler,
 	validateDependencies
 };
 
 export const InitJwtAuthParameters: interfaces.InitJwtAuthInterface = {
 	verifyJwt: createJwt().verifyJwt,
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
-	errorHandler,
 	validateDependencies
 };
 
 export const InitMiddlewareStaticParameters = {
-	appLogger: configService.getAppLogger(),
 	authenticateOptions: { session: false },
-	configService,
 	cookieParser,
 	cors,
 	express,
-	expressErrorHandler,
 	fsModule: fs,
 	// getRedisClient,
 	hpp,
@@ -266,67 +223,30 @@ export const InitMiddlewareStaticParameters = {
 	initializeValidatorMiddleware,
 	morgan,
 	passport,
-	errorHandler,
 	session,
 	randomBytes,
-	// redisClient: () => getRedisClient(createClient),
 	RedisStore,
 	verifyJwt: passport.authenticate('jwt', { session: false })
 };
 
 export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {
-	fsModule: fsPromises,
-	configService,
-	errorHandler
+	fsModule: fsPromises
 };
-
-export const PreInitIpBlacklistParameters: interfaces.PreInitIpBlacklistInterface =
-	{
-		fsModule: fsPromises,
-		configService,
-		errorHandler
-	};
 
 export const RemoveIpFromBlacklistStaticParameters: Omit<
 	interfaces.RemoveIpFromBlacklistInterface,
 	'ip'
 > = {
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
-	configService,
-	errorHandler,
 	validateDependencies
 };
 
 export const SaveIpBlacklistParameters: interfaces.SaveIpBlacklistInterface = {
-	fsModule: fsPromises,
-	configService,
-	errorHandler
+	fsModule: fsPromises
 };
 
 export const SetUpDatabaseParameters: interfaces.SetUpDatabaseInterface = {
-	logger: configService.getAppLogger(),
-	errorLogger: configService.getErrorLogger(),
-	errorHandler,
-	configService,
-	envSecretsStore,
 	blankRequest
 };
-
-/*
-export const SetUpWebServerParameters: interfaces.SetUpWebServerInterface = {
-	app: express(),
-	logger: configService.getAppLogger(),
-	blankRequest,
-	DeclareWebServerOptionsStaticParameters,
-	envVariables: configService.getEnvVariables(),
-	errorLogger: configService.getErrorLogger(),
-	featureFlags: configService.getFeatureFlags(),
-	getCallerInfo,
-	errorHandler
-	// sequelize
-};
-*/
 
 //
 ///
@@ -343,8 +263,7 @@ export const AppLoggerServiceParameters = {
 	},
 	DailyRotateFile,
 	LogStashTransport,
-	configService,
-	envSecretsStore,
+	secretsStore,
 	ErrorClasses,
 	ErrorSeverity,
 	HandleErrorStaticParameters,

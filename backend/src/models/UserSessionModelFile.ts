@@ -7,9 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface UserSessionAttributes {
 	id: string; // UUID for the session record, primary key (from User model)
@@ -42,8 +41,9 @@ export class UserSession
 export default function createUserSessionModel(
 	sequelize: Sequelize
 ): typeof UserSession {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -143,7 +143,7 @@ export default function createUserSessionModel(
 					exposeToClient: false
 				}
 			);
-		errorLogger.logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return {} as typeof UserSession;
 	}

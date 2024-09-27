@@ -7,9 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface RecoveryMethodAttributes {
 	id: string; // UUID for recovery method, primary key (from User model)
@@ -38,8 +37,9 @@ class RecoveryMethod
 export default function createRecoveryMethodModel(
 	sequelize: Sequelize
 ): typeof RecoveryMethod | null {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -102,7 +102,7 @@ export default function createRecoveryMethodModel(
 					exposeToClient: false
 				}
 			);
-		errorLogger.logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}

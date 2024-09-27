@@ -2,12 +2,10 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import zxcvbn from 'zxcvbn';
 import { createEmail2FAUtil } from '../auth/emailMfa';
 import { hashPassword } from '../auth/hash';
-import { mailer } from '../services/mailer';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
 import { UserRoutesInterface } from '../index/interfaces';
-import { envSecretsStore } from '../environment/envSecrets';
+import { ServiceFactory } from '../index/factory';
+import { secretsStore } from 'src/services/secrets';
 
 export default function initializeUserRoutes({
 	UserRoutes,
@@ -22,10 +20,14 @@ export default function initializeUserRoutes({
 	totpMfa
 }: UserRoutesInterface): Router {
 	const router = express.Router();
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const configService = ServiceFactory.getConfigService();
+	const secrets = ServiceFactory.getSecretsStore();
+	const mailer = ServiceFactory.getMailerService();
 
-	const port = configService.getEnvVariables().serverPort;
+	const port = configService.getEnvVariable('serverPort');
 
 	validateDependencies(
 		[
@@ -46,8 +48,8 @@ export default function initializeUserRoutes({
 		logger
 	);
 
-	const pepper = envSecretsStore.retrieveSecret('PEPPER');
-	const jwtSecret = envSecretsStore.retrieveSecret('JWT_SECRET');
+	const pepper = secrets.retrieveSecrets('PEPPER');
+	const jwtSecret = secrets.retrieveSecrets('JWT_SECRET');
 
 	if (!pepper || !jwtSecret) {
 		const userRoutesError =
@@ -103,7 +105,6 @@ export default function initializeUserRoutes({
 				});
 			}
 
-			// check password exposure in breaches
 			const pwnedResponse = await axios.get<string>(
 				`https://api.pwnedpasswords.com/range/${sanitizedPassword.substring(0, 5)}`
 			);
@@ -147,18 +148,19 @@ export default function initializeUserRoutes({
 				creationDate: new Date()
 			});
 
-			const jwtSecret = envSecretsStore.retrieveSecret('JWT_SECRET')!;
+			if (typeof jwtSecret !== 'string') {
+				throw new Error('Invalid JWT secret');
+			}
 
 			const confirmationToken = jwt.sign(newUser.id, jwtSecret, {
 				expiresIn: '1d'
 			});
 			const confirmationUrl = `http://localhost:${port}/api/users/confirm/${confirmationToken}`;
 
-			// send confirmation email
 			const mailOptions = {
-				from: configService.getEnvVariables().emailUser,
+				from: configService.getEnvVariable('emailUser'),
 				to: newUser.email,
-				subject: 'Guestbook - Account Confirmation',
+				subject: 'BrainBlot - Account Confirmation',
 				html: generateConfirmationEmailTemplate(
 					newUser.username,
 					confirmationUrl
@@ -169,11 +171,15 @@ export default function initializeUserRoutes({
 
 			await transporter.sendMail(mailOptions);
 
-			envSecretsStore.reEncryptSecret('JWT_SECRET');
+			secrets.reEncryptSecret('JWT_SECRET');
 
 			logger.info(
 				`User registration for ${newUser.username} complete. Confirmation email sent.`
 			);
+
+			secrets.reEncryptSecret('PEPPER');
+			secrets.reEncryptSecret('JWT_SECRET');
+
 			return res.json({
 				message: 'Account registered! Please confirm via email.'
 			});
@@ -204,13 +210,17 @@ export default function initializeUserRoutes({
 				return res.status(400).json({ email: 'User not found' });
 			}
 
-			const pepper = envSecretsStore.retrieveSecret('PEPPER')!;
-			const jwtSecret = envSecretsStore.retrieveSecret('JWT_SECRET')!;
+			const pepper = secrets.retrieveSecrets('PEPPER')!;
+			const jwtSecret = secrets.retrieveSecrets('JWT_SECRET')!;
 
 			const isMatch = await argon2.verify(
 				user.password,
 				sanitizedPassword + pepper
 			);
+
+			if (typeof jwtSecret !== 'string') {
+				throw new Error('Invalid JWT secret');
+			}
 
 			if (isMatch) {
 				const payload = { id: user.userid, username: user.username };
@@ -218,7 +228,8 @@ export default function initializeUserRoutes({
 					expiresIn: '1h'
 				});
 
-				envSecretsStore.reEncryptSecrets(['PEPPER', 'JWT_SECRET']);
+				secretsStore.reEncryptSecret('PEPPER');
+				secretsStore.reEncryptSecret('JWT_SECRET');
 
 				return res.json({ success: true, token: `Bearer ${token}` });
 			} else {
@@ -347,7 +358,6 @@ export default function initializeUserRoutes({
 				const email2FAUtil = await createEmail2FAUtil({
 					bcrypt,
 					jwt,
-					configService,
 					validateDependencies
 				});
 
@@ -405,7 +415,6 @@ export default function initializeUserRoutes({
 				const email2FAUtil = await createEmail2FAUtil({
 					bcrypt,
 					jwt,
-					configService,
 					validateDependencies
 				});
 

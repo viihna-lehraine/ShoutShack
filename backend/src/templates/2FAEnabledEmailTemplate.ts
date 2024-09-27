@@ -1,18 +1,11 @@
-import { processError } from '../errors/processError';
-import { Logger } from '../services/appLogger';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
-const generate2FAEnabledEmailTemplate = (
-	username: string,
-	logger: Logger
-): string => {
-	validateDependencies(
-		[
-			{ name: 'username', instance: username },
-			{ name: 'logger', instance: logger }
-		],
-		logger
-	);
+const generate2FAEnabledEmailTemplate = (username: string): string => {
+	const logger = ServiceFactory.getLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
+	validateDependencies([{ name: 'username', instance: username }], logger);
 
 	try {
 		return `
@@ -82,7 +75,7 @@ const generate2FAEnabledEmailTemplate = (
     	    </html>
     	`;
 	} catch (error) {
-		processError(error, logger);
+		errorHandler.handleError({ error });
 		throw new Error(
 			`Failed to generate 2FA enabled email template: ${
 				error instanceof Error ? error.message : String(error)

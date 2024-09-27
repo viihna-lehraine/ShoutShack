@@ -1,19 +1,15 @@
 import { Request, Response } from 'express';
-import {
-	ModelControllerInterface,
-	ModelOperations,
-	ModelType
-} from '../index/interfaces';
+import { ModelOperations, ModelType } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
+
+const logger = ServiceFactory.getLoggerService();
+const errorLogger = ServiceFactory.getErrorLoggerService();
+const errorHandler = ServiceFactory.getErrorHandlerService();
 
 export const getEntries =
-	<T extends ModelType>(
-		Model: ModelOperations<T>,
-		{ configService, errorHandler }: ModelControllerInterface
-	) =>
+	<T extends ModelType>(Model: ModelOperations<T>) =>
 	async (req: Request, res: Response): Promise<void> => {
 		try {
-			const logger = configService.getAppLogger();
-
 			const entries = await Model.findAll();
 			res.status(200).json(entries);
 			logger.debug(`Fetched all entries from ${Model.name}`);
@@ -28,23 +24,18 @@ export const getEntries =
 						originalError: missingResourceError
 					}
 				);
-			configService.getErrorLogger().logWarn(resourceError.message);
+			errorLogger.logWarn(resourceError.message);
 			errorHandler.handleError({ error: resourceError });
 		}
 	};
 
 export const createEntry =
-	<T extends ModelType>(
-		Model: ModelOperations<T>,
-		{ configService, errorHandler }: ModelControllerInterface
-	) =>
+	<T extends ModelType>(Model: ModelOperations<T>) =>
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const newEntry = await Model.create(req.body);
 			res.status(201).json(newEntry);
-			configService
-				.getAppLogger()
-				.debug(`Created new entry in ${Model.name}`);
+			logger.debug(`Created new entry in ${Model.name}`);
 		} catch (utilError) {
 			const utility: string = 'modelController - createEntry()';
 			const utilityError =
@@ -52,19 +43,14 @@ export const createEntry =
 					`Error occurred with dependency ${utility}: ${utilError instanceof Error ? utilError.message : String(utilError)}`,
 					{ exposeToClient: false }
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 		}
 	};
 
 export const deleteEntry =
-	<T extends ModelType>(
-		Model: ModelOperations<T>,
-		{ configService, errorHandler }: ModelControllerInterface
-	) =>
+	<T extends ModelType>(Model: ModelOperations<T>) =>
 	async (req: Request, res: Response): Promise<void> => {
-		const logger = configService.getAppLogger();
-
 		try {
 			const { id } = req.params;
 			const parsedId = Number(id);
@@ -102,7 +88,7 @@ export const deleteEntry =
 						originalError: utilError
 					}
 				);
-			configService.getErrorLogger().logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 		}
 	};

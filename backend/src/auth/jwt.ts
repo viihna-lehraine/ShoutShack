@@ -1,43 +1,46 @@
-import {
-	AppLoggerInterface,
-	CreateJwtInterface,
-	JwtUserInterface
-} from '../index/interfaces';
-import { CreateJwtParameters } from '../index/parameters';
-import { configService } from '../services/configService';
-import { envSecretsStore } from '../environment/envSecrets';
-import { errorHandler } from '../services/errorHandler';
+import { JwtUserInterface } from '../index/interfaces';
 import { validateDependencies } from '../utils/helpers';
 import jwt from 'jsonwebtoken';
+import { ServiceFactory } from '../index/factory';
 
 export function createJwt(): {
 	generateJwt: (user: JwtUserInterface) => Promise<string>;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 } {
-	const params: CreateJwtInterface = CreateJwtParameters;
-	const logger: AppLoggerInterface = configService.getErrorLogger();
-	const errorLogger: AppLoggerInterface = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const secrets = ServiceFactory.getSecretsStore();
 
 	const loadJwtSecret = async (): Promise<string> => {
 		try {
-			const secret = params.envSecretsStore.retrieveSecret('JWT_SECRET');
+			const secretResult = secrets.retrieveSecrets('JWT_SECRET');
 
-			if (!secret) {
+			if (!secretResult) {
 				throw new Error('JWT_SECRET is not available.');
 			}
 
-			return secret;
+			if (typeof secretResult === 'string') {
+				return secretResult;
+			} else if (
+				typeof secretResult === 'object' &&
+				secretResult.JWT_SECRET
+			) {
+				return secretResult.JWT_SECRET as string;
+			} else {
+				throw new Error('JWT_SECRET is not available.');
+			}
 		} catch (utilError) {
 			const utilityError =
 				new errorHandler.ErrorClasses.UtilityErrorFatal(
 					`Failed to load secrets in 'jwtUtil - loadJwtSecret()'\n${utilError instanceof Error ? utilError.message : utilError}\nShutting down...`
 				);
-			params.errorLogger.logError(utilityError.message);
+			errorLogger.logError(utilityError.message);
 			errorHandler.handleError({ error: utilityError });
 			process.exit(1);
 		} finally {
-			params.appLogger.debug('JWT secret loaded successfully');
-			params.envSecretsStore.reEncryptSecret('JWT	_SECRET');
+			logger.debug('JWT secret loaded successfully');
+			secrets.reEncryptSecret('JWT	_SECRET');
 		}
 	};
 
@@ -73,9 +76,19 @@ export function createJwt(): {
 		try {
 			validateDependencies([{ name: 'token', instance: token }], logger);
 
-			const pepper = await envSecretsStore.retrieveSecret('JWT_SECRET');
+			const secretResult = secrets.retrieveSecrets('JWT_SECRET');
 
-			if (!pepper) {
+			let pepper: string;
+
+			if (typeof secretResult === 'string') {
+				pepper = secretResult;
+			} else if (
+				secretResult !== null &&
+				typeof secretResult === 'object' &&
+				secretResult.JWT_SECRET
+			) {
+				pepper = secretResult.JWT_SECRET as string;
+			} else {
 				logger.error('JWT_SECRET is not available.');
 				throw new Error('JWT_SECRET is not available.');
 			}

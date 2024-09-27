@@ -1,14 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { PassportAuthMiddlewareDependencies } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 export const initializePassportAuthMiddleware = ({
 	passport,
 	authenticateOptions,
-	logger,
-	errorLogger,
-	errorHandler,
 	validateDependencies
 }: PassportAuthMiddlewareDependencies) => {
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+
 	validateDependencies(
 		[
 			{ name: 'passport', instance: passport },

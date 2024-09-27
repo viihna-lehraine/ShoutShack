@@ -7,9 +7,8 @@ import {
 	Sequelize
 } from 'sequelize';
 import { User } from './UserModelFile';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface GuestbookEntryAttributes {
 	id: string;
@@ -38,8 +37,9 @@ class GuestbookEntry
 export default function createGuestbookEntryModel(
 	sequelize: Sequelize
 ): typeof GuestbookEntry | null {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -108,7 +108,7 @@ export default function createGuestbookEntryModel(
 					exposeToClient: false
 				}
 			);
-		errorLogger.logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}

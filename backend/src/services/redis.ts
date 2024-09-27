@@ -1,7 +1,9 @@
 import { RedisClientType } from 'redis';
 import {
-	AppLoggerInterface,
-	DependencyInterface,
+	AppLoggerServiceInterface,
+	ConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
 	FlushRedisMemoryCacheInterface,
 	GetRedisClientInterface,
 	RedisServiceDeps,
@@ -9,24 +11,27 @@ import {
 } from '../index/interfaces';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
 	private static instance: RedisService | null = null;
 	private redisClient: RedisClientType | null = null;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private configService: ConfigServiceInterface;
 
 	private constructor(
-		private readonly configService: typeof import('../services/configService').configService,
-		private readonly createRedisClient: typeof import('redis').createClient,
-		private readonly validateDependencies: (
-			dependencies: DependencyInterface[],
-			logger: AppLoggerInterface
-		) => void,
-		private readonly errorHandler: typeof import('../services/errorHandler').errorHandler
-	) {}
+		private readonly createRedisClient: typeof import('redis').createClient
+	) {
+		this.logger = ServiceFactory.getLoggerService();
+		this.errorLogger = ServiceFactory.getErrorLoggerService();
+		this.errorHandler = ServiceFactory.getErrorHandlerService();
+		this.configService = ServiceFactory.getConfigService();
+	}
 
 	public static getInstance(deps: RedisServiceDeps): RedisService {
 		if (!RedisService.instance) {
-			// Validate dependencies
 			deps.validateDependencies(
 				[
 					{
@@ -34,15 +39,10 @@ export class RedisService implements RedisServiceInterface {
 						instance: deps.createRedisClient
 					}
 				],
-				deps.configService.getAppLogger()
+				ServiceFactory.getLoggerService()
 			);
 
-			RedisService.instance = new RedisService(
-				deps.configService,
-				deps.createRedisClient,
-				deps.validateDependencies,
-				deps.errorHandler
-			);
+			RedisService.instance = new RedisService(deps.createRedisClient);
 		}
 		return RedisService.instance;
 	}
@@ -53,9 +53,6 @@ export class RedisService implements RedisServiceInterface {
 		next,
 		blankRequest
 	}: RedisServiceDeps): Promise<RedisClientType | null> {
-		const logger = this.configService.getAppLogger();
-		const errorLogger = this.configService.getErrorLogger();
-
 		try {
 			validateDependencies(
 				[
@@ -64,17 +61,17 @@ export class RedisService implements RedisServiceInterface {
 						instance: this.createRedisClient
 					}
 				],
-				logger
+				this.logger
 			);
 
 			if (!this.redisClient) {
 				const client: RedisClientType = this.createRedisClient({
-					url: this.configService.getEnvVariables().redisUrl,
+					url: this.configService.getEnvVariable('redisUrl'),
 					socket: {
 						reconnectStrategy: retries => {
 							const retryAfter = Math.min(retries * 100, 3000);
-							errorLogger.logWarn(
-								`reason: Error connecting to Redis instance at ${this.configService.getEnvVariables().redisUrl}, retrying in ${retryAfter}ms. ${retries} retries so far`,
+							this.errorLogger.logWarn(
+								`reason: Error connecting to Redis instance at ${this.configService.getEnvVariable('redisUrl')}, retrying in ${retryAfter}ms. ${retries} retries so far`,
 								{}
 							);
 							if (retries >= 10) {
@@ -85,12 +82,16 @@ export class RedisService implements RedisServiceInterface {
 										{
 											retries,
 											redisUrl:
-												this.configService.getEnvVariables()
-													.redisUrl,
+												this.configService.getEnvVariable(
+													'redisUrl'
+												),
 											exposeToClient: false
 										}
 									);
-								errorLogger.logError(serviceError.message, {});
+								this.errorLogger.logError(
+									serviceError.message,
+									{}
+								);
 								this.errorHandler.handleError({
 									error:
 										serviceError ||
@@ -101,7 +102,7 @@ export class RedisService implements RedisServiceInterface {
 									}
 								});
 
-								logger.error(
+								this.errorLogger.logError(
 									'Max retries reached when trying to initialize Redis.'
 								);
 							}
@@ -121,7 +122,7 @@ export class RedisService implements RedisServiceInterface {
 				});
 
 				await client.connect();
-				logger.info('Connected to Redis');
+				this.logger.info('Connected to Redis');
 
 				this.redisClient = client;
 			}
@@ -131,9 +132,9 @@ export class RedisService implements RedisServiceInterface {
 			const redisServiceError =
 				new this.errorHandler.ErrorClasses.ServiceUnavailableError(
 					20,
-					`Failed to connect to Redis instance at ${this.configService.getEnvVariables().redisUrl}`
+					`Failed to connect to Redis instance at ${this.configService.getEnvVariable('redisUrl')}`
 				);
-			errorLogger.logError(redisServiceError.message);
+			this.errorLogger.logError(redisServiceError.message);
 			this.errorHandler.handleError({
 				...HandleErrorStaticParameters,
 				error:
@@ -151,17 +152,12 @@ export class RedisService implements RedisServiceInterface {
 		res,
 		next,
 		blankRequest,
-		createRedisClient,
-		configService,
-		errorHandler
+		createRedisClient
 	}: GetRedisClientInterface): Promise<RedisClientType | null> {
-		const logger = configService.getAppLogger();
-		const errorLogger = configService.getErrorLogger();
-
 		if (this.redisClient) {
-			logger.info('Redis client is already connected', {});
+			this.logger.info('Redis client is already connected', {});
 		} else {
-			errorLogger.logWarn(
+			this.errorLogger.logWarn(
 				'Redis client is not connected. Calling connectRedis()',
 				{}
 			);
@@ -171,9 +167,7 @@ export class RedisService implements RedisServiceInterface {
 				next,
 				blankRequest,
 				createRedisClient,
-				configService,
-				validateDependencies,
-				errorHandler
+				validateDependencies
 			});
 		}
 		return this.redisClient;
@@ -184,48 +178,41 @@ export class RedisService implements RedisServiceInterface {
 		res,
 		next,
 		blankRequest,
-		configService,
-		errorHandler,
 		createRedisClient
 	}: FlushRedisMemoryCacheInterface): Promise<void> {
-		const logger = configService.getAppLogger();
-
-		logger.info('Flushing in-memory cache');
+		this.logger.info('Flushing in-memory cache');
 		const redisClient = await this.getRedisClient({
 			req,
 			res,
 			next,
 			blankRequest,
-			createRedisClient,
-			configService,
-			errorHandler
+			createRedisClient
 		});
 
 		if (redisClient) {
 			try {
 				await redisClient.flushAll();
-				logger.info('In-memory cache flushed');
+				this.logger.info('In-memory cache flushed');
 			} catch (utilError) {
 				const utilityError =
-					new errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
 						'flushInMemoryCache()',
 						{
 							message: `Error flushing Redis cache\n${utilError instanceof Error ? utilError.message : utilError}`,
 							originalError: utilError
 						}
 					);
-				configService
-					.getErrorLogger()
-					.logError(utilityError.message, {});
-				errorHandler.handleError({
+				this.errorLogger.logError(utilityError.message, {});
+				this.errorHandler.handleError({
 					error:
 						utilityError || Error || 'Unable to flush Redis cache'
 				});
 			}
 		} else {
-			configService
-				.getErrorLogger()
-				.logWarn('Redis client is not available for cache flush\n', {});
+			this.errorLogger.logWarn(
+				'Redis client is not available for cache flush\n',
+				{}
+			);
 		}
 	}
 }

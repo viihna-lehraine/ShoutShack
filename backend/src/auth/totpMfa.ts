@@ -1,7 +1,6 @@
 import { TOTPMFA, TOTPSecretInterface } from '../index/interfaces';
 import { validateDependencies } from '../utils/helpers';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
+import { ServiceFactory } from '../index/factory';
 
 export function createTOTPUtil({ speakeasy, QRCode }: TOTPMFA): {
 	generateTOTPSecret: () => TOTPSecretInterface;
@@ -9,8 +8,9 @@ export function createTOTPUtil({ speakeasy, QRCode }: TOTPMFA): {
 	verifyTOTPToken: (secret: string, token: string) => boolean;
 	generateQRCode: (otpauth_url: string) => Promise<string>;
 } {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	validateDependencies(
 		[

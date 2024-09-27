@@ -27,15 +27,6 @@ export interface BaseExpressInterface {
 	res: import('express').Response;
 	next: import('express').NextFunction;
 }
-
-export interface BaseInterface {
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	blankRequest?: import('express').Request;
-	req?: import('express').Request;
-}
-
 //
 ///
 ////  ***** FUNCTION INTERFACES ***** //
@@ -54,8 +45,6 @@ export interface HandleErrorFnInterface {
 
 export interface AddIpToBlacklistInterface {
 	ip: string;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -68,9 +57,6 @@ export interface AuthControllerInterface {
 	jwt: ReturnType<typeof import('../auth/jwt').createJwt>;
 	req: import('express').Request;
 	res: import('express').Response;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-	envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 	createJwt: typeof import('../auth/jwt').createJwt;
 	UserModel: typeof import('../models/UserModelFile').User;
 	validateDependencies: (
@@ -88,33 +74,19 @@ export interface BackupCodeServiceInterface {
 	UserMfa: typeof import('../models/UserMfaModelFile').UserMfa;
 	crypto: typeof import('crypto');
 	bcrypt: typeof import('bcrypt');
-	configService: typeof import('../services/configService').configService;
-	appLogger: AppLoggerServiceInterface;
-}
-
-export interface ConfigSecretsInterface {
-	readonly logger: AppLoggerServiceInterface;
-	readonly execSync: typeof import('child_process').execSync;
-	readonly getDirectoryPath: () => string;
-	readonly gpgPassphrase: string;
 }
 
 export interface CreateFeatureEnablerInterface {
-	readonly configService: typeof import('../services/configService').configService;
+	readonly configService: typeof import('../services/config').configService;
 }
 
 export interface CreateJwtInterface {
 	jwt: typeof import('jsonwebtoken');
 	execSync: typeof import('child_process').execSync;
-	configService: typeof import('../services/configService').configService;
-	appLogger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	) => void;
-	envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 }
 
 export interface CsrfMiddlewareInterface {
@@ -123,38 +95,14 @@ export interface CsrfMiddlewareInterface {
 	next: import('express').NextFunction;
 }
 
-export interface DeclareWebServerOptionsInterface {
-	logger: AppLoggerServiceInterface;
-	blankRequest: import('express').Request;
-	configService: typeof import('../services/configService').configService;
-	constants: typeof import('crypto').constants;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-	fs: typeof import('fs').promises;
-	getCallerInfo: () => string;
-	tlsCiphers: string[];
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-}
-
 export interface DependencyInterface {
 	name: string;
 	instance: unknown;
 }
 
-export interface DisplayEnvAndFeatueFlagsInterface {
-	readonly logger: AppLoggerServiceInterface;
-	readonly errorLogger: AppLoggerServiceInterface;
-	readonly ErrorSeverity: typeof import('../errors/errorClasses').ErrorSeverity;
-	readonly handleError: (params: Partial<HandleErrorFnInterface>) => void;
-}
-
 export interface EmailMFAInterface {
 	bcrypt: typeof import('bcrypt');
 	jwt: typeof import('jsonwebtoken');
-	configService: typeof import('../services/configService').configService;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -239,9 +187,6 @@ export interface ExpressErrorHandlerInterface {
 	req: Request;
 	res: Response;
 	next: NextFunction;
-	logger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	errorLogger: AppLoggerServiceInterface;
 	fallbackLogger: Console;
 	errorResponse?: string;
 }
@@ -255,33 +200,6 @@ export interface ErrorLoggerDetailsInterface {
 	actionVal?: string;
 	ipVal?: string;
 	userAgentVal?: string;
-}
-
-export interface ErrorLoggerInterface {
-	logAppError(
-		error: AppError,
-		sequelize: Sequelize,
-		details?: Record<string, unknown>
-	): void;
-	logToDatabase(
-		error: AppError,
-		sequelize: Sequelize,
-		retryCount?: number
-	): Promise<void>;
-	getErrorCount(errorName: string): number;
-}
-
-export interface FeatureEnabler {
-	enableFeatureBasedOnFlag: (
-		flag: boolean,
-		description: string,
-		callback: () => void
-	) => void;
-	enableFeatureWithProdOverride: (
-		flag: boolean,
-		description: string,
-		callback: () => void
-	) => void;
 }
 
 export interface FeatureFlagTypes {
@@ -302,26 +220,20 @@ export interface FlushRedisMemoryCacheInterface {
 	readonly res: import('express').Response;
 	readonly next: import('express').NextFunction;
 	readonly blankRequest: import('express').Request;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
 	readonly createRedisClient: typeof import('redis').createClient;
 }
 
 export interface GetFeatureFlagsInterface {
 	blankRequest: import('express').Request;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
 
 export interface GeneratePasskeyInterface {
 	user: FidoUserInterface;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
 }
 
 export interface GeneratePasskeyInterface {
 	user: FidoUserInterface;
-	configService: typeof import('../services/configService').configService;
+	configService: typeof import('../services/config').configService;
 	logger: AppLoggerServiceInterface;
 }
 
@@ -331,8 +243,6 @@ export interface GetRedisClientInterface {
 	readonly next: import('express').NextFunction;
 	readonly blankRequest: import('express').Request;
 	readonly createRedisClient: typeof import('redis').createClient;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
 
 export interface HandleCriticalErrorInterface {
@@ -353,31 +263,18 @@ export interface HandleErrorInterface {
 
 export interface HashPasswordInterface {
 	password: string;
-	configService: typeof import('../services/configService');
-	logger: AppLoggerServiceInterface;
 }
 
 export interface InitCsrfInterface {
 	csrf: typeof import('csrf');
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
 
 export interface InitDatabaseInterface {
-	logger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
 	maxRetries: number;
 	retryAfter: number;
 }
 
 export interface InitializeDatabaseInterface {
-	readonly dbInitMaxRetries: number;
-	readonly dbInitRetryAfter: number;
-	readonly logger: AppLoggerServiceInterface;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly errorLogger: AppLoggerServiceInterface;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
-	readonly envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 	readonly blankRequest: import('express').Request;
 }
 
@@ -390,10 +287,6 @@ export interface InitExpressMiddlware {
 export interface InitIpBlacklistInterface {
 	fsModule: typeof import('fs');
 	inRange: typeof import('range_check').inRange;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -402,9 +295,6 @@ export interface InitIpBlacklistInterface {
 
 export interface InitJwtAuthInterface {
 	verifyJwt: (token: string) => Promise<string | object | null>;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		appLogger: AppLoggerServiceInterface
@@ -412,15 +302,11 @@ export interface InitJwtAuthInterface {
 }
 
 export interface InitMiddlewareParameters {
-	logger: AppLoggerServiceInterface;
 	authenticateOptions: import('passport').AuthenticateOptions;
-	configService: typeof import('../services/configService').configService;
 	cookieParser: typeof import('cookie-parser');
 	cors: typeof import('cors');
 	express: typeof import('express');
-	expressErrorHandler: ExpressErrorHandlerInterface;
 	fsModule: typeof import('fs');
-	// 	getRedisClient;
 	hpp: typeof import('hpp');
 	initCsrf: typeof import('../middleware/csrf').initCsrf;
 	initIpBlacklist: typeof import('../middleware/ipBlacklist').initIpBlacklist;
@@ -432,10 +318,8 @@ export interface InitMiddlewareParameters {
 	initializeValidatorMiddleware: typeof import('../middleware/validator').initializeValidatorMiddleware;
 	morgan: typeof import('morgan');
 	passport: typeof import('passport');
-	handleError: typeof import('../services/errorHandler').errorHandler;
 	session: typeof import('express-session');
 	randomBytes: typeof import('crypto').randomBytes;
-	// redisClient: typeof import('../services/redis').getRedisClient;
 	RedisStore: RedisStore;
 	verifyJwt: (token: string) => Promise<string | object | null>;
 }
@@ -447,8 +331,6 @@ export interface JwtUserInterface {
 
 export interface LoadIpBlacklistInterface {
 	fsModule: typeof import('fs').promises;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
 
 export interface MailOptions {
@@ -462,10 +344,6 @@ export interface MailOptions {
 export interface MailerServiceDeps {
 	nodemailer: typeof import('nodemailer');
 	emailUser: string;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -482,10 +360,6 @@ export interface MemoryMonitorInterface {
 	os: typeof import('os');
 	process: NodeJS.Process;
 	setInterval: typeof setInterval;
-	logger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	errorLogger: AppLoggerServiceInterface;
-	handleError: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -500,31 +374,6 @@ export interface MemoryMonitorStats {
 	available: string;
 }
 
-export interface MulterUploadServiceDeps {
-	multer: typeof import('multer');
-	path: typeof import('path');
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: ErrorHandlerServiceInterface;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-	allowedMimeTypes?: string[];
-	allowedExtensions?: string[];
-}
-
-export interface MulterUploadServiceInterface {
-	setFileSizeLimit(limit: number): void;
-	setAllowedMimeTypes(mimeTypes: string[]): void;
-	setAllowedExtensions(extensions: string[]): void;
-	createMulterUpload(
-		validationCallback?: (file: Express.Multer.File) => boolean
-	): import('multer').Multer;
-	onUploadSuccess(callback: (file: Express.Multer.File) => void): void;
-}
-
 export interface ModelType extends Model {
 	id?: number;
 }
@@ -536,17 +385,9 @@ export interface ModelOperations<T> {
 	destroy: (options: { where: { id: number } }) => Promise<number>;
 }
 
-export interface ModelControllerInterface {
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-}
-
 export interface PassportAuthMiddlewareDependencies {
 	passport: import('passport').PassportStatic;
 	authenticateOptions: import('passport').AuthenticateOptions;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -559,28 +400,6 @@ export interface PassportServiceInterface {
 		typeof import('../models/UserModelFile').createUserModel
 	>;
 	readonly argon2: typeof import('argon2');
-	readonly configService: typeof import('../services/configService').configService;
-	readonly logger: AppLoggerServiceInterface;
-}
-
-export interface PreInitIpBlacklistInterface {
-	readonly fsModule: typeof import('fs').promises;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
-}
-
-export interface RedisServiceDeps {
-	readonly req: import('express').Request;
-	readonly res: import('express').Response;
-	readonly next: import('express').NextFunction;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly createRedisClient: typeof import('redis').createClient;
-	readonly validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
-	readonly blankRequest: import('express').Request;
 }
 
 export interface RedisServiceInterface {
@@ -595,10 +414,6 @@ export interface RedisServiceInterface {
 
 export interface RemoveIpFromBlacklistInterface {
 	ip: string;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -607,13 +422,10 @@ export interface RemoveIpFromBlacklistInterface {
 
 export interface RouteParams {
 	app: import('express').Application;
-	configService: typeof import('../services/configService').configService;
 }
 
 export interface SaveIpBlacklistInterface {
 	fsModule: typeof import('fs').promises;
-	configService: typeof import('../services/configService').configService;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 }
 
 export interface SecretsMap {
@@ -625,9 +437,6 @@ export interface SecurityHeadersInterface {
 	permissionsPolicyOptions?: {
 		[key: string]: string[];
 	};
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -641,38 +450,11 @@ export interface SendClientErrorResponseInterface {
 }
 
 export interface SetUpDatabaseInterface {
-	readonly logger: AppLoggerServiceInterface;
-	readonly errorHandler: typeof import('../services/errorHandler').errorHandler;
-	readonly configService: typeof import('../services/configService').configService;
-	readonly errorLogger: AppLoggerServiceInterface;
-	readonly envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
 	readonly blankRequest?: import('express').Request;
-}
-
-export interface SetUpWebServerInterface {
-	app: import('express').Application;
-	logger: AppLoggerServiceInterface;
-	blankRequest: import('express').Request;
-	envVariables: EnvVariableTypes;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-	DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface;
-	featureFlags: FeatureFlagTypes;
-	getCallerInfo: () => string;
-	handleError: HandleErrorFnInterface;
-	sequelize: import('sequelize').Sequelize | null;
-}
-
-export interface SetUpWebServerReturn {
-	startServer: () => Promise<void>;
 }
 
 export interface SlowdownConfigInterface {
 	slowdownThreshold: number;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -681,19 +463,6 @@ export interface SlowdownConfigInterface {
 
 export interface SlowdownSessionInterface extends Session {
 	lastRequestTime?: number;
-}
-
-export interface StaticRoutesInterface {
-	staticRootPath: string;
-	secretsPath: string;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
 }
 
 export interface UserInstanceInterface {
@@ -778,10 +547,6 @@ export interface TLSKeys {
 export interface TOTPMFA {
 	QRCode: typeof import('qrcode');
 	speakeasy: typeof import('speakeasy');
-	logger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	errorLogger: AppLoggerServiceInterface;
-	handleError: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -805,9 +570,6 @@ export interface UserInstanceInterface {
 }
 
 export interface ValidatorInterface {
-	logger: AppLoggerServiceInterface;
-	errorLogger: AppLoggerServiceInterface;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	validator: typeof import('validator');
 }
 
@@ -824,18 +586,12 @@ export interface VerifyPasskeyAuthInterface {
 	publicKey: string;
 	previousCounter: number;
 	id: string;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
 }
 
 export interface VerifyPasskeyRegistrationInterface {
 	attestation: import('fido2-lib').AttestationResult;
 	expectedChallenge: string;
-	configService: typeof import('../services/configService').configService;
-	logger: AppLoggerServiceInterface;
 }
-
-export type WebServerOptions = import('tls').SecureContextOptions;
 
 export interface YubClientInterface {
 	verify(
@@ -848,10 +604,6 @@ export interface YubicoOtpMFAInterface {
 	execSync: typeof import('child_process').execSync;
 	getDirectoryPath: () => string;
 	yub: typeof import('yub');
-	logger: AppLoggerServiceInterface;
-	configService: typeof import('../services/configService').configService;
-	ErrorLogger: AppLoggerServiceInterface;
-	handleError: typeof import('../services/errorHandler').errorHandler;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -887,6 +639,8 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 		sequelize: Sequelize,
 		retentionPeriodDays?: number
 	): Promise<void>;
+	setAdminId(adminId: number | null): void;
+	getCallerInfo(): string;
 	getErrorDetails(
 		getCallerInfo: () => string,
 		action: string,
@@ -897,10 +651,20 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 	isAppLogger(logger: unknown): logger is AppLoggerServiceInterface | unknown;
 }
 
+export interface ConfigSecretsInterface {
+	readonly logger: AppLoggerServiceInterface;
+	readonly execSync: typeof import('child_process').execSync;
+	readonly getDirectoryPath: () => string;
+	readonly gpgPassphrase: string;
+}
+
 export interface ConfigServiceInterface {
 	logger: AppLoggerServiceInterface;
 	getLogger(): AppLoggerServiceInterface;
-	getEnvVariables(): EnvVariableTypes;
+	getErrorLogger(): ErrorLoggerServiceInterface;
+	getEnvVariable<K extends keyof EnvVariableTypes>(
+		key: K
+	): EnvVariableTypes[K];
 	getFeatureFlags(): FeatureFlagTypes;
 	getSecrets(
 		keys: string | string[],
@@ -910,8 +674,26 @@ export interface ConfigServiceInterface {
 }
 
 export interface DatabaseServiceInterface {
+	getSequelizeInstance(): Sequelize | null;
 	initializeDatabase(): Promise<Sequelize>;
-	getInstance(): Sequelize | null;
+}
+
+export interface DeclareWebServerOptionsInterface {
+	blankRequest: import('express').Request;
+	constants: typeof import('crypto').constants;
+	fs: typeof import('fs').promises;
+	tlsCiphers: string[];
+	validateDependencies: (
+		dependencies: DependencyInterface[],
+		logger: AppLoggerServiceInterface
+	) => void;
+}
+
+export interface EnvironmentServiceInterface {
+	getEnvVariable<K extends keyof EnvVariableTypes>(
+		key: K
+	): EnvVariableTypes[K];
+	getFeatureFlags(): FeatureFlagTypes;
 }
 
 export interface ErrorLoggerServiceInterface extends AppLoggerServiceInterface {
@@ -920,19 +702,16 @@ export interface ErrorLoggerServiceInterface extends AppLoggerServiceInterface {
 		sequelize?: Sequelize,
 		details?: Record<string, unknown>
 	): void;
-
 	logToDatabase(
 		error: Error,
 		sequelize: Sequelize,
 		retryCount?: number
 	): Promise<void>;
-
 	getErrorCount(errorName: string): number;
 }
 
 export interface ErrorHandlerServiceInterface {
 	ErrorClasses: typeof ErrorClasses;
-
 	handleError(params: {
 		error: unknown;
 		req?: Request;
@@ -942,20 +721,17 @@ export interface ErrorHandlerServiceInterface {
 		userId?: string;
 		sequelize?: Sequelize;
 	}): void;
-
 	expressErrorHandler(): (
 		err: AppError | ClientError | Error | Record<string, unknown>,
 		req: Request,
 		res: Response,
 		next: NextFunction
 	) => void;
-
 	handleCriticalError(params: {
 		error: unknown;
 		req?: Request;
 		details?: Record<string, unknown>;
 	}): void;
-
 	sendClientErrorResponse(params: {
 		message: string;
 		statusCode?: number;
@@ -964,7 +740,47 @@ export interface ErrorHandlerServiceInterface {
 	}): Promise<void>;
 }
 
-//
+export interface MulterUploadServiceInterface {
+	setFileSizeLimit(limit: number): void;
+	setAllowedMimeTypes(mimeTypes: string[]): void;
+	setAllowedExtensions(extensions: string[]): void;
+	createMulterUpload(
+		validationCallback?: (file: Express.Multer.File) => boolean
+	): import('multer').Multer | undefined;
+	onUploadSuccess(callback: (file: Express.Multer.File) => void): void;
+}
+
+export interface SecretsStoreInterface {
+	initializeEncryptionKey(encryptionKey: string): void;
+	loadSecrets(dependencies: ConfigSecretsInterface): Promise<void>;
+	storeSecret(key: string, secret: string): Promise<void>;
+	retrieveSecrets(
+		secretKeys: string | string[]
+	): Record<string, string | null> | string | null;
+	reEncryptSecret(secretKey: string): Promise<void>;
+	redactSecrets(
+		logData: string | Record<string, unknown> | unknown[]
+	): Promise<string | Record<string, unknown> | unknown[]>;
+	clearExpiredSecretsFromMemory(): void;
+	clearSecretsFromMemory(secretKeys: string | string[]): void;
+	batchReEncryptSecrets(): void;
+}
+
+export interface WebServerInterface {
+	initialize: () => Promise<void>;
+	startServer: () => Promise<void>;
+	shutdownServer: () => Promise<void>;
+}
+
+export interface WebServerDeps {
+	app: import('express').Application;
+	blankRequest: import('express').Request;
+	DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface;
+	sequelize: import('sequelize').Sequelize | null;
+}
+
+export type WebServerOptions = import('tls').SecureContextOptions;
+
 ///
 //// ***** SERVICE DEPENDENCY INTERFACES ***** /////////
 ///
@@ -979,20 +795,17 @@ export interface AppLoggerServiceDeps {
 	};
 	DailyRotateFile: typeof import('winston-daily-rotate-file');
 	LogStashTransport: typeof import('winston-logstash');
-	configService: typeof import('../services/configService').configService;
-	envSecretsStore: typeof import('../environment/envSecrets').envSecretsStore;
+	secretsStore: typeof import('../services/secrets').secretsStore;
 	ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
 	HandleErrorStaticParameters: typeof import('../index/parameters').HandleErrorStaticParameters;
 	errorHandler: typeof import('../services/errorHandler').errorHandler;
 	ErrorSeverity: typeof import('../errors/errorClasses').ErrorSeverity;
 	uuidv4: typeof import('uuid').v4;
-	sanitizeRequestBody: typeof import('../utils/helpers').sanitizeRequestBody;
 	fs: typeof import('fs');
 	Sequelize: typeof import('sequelize').Sequelize;
 }
 
 export interface ErrorLoggerServiceDeps {
-	readonly configService: typeof import('../services/configService').configService;
 	readonly validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -1000,6 +813,33 @@ export interface ErrorLoggerServiceDeps {
 	readonly ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
 	readonly ErrorSeverity: string;
 	readonly handleError: typeof import('../services/errorHandler').errorHandler.handleError;
+}
+
+export interface MulterUploadServiceDeps {
+	multer: typeof import('multer');
+	fileTypeFromBuffer: typeof import('file-type').fileTypeFromBuffer;
+	fs: typeof import('fs');
+	path: typeof import('path');
+	configService: typeof import('../services/config').configService;
+	validateDependencies: (
+		dependencies: DependencyInterface[],
+		logger: AppLoggerServiceInterface
+	) => void;
+	logger: AppLoggerServiceInterface;
+	errorLogger: AppLoggerServiceInterface;
+	errorHandler: ErrorHandlerServiceInterface;
+}
+
+export interface RedisServiceDeps {
+	readonly req: import('express').Request;
+	readonly res: import('express').Response;
+	readonly next: import('express').NextFunction;
+	readonly createRedisClient: typeof import('redis').createClient;
+	readonly validateDependencies: (
+		dependencies: DependencyInterface[],
+		logger: AppLoggerServiceInterface
+	) => void;
+	readonly blankRequest: import('express').Request;
 }
 
 //

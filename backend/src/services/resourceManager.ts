@@ -1,48 +1,37 @@
 import { HandleErrorStaticParameters } from '../index/parameters';
 import {
-	AppLoggerInterface,
-	ErrorHandlerInterface,
+	AppLoggerServiceInterface,
+	ConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
 	MemoryMonitorInterface
 } from '../index/interfaces';
-import { ConfigService } from './configService';
 import { AppError } from '../errors/errorClasses';
 import { RedisClientType, createClient } from 'redis';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 import os from 'os';
 import fs from 'fs';
-import { AppLogger, ErrorLogger } from './logger'; // Assuming AppLogger import is correct
-import { ErrorHandler } from './errorHandler';
 
 export class ResourceManager {
 	private static instance: ResourceManager;
 	private redisClient: RedisClientType | null = null;
 	private memoryMonitor: MemoryMonitorInterface | null = null;
-	private configService: ConfigService;
-	private appLogger: AppLoggerInterface;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private configService: ConfigServiceInterface;
 
-	constructor(
-		private logger: AppLoggerInterface = AppLogger.getInstance().getRedactedLogger(),
-		private errorLogger: AppLoggerInterface = ErrorLogger.getInstance().getRedactedLogger(),
-		public errorHandler: ErrorHandlerInterface = errorHandler
-	) {
-		this.configService = ConfigService.getInstance();
-		this.appLogger = logger;
+	constructor() {
+		this.logger = ServiceFactory.getLoggerService();
+		this.errorLogger = ServiceFactory.getErrorLoggerService();
+		this.errorHandler = ServiceFactory.getErrorHandlerService();
+		this.configService = ServiceFactory.getConfigService();
 	}
 
 	public static getInstance(): ResourceManager {
 		if (!ResourceManager.instance) {
-			const logger = AppLogger.getInstance();
-			const errorLogger = ConfigService.getInstance().getErrorLogger();
-			const errorHandler = ErrorHandler.getInstance(
-				new AppLogger(),
-				new ErrorLogger()
-			);
-
-			ResourceManager.instance = new ResourceManager(
-				logger,
-				errorLogger,
-				errorHandler
-			);
+			ResourceManager.instance = new ResourceManager();
 		}
 		return ResourceManager.instance;
 	}
@@ -51,22 +40,22 @@ export class ResourceManager {
 		try {
 			validateDependencies(
 				[{ name: 'createRedisClient', instance: createClient }],
-				this.appLogger
+				this.logger
 			);
 
 			if (!this.configService.getFeatureFlags().enableRedis) {
-				this.appLogger.debug('Redis is disabled');
+				this.logger.debug('Redis is disabled');
 				return null;
 			}
 
 			if (!this.redisClient) {
 				const client: RedisClientType = createClient({
-					url: this.configService.getEnvVariables().redisUrl,
+					url: this.configService.getEnvVariable('redisUrl'),
 					socket: {
 						reconnectStrategy: retries => {
 							const retryAfter = Math.min(retries * 100, 3000);
 							this.errorLogger.logWarn(
-								`Error connecting to Redis at ${this.configService.getEnvVariables().redisUrl}, retrying in ${retryAfter}ms. Retries: ${retries}`
+								`Error connecting to Redis at ${this.configService.getEnvVariable('redisUrl')}, retrying in ${retryAfter}ms. Retries: ${retries}`
 							);
 							if (retries >= 10) {
 								this.handleCriticalRedisFailure(retries);
@@ -82,7 +71,7 @@ export class ResourceManager {
 				});
 
 				await client.connect();
-				this.appLogger.info('Connected to Redis');
+				this.logger.info('Connected to Redis');
 				this.redisClient = client;
 			}
 
@@ -110,14 +99,14 @@ export class ResourceManager {
 	}
 
 	public async flushRedisMemoryCache(): Promise<void> {
-		this.appLogger.info('Flushing in-memory cache');
+		this.logger.info('Flushing in-memory cache');
 		const redisClient = await this.getRedisClient();
 
 		if (this.configService.getFeatureFlags().enableRedis) {
 			if (redisClient) {
 				try {
 					await redisClient.flushAll();
-					this.appLogger.info('In-memory cache flushed');
+					this.logger.info('In-memory cache flushed');
 				} catch (utilError) {
 					const utilityError = new AppError(
 						`Error flushing Redis cache: ${utilError instanceof Error ? utilError.message : utilError}`,
@@ -136,14 +125,14 @@ export class ResourceManager {
 	}
 
 	private createMemoryMonitor(): void {
-		this.appLogger.info('Creating memory monitor as Redis is unavailable');
+		this.logger.info('Creating memory monitor as Redis is unavailable');
 
 		setInterval(() => {
 			const memoryUsage = process.memoryUsage();
-			this.appLogger.info(`Memory Usage: ${JSON.stringify(memoryUsage)}`);
+			this.logger.info(`Memory Usage: ${JSON.stringify(memoryUsage)}`);
 			if (
 				memoryUsage.heapUsed >
-				this.configService.getEnvVariables().memoryLimit
+				this.configService.getEnvVariable('memoryLimit')
 			) {
 				this.manageMemory();
 			}
@@ -155,14 +144,14 @@ export class ResourceManager {
 			`Redis Service unavailable after ${retries} retries`
 		);
 		this.errorLogger.logError(serviceError.message, {});
-		this.appLogger.error(
+		this.errorLogger.logError(
 			'Max retries reached when trying to initialize Redis. Falling back to memory monitor.'
 		);
 	}
 
 	private manageMemory(): void {
 		const memoryUsage = process.memoryUsage();
-		const memoryLimit = this.configService.getEnvVariables().memoryLimit;
+		const memoryLimit = this.configService.getEnvVariable('memoryLimit');
 		const usedHeapPercentage =
 			(memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
 
@@ -202,7 +191,7 @@ export class ResourceManager {
 	}
 
 	private removeTemporaryFiles(): void {
-		const tempDir = this.configService.getEnvVariables().tempDir || '/tmp';
+		const tempDir = this.configService.getEnvVariable('tempDir') || '/tmp';
 		this.logger.info(`Removing temporary files from ${tempDir}...`);
 		fs.readdir(tempDir, (err, files) => {
 			if (err) {
@@ -233,7 +222,7 @@ export class ResourceManager {
 					0
 				);
 				const usage = ((total - cpu.times.idle) / total) * 100;
-				this.appLogger.info(
+				this.logger.info(
 					`CPU ${index + 1}: Usage ${usage.toFixed(2)}%`
 				);
 			});
@@ -241,14 +230,14 @@ export class ResourceManager {
 	}
 
 	public monitorDiskUsage(): void {
-		const diskPath = this.configService.getEnvVariables().diskPath || '/';
+		const diskPath = this.configService.getEnvVariable('diskPath') || '/';
 		setInterval(() => {
 			fs.stat(diskPath, (err, stats) => {
 				if (err) {
-					this.appLogger.error(`Error getting disk usage: ${err}`);
+					this.logger.error(`Error getting disk usage: ${err}`);
 					return;
 				}
-				this.appLogger.info(`Disk usage: ${JSON.stringify(stats)}`);
+				this.logger.info(`Disk usage: ${JSON.stringify(stats)}`);
 			});
 		}, 30000);
 	}
@@ -260,7 +249,7 @@ export class ResourceManager {
 				const netStats = networkInterfaces[interfaceName];
 				if (netStats) {
 					netStats.forEach(netStat => {
-						this.appLogger.info(
+						this.logger.info(
 							`Interface ${interfaceName}: Address ${netStat.address}, Family ${netStat.family}, Internal ${netStat.internal}`
 						);
 					});

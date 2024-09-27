@@ -1,21 +1,22 @@
-import { envSecretsStore } from '../environment/envSecrets';
 import {
 	YubClientInterface,
 	YubicoOtpMFAInterface,
 	YubicoOtpOptionsInterface,
 	YubResponseInterface
 } from '../index/interfaces';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 export default function createYubicoOtpUtil({ yub }: YubicoOtpMFAInterface): {
 	initializeYubicoOtpUtil: () => Promise<void>;
 	validateYubicoOTP: (otp: string) => Promise<boolean>;
 	generateYubicoOtpOptions: () => Promise<YubicoOtpOptionsInterface>;
 } {
-	const logger = configService.getAppLogger();
-	const errorLogger = configService.getErrorLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const secrets = ServiceFactory.getSecretsStore();
+	const configService = ServiceFactory.getConfigService();
 
 	let yubClient: YubClientInterface | undefined;
 
@@ -25,19 +26,20 @@ export default function createYubicoOtpUtil({ yub }: YubicoOtpMFAInterface): {
 		try {
 			logger.info('Initializing Yubico OTP Utility.');
 
-			const secrets = envSecretsStore.retrieveSecrets([
+			const yubiSecrets = secrets.retrieveSecrets([
 				'YUBICO_CLIENT_ID',
 				'YUBICO_SECRET_KEY'
 			]);
 
 			if (
-				secrets &&
-				typeof secrets === 'object' &&
-				!Array.isArray(secrets)
+				yubiSecrets &&
+				typeof yubiSecrets === 'object' &&
+				!Array.isArray(yubiSecrets)
 			) {
 				const yubicoClientId =
-					secrets['YUBICO_CLIENT_ID']?.toString() || '';
-				const yubicoSecretKey = secrets['YUBICO_SECRET_KEY'] || '';
+					yubiSecrets['YUBICO_CLIENT_ID']?.toString() || '';
+				const yubicoSecretKey =
+					yubiSecrets['YUBICO_SECRET_KEY']?.toString() || '';
 
 				if (!yubicoClientId || !yubicoSecretKey) {
 					throw new Error(
@@ -68,10 +70,8 @@ export default function createYubicoOtpUtil({ yub }: YubicoOtpMFAInterface): {
 			errorHandler.handleError({ error: utilityError });
 		} finally {
 			try {
-				await envSecretsStore.reEncryptSecrets([
-					'YUBICO_CLIENT_ID',
-					'YUBICO_SECRET_KEY'
-				]);
+				await secrets.reEncryptSecret('YUBICO_CLIENT_ID');
+				await secrets.reEncryptSecret('YUBICO_SECRET_KEY');
 				logger.debug('Secrets re-encrypted');
 			} catch (reEncryptError) {
 				errorLogger.logError(
@@ -137,10 +137,12 @@ export default function createYubicoOtpUtil({ yub }: YubicoOtpMFAInterface): {
 		try {
 			logger.info('Generating Yubico OTP options.');
 
-			const apiUrl = configService.getEnvVariables().yubicoApiUrl;
+			const apiUrl = configService.getEnvVariable(
+				'yubicoApiUrl'
+			) as string;
 
 			const { YUBICO_CLIENT_ID, YUBICO_SECRET_KEY } =
-				envSecretsStore.retrieveSecrets([
+				secrets.retrieveSecrets([
 					'YUBICO_CLIENT_ID',
 					'YUBICO_SECRET_KEY'
 				]) as Record<string, string>;
@@ -178,10 +180,8 @@ export default function createYubicoOtpUtil({ yub }: YubicoOtpMFAInterface): {
 			};
 		} finally {
 			try {
-				await envSecretsStore.reEncryptSecrets([
-					'YUBICO_CLIENT_ID',
-					'YUBICO_SECRET_KEY'
-				]);
+				await secrets.reEncryptSecret('YUBICO_CLIENT_ID');
+				await secrets.reEncryptSecret('YUBICO_SECRET_KEY');
 				logger.debug('Secrets re-encrypted');
 			} catch (reEncryptError) {
 				errorLogger.logError(

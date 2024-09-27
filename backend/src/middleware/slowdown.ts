@@ -1,21 +1,28 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express';
-import { validateDependencies } from '../utils/helpers';
-import {
-	AppLoggerInterface,
-	SlowdownSessionInterface
-} from '../index/interfaces';
+import { SlowdownSessionInterface } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
-export function initializeSlowdownMiddleware(
-	slowdownThreshold: number,
-	logger: AppLoggerInterface,
-	errorLogger: AppLoggerInterface,
-	errorHandler: typeof import('../services/errorHandler').errorHandler
-): RequestHandler {
+export function initializeSlowdownMiddleware(): RequestHandler {
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const slowdownThreshold =
+		ServiceFactory.getConfigService().getEnvVariable('slowdownThreshold');
+
 	try {
-		validateDependencies(
-			[{ name: 'slowdownThreshold', instance: slowdownThreshold }],
-			logger
-		);
+		if (typeof slowdownThreshold !== 'number') {
+			const configError =
+				new errorHandler.ErrorClasses.ConfigurationError(
+					`Invalid slowdown threshold configuration: ${slowdownThreshold}`,
+					{
+						configuration: 'slowdownThreshold',
+						originalError: 'Invalid configuration value'
+					}
+				);
+			errorLogger.logError(configError.message);
+			errorHandler.handleError({ error: configError });
+			throw configError;
+		}
 
 		return function slowdownMiddleware(
 			req: Request & { session: SlowdownSessionInterface },

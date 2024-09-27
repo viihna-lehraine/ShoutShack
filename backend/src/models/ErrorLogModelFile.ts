@@ -6,9 +6,8 @@ import {
 	Model,
 	Sequelize
 } from 'sequelize';
-import { configService } from '../services/configService';
-import { errorHandler } from '../services/errorHandler';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 interface ErrorLogAttributes {
 	id: CreationOptional<number>; // primary key, auto-incremented
@@ -40,7 +39,9 @@ class ErrorLog
 export function createErrorLogModel(
 	sequelize: Sequelize
 ): typeof ErrorLog | null {
-	const logger = configService.getAppLogger();
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
 		validateDependencies(
@@ -113,7 +114,7 @@ export function createErrorLogModel(
 					exposeToClient: false
 				}
 			);
-		configService.getErrorLogger().logInfo(loadErrorLogModelError.message);
+		errorLogger.logError(loadErrorLogModelError.message);
 		errorHandler.handleError({ error: loadErrorLogModelError });
 		return null;
 	}

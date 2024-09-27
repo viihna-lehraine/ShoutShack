@@ -8,37 +8,83 @@ import {
 	PublicKeyCredentialRequestOptions,
 	Fido2AttestationResult,
 	Fido2AssertionResult,
-	AssertionResult
+	AssertionResult,
+	UserVerification
 } from 'fido2-lib';
 import { errorHandler } from '../services/errorHandler';
 import {
-	AppLoggerInterface,
+	AppLoggerServiceInterface,
 	FidoUserInterface,
 	SecretsMap
 } from '../index/interfaces';
 import { FidoFactor } from '../index/types';
-import { configService } from '../services/configService';
 import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 import '../../types/custom/yub.js';
 
+const configService = ServiceFactory.getConfigService();
+const logger = ServiceFactory.getLoggerService() as AppLoggerServiceInterface;
 let fido2: Fido2Lib | null = null;
 let secrets: SecretsMap;
 
-export async function initializeFido2(
-	logger: AppLoggerInterface
-): Promise<void> {
+export async function initializeFido2(): Promise<void> {
 	try {
+		const rpId = configService.getEnvVariable('rpId');
+		const rpName = configService.getEnvVariable('rpName');
+		const challengeSize = configService.getEnvVariable('fidoChallengeSize');
+		const cryptoParams = configService.getEnvVariable('fidoCryptoParams');
+		const requireResidentKey = configService.getEnvVariable(
+			'fidoAuthRequireResidentKey'
+		);
+		const userVerification = configService.getEnvVariable(
+			'fidoAuthUserVerification'
+		);
+
+		if (typeof rpId !== 'string' || typeof rpName !== 'string') {
+			throw new Error(
+				'Environment variables rpId and rpName must be strings'
+			);
+		}
+
+		if (typeof challengeSize !== 'number') {
+			throw new Error(
+				'Environment variable fidochallengeSize must be a number'
+			);
+		}
+
+		if (
+			!Array.isArray(cryptoParams) ||
+			typeof requireResidentKey !== 'boolean' ||
+			typeof userVerification !== 'string'
+		) {
+			throw new Error(
+				'Invalid environment variables for FIDO2 configuration'
+			);
+		}
+
+		const validUserVerificationValues: UserVerification[] = [
+			'required',
+			'preferred',
+			'discouraged'
+		];
+
+		if (
+			!validUserVerificationValues.includes(
+				userVerification as UserVerification
+			)
+		) {
+			throw new Error('Invalid value for authenticatorUserVerification');
+		}
+
 		fido2 = new Fido2Lib({
 			timeout: 60000,
-			rpId: configService.getEnvVariables().rpId,
-			rpName: configService.getEnvVariables().rpName,
-			challengeSize: configService.getEnvVariables().fidoChallengeSize,
-			cryptoParams: configService.getEnvVariables().fidoCryptoParams,
-			authenticatorRequireResidentKey:
-				configService.getEnvVariables().fidoAuthRequireResidentKey,
-			authenticatorUserVerification:
-				configService.getEnvVariables().fidoAuthUserVerification
+			rpId,
+			rpName,
+			challengeSize,
+			cryptoParams,
+			authenticatorRequireResidentKey: requireResidentKey,
+			authenticatorUserVerification: userVerification as UserVerification
 		});
 
 		logger.info('Fido2Lib initialized successfully.');
@@ -54,13 +100,11 @@ export async function initializeFido2(
 	}
 }
 
-export async function ensureFido2Initialized(
-	logger: AppLoggerInterface
-): Promise<void> {
+export async function ensureFido2Initialized(): Promise<void> {
 	validateDependencies([{ name: 'logger', instance: logger }], logger);
 	if (!fido2) {
 		logger.debug('Fido2Lib is not initialized, initializing now.');
-		await initializeFido2(logger);
+		await initializeFido2();
 	} else {
 		logger.debug('Fido2Lib is already initialized.');
 		return;
@@ -68,19 +112,12 @@ export async function ensureFido2Initialized(
 }
 
 export async function generatePasskeyRegistrationOptions(
-	user: FidoUserInterface,
-	logger: AppLoggerInterface
+	user: FidoUserInterface
 ): Promise<PublicKeyCredentialCreationOptions> {
 	try {
-		validateDependencies(
-			[
-				{ name: 'user', instance: user },
-				{ name: 'logger', instance: logger }
-			],
-			logger
-		);
+		validateDependencies([{ name: 'user', instance: user }], logger);
 
-		await ensureFido2Initialized(logger);
+		await ensureFido2Initialized();
 
 		const passkeyRegistrationOptions = await fido2!.attestationOptions();
 
@@ -121,20 +158,18 @@ export async function generatePasskeyRegistrationOptions(
 
 export async function verifyPasskeyRegistration(
 	attestation: AttestationResult,
-	expectedChallenge: string,
-	logger: AppLoggerInterface
+	expectedChallenge: string
 ): Promise<Fido2AttestationResult> {
 	try {
 		validateDependencies(
 			[
 				{ name: 'attestation', instance: attestation },
-				{ name: 'expectedChallenge', instance: expectedChallenge },
-				{ name: 'logger', instance: logger }
+				{ name: 'expectedChallenge', instance: expectedChallenge }
 			],
 			logger
 		);
 
-		await ensureFido2Initialized(logger);
+		await ensureFido2Initialized();
 
 		const u2fAttestationExpectations: ExpectedAttestationResult = {
 			challenge: expectedChallenge,
@@ -164,19 +199,10 @@ export async function verifyPasskeyRegistration(
 }
 
 export async function generatePasskeyAuthenticationOptions(
-	user: FidoUserInterface,
-	logger: AppLoggerInterface
+	user: FidoUserInterface
 ): Promise<PublicKeyCredentialRequestOptions> {
 	try {
-		validateDependencies(
-			[
-				{ name: 'user', instance: user },
-				{ name: 'logger', instance: logger }
-			],
-			logger
-		);
-
-		await ensureFido2Initialized(logger);
+		await ensureFido2Initialized();
 
 		const userCredentials: PublicKeyCredentialDescriptor[] =
 			user.credential.map(credential => ({
@@ -213,8 +239,7 @@ export async function verifyPasskeyAuthentication(
 	expectedChallenge: string,
 	publicKey: string,
 	previousCounter: number,
-	id: string,
-	logger: AppLoggerInterface
+	id: string
 ): Promise<Fido2AssertionResult> {
 	try {
 		validateDependencies(
@@ -228,7 +253,7 @@ export async function verifyPasskeyAuthentication(
 			logger
 		);
 
-		await ensureFido2Initialized(logger);
+		await ensureFido2Initialized();
 
 		const assertionExpectations: ExpectedAssertionResult = {
 			challenge: expectedChallenge,
