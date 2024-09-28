@@ -4,13 +4,10 @@ import {
 	ConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
-	FlushRedisMemoryCacheInterface,
-	GetRedisClientInterface,
 	RedisServiceDeps,
 	RedisServiceInterface
 } from '../index/interfaces';
 import { HandleErrorStaticParameters } from '../index/parameters';
-import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
@@ -41,178 +38,175 @@ export class RedisService implements RedisServiceInterface {
 				],
 				ServiceFactory.getLoggerService()
 			);
-
 			RedisService.instance = new RedisService(deps.createRedisClient);
 		}
 		return RedisService.instance;
 	}
 
-	public async connectRedis({
-		req,
-		res,
-		next,
-		blankRequest
-	}: RedisServiceDeps): Promise<RedisClientType | null> {
+	public async get<T>(key: string): Promise<T | null> {
+		await this.connectRedisClient();
+		if (!this.redisClient) throw new Error('Redis client is not connected');
 		try {
-			validateDependencies(
-				[
-					{
-						name: 'createRedisClient',
-						instance: this.createRedisClient
-					}
-				],
-				this.logger
-			);
-
-			if (!this.redisClient) {
-				const client: RedisClientType = this.createRedisClient({
-					url: this.configService.getEnvVariable('redisUrl'),
-					socket: {
-						reconnectStrategy: retries => {
-							const retryAfter = Math.min(retries * 100, 3000);
-							this.errorLogger.logWarn(
-								`reason: Error connecting to Redis instance at ${this.configService.getEnvVariable('redisUrl')}, retrying in ${retryAfter}ms. ${retries} retries so far`,
-								{}
-							);
-							if (retries >= 10) {
-								const serviceError =
-									new this.errorHandler.ErrorClasses.ServiceUnavailableError(
-										retryAfter,
-										'Redis Service',
-										{
-											retries,
-											redisUrl:
-												this.configService.getEnvVariable(
-													'redisUrl'
-												),
-											exposeToClient: false
-										}
-									);
-								this.errorLogger.logError(
-									serviceError.message,
-									{}
-								);
-								this.errorHandler.handleError({
-									error:
-										serviceError ||
-										Error ||
-										'Redis Service Error',
-									details: {
-										reason: 'Failed to initialize Redis'
-									}
-								});
-
-								this.errorLogger.logError(
-									'Max retries reached when trying to initialize Redis.'
-								);
-							}
-
-							return retryAfter;
-						}
-					}
-				});
-
-				client.on('error', error => {
-					this.errorHandler.expressErrorHandler()(
-						error,
-						req || blankRequest,
-						res,
-						next
-					);
-				});
-
-				await client.connect();
-				this.logger.info('Connected to Redis');
-
-				this.redisClient = client;
-			}
-
-			return this.redisClient;
-		} catch (serviceError) {
-			const redisServiceError =
-				new this.errorHandler.ErrorClasses.ServiceUnavailableError(
-					20,
-					`Failed to connect to Redis instance at ${this.configService.getEnvVariable('redisUrl')}`
-				);
-			this.errorLogger.logError(redisServiceError.message);
-			this.errorHandler.handleError({
-				...HandleErrorStaticParameters,
-				error:
-					redisServiceError ||
-					serviceError ||
-					Error ||
-					'Redis Service Unavailable'
-			});
+			const result = await this.redisClient.get(key);
+			return result ? JSON.parse(result) : null;
+		} catch (error) {
+			this.errorLogger.logError(`Error fetching key ${key}: ${error}`);
 			return null;
 		}
 	}
 
-	public async getRedisClient({
-		req,
-		res,
-		next,
-		blankRequest,
-		createRedisClient
-	}: GetRedisClientInterface): Promise<RedisClientType | null> {
-		if (this.redisClient) {
-			this.logger.info('Redis client is already connected', {});
-		} else {
-			this.errorLogger.logWarn(
-				'Redis client is not connected. Calling connectRedis()',
-				{}
+	public async set<T>(
+		key: string,
+		value: T,
+		expiration?: number
+	): Promise<void> {
+		await this.connectRedisClient();
+		if (!this.redisClient) throw new Error('Redis client is not connected');
+		try {
+			const valueString = JSON.stringify(value);
+			if (expiration) {
+				await this.redisClient.set(key, valueString, {
+					EX: expiration
+				});
+			} else {
+				await this.redisClient.set(key, valueString);
+			}
+			this.logger.info(
+				`Key ${key} set in Redis with expiration ${expiration}`
 			);
-			await this.connectRedis({
-				req,
-				res,
-				next,
-				blankRequest,
-				createRedisClient,
-				validateDependencies
+		} catch (error) {
+			this.errorLogger.logError(`Error setting key ${key}: ${error}`);
+		}
+	}
+
+	public async del(key: string): Promise<void> {
+		if (!this.redisClient) {
+			throw new Error('Redis client is not connected');
+		}
+		try {
+			await this.redisClient.del(key);
+			this.logger.info(`Key ${key} deleted from Redis`);
+		} catch (error) {
+			this.errorLogger.logError(`Error deleting key ${key}: ${error}`);
+		}
+	}
+
+	public async exists(key: string): Promise<boolean> {
+		if (!this.redisClient) {
+			throw new Error('Redis client is not connected');
+		}
+		try {
+			const result = await this.redisClient.exists(key);
+			return result > 0;
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error checking existence of key ${key}: ${error}`
+			);
+			return false;
+		}
+	}
+
+	public async increment(
+		key: string,
+		expiration?: number
+	): Promise<number | null> {
+		if (!this.redisClient) {
+			throw new Error('Redis client is not connected');
+		}
+		try {
+			const newValue = await this.redisClient.incr(key);
+			if (expiration) {
+				await this.redisClient.expire(key, expiration);
+			}
+			return newValue;
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error incrementing key ${key}: ${error}`
+			);
+			return null;
+		}
+	}
+
+	private async connectRedisClient(): Promise<void> {
+		if (this.redisClient) return;
+
+		try {
+			this.redisClient = this.createRedisClient({
+				url: this.configService.getEnvVariable('redisUrl'),
+				socket: {
+					reconnectStrategy: retries => {
+						const retryAfter = Math.min(retries * 100, 3000);
+						this.errorLogger.logWarn(
+							`Error connecting to Redis, retrying in ${retryAfter}ms. Retries: ${retries}`
+						);
+						if (retries >= 10) {
+							this.handleRedisFailure(retries);
+						}
+						return retryAfter;
+					}
+				}
+			});
+
+			this.redisClient.on('error', error => {
+				this.errorLogger.logError(`Redis error: ${error}`);
+			});
+
+			await this.redisClient.connect();
+			this.logger.info('Connected to Redis');
+		} catch (error) {
+			this.errorHandler.handleError({
+				...HandleErrorStaticParameters,
+				error,
+				details: { reason: 'Failed to connect to Redis' }
 			});
 		}
+	}
+
+	public async getRedisClient(): Promise<RedisClientType | null> {
+		await this.connectRedisClient();
 		return this.redisClient;
 	}
 
-	public async flushRedisMemoryCache({
-		req,
-		res,
-		next,
-		blankRequest,
-		createRedisClient
-	}: FlushRedisMemoryCacheInterface): Promise<void> {
-		this.logger.info('Flushing in-memory cache');
-		const redisClient = await this.getRedisClient({
-			req,
-			res,
-			next,
-			blankRequest,
-			createRedisClient
-		});
+	public async flushRedisMemoryCache(): Promise<void> {
+		await this.connectRedisClient();
 
-		if (redisClient) {
+		if (this.redisClient) {
 			try {
-				await redisClient.flushAll();
-				this.logger.info('In-memory cache flushed');
-			} catch (utilError) {
-				const utilityError =
-					new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
-						'flushInMemoryCache()',
-						{
-							message: `Error flushing Redis cache\n${utilError instanceof Error ? utilError.message : utilError}`,
-							originalError: utilError
-						}
-					);
-				this.errorLogger.logError(utilityError.message, {});
-				this.errorHandler.handleError({
-					error:
-						utilityError || Error || 'Unable to flush Redis cache'
-				});
+				await this.redisClient.flushAll();
+				this.logger.info('Redis cache flushed successfully');
+			} catch (error) {
+				this.errorLogger.logError(
+					`Error flushing Redis cache: ${error}`
+				);
 			}
 		} else {
 			this.errorLogger.logWarn(
-				'Redis client is not available for cache flush\n',
-				{}
+				'Redis client is not available for cache flush'
 			);
 		}
+	}
+
+	public async cleanUpRedisClient(): Promise<void> {
+		if (this.redisClient) {
+			try {
+				await this.redisClient.quit();
+				this.logger.info('Redis client disconnected successfully');
+				this.redisClient = null;
+			} catch (error) {
+				this.errorLogger.logError(
+					`Error disconnecting Redis client: ${error}`
+				);
+			}
+		}
+	}
+
+	private handleRedisFailure(retries: number): void {
+		this.errorLogger.logError(
+			`Max retries (${retries}) reached for Redis connection`
+		);
+		this.errorHandler.handleError({
+			error: new Error('Redis connection failed after max retries'),
+			details: { reason: 'Failed to connect to Redis' }
+		});
 	}
 }

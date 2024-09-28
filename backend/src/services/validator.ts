@@ -1,103 +1,106 @@
 import { NextFunction, Request, Response } from 'express';
 import { ValidatorInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
+import { validationResult } from 'express-validator';
+import { ValidatorServiceInterface } from '../index/interfaces';
 
-export function initializeValidatorMiddleware({
-	validator
-}: ValidatorInterface): {
-	validateEntry: (req: Request, res: Response, next: NextFunction) => void;
-	registrationValidationRules: (
+export class ValidatorService implements ValidatorServiceInterface {
+	private validator: typeof import('validator');
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
+
+	constructor(validator: ValidatorInterface['validator']) {
+		this.validator = validator;
+	}
+
+	public validateEntry(
 		req: Request,
 		res: Response,
 		next: NextFunction
-	) => void;
-} {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
-
-	const validateEntry = (
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): void => {
+	): void {
 		const errors: Array<{ msg: string; param: string }> = [];
 
-		if (validator.isEmpty(req.body.name || '')) {
+		if (this.validator.isEmpty(req.body.name || '')) {
 			errors.push({ msg: 'Name is required', param: 'name' });
 		}
 
-		if (validator.isEmpty(req.body.message || '')) {
+		if (this.validator.isEmpty(req.body.message || '')) {
 			errors.push({ msg: 'Message is required', param: 'message' });
 		}
 
 		if (errors.length) {
-			logger.warn(
+			this.logger.warn(
 				`Validation failed for entry creation: ${JSON.stringify(errors)}`
 			);
 			res.status(400).json({ errors });
 			return;
 		}
 
-		logger.info('Validation passed for entry creation');
+		this.logger.info('Validation passed for entry creation');
 		next();
-	};
+	}
 
-	const registrationValidationRules = (
+	public registrationValidationRules(
 		req: Request,
 		res: Response,
 		next: NextFunction
-	): void => {
+	): void {
 		const errors: Array<{ msg: string; param: string }> = [];
 
 		try {
-			if (!validator.isLength(req.body.username || '', { min: 3 })) {
+			if (!this.validator.isLength(req.body.username || '', { min: 3 })) {
 				errors.push({
 					msg: 'Username must be at least 3 characters long',
 					param: 'username'
 				});
 			}
 
-			if (!validator.matches(req.body.username || '', /^[\w-]+$/)) {
+			if (!this.validator.matches(req.body.username || '', /^[\w-]+$/)) {
 				errors.push({
 					msg: 'Username can only contain letters, numbers, underscores, and hyphens',
 					param: 'username'
 				});
 			}
 
-			if (!validator.isEmail(req.body.email || '')) {
+			if (!this.validator.isEmail(req.body.email || '')) {
 				errors.push({
 					msg: 'Please provide a valid email address',
 					param: 'email'
 				});
 			}
 
-			if (!validator.isLength(req.body.password || '', { min: 8 })) {
+			if (!this.validator.isLength(req.body.password || '', { min: 8 })) {
 				errors.push({
 					msg: 'Password must be at least 8 characters long',
 					param: 'password'
 				});
 			}
-			if (!validator.matches(req.body.password || '', /[A-Z]/)) {
+
+			if (!this.validator.matches(req.body.password || '', /[A-Z]/)) {
 				errors.push({
 					msg: 'Password must contain at least one uppercase letter',
 					param: 'password'
 				});
 			}
-			if (!validator.matches(req.body.password || '', /[a-z]/)) {
+
+			if (!this.validator.matches(req.body.password || '', /[a-z]/)) {
 				errors.push({
 					msg: 'Password must contain at least one lowercase letter',
 					param: 'password'
 				});
 			}
-			if (!validator.matches(req.body.password || '', /\d/)) {
+
+			if (!this.validator.matches(req.body.password || '', /\d/)) {
 				errors.push({
 					msg: 'Password must contain at least one digit',
 					param: 'password'
 				});
 			}
 
-			if (!validator.matches(req.body.password || '', /[^\dA-Za-z]/)) {
+			if (
+				!this.validator.matches(req.body.password || '', /[^\dA-Za-z]/)
+			) {
 				errors.push({
 					msg: 'Password must contain at least one special character',
 					param: 'password'
@@ -112,37 +115,45 @@ export function initializeValidatorMiddleware({
 			}
 
 			if (errors.length) {
-				logger.info(
+				this.logger.info(
 					`Validation failed for registration: ${JSON.stringify(errors)}`
 				);
 				res.status(400).json({ errors });
 				return;
 			}
 
-			logger.info('Validation passed for registration');
+			this.logger.info('Validation passed for registration');
 			next();
-		} catch (expessError) {
+		} catch (error) {
 			const expressMiddlewareError =
-				new errorHandler.ErrorClasses.ExpressError(
-					`Fatal error occured when attempting to execute 'registrationValidationRules()': ${
-						expessError instanceof Error
-							? expessError.message
-							: 'Unknown error'
-					} ; Shutting down...`,
+				new this.errorHandler.ErrorClasses.ExpressError(
+					`Error during registration validation: ${error instanceof Error ? error.message : 'Unknown error'}`,
 					{ exposeToClient: false }
 				);
-			errorLogger.logError(expressMiddlewareError.message);
-			errorHandler.expressErrorHandler()(
+			this.errorLogger.logError(expressMiddlewareError.message);
+			this.errorHandler.expressErrorHandler()(
 				expressMiddlewareError,
 				req,
 				res,
 				next
 			);
 		}
-	};
+	}
 
-	return {
-		validateEntry,
-		registrationValidationRules
-	};
+	public handleValidationErrors(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): Response | void {
+		const errors = validationResult(req);
+
+		if (!errors.isEmpty()) {
+			this.logger.logError('Validation failed', {
+				errors: errors.array()
+			});
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		next();
+	}
 }

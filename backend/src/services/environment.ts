@@ -130,6 +130,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 
 			// number
 			case 'batchReEncryptSecretsInterval':
+			case 'blacklistSyncInterval':
 			case 'clearExpiredSecretsInterval':
 			case 'cronLoggerSetting':
 			case 'dbInitMaxRetries':

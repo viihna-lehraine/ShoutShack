@@ -1,17 +1,17 @@
-import { HandleErrorStaticParameters } from '../index/parameters';
 import {
 	AppLoggerServiceInterface,
 	ConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
-	MemoryMonitorInterface
+	MemoryMonitorInterface,
+	RedisServiceInterface
 } from '../index/interfaces';
 import { AppError } from '../errors/errorClasses';
-import { RedisClientType, createClient } from 'redis';
-import { validateDependencies } from '../utils/helpers';
+import { createClient, RedisClientType } from 'redis';
 import { ServiceFactory } from '../index/factory';
 import os from 'os';
 import fs from 'fs';
+import NodeCache from 'node-cache';
 
 export class ResourceManager {
 	private static instance: ResourceManager;
@@ -21,106 +21,57 @@ export class ResourceManager {
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
 	private configService: ConfigServiceInterface;
+	private redisService: RedisServiceInterface;
+	private appCache: NodeCache;
 
 	constructor() {
 		this.logger = ServiceFactory.getLoggerService();
 		this.errorLogger = ServiceFactory.getErrorLoggerService();
 		this.errorHandler = ServiceFactory.getErrorHandlerService();
 		this.configService = ServiceFactory.getConfigService();
+		this.redisService = ServiceFactory.getRedisService();
+		this.appCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
+
+		this.setupMemoryMonitor();
+		this.setupRedis();
 	}
 
 	public static getInstance(): ResourceManager {
 		if (!ResourceManager.instance) {
 			ResourceManager.instance = new ResourceManager();
 		}
+
 		return ResourceManager.instance;
 	}
 
-	public async connectRedis(): Promise<RedisClientType | null> {
+	private setupMemoryMonitor(): void {
+		this.logger.info('Setting up memory monitor');
+		const memoryLimit = this.configService.getEnvVariable('memoryLimit');
+		if (memoryLimit) {
+			this.createMemoryMonitor();
+		} else {
+			this.logger.warn(
+				'Memory limit is not set, skipping memory monitor setup'
+			);
+		}
+	}
+
+	private async setupRedis(): Promise<void> {
+		this.logger.info('Setting up Redis service');
 		try {
-			validateDependencies(
-				[{ name: 'createRedisClient', instance: createClient }],
-				this.logger
-			);
-
-			if (!this.configService.getFeatureFlags().enableRedis) {
-				this.logger.debug('Redis is disabled');
-				return null;
-			}
-
-			if (!this.redisClient) {
-				const client: RedisClientType = createClient({
-					url: this.configService.getEnvVariable('redisUrl'),
-					socket: {
-						reconnectStrategy: retries => {
-							const retryAfter = Math.min(retries * 100, 3000);
-							this.errorLogger.logWarn(
-								`Error connecting to Redis at ${this.configService.getEnvVariable('redisUrl')}, retrying in ${retryAfter}ms. Retries: ${retries}`
-							);
-							if (retries >= 10) {
-								this.handleCriticalRedisFailure(retries);
-								this.createMemoryMonitor();
-							}
-							return retryAfter;
-						}
-					}
-				});
-
-				client.on('error', error => {
-					this.errorHandler.handleError({ error });
-				});
-
-				await client.connect();
-				this.logger.info('Connected to Redis');
-				this.redisClient = client;
-			}
-
-			return this.redisClient;
-		} catch (error) {
-			this.errorHandler.handleError({
-				...HandleErrorStaticParameters,
-				error,
-				details: { reason: 'Failed to connect to Redis' }
+			const redisClient = await this.redisService.getRedisClient({
+				req: {} as import('express').Request,
+				res: {} as import('express').Response,
+				next: () => {},
+				blankRequest: {} as import('express').Request,
+				createRedisClient: createClient
 			});
-			return null;
-		}
-	}
-
-	public async getRedisClient(): Promise<RedisClientType | null> {
-		if (this.redisClient) {
-			this.errorLogger.logInfo('Redis client is already connected');
-		} else {
-			this.errorLogger.logWarn(
-				'Redis client is not connected, calling connectRedis()'
+			this.redisClient = redisClient;
+		} catch (error) {
+			this.errorLogger.logError(
+				`Failed to setup Redis service: ${error instanceof Error ? error.message : error}`
 			);
-			await this.connectRedis();
-		}
-		return this.redisClient;
-	}
-
-	public async flushRedisMemoryCache(): Promise<void> {
-		this.logger.info('Flushing in-memory cache');
-		const redisClient = await this.getRedisClient();
-
-		if (this.configService.getFeatureFlags().enableRedis) {
-			if (redisClient) {
-				try {
-					await redisClient.flushAll();
-					this.logger.info('In-memory cache flushed');
-				} catch (utilError) {
-					const utilityError = new AppError(
-						`Error flushing Redis cache: ${utilError instanceof Error ? utilError.message : utilError}`,
-						500
-					);
-					this.errorLogger.logError(utilityError.message, {});
-				}
-			} else {
-				this.errorLogger.logWarn(
-					'Redis client is not available for cache flush'
-				);
-			}
-		} else {
-			this.errorLogger.logInfo('No cache to flush, as Redis is disabled');
+			this.createMemoryMonitor();
 		}
 	}
 
@@ -139,16 +90,6 @@ export class ResourceManager {
 		}, 10000);
 	}
 
-	private handleCriticalRedisFailure(retries: number): void {
-		const serviceError = new AppError(
-			`Redis Service unavailable after ${retries} retries`
-		);
-		this.errorLogger.logError(serviceError.message, {});
-		this.errorLogger.logError(
-			'Max retries reached when trying to initialize Redis. Falling back to memory monitor.'
-		);
-	}
-
 	private manageMemory(): void {
 		const memoryUsage = process.memoryUsage();
 		const memoryLimit = this.configService.getEnvVariable('memoryLimit');
@@ -158,11 +99,13 @@ export class ResourceManager {
 		this.logger.info(
 			`Memory usage: ${usedHeapPercentage.toFixed(2)}% of heap used`
 		);
+
 		if (memoryUsage.heapUsed > memoryLimit) {
 			this.logger.warn(
 				`Memory usage exceeded the limit (${memoryLimit} bytes). Initiating memory cleanup...`
 			);
 			this.clearCaches();
+
 			if (global.gc) {
 				this.logger.info('Forcing garbage collection');
 				global.gc();
@@ -171,8 +114,10 @@ export class ResourceManager {
 					'Garbage collection is not exposed. Start the process with --expose-gc to enable forced GC.'
 				);
 			}
+
 			this.closeIdleConnections();
 			this.removeTemporaryFiles();
+
 			const postCleanupMemoryUsage = process.memoryUsage();
 			this.logger.info(
 				`Post-cleanup memory usage: ${postCleanupMemoryUsage.heapUsed} bytes`
@@ -180,14 +125,58 @@ export class ResourceManager {
 		}
 	}
 
-	private clearCaches(): void {
-		this.logger.info('Clearing application caches...');
-		// myCache.clear(); or whatever
+	public async getFromCache<T>(key: string): Promise<T | null> {
+		const cachedData = await this.redisService.get<string>(key);
+		if (cachedData) {
+			return JSON.parse(cachedData) as T;
+		}
+		return null;
 	}
 
-	private closeIdleConnections(): void {
+	public async saveToCache<T>(
+		key: string,
+		value: T,
+		expiration: number
+	): Promise<void> {
+		await this.redisService.set<T>(key, value, expiration);
+	}
+
+	private clearCaches(): void {
+		this.logger.info('Clearing application caches...');
+
+		this.redisService
+			.flushRedisMemoryCache()
+			.then(() => {
+				this.logger.info('Redis cache flushed successfully');
+			})
+			.catch(error => {
+				this.errorLogger.logError(
+					`Failed to flush Redis cache: ${error.message}`
+				);
+			});
+
+		// Clear local in-memory cache
+		if (this.appCache) {
+			this.appCache.flushAll();
+			this.logger.info('In-memory cache cleared');
+		}
+	}
+
+	private async closeIdleConnections(): Promise<void> {
 		this.logger.info('Closing idle database connections...');
-		// logic to close idle database connections or connections that are not used frequently
+
+		try {
+			const databaseService = ServiceFactory.getDatabaseService();
+			await databaseService.clearIdleConnections();
+
+			this.logger.info('Idle database connections closed successfully');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Failed to close idle connections: ${error instanceof Error ? error.message : error}`
+			);
+		}
+
+		// Optionally, close other types of idle connections (like HTTP client connections) if needed
 	}
 
 	private removeTemporaryFiles(): void {
@@ -256,6 +245,97 @@ export class ResourceManager {
 				}
 			});
 		}, 10000);
+	}
+
+	public async performHealthCheck(
+		req: import('express').Request,
+		res: import('express').Response,
+		next: import('express').NextFunction
+	): Promise<Record<string, unknown>> {
+		const redisClientStatus = await this.redisService.getRedisClient({
+			req,
+			res,
+			next,
+			blankRequest: req,
+			createRedisClient: createClient
+		});
+
+		const healthSummary: Record<string, unknown> = {
+			timestamp: new Date().toISOString(),
+			redisStatus: redisClientStatus ? 'Connected' : 'Not connected',
+			memoryUsage: this.getMemoryUsage(),
+			cpuUsage: this.getCpuUsage(),
+			diskUsage: await this.getDiskUsage(),
+			networkStatus: this.getNetworkUsage()
+		};
+
+		this.logger.info(`Health Check: ${JSON.stringify(healthSummary)}`);
+		return healthSummary;
+	}
+
+	private getMemoryUsage(): Record<string, unknown> {
+		const memoryUsage = process.memoryUsage();
+		const memoryLimit =
+			this.configService.getEnvVariable('memoryLimit') || os.totalmem();
+		const usedHeapPercentage =
+			(memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
+
+		return {
+			heapUsed: memoryUsage.heapUsed,
+			heapTotal: memoryUsage.heapTotal,
+			heapUsedPercentage: usedHeapPercentage,
+			memoryLimit,
+			isMemoryHealthy: memoryUsage.heapUsed < memoryLimit
+		};
+	}
+
+	private getCpuUsage(): Array<{ core: number; usage: string }> {
+		const cpus = os.cpus();
+		return cpus.map((cpu, index) => {
+			const total = Object.values(cpu.times).reduce(
+				(acc, time) => acc + time,
+				0
+			);
+			const usage = ((total - cpu.times.idle) / total) * 100;
+			return { core: index + 1, usage: `${usage.toFixed(2)}%` };
+		});
+	}
+
+	private async getDiskUsage(): Promise<Record<string, unknown>> {
+		const diskPath = this.configService.getEnvVariable('diskPath') || '/';
+		return new Promise(resolve => {
+			fs.stat(diskPath, (err, stats) => {
+				if (err) {
+					this.errorLogger.logError(
+						`Error getting disk usage: ${err.message}`
+					);
+					resolve({ error: err.message });
+				} else {
+					resolve({
+						diskPath,
+						diskStats: stats
+					});
+				}
+			});
+		});
+	}
+
+	private getNetworkUsage(): Record<string, unknown>[] {
+		const networkInterfaces = os.networkInterfaces();
+		return Object.keys(networkInterfaces)
+			.map(interfaceName => {
+				const netStats = networkInterfaces[interfaceName];
+				if (netStats) {
+					return netStats.map(netStat => ({
+						interface: interfaceName,
+						address: netStat.address,
+						family: netStat.family,
+						internal: netStat.internal
+					}));
+				}
+				return [];
+			})
+			.flat();
 	}
 
 	private processResourceError(error: AppError | Error): void {

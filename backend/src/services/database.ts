@@ -1,12 +1,12 @@
-import { Options, Sequelize, Dialect } from 'sequelize';
+import { Options, QueryTypes, Sequelize, Dialect } from 'sequelize';
 import { AppError } from '../errors/errorClasses';
-import { errorHandler } from './errorHandler';
 import {
 	AppLoggerServiceInterface,
 	DatabaseServiceInterface,
 	EnvVariableTypes,
 	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface
+	ErrorLoggerServiceInterface,
+	RedisServiceInterface
 } from '../index/interfaces';
 import {
 	ConfigServiceInterface,
@@ -24,6 +24,7 @@ export class DatabaseService implements DatabaseServiceInterface {
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
+	private redisService: RedisServiceInterface;
 
 	private constructor() {
 		this.configService = ServiceFactory.getConfigService();
@@ -31,6 +32,7 @@ export class DatabaseService implements DatabaseServiceInterface {
 		this.logger = ServiceFactory.getLoggerService();
 		this.errorLogger = ServiceFactory.getErrorLoggerService();
 		this.errorHandler = ServiceFactory.getErrorHandlerService();
+		this.redisService = ServiceFactory.getRedisService();
 
 		const host = this.getValidatedEnvVariable('dbHost');
 		const username = this.getValidatedEnvVariable('dbUser');
@@ -102,32 +104,24 @@ export class DatabaseService implements DatabaseServiceInterface {
 	private async connect(): Promise<void> {
 		try {
 			if (!this.sequelizeInstance) {
-				const sequelizeInitError =
-					new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-						`Sequelize instance not initialized`
-					);
-				errorHandler.handleError({
-					error: sequelizeInitError,
-					details: { reason: 'Sequelize instance INIT failed' }
-				});
-				throw sequelizeInitError;
+				throw new AppError(
+					'Sequelize instance is not initialized',
+					500
+				);
 			}
 			await this.sequelizeInstance.authenticate();
-		} catch (dbError: unknown) {
-			const dbConnectionError =
-				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-					`Failed to authenticate database connection: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-					{ originalError: dbError }
-				);
-			errorHandler.handleError({
-				error: dbError,
-				details: {
-					reason: 'Failed to authenticate database connection'
-				}
+			this.logger.info('Connected to the database');
+		} catch (error: unknown) {
+			this.errorHandler.handleError({
+				error,
+				details: { reason: 'Database connection failed' }
 			});
-			throw dbConnectionError;
-		} finally {
-			this.logger.debug('Database connection initialized');
+			throw new AppError(
+				`Failed to authenticate database connection: ${
+					(error as Error).message
+				}`,
+				500
+			);
 		}
 	}
 
@@ -220,6 +214,70 @@ export class DatabaseService implements DatabaseServiceInterface {
 		} finally {
 			this.secrets.reEncryptSecret('DB_PASSWORD');
 			this.logger.debug('Database password re-encrypted.');
+		}
+	}
+
+	public async getCachedData<T>(key: string): Promise<T | null> {
+		this.logger.info(`Fetching data from cache with key: ${key}`);
+		return await this.redisService.get<T>(key);
+	}
+
+	public async cacheData<T>(
+		key: string,
+		data: T,
+		expiration?: number
+	): Promise<void> {
+		this.logger.info(`Caching data with key: ${key}`);
+		await this.redisService.set<T>(key, data, expiration);
+	}
+
+	public async clearCache(key: string): Promise<void> {
+		this.logger.info(`Clearing cache for key: ${key}`);
+		await this.redisService.del(key);
+	}
+
+	public async queryWithCache<T extends object>(
+		query: string,
+		cacheKey: string,
+		expiration?: number
+	): Promise<T | null> {
+		const cachedData = await this.getCachedData<T>(cacheKey);
+		if (cachedData) {
+			this.logger.info(`Cache hit for key: ${cacheKey}`);
+			return cachedData;
+		}
+
+		this.logger.info(`Cache miss for key: ${cacheKey}, querying database`);
+
+		const result = await this.sequelizeInstance?.query<T>(query, {
+			type: QueryTypes.SELECT
+		});
+
+		if (result) {
+			await this.cacheData(cacheKey, result, expiration);
+		}
+
+		return result ? (result as T) : null;
+	}
+
+	public async clearIdleConnections(): Promise<void> {
+		try {
+			if (this.sequelizeInstance) {
+				this.logger.info(
+					'Checking for idle database connections to close'
+				);
+
+				await this.sequelizeInstance.close();
+				this.logger.info('All database connections have been closed');
+			} else {
+				this.logger.warn(
+					'No Sequelize instance available to close connections'
+				);
+			}
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error closing database connections: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 }

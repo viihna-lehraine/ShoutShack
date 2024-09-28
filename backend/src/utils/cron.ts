@@ -3,28 +3,34 @@ import compressing from 'compressing';
 import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
-import { ErrorHandlerService } from '../services/errorHandler';
+import { fileURLToPath } from 'url';
+import { ServiceFactory } from '../index/factory';
+import { Sequelize } from 'sequelize';
 
-export interface CronDependencies {
-	logger: Logger;
+export interface CronInterface {
 	compressing: typeof compressing;
 	exec: typeof exec;
 	fs: typeof fs;
 	path: typeof path;
 	processEnv: NodeJS.ProcessEnv;
+	sequelize: Sequelize;
 	__dirname: string;
-	errorHandler: ErrorHandlerService;
 }
 
 export function createCronJobs({
-	logger,
 	compressing,
 	exec,
 	fs,
 	path,
 	processEnv,
-	__dirname
-}: CronDependencies): void {
+	sequelize
+}: CronInterface): void {
+	const logger = ServiceFactory.getLoggerService();
+	const errorLogger = ServiceFactory.getErrorLoggerService();
+	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const __filename = fileURLToPath(import.meta.url);
+	const __dirname = path.dirname(__filename);
+
 	try {
 		if (
 			!processEnv.SERVER_LOG_PATH ||
@@ -52,7 +58,7 @@ export function createCronJobs({
 				logger.info(`${logFileName} successfully compressed`);
 				return outputFilePath;
 			} catch (error) {
-				processError(error, logger);
+				errorHandler.handleError({ error });
 				throw new Error(
 					`Error compressing log files: ${
 						error instanceof Error ? error.message : String(error)
@@ -113,7 +119,7 @@ export function createCronJobs({
 				try {
 					fs.mkdirSync(exportDir, { recursive: true });
 				} catch (error) {
-					processError(error, logger);
+					errorHandler.handleError({ error });
 					throw new Error(
 						`Error creating export directory: ${
 							error instanceof Error
@@ -149,7 +155,7 @@ export function createCronJobs({
 					'Logs have been successfully compressed and exported.'
 				);
 			} catch (error) {
-				processError(error, logger);
+				errorHandler.handleError({ error });
 				throw new Error(
 					`Error exporting logs: ${
 						error instanceof Error ? error.message : String(error)
@@ -160,11 +166,11 @@ export function createCronJobs({
 
 		const cleanupLogs = async (): Promise<void> => {
 			try {
-				await ErrorLogger.cleanupOldLogs(sequelize, logger, 30);
+				await errorLogger.cleanUpOldLogs(sequelize, 30);
 				logger.info('Scheduled log cleanup completed successfully');
 			} catch (error) {
-				processError(error, logger);
-				logger.error('Scheduld log cleanup failed');
+				errorHandler.handleError({ error });
+				logger.error('Scheduled log cleanup failed');
 			}
 		};
 
@@ -188,7 +194,7 @@ export function createCronJobs({
 				await runCommandAndLog('npm update --verbose', logFilePath);
 				logger.info('npm update completed successfully.');
 			} catch (error) {
-				processError(error, logger);
+				errorHandler.handleError({ error });
 			}
 		};
 
@@ -229,22 +235,28 @@ export function createCronJobs({
 
 			if (schedule) {
 				cron.schedule(schedule, () => {
-					exportLogs().catch(error => processError(error, logger));
+					exportLogs().catch(error =>
+						errorHandler.handleError({ error })
+					);
 				});
 			}
 
 			cron.schedule('0 0 * * *', () => {
-				cleanupLogs().catch(error => processError(error, logger));
+				cleanupLogs().catch(error =>
+					errorHandler.handleError({ error })
+				);
 			});
 
 			cron.schedule('0 * * * *', () => {
-				performNpmTasks().catch(error => processError(error, logger));
+				performNpmTasks().catch(error =>
+					errorHandler.handleError({ error })
+				);
 			});
 		};
 
 		scheduleLogJobs();
 	} catch (error) {
-		processError(error, logger);
+		errorHandler.handleError({ error });
 		throw new Error(
 			`Failed to create cron jobs: ${
 				error instanceof Error ? error.message : String(error)

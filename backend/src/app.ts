@@ -14,7 +14,7 @@ import process from 'process';
 import { createClient } from 'redis';
 import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
-import { initializeRoutes } from './routes';
+import { initializeRoutes } from './routers/baseRouter';
 import { configService } from './services/config';
 import { AppError, ErrorClasses, ErrorSeverity } from './errors/errorClasses';
 import { configurePassport } from './auth/passport';

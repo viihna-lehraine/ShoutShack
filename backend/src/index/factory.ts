@@ -3,17 +3,20 @@ import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
 import { configService, ConfigService } from '../services/config'; // Use ConfigService
+import { APIRouter } from '../routers/apiRouter';
 import { MailerService } from '../services/mailer';
 import { RedisService } from '../services/redis';
 import { blankRequest } from '../utils/constants';
 import { validateDependencies } from '../utils/helpers';
 import { AppLoggerService, ErrorLoggerService } from '../services/logger';
 import { AppLoggerServiceParameters } from './parameters';
+import { BouncerService } from '../services/bouncer';
 import { DatabaseService } from '../services/database';
 import { EnvironmentService } from '../services/environment';
 import { ErrorHandlerService } from '../services/errorHandler';
+import { HTTPSServer } from '../services/httpsServer';
 import { MulterUploadService } from '../services/multer';
-import { WebServer } from '../services/webServer';
+import { UserService } from '../services/user';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -23,11 +26,12 @@ import {
 	DatabaseServiceInterface,
 	EnvironmentServiceInterface,
 	ErrorLoggerServiceInterface,
+	HTTPSServerInterface,
 	MailerServiceInterface,
 	MulterUploadServiceInterface,
 	RedisServiceInterface,
 	SecretsStoreInterface,
-	WebServerInterface
+	UserServiceInterface
 } from './interfaces';
 import { SecretsStore } from '../services/secrets';
 
@@ -57,6 +61,14 @@ export class ServiceFactory {
 		) as ErrorLoggerService
 	);
 
+	public static getAPIRouter(): APIRouter {
+		return APIRouter.getInstance();
+	}
+
+	public static getBouncerService(): BouncerService {
+		return BouncerService.getInstance();
+	}
+
 	public static getConfigService(): ConfigService {
 		return this.configServiceInstance;
 	}
@@ -79,6 +91,31 @@ export class ServiceFactory {
 
 	public static getErrorLoggerService(): ErrorLoggerServiceInterface {
 		return this.errorLoggerService as ErrorLoggerService;
+	}
+
+	public static getHTTPSServer(app: app.Application): HTTPSServerInterface {
+		const sequelize = this.getDatabaseService().getSequelizeInstance();
+		const errorHandler = this.getErrorHandlerService();
+
+		if (!sequelize) {
+			const HTTPSServerError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					`Unable to start web server, as the sequelize instance is not initialized.`,
+					{
+						exposeToClient: false
+					}
+				);
+			errorHandler.handleError({
+				error: HTTPSServerError,
+				details: {
+					context: 'WEB_SERVER',
+					reason: 'Sequelize instance not initialized'
+				}
+			});
+			throw HTTPSServerError;
+		}
+
+		return HTTPSServer.getInstance(app, sequelize);
 	}
 
 	public static getMailerService(): MailerServiceInterface {
@@ -120,28 +157,7 @@ export class ServiceFactory {
 		return SecretsStore.getInstance();
 	}
 
-	public static getWebServer(app: app.Application): WebServerInterface {
-		const sequelize = this.getDatabaseService().getSequelizeInstance();
-		const errorHandler = this.getErrorHandlerService();
-
-		if (!sequelize) {
-			const webServerError =
-				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-					`Unable to start web server, as the sequelize instance is not initialized.`,
-					{
-						exposeToClient: false
-					}
-				);
-			errorHandler.handleError({
-				error: webServerError,
-				details: {
-					context: 'WEB_SERVER',
-					reason: 'Sequelize instance not initialized'
-				}
-			});
-			throw webServerError;
-		}
-
-		return WebServer.getInstance(app, sequelize);
+	public static getUserService(): UserServiceInterface {
+		return UserService.getInstance();
 	}
 }

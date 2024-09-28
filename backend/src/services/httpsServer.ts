@@ -2,7 +2,7 @@ import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
 import net from 'net';
 import { Sequelize } from 'sequelize';
-import { Application, Request, Response, NextFunction } from 'express';
+import { Application, Request, Response } from 'express';
 import { constants as cryptoConstants } from 'crypto';
 import { validateDependencies } from '../utils/helpers';
 import {
@@ -10,29 +10,28 @@ import {
 	ConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
+	HTTPSServerOptions,
 	RedisServiceInterface,
 	SecretsStoreInterface,
-	WebServerInterface,
-	WebServerOptions
+	HTTPSServerInterface
 } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 import { tlsCiphers } from '../utils/constants';
-import { createClient } from 'redis'; // ES module import
 
-export class WebServer implements WebServerInterface {
-	public static instance: WebServer;
+export class HTTPSServer implements HTTPSServerInterface {
+	public static instance: HTTPSServer | null = null;
 	private server: https.Server | null = null;
 	private app: Application;
 	private sequelize: Sequelize;
 	private shuttingDown = false;
 	private connections: Set<net.Socket> = new Set();
-	private options: WebServerOptions | undefined;
+	private options: HTTPSServerOptions | undefined;
 	private port: number;
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
 	private configService: ConfigServiceInterface;
-	private redis: RedisServiceInterface;
+	private redisService: RedisServiceInterface;
 	private secrets: SecretsStoreInterface;
 
 	constructor(app: Application, sequelize: Sequelize) {
@@ -42,7 +41,7 @@ export class WebServer implements WebServerInterface {
 		this.errorLogger = ServiceFactory.getErrorLoggerService();
 		this.errorHandler = ServiceFactory.getErrorHandlerService();
 		this.configService = ServiceFactory.getConfigService();
-		this.redis = ServiceFactory.getRedisService();
+		this.redisService = ServiceFactory.getRedisService();
 		this.secrets = ServiceFactory.getSecretsStore();
 		this.port = this.configService.getEnvVariable('serverPort');
 	}
@@ -50,11 +49,11 @@ export class WebServer implements WebServerInterface {
 	public static getInstance(
 		app: Application,
 		sequelize: Sequelize
-	): WebServer {
-		if (!WebServer.instance) {
-			WebServer.instance = new WebServer(app, sequelize);
+	): HTTPSServer {
+		if (!HTTPSServer.instance) {
+			HTTPSServer.instance = new HTTPSServer(app, sequelize);
 		}
-		return WebServer.instance;
+		return HTTPSServer.instance;
 	}
 
 	public async initialize(): Promise<void> {
@@ -65,7 +64,7 @@ export class WebServer implements WebServerInterface {
 				this.logger
 			);
 
-			this.options = await this.declareWebServerOptions();
+			this.options = await this.declareHTTPSServerOptions();
 
 			await this.startServer();
 		} catch (error) {
@@ -73,7 +72,7 @@ export class WebServer implements WebServerInterface {
 		}
 	}
 
-	private async declareWebServerOptions(): Promise<WebServerOptions> {
+	private async declareHTTPSServerOptions(): Promise<HTTPSServerOptions> {
 		try {
 			validateDependencies(
 				[{ name: 'tlsCiphers', instance: tlsCiphers }],
@@ -181,13 +180,7 @@ export class WebServer implements WebServerInterface {
 
 		if (this.configService.getFeatureFlags().enableRedis) {
 			try {
-				const redisClient = await this.redis.getRedisClient({
-					req: {} as Request,
-					res: {} as Response,
-					next: (() => {}) as NextFunction,
-					blankRequest: {} as Request,
-					createRedisClient: createClient
-				});
+				const redisClient = await this.redisService.getRedisClient();
 				if (redisClient) {
 					await redisClient.quit();
 					this.logger.info('Redis connection closed.');
@@ -198,13 +191,7 @@ export class WebServer implements WebServerInterface {
 		}
 
 		try {
-			await this.redis.flushRedisMemoryCache({
-				req: {} as Request,
-				res: {} as Response,
-				next: (() => {}) as NextFunction,
-				blankRequest: {} as Request,
-				createRedisClient: createClient
-			});
+			await this.redisService.flushRedisMemoryCache();
 			this.logger.info('Redis memory cache flushed.');
 		} catch (error) {
 			this.handleError(error, 'FLUSH_REDIS');
@@ -241,6 +228,77 @@ export class WebServer implements WebServerInterface {
 			}, 100);
 		});
 	}
+
+	public async handleRequest(req: Request, res: Response): Promise<void> {
+		const cacheKey = `api:${req.url}`;
+		try {
+			const cachedResponse =
+				await this.redisService.get<string>(cacheKey);
+
+			if (cachedResponse) {
+				res.send(JSON.parse(cachedResponse));
+				return;
+			}
+
+			const response = await this.fetchResponse(req);
+
+			await this.redisService.set(
+				cacheKey,
+				JSON.stringify(response),
+				3600 // TTL = 1 hr
+			);
+
+			res.send(response);
+		} catch (error) {
+			this.handleError(error, 'HANDLE_REQUEST');
+		}
+	}
+
+	private async fetchResponse(req: Request): Promise<any> {
+		if (req.url.startsWith('/api')) {
+			return await this.handleApiRequest(req);
+		} else if (req.url.startsWith('/static')) {
+			return await this.handleStaticRequest(req);
+		} else {
+			return await this.handleUnknownRequest(req);
+		}
+	}
+
+	private async handleApiRequest(req: Request): Promise<any> {
+		const apiRouter = express.Router();
+
+		const userRoutes = initializeUserRoutes({
+			// Pass the necessary dependencies here
+			UserRoutes,
+			argon2,
+			jwt,
+			axios,
+			bcrypt,
+			uuidv4,
+			xss,
+			generateConfirmationEmailTemplate,
+			getTransporter,
+			totpMfa
+		});
+
+		const validationRoutes = initializeValidationRoutes({
+			// validator: /* your validator instance */
+		});
+
+		apiRouter.use('/users', userRoutes);
+		apiRouter.use('/validate', validationRoutes);
+
+		return new Promise((resolve, reject) => {
+			apiRouter(req, {} as Response, (err: any) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve({ message: 'API request handled successfully' });
+				}
+			});
+		});
+	}
+
 
 	private handleError(error: unknown, action: string): void {
 		const appError =

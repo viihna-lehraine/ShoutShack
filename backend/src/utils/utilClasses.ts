@@ -1,5 +1,5 @@
-import { appLogger } from '../services/logger';
 import {
+	AppLoggerServiceInterface,
 	DependencyInterface,
 	ValidateDependenciesInterface
 } from '../index/interfaces';
@@ -10,9 +10,9 @@ export class DependencyValidationService
 {
 	validateDependencies(
 		dependencies: DependencyInterface[],
-		appLogger: AppLogger
+		logger: AppLoggerServiceInterface
 	): void {
-		validateDependencies(dependencies, appLogger);
+		validateDependencies(dependencies, logger);
 	}
 }
 

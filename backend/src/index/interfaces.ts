@@ -1,11 +1,13 @@
 import { Model } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { AppError, ClientError, ErrorClasses } from '../errors/errorClasses';
 import RedisStore from 'connect-redis';
 import { Transporter } from 'nodemailer';
 import { Sequelize } from 'sequelize';
 import { Session } from 'express-session';
+import { User } from '../models/UserModelFile';
+import { InferAttributes, WhereOptions } from 'sequelize/types';
 
 //
 ///
@@ -111,6 +113,7 @@ export interface EmailMFAInterface {
 
 export interface EnvVariableTypes {
 	batchReEncryptSecretsInterval: number;
+	blacklistSyncInterval: number;
 	clearExpiredSecretsInterval: number;
 	cronLoggerSetting: number;
 	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
@@ -309,13 +312,9 @@ export interface InitMiddlewareParameters {
 	fsModule: typeof import('fs');
 	hpp: typeof import('hpp');
 	initCsrf: typeof import('../middleware/csrf').initCsrf;
-	initIpBlacklist: typeof import('../middleware/ipBlacklist').initIpBlacklist;
 	initJwtAuth: typeof import('../middleware/jwtAuth').initJwtAuth;
 	initializePassportAuthMiddleware: typeof import('../middleware/passportAuth').initializePassportAuthMiddleware;
-	initializeRateLimitMiddleware: typeof import('../middleware/rateLimit').initializeRateLimitMiddleware;
 	initializeSecurityHeaders: typeof import('../middleware/securityHeaders').initializeSecurityHeaders;
-	initializeSlowdownMiddleware: typeof import('../middleware/slowdown').initializeSlowdownMiddleware;
-	initializeValidatorMiddleware: typeof import('../middleware/validator').initializeValidatorMiddleware;
 	morgan: typeof import('morgan');
 	passport: typeof import('passport');
 	session: typeof import('express-session');
@@ -402,30 +401,8 @@ export interface PassportServiceInterface {
 	readonly argon2: typeof import('argon2');
 }
 
-export interface RedisServiceInterface {
-	connectRedis(
-		deps: RedisServiceDeps
-	): Promise<import('redis').RedisClientType | null>;
-	getRedisClient(
-		deps: GetRedisClientInterface
-	): Promise<import('redis').RedisClientType | null>;
-	flushRedisMemoryCache(deps: FlushRedisMemoryCacheInterface): Promise<void>;
-}
-
-export interface RemoveIpFromBlacklistInterface {
-	ip: string;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-}
-
 export interface RouteParams {
 	app: import('express').Application;
-}
-
-export interface SaveIpBlacklistInterface {
-	fsModule: typeof import('fs').promises;
 }
 
 export interface SecretsMap {
@@ -467,7 +444,7 @@ export interface SlowdownSessionInterface extends Session {
 
 export interface UserInstanceInterface {
 	id: string;
-	userid: number;
+	userId?: number | undefined;
 	username: string;
 	password: string;
 	email: string;
@@ -481,62 +458,6 @@ export interface UserInstanceInterface {
 		argon2: typeof import('argon2')
 	) => Promise<boolean>;
 	save: () => Promise<void>;
-}
-
-export interface UserRoutesInterface {
-	UserRoutes: UserRoutesModelInterface;
-	argon2: {
-		hash(
-			data: string | Buffer,
-			options?: Record<string, unknown>
-		): Promise<string>;
-		verify(
-			plain: string | Buffer,
-			hash: string,
-			options?: Record<string, unknown>
-		): Promise<boolean>;
-		argon2id: number;
-	};
-	jwt: typeof import('jsonwebtoken');
-	axios: {
-		get<T>(url: string, config?: object): Promise<{ data: T }>;
-		post<T>(
-			url: string,
-			data?: unknown,
-			config?: object
-		): Promise<{ data: T }>;
-		put<T>(
-			url: string,
-			data?: unknown,
-			config?: object
-		): Promise<{ data: T }>;
-		delete<T>(url: string, config?: object): Promise<{ data: T }>;
-	};
-	bcrypt: typeof import('bcrypt');
-	uuidv4: () => string;
-	xss: (input: string) => string;
-	generateConfirmationEmailTemplate: (
-		userName: string,
-		confirmationLink: string
-	) => string;
-	getTransporter: (deps: MailerServiceInterface) => Promise<Transporter>;
-	totpMfa: {
-		generateQRCode(otpauth_url: string): Promise<string>;
-		generateTOTPSecret(): TOTPSecretInterface;
-		verifyTOTPToken(secret: string, token: string): boolean;
-	};
-}
-
-export interface UserRoutesModelInterface {
-	validatePassword: (password: string) => boolean;
-	findOne: (criteria: object) => Promise<UserInstanceInterface | null>;
-	create: (
-		user: Partial<UserInstanceInterface>
-	) => Promise<UserInstanceInterface>;
-}
-
-export interface TestRoutesInterface {
-	app: import('express').Application;
 }
 
 export interface TLSKeys {
@@ -560,9 +481,25 @@ export interface TOTPSecretInterface {
 	otpauth_url: string;
 }
 
+export interface UserAttributesInterface {
+	id: string;
+	userId?: number | undefined;
+	username: string;
+	password: string;
+	email: string;
+	isVerified: boolean;
+	resetPasswordToken?: string | null;
+	resetPasswordExpires?: Date | null;
+	isMfaEnabled: boolean;
+	creationDate: Date;
+}
+
 export interface UserInstanceInterface {
 	id: string;
+	userId?: number | undefined;
 	username: string;
+	password: string;
+	isAccountVerified: boolean;
 	comparePassword: (
 		password: string,
 		argon2: typeof import('argon2')
@@ -651,6 +588,27 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 	isAppLogger(logger: unknown): logger is AppLoggerServiceInterface | unknown;
 }
 
+export interface BouncerServiceInterface {
+	rateLimitMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void>;
+	slowdownMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => void;
+	ipBlacklistMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void>;
+	addIpToBlacklist(ip: string): Promise<void>;
+	removeIpFromBlacklist(ip: string): Promise<void>;
+	preInitIpBlacklist(): Promise<void>;
+}
+
 export interface ConfigSecretsInterface {
 	readonly logger: AppLoggerServiceInterface;
 	readonly execSync: typeof import('child_process').execSync;
@@ -676,6 +634,7 @@ export interface ConfigServiceInterface {
 export interface DatabaseServiceInterface {
 	getSequelizeInstance(): Sequelize | null;
 	initializeDatabase(): Promise<Sequelize>;
+	clearIdleConnections(): Promise<void>;
 }
 
 export interface DeclareWebServerOptionsInterface {
@@ -740,6 +699,12 @@ export interface ErrorHandlerServiceInterface {
 	}): Promise<void>;
 }
 
+export interface HTTPSServerInterface {
+	initialize: () => Promise<void>;
+	startServer: () => Promise<void>;
+	shutdownServer: () => Promise<void>;
+}
+
 export interface MulterUploadServiceInterface {
 	setFileSizeLimit(limit: number): void;
 	setAllowedMimeTypes(mimeTypes: string[]): void;
@@ -748,6 +713,20 @@ export interface MulterUploadServiceInterface {
 		validationCallback?: (file: Express.Multer.File) => boolean
 	): import('multer').Multer | undefined;
 	onUploadSuccess(callback: (file: Express.Multer.File) => void): void;
+}
+
+export interface RedisServiceInterface {
+	get<T>(key: string): Promise<T | null>;
+	set<T>(key: string, value: T, expiration?: number): Promise<void>;
+	del(key: string): Promise<void>;
+	exists(key: string): Promise<boolean>;
+	increment(key: string, expiration?: number): Promise<number | null>;
+	getRedisClient(): Promise<import('redis').RedisClientType | null>;
+	flushRedisMemoryCache(): Promise<void>;
+}
+
+export interface BaseRouterInterface {
+	getRouter(): Router;
 }
 
 export interface SecretsStoreInterface {
@@ -766,25 +745,116 @@ export interface SecretsStoreInterface {
 	batchReEncryptSecrets(): void;
 }
 
-export interface WebServerInterface {
-	initialize: () => Promise<void>;
-	startServer: () => Promise<void>;
-	shutdownServer: () => Promise<void>;
+export interface UserServiceInterface {
+	validatePassword: (password: string) => boolean;
+	findOne: (
+		criteria: WhereOptions<InferAttributes<User>>
+	) => Promise<UserInstanceInterface | null>;
+	createUser: (
+		userDetails: Omit<UserAttributesInterface, 'id' | 'creationDate'>
+	) => Promise<UserInstanceInterface | null>;
+	loginUser: (req: Request, res: Response) => Promise<Response | void>;
+	comparePassword: (
+		user: UserInstanceInterface,
+		password: string
+	) => Promise<boolean>;
+	resetPassword: (
+		user: UserInstanceInterface,
+		newPassword: string
+	) => Promise<UserInstanceInterface | null>;
+	findUserByEmail: (email: string) => Promise<UserInstanceInterface | null>;
+	updateUser: (
+		user: UserInstanceInterface,
+		updatedDetails: Partial<UserInstanceInterface>
+	) => Promise<UserInstanceInterface | null>;
+	deleteUser: (userId: string) => Promise<void>;
+	verifyUserAccount: (userId: string) => Promise<boolean>;
+	generateResetToken: (user: UserInstanceInterface) => Promise<string | null>;
+	validateResetToken: (
+		userId: string,
+		token: string
+	) => Promise<UserInstanceInterface | null>;
+	enableMfa: (userId: string) => Promise<boolean>;
+	disableMfa: (userId: string) => Promise<boolean>;
+	findUserById: (userId: string) => Promise<UserInstanceInterface | null>;
+	recoverPassword: (email: string) => Promise<void>;
+	generateEmail2FA: (email: string) => Promise<void>;
+	verifyEmail2FA: (email: string, email2FACode: string) => Promise<boolean>;
+	generateTOTP: (
+		userId: string
+	) => Promise<{ secret: string; qrCodeUrl: string }>;
+	verifyTOTP: (userId: string, token: string) => Promise<boolean>;
 }
 
-export interface WebServerDeps {
-	app: import('express').Application;
-	blankRequest: import('express').Request;
-	DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface;
-	sequelize: import('sequelize').Sequelize | null;
+export interface ValidatorServiceInterface {
+	validateEntry(req: Request, res: Response, next: NextFunction): void;
+	registrationValidationRules(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): void;
+	handleValidationErrors(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): Response | void;
 }
 
-export type WebServerOptions = import('tls').SecureContextOptions;
+export type HTTPSServerOptions = import('tls').SecureContextOptions;
 
 ///
 //// ***** SERVICE DEPENDENCY INTERFACES ***** /////////
 ///
 //
+
+export interface APIRouterDeps {
+	UserRoutes: UserServiceInterface;
+	argon2: {
+		hash(
+			data: string | Buffer,
+			options?: Record<string, unknown>
+		): Promise<string>;
+		verify(
+			plain: string | Buffer,
+			hash: string,
+			options?: Record<string, unknown>
+		): Promise<boolean>;
+		argon2id: number;
+	};
+	jwt: typeof import('jsonwebtoken');
+	axios: {
+		get<T>(url: string, config?: object): Promise<{ data: T }>;
+		post<T>(
+			url: string,
+			data?: unknown,
+			config?: object
+		): Promise<{ data: T }>;
+		put<T>(
+			url: string,
+			data?: unknown,
+			config?: object
+		): Promise<{ data: T }>;
+		delete<T>(url: string, config?: object): Promise<{ data: T }>;
+	};
+	bcrypt: typeof import('bcrypt');
+	uuidv4: () => string;
+	xss: (input: string) => string;
+	generateConfirmationEmailTemplate: (
+		userName: string,
+		confirmationLink: string
+	) => string;
+	getTransporter: (deps: MailerServiceInterface) => Promise<Transporter>;
+	totpMfa: {
+		generateTOTPSecret: () => TOTPSecretInterface;
+		generateTOTPToken: (secret: string) => string;
+		verifyTOTPToken: (secret: string, token: string) => boolean;
+		generateQRCode: (otpauth_url: string) => Promise<string>;
+	};
+	zxcvbn: (password: string) => {
+		score: number;
+		guesses: number;
+	};
+}
 
 export interface AppLoggerServiceDeps {
 	winston: {
@@ -815,6 +885,13 @@ export interface ErrorLoggerServiceDeps {
 	readonly handleError: typeof import('../services/errorHandler').errorHandler.handleError;
 }
 
+export interface HTTPSServerDeps {
+	app: import('express').Application;
+	blankRequest: import('express').Request;
+	DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface;
+	sequelize: import('sequelize').Sequelize | null;
+}
+
 export interface MulterUploadServiceDeps {
 	multer: typeof import('multer');
 	fileTypeFromBuffer: typeof import('file-type').fileTypeFromBuffer;
@@ -840,6 +917,49 @@ export interface RedisServiceDeps {
 		logger: AppLoggerServiceInterface
 	) => void;
 	readonly blankRequest: import('express').Request;
+}
+
+export interface UserServiceDeps {
+	argon2: {
+		hash(
+			data: string | Buffer,
+			options?: Record<string, unknown>
+		): Promise<string>;
+		verify(
+			plain: string | Buffer,
+			hash: string,
+			options?: Record<string, unknown>
+		): Promise<boolean>;
+		argon2id: number;
+	};
+	jwt: typeof import('jsonwebtoken');
+	bcrypt: typeof import('bcrypt');
+	uuidv4: () => string;
+	axios: {
+		get<T>(url: string, config?: object): Promise<{ data: T }>;
+		post<T>(
+			url: string,
+			data?: unknown,
+			config?: object
+		): Promise<{ data: T }>;
+		put<T>(
+			url: string,
+			data?: unknown,
+			config?: object
+		): Promise<{ data: T }>;
+		delete<T>(url: string, config?: object): Promise<{ data: T }>;
+	};
+	xss: (input: string) => string;
+	zxcvbn: (password: string) => {
+		score: number;
+		guesses: number;
+	};
+	totpMfa: {
+		generateTOTPSecret: () => TOTPSecretInterface;
+		generateTOTPToken: (secret: string) => string;
+		verifyTOTPToken: (secret: string, token: string) => boolean;
+		generateQRCode: (otpauth_url: string) => Promise<string>;
+	};
 }
 
 //

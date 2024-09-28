@@ -17,11 +17,6 @@ import { secretsStore } from '../services/secrets';
 import { createJwt } from '../auth/jwt';
 import * as interfaces from './interfaces';
 import { initCsrf } from '../middleware/csrf';
-import { initIpBlacklist } from '../middleware/ipBlacklist';
-import { initializeRateLimitMiddleware } from 'src/middleware/rateLimit';
-import { initializeSecurityHeaders } from 'src/middleware/securityHeaders';
-import { initializeSlowdownMiddleware } from 'src/middleware/slowdown';
-import { initializeValidatorMiddleware } from 'src/middleware/validator';
 import {
 	fidoAuthRequireResidentKeyAsBoolean,
 	fidoCryptoParamsAsArray,
@@ -65,6 +60,10 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	batchReEncryptSecretsInterval: parseInt(
 		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!,
 		10
+	),
+	blacklistSyncInterval: parseInt(
+		process.env.BLACKLIST_SYNC_INTERVAL!,
+		3600000
 	),
 	clearExpiredSecretsInterval: parseInt(
 		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!,
@@ -211,16 +210,8 @@ export const InitMiddlewareStaticParameters = {
 	cors,
 	express,
 	fsModule: fs,
-	// getRedisClient,
 	hpp,
 	initCsrf,
-	initIpBlacklist,
-	// initJwtAuth: () => passport.authenticate('jwt', { session: false }),
-	// initializePassportAuthMiddleware: () => passport.authenticate('local'),
-	initializeRateLimitMiddleware,
-	initializeSecurityHeaders,
-	initializeSlowdownMiddleware,
-	initializeValidatorMiddleware,
 	morgan,
 	passport,
 	session,
@@ -230,17 +221,6 @@ export const InitMiddlewareStaticParameters = {
 };
 
 export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {
-	fsModule: fsPromises
-};
-
-export const RemoveIpFromBlacklistStaticParameters: Omit<
-	interfaces.RemoveIpFromBlacklistInterface,
-	'ip'
-> = {
-	validateDependencies
-};
-
-export const SaveIpBlacklistParameters: interfaces.SaveIpBlacklistInterface = {
 	fsModule: fsPromises
 };
 
