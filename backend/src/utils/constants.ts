@@ -27,6 +27,21 @@ export const hashConfig = {
 	parallelism: 1
 };
 
+export const sensitiveFields: string[] = [
+	'email',
+	'key',
+	'newPassword',
+	'oldPassword',
+	'passphrase',
+	'password',
+	'totpSecret',
+	'email2faToken',
+	'email2faTokenExpires',
+	'secret',
+	'token',
+	'username'
+];
+
 export const tlsCiphers: string[] = [
 	'ECDHE-ECDSA-AES256-GCM-SHA384',
 	'ECDHE-RSA-AES256-GCM-SHA384',

@@ -66,6 +66,8 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 			this.options = await this.declareHTTPSServerOptions();
 
+			this.errorHandler.setShutdownHandler(() => this.shutdownServer());
+
 			await this.startServer();
 		} catch (error) {
 			this.handleError(error, 'INITIALIZE_SERVER');
@@ -201,6 +203,13 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	public async shutdownServer(): Promise<void> {
+		if (this.shuttingDown) {
+			this.logger.warn('Shutdown already in progress.');
+			return;
+		}
+
+		this.shuttingDown = true;
+
 		try {
 			this.logger.info('Initiating server shutdown...');
 			await this.cleanupResources();
@@ -298,7 +307,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 			});
 		});
 	}
-
 
 	private handleError(error: unknown, action: string): void {
 		const appError =

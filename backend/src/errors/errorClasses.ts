@@ -63,7 +63,7 @@ export class ClientError extends RootError {
 	constructor(
 		errorMessage: string,
 		statusCode: number = 400,
-		severity: ErrorSeverityType = ErrorSeverity.RECOVERABLE, // disallow use of ErrorSeverity.FATAL here
+		severity: ErrorSeverityType = ErrorSeverity.RECOVERABLE,
 		errorCode: string = ERROR_CODES.CLIENT_ERROR,
 		details: ErrorDetails = {}
 	) {

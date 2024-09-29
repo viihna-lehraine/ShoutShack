@@ -13,9 +13,7 @@ import {
 } from '../index/interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
-import { AppLoggerService, ErrorLoggerService } from './logger';
-import { AppLoggerServiceParameters } from '../index/parameters';
-import { sanitizeRequestBody } from '../utils/helpers';
+import { sanitizeRequestBody } from '../utils/validator';
 
 export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 	private static instance: ErrorHandlerService;
@@ -23,6 +21,7 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 	public ErrorSeverity = ErrorSeverity;
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
+	private shutdownFunction: (() => Promise<void>) | null = null;
 
 	private constructor(
 		logger: AppLoggerServiceInterface,
@@ -41,7 +40,7 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 				logger,
 				errorLogger
 			);
-			// ErrorHandlerService.instance.initializeGlobalErrorHandlers();
+			ErrorHandlerService.instance.initializeGlobalErrorHandlers();
 		}
 		return ErrorHandlerService.instance;
 	}
@@ -243,55 +242,53 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 		);
 	}
 
-	/*
 	public initializeGlobalErrorHandlers(): void {
-		// Handle unhandled promise rejections
+		process.on('SIGINT', async () => {
+			this.logger.logInfo('Received SIGINT. Gracefully shutting down...');
+			await this.performGracefulShutdown();
+		});
+
+		process.on('SIGTERM', async () => {
+			this.logger.logInfo(
+				'Received SIGTERM. Gracefully shutting down...'
+			);
+			await this.performGracefulShutdown();
+		});
+
 		process.on('unhandledRejection', (reason, promise) => {
 			const rejectionMessage = `Unhandled promise rejection: ${reason}`;
-			const details = { reason, promise };
-
 			this.handleError({
 				error: new Error(rejectionMessage),
-				details,
+				details: { reason, promise },
 				action: 'unhandledRejection'
 			});
-
 			console.error(rejectionMessage);
 		});
 
-		process.on('uncaughtException', (error) => {
+		process.on('uncaughtException', error => {
 			this.handleCriticalError({
 				error,
 				details: { action: 'uncaughtException' }
 			});
-
 			console.error('Uncaught Exception:', error);
-			// Optional: Exit the process after logging in production
 			if (process.env.NODE_ENV === 'production') {
 				process.exit(1);
 			}
 		});
-
-		// Handle graceful shutdown on SIGINT/SIGTERM
-		process.on('SIGINT', async () => {
-			console.log('Received SIGINT. Gracefully shutting down...');
-			await this.performGracefulShutdown();
-			process.exit(0);
-		});
-
-		process.on('SIGTERM', async () => {
-			console.log('Received SIGTERM. Gracefully shutting down...');
-			await this.performGracefulShutdown();
-			process.exit(0);
-		});
 	}
-	*/
 
-	/*
+	public setShutdownHandler(shutdownFn: () => Promise<void>): void {
+		this.shutdownFunction = shutdownFn;
+	}
+
 	private async performGracefulShutdown(): Promise<void> {
 		try {
-			await someService.stop();
-			this.logger.logInfo('Services shut down successfully.');
+			if (this.shutdownFunction) {
+				this.logger.logInfo('Performing graceful shutdown...');
+				await this.shutdownFunction();
+			} else {
+				this.logger.logError('Shutdown function not set.');
+			}
 		} catch (error) {
 			this.handleCriticalError({
 				error,
@@ -300,14 +297,4 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 			process.exit(1);
 		}
 	}
-	*/
 }
-
-export const errorHandler = ErrorHandlerService.getInstance(
-	AppLoggerService.getInstance(
-		AppLoggerServiceParameters
-	) as AppLoggerServiceInterface,
-	ErrorLoggerService.getInstance(
-		AppLoggerServiceParameters
-	) as ErrorLoggerServiceInterface
-);

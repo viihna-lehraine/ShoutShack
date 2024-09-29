@@ -1,218 +1,344 @@
 import { BaseRouter } from './baseRouter';
-import { Request, Response, NextFunction } from 'express';
-import { UserServiceInterface } from '../index/interfaces';
+import {
+	CacheServiceInterface,
+	UserControllerInterface
+} from '../index/interfaces';
+import { NextFunction, Request, Response } from 'express';
+import { ServiceFactory } from '../index/factory';
+import { check } from 'express-validator';
+import { handleValidationErrors } from '../utils/validator';
 
 export class APIRouter extends BaseRouter {
 	private static instance: APIRouter | null = null;
-	private userService: UserServiceInterface;
+	private userController: UserControllerInterface;
+	private cacheService: CacheServiceInterface;
 
-	constructor(userService: UserServiceInterface) {
+	constructor() {
 		super();
-		this.userService = userService;
+		this.userController = ServiceFactory.getUserController();
+		this.cacheService = ServiceFactory.getCacheService();
 		this.setUpRoutes();
 	}
 
-	public static getInstance(userService: UserServiceInterface): APIRouter {
+	public static getInstance(): APIRouter {
 		if (!APIRouter.instance) {
-			APIRouter.instance = new APIRouter(userService);
+			APIRouter.instance = new APIRouter();
 		}
-
 		return APIRouter.instance;
 	}
 
 	private setUpRoutes(): void {
 		this.router.post(
 			'/register',
-			this.asyncHandler(this.registerUser.bind(this))
+			[
+				check('username')
+					.isLength({ min: 3 })
+					.withMessage('Username must be at least 3 characters long')
+					.trim()
+					.escape(),
+				check('email')
+					.isEmail()
+					.withMessage('Please provide a valid email address')
+					.normalizeEmail(),
+				check('password')
+					.isLength({ min: 8 })
+					.withMessage('Password must be at least 8 characters long')
+					.matches(/[A-Z]/)
+					.withMessage(
+						'Password must contain at least one uppercase letter'
+					)
+					.matches(/[a-z]/)
+					.withMessage(
+						'Password must contain at least one lowercase letter'
+					)
+					.matches(/\d/)
+					.withMessage('Password must contain at least one digit')
+					.matches(/[^\w\s]/)
+					.withMessage(
+						'Password must contain at least one special character'
+					),
+				check('confirmPassword')
+					.custom((value, { req }) => value === req.body.password)
+					.withMessage('Passwords do not match'),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					try {
+						const result = await this.userController.createUser(
+							req.body
+						);
+						return res.json(result);
+					} catch (err) {
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/login',
-			this.asyncHandler(this.loginUser.bind(this))
+			[
+				check('email')
+					.isEmail()
+					.withMessage('Please provide a valid email address')
+					.normalizeEmail(),
+				check('password')
+					.notEmpty()
+					.withMessage('Password is required'),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					const cacheKey = `login:${req.body.email}`;
+					const cachedResponse = await this.cacheService.get(
+						cacheKey,
+						'userLogin'
+					);
+					if (cachedResponse) {
+						return res.json(cachedResponse);
+					}
+
+					try {
+						const result = await this.userController.loginUser(
+							req.body.email,
+							req.body.password
+						);
+						await this.cacheService.set(
+							cacheKey,
+							result,
+							'userLogin',
+							3600
+						);
+						return res.json(result);
+					} catch (err) {
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/recover-password',
-			this.asyncHandler(this.recoverPassword.bind(this))
+			[
+				check('email')
+					.isEmail()
+					.withMessage('Please provide a valid email address')
+					.normalizeEmail(),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					const cacheKey = `recover-password:${req.body.email}`;
+					const cachedResponse = await this.cacheService.get(
+						cacheKey,
+						'recoverPassword'
+					);
+					if (cachedResponse) {
+						return res.json(cachedResponse);
+					}
+
+					try {
+						await this.userController.recoverPassword(
+							req.body.email
+						);
+						const response = {
+							message: 'Password recovery email sent'
+						};
+						await this.cacheService.set(
+							cacheKey,
+							response,
+							'recoverPassword',
+							3600
+						);
+						return res.json(response);
+					} catch (err) {
+						this.errorLogger.logError('Password recovery failed');
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/generate-totp',
-			this.asyncHandler(this.generateTOTP.bind(this))
+			[
+				check('userId').notEmpty().withMessage('User ID is required'),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					const cacheKey = `generate-totp:${req.body.userId}`;
+					const cachedResponse = await this.cacheService.get(
+						cacheKey,
+						'generateTOTP'
+					);
+					if (cachedResponse) {
+						return res.json(cachedResponse);
+					}
+
+					try {
+						const result = await this.userController.generateTOTP(
+							req.body.userId
+						);
+						await this.cacheService.set(
+							cacheKey,
+							result,
+							'generateTOTP',
+							3600
+						);
+						return res.json(result);
+					} catch (err) {
+						this.errorLogger.logError('TOTP generation failed');
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/verify-totp',
-			this.asyncHandler(this.verifyTOTP.bind(this))
+			[
+				check('userId').notEmpty().withMessage('User ID is required'),
+				check('token').notEmpty().withMessage('Token is required'),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					try {
+						const isValid = await this.userController.verifyTOTP(
+							req.body.userId,
+							req.body.token
+						);
+						return res.json({ isValid });
+					} catch (err) {
+						this.errorLogger.logError('TOTP verification failed');
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/generate-email-2fa',
-			this.asyncHandler(this.generateEmail2FA.bind(this))
+			[
+				check('email')
+					.isEmail()
+					.withMessage('Please provide a valid email address')
+					.normalizeEmail(),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					const cacheKey = `generate-email-2fa:${req.body.email}`;
+					const cachedResponse = await this.cacheService.get(
+						cacheKey,
+						'generateEmail2FA'
+					);
+					if (cachedResponse) {
+						return res.json(cachedResponse);
+					}
+
+					try {
+						await this.userController.generateEmail2FA(
+							req.body.email
+						);
+						const response = { message: '2FA code sent' };
+						await this.cacheService.set(
+							cacheKey,
+							response,
+							'generateEmail2FA',
+							3600
+						);
+						return res.json(response);
+					} catch (err) {
+						this.errorLogger.logError(
+							'Email 2FA generation failed'
+						);
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
+
 		this.router.post(
 			'/verify-email-2fa',
-			this.asyncHandler(this.verifyEmail2FA.bind(this))
+			[
+				check('email')
+					.isEmail()
+					.withMessage('Please provide a valid email address')
+					.normalizeEmail(),
+				check('email2FACode')
+					.notEmpty()
+					.withMessage('2FA code is required'),
+				handleValidationErrors
+			],
+			this.asyncHandler(
+				async (req: Request, res: Response, next: NextFunction) => {
+					try {
+						const isValid =
+							await this.userController.verifyEmail2FA(
+								req.body.email,
+								req.body.email2FACode
+							);
+						return res.json({ isValid });
+					} catch (err) {
+						this.errorLogger.logError(
+							'Email 2FA verification failed'
+						);
+						this.errorHandler.expressErrorHandler()(
+							err as Error,
+							req,
+							res,
+							next
+						);
+						next(err);
+						return;
+					}
+				}
+			)
 		);
-	}
-
-	private async registerUser(
-		req: Request,
-		res: Response
-	): Promise<Response | void> {
-		try {
-			const { username, email, password, confirmPassword } = req.body;
-
-			if (password !== confirmPassword) {
-				return res.status(400).json({
-					password: 'Registration failure: passwords do not match'
-				});
-			}
-
-			await this.userService.createUser({
-				username,
-				email,
-				password,
-				isVerified: false,
-				isMfaEnabled: false
-			});
-
-			this.logger.debug(`User ${username} registered successfully`);
-
-			return res.json({
-				message: 'Account registered! Please confirm via email.'
-			});
-		} catch (err) {
-			this.errorHandler.handleError({
-				error: err || 'User registration failed'
-			});
-			return res.status(500).json({
-				error: 'Registration failed. Please try again.'
-			});
-		}
-	}
-
-	private async loginUser(
-		req: Request,
-		res: Response
-	): Promise<Response | void> {
-		try {
-			this.logger.debug(`Login request received`);
-
-			const response = await this.userService.loginUser(req, res);
-			return response;
-		} catch (err) {
-			this.errorHandler.handleError({
-				error: err || 'Login failed'
-			});
-			return res.status(500).json({ error: 'Login - Server error' });
-		}
-	}
-
-	private async recoverPassword(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<Response | void> {
-		const { email } = req.body;
-		try {
-			await this.userService.recoverPassword(email);
-			return res.json({
-				message: `Password reset link sent to ${email}`
-			});
-		} catch (err) {
-			this.errorHandler.expressErrorHandler()(
-				err as Error,
-				req,
-				res,
-				next
-			);
-			return res.status(500).json({
-				error: 'Password recovery failed due to an unknown error. Please try again.'
-			});
-		}
-	}
-
-	private async generateEmail2FA(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<Response | void> {
-		const { email } = req.body;
-		try {
-			await this.userService.generateEmail2FA(email);
-			return res.json({ message: '2FA code sent to email' });
-		} catch (err) {
-			this.errorHandler.expressErrorHandler()(
-				err as Error,
-				req,
-				res,
-				next
-			);
-			return res.status(500).json({
-				error: 'Generate 2FA: internal server error'
-			});
-		}
-	}
-
-	private async verifyEmail2FA(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<Response | void> {
-		const { email, email2FACode } = req.body;
-		try {
-			const isEmail2FACodeValid = await this.userService.verifyEmail2FA(
-				email,
-				email2FACode
-			);
-			if (!isEmail2FACodeValid) {
-				return res
-					.status(400)
-					.json({ error: 'Invalid or expired 2FA code' });
-			}
-			return res.json({ message: '2FA code verified successfully' });
-		} catch (err) {
-			this.errorHandler.expressErrorHandler()(
-				err as Error,
-				req,
-				res,
-				next
-			);
-			return res.status(500).json({ error: 'Internal server error' });
-		}
-	}
-
-	private async generateTOTP(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<Response | void> {
-		try {
-			const { userId } = req.body;
-			const { secret, qrCodeUrl } =
-				await this.userService.generateTOTP(userId);
-			return res.json({ secret, qrCodeUrl });
-		} catch (err) {
-			this.handleRouteError(err as Error, req, res, next);
-			return res.status(500).json({
-				error: 'Unable to generate TOTP secret. Please try again.'
-			});
-		}
-	}
-
-	private async verifyTOTP(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<Response | void> {
-		const { userId, token } = req.body;
-		try {
-			const isTOTPTokenValid = await this.userService.verifyTOTP(
-				userId,
-				token
-			);
-			return res.json({ isTOTPTokenValid });
-		} catch (err) {
-			this.handleRouteError(err as Error, req, res, next);
-			return res.status(500).json({
-				error: 'Unable to verify TOTP token. Please try again.'
-			});
-		}
 	}
 }

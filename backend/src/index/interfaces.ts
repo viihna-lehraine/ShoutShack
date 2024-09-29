@@ -8,6 +8,7 @@ import { Sequelize } from 'sequelize';
 import { Session } from 'express-session';
 import { User } from '../models/UserModelFile';
 import { InferAttributes, WhereOptions } from 'sequelize/types';
+import { RedisClientType } from 'redis';
 
 //
 ///
@@ -53,20 +54,6 @@ export interface AddIpToBlacklistInterface {
 	) => void;
 }
 
-export interface AuthControllerInterface {
-	argon2: typeof import('argon2');
-	execSync: typeof import('child_process').execSync;
-	jwt: ReturnType<typeof import('../auth/jwt').createJwt>;
-	req: import('express').Request;
-	res: import('express').Response;
-	createJwt: typeof import('../auth/jwt').createJwt;
-	UserModel: typeof import('../models/UserModelFile').User;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-}
-
 export interface BackupCodeInterface {
 	code: string;
 	used: boolean;
@@ -76,6 +63,12 @@ export interface BackupCodeServiceInterface {
 	UserMfa: typeof import('../models/UserMfaModelFile').UserMfa;
 	crypto: typeof import('crypto');
 	bcrypt: typeof import('bcrypt');
+}
+
+export interface CacheMetrics {
+	cacheHits: number;
+	cacheMisses: number;
+	cacheSize?: number;
 }
 
 export interface CreateFeatureEnablerInterface {
@@ -112,9 +105,11 @@ export interface EmailMFAInterface {
 }
 
 export interface EnvVariableTypes {
+	baseUrl: string;
 	batchReEncryptSecretsInterval: number;
 	blacklistSyncInterval: number;
 	clearExpiredSecretsInterval: number;
+	cpuLimit: number;
 	cronLoggerSetting: number;
 	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
 	dbHost: string;
@@ -127,6 +122,7 @@ export interface EnvVariableTypes {
 	emailPort: number;
 	emailSecure: boolean;
 	emailUser: string;
+	eventLoopLagThreshold: number;
 	featureApiRoutesCsrf: boolean;
 	featureDbSync: boolean;
 	featureEnableIpBlacklist: boolean;
@@ -148,13 +144,16 @@ export interface EnvVariableTypes {
 	fidoChallengeSize: number;
 	fidoCryptoParams: number[];
 	frontendSecretsPath: string;
+	ipWhitelistPath: string;
 	logExportPath: string;
 	loggerServiceName: string;
 	logLevel: 'debug' | 'info' | 'warn' | 'error';
 	logStashHost: string;
 	logStashNode: string;
 	logStashPort: number;
+	maxCacheSize: number;
 	memoryLimit: number;
+	memoryThreshold: number;
 	memoryMonitorInterval: number;
 	multerFileSizeLimit: number;
 	multerStorageDir: string;
@@ -164,6 +163,7 @@ export interface EnvVariableTypes {
 	primaryLogPath: string;
 	rateLimiterBaseDuration: number;
 	rateLimiterBasePoints: number;
+	rateLimiterGlobalReset: number;
 	redisUrl: string;
 	rpName: string;
 	rpIcon: string;
@@ -452,6 +452,7 @@ export interface UserInstanceInterface {
 	resetPasswordToken: string | null;
 	resetPasswordExpires: Date | null;
 	isMfaEnabled: boolean;
+	totpSecret?: string | null | undefined;
 	creationDate: Date;
 	comparePassword: (
 		password: string,
@@ -491,6 +492,9 @@ export interface UserAttributesInterface {
 	resetPasswordToken?: string | null;
 	resetPasswordExpires?: Date | null;
 	isMfaEnabled: boolean;
+	totpSecret?: string | null | undefined;
+	email2faToken?: string | null | undefined;
+	email2faTokenExpires?: Date | null | undefined;
 	creationDate: Date;
 }
 
@@ -500,6 +504,9 @@ export interface UserInstanceInterface {
 	username: string;
 	password: string;
 	isAccountVerified: boolean;
+	totpSecret?: string | null | undefined;
+	email2faToken?: string | null | undefined;
+	email2faTokenExpires?: Date | null | undefined;
 	comparePassword: (
 		password: string,
 		argon2: typeof import('argon2')
@@ -577,7 +584,6 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 		retentionPeriodDays?: number
 	): Promise<void>;
 	setAdminId(adminId: number | null): void;
-	getCallerInfo(): string;
 	getErrorDetails(
 		getCallerInfo: () => string,
 		action: string,
@@ -585,7 +591,12 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 		userId?: string | null,
 		additionalData?: Record<string, unknown>
 	): Record<string, unknown>;
-	isAppLogger(logger: unknown): logger is AppLoggerServiceInterface | unknown;
+	setUpSecrets(secrets: SecretsStoreInterface): void;
+	setErrorHandler(errorHandler: ErrorHandlerServiceInterface): void;
+}
+
+export interface BaseRouterInterface {
+	getRouter(): Router;
 }
 
 export interface BouncerServiceInterface {
@@ -595,10 +606,15 @@ export interface BouncerServiceInterface {
 		next: NextFunction
 	) => Promise<void>;
 	slowdownMiddleware(): (
-		req: Request,
+		req: Request & { session: SlowdownSessionInterface },
 		res: Response,
 		next: NextFunction
 	) => void;
+	throttleRequests(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void | Response>;
 	ipBlacklistMiddleware(): (
 		req: Request,
 		res: Response,
@@ -607,6 +623,26 @@ export interface BouncerServiceInterface {
 	addIpToBlacklist(ip: string): Promise<void>;
 	removeIpFromBlacklist(ip: string): Promise<void>;
 	preInitIpBlacklist(): Promise<void>;
+	loadIpBlacklist(): Promise<void>;
+	syncBlacklistFromRedisToFile(): Promise<void>;
+	temporaryBlacklist(ip: string): Promise<void>;
+	isTemporarilyBlacklisted(ip: string): Promise<boolean>;
+	dynamicRateLimiter(): Promise<void>;
+}
+
+export interface CacheServiceInterface {
+	get<T>(key: string, service: string): Promise<T | null>;
+	set<T>(
+		key: string,
+		value: T,
+		service: string,
+		expirationInSeconds?: number
+	): Promise<void>;
+	del(key: string, service: string): Promise<void>;
+	exists(key: string, service: string): Promise<boolean>;
+	flushCache(service: string): Promise<void>;
+	closeConnection(): Promise<void>;
+	getCacheMetrics(service: string): CacheMetrics;
 }
 
 export interface ConfigSecretsInterface {
@@ -631,10 +667,21 @@ export interface ConfigServiceInterface {
 	refreshSecrets(dependencies: ConfigSecretsInterface): void;
 }
 
-export interface DatabaseServiceInterface {
+export interface DatabaseControllerInterface {
 	getSequelizeInstance(): Sequelize | null;
 	initializeDatabase(): Promise<Sequelize>;
 	clearIdleConnections(): Promise<void>;
+	getEntries<T>(Model: ModelOperations<T>): Promise<T[]>;
+	createEntry<T>(Model: ModelOperations<T>, data: T): Promise<T>;
+	deleteEntry<T>(Model: ModelOperations<T>, id: number): Promise<boolean>;
+	cacheData<T>(key: string, data: T, expiration?: number): Promise<void>;
+	queryWithCache<T extends object>(
+		query: string,
+		cacheKey: string,
+		expiration?: number
+	): Promise<T | null>;
+	getCachedData<T>(key: string): Promise<T | null>;
+	clearCache(key: string): Promise<void>;
 }
 
 export interface DeclareWebServerOptionsInterface {
@@ -671,6 +718,7 @@ export interface ErrorLoggerServiceInterface extends AppLoggerServiceInterface {
 
 export interface ErrorHandlerServiceInterface {
 	ErrorClasses: typeof ErrorClasses;
+	ErrorSeverity: typeof import('../errors/errorClasses').ErrorSeverity;
 	handleError(params: {
 		error: unknown;
 		req?: Request;
@@ -697,12 +745,18 @@ export interface ErrorHandlerServiceInterface {
 		res: Response;
 		responseId?: string;
 	}): Promise<void>;
+	initializeGlobalErrorHandlers(): void;
+	setShutdownHandler(shutdownFn: () => Promise<void>): void;
 }
 
 export interface HTTPSServerInterface {
 	initialize: () => Promise<void>;
 	startServer: () => Promise<void>;
 	shutdownServer: () => Promise<void>;
+}
+
+export interface MiddlewareServiceInterface {
+	//
 }
 
 export interface MulterUploadServiceInterface {
@@ -716,17 +770,46 @@ export interface MulterUploadServiceInterface {
 }
 
 export interface RedisServiceInterface {
+	getRedisClient(): Promise<RedisClientType | null>;
 	get<T>(key: string): Promise<T | null>;
 	set<T>(key: string, value: T, expiration?: number): Promise<void>;
 	del(key: string): Promise<void>;
 	exists(key: string): Promise<boolean>;
 	increment(key: string, expiration?: number): Promise<number | null>;
-	getRedisClient(): Promise<import('redis').RedisClientType | null>;
 	flushRedisMemoryCache(): Promise<void>;
+	cleanUpRedisClient(): Promise<void>;
+	delMultiple(service: string, keys: string[]): Promise<void>;
+	getKeysByPattern(pattern: string): Promise<string[]>;
+	flushCacheByService(service: string): Promise<void>;
 }
 
-export interface BaseRouterInterface {
-	getRouter(): Router;
+export interface ResourceManagerInterface {
+	performHealthCheck(): Promise<Record<string, unknown>>;
+	monitorEventLoopLag(): void;
+	monitorCPU(): void;
+	monitorMemoryUsage(): void;
+	monitorDiskUsage(): void;
+	monitorCacheSize(): void;
+	monitorNetworkUsage(): void;
+	getCpuUsage(): Array<{ core: number; usage: string }>;
+	getMemoryUsage(): {
+		heapUsed: number;
+		heapTotal: number;
+		heapUsedPercentage: number;
+		memoryLimit: number;
+		isMemoryHealthy: boolean;
+	};
+	getDiskUsage(): Promise<Record<string, unknown>>;
+	getNetworkUsage(): Record<string, unknown>[];
+	clearCaches(service: string): Promise<void>;
+	closeIdleConnections(): Promise<void>;
+	saveToCache<T>(
+		key: string,
+		value: T,
+		service: string,
+		expiration: number
+	): Promise<void>;
+	getFromCache<T>(key: string, service: string): Promise<T | null>;
 }
 
 export interface SecretsStoreInterface {
@@ -745,45 +828,47 @@ export interface SecretsStoreInterface {
 	batchReEncryptSecrets(): void;
 }
 
-export interface UserServiceInterface {
-	validatePassword: (password: string) => boolean;
-	findOne: (
+export interface UserControllerInterface {
+	findOne(
 		criteria: WhereOptions<InferAttributes<User>>
-	) => Promise<UserInstanceInterface | null>;
-	createUser: (
+	): Promise<UserInstanceInterface | null>;
+	createUser(
 		userDetails: Omit<UserAttributesInterface, 'id' | 'creationDate'>
-	) => Promise<UserInstanceInterface | null>;
-	loginUser: (req: Request, res: Response) => Promise<Response | void>;
-	comparePassword: (
+	): Promise<UserInstanceInterface | null>;
+	loginUser(
+		email: string,
+		password: string
+	): Promise<{ success: boolean; token?: string }>;
+	comparePassword(
 		user: UserInstanceInterface,
 		password: string
-	) => Promise<boolean>;
-	resetPassword: (
+	): Promise<boolean>;
+	resetPassword(
 		user: UserInstanceInterface,
 		newPassword: string
-	) => Promise<UserInstanceInterface | null>;
-	findUserByEmail: (email: string) => Promise<UserInstanceInterface | null>;
-	updateUser: (
+	): Promise<UserInstanceInterface | null>;
+	findUserByEmail(email: string): Promise<UserInstanceInterface | null>;
+	updateUser(
 		user: UserInstanceInterface,
 		updatedDetails: Partial<UserInstanceInterface>
-	) => Promise<UserInstanceInterface | null>;
-	deleteUser: (userId: string) => Promise<void>;
-	verifyUserAccount: (userId: string) => Promise<boolean>;
-	generateResetToken: (user: UserInstanceInterface) => Promise<string | null>;
-	validateResetToken: (
+	): Promise<UserInstanceInterface | null>;
+	deleteUser(userId: string): Promise<boolean>;
+	verifyUserAccount(userId: string): Promise<boolean>;
+	generateResetToken(user: UserInstanceInterface): Promise<string | null>;
+	validateResetToken(
 		userId: string,
 		token: string
-	) => Promise<UserInstanceInterface | null>;
-	enableMfa: (userId: string) => Promise<boolean>;
-	disableMfa: (userId: string) => Promise<boolean>;
-	findUserById: (userId: string) => Promise<UserInstanceInterface | null>;
-	recoverPassword: (email: string) => Promise<void>;
-	generateEmail2FA: (email: string) => Promise<void>;
-	verifyEmail2FA: (email: string, email2FACode: string) => Promise<boolean>;
-	generateTOTP: (
+	): Promise<UserInstanceInterface | null>;
+	enableMfa(userId: string): Promise<boolean>;
+	disableMfa(userId: string): Promise<boolean>;
+	findUserById(userId: string): Promise<UserInstanceInterface | null>;
+	recoverPassword(email: string): Promise<void>;
+	generateEmail2FA(email: string): Promise<void>;
+	verifyEmail2FA(email: string, email2FACode: string): Promise<boolean>;
+	generateTOTP(
 		userId: string
-	) => Promise<{ secret: string; qrCodeUrl: string }>;
-	verifyTOTP: (userId: string, token: string) => Promise<boolean>;
+	): Promise<{ secret: string; qrCodeUrl: string }>;
+	verifyTOTP(userId: string, token: string): Promise<boolean>;
 }
 
 export interface ValidatorServiceInterface {
@@ -808,7 +893,7 @@ export type HTTPSServerOptions = import('tls').SecureContextOptions;
 //
 
 export interface APIRouterDeps {
-	UserRoutes: UserServiceInterface;
+	UserRoutes: UserControllerInterface;
 	argon2: {
 		hash(
 			data: string | Buffer,
@@ -868,8 +953,6 @@ export interface AppLoggerServiceDeps {
 	secretsStore: typeof import('../services/secrets').secretsStore;
 	ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
 	HandleErrorStaticParameters: typeof import('../index/parameters').HandleErrorStaticParameters;
-	errorHandler: typeof import('../services/errorHandler').errorHandler;
-	ErrorSeverity: typeof import('../errors/errorClasses').ErrorSeverity;
 	uuidv4: typeof import('uuid').v4;
 	fs: typeof import('fs');
 	Sequelize: typeof import('sequelize').Sequelize;
@@ -882,7 +965,7 @@ export interface ErrorLoggerServiceDeps {
 	) => void;
 	readonly ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
 	readonly ErrorSeverity: string;
-	readonly handleError: typeof import('../services/errorHandler').errorHandler.handleError;
+	readonly handleError: ErrorHandlerServiceInterface['handleError'];
 }
 
 export interface HTTPSServerDeps {
@@ -919,7 +1002,7 @@ export interface RedisServiceDeps {
 	readonly blankRequest: import('express').Request;
 }
 
-export interface UserServiceDeps {
+export interface UserControllerDeps {
 	argon2: {
 		hash(
 			data: string | Buffer,

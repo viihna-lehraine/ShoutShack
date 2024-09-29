@@ -2,8 +2,10 @@ import TransportStream from 'winston-transport';
 import {
 	AppLoggerServiceDeps,
 	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
 } from '../index/interfaces';
+import { SecretsStoreInterface } from '../index/interfaces';
 import { Op } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';
@@ -15,6 +17,9 @@ export class AppLoggerService
 	public static instance: AppLoggerService | null = null;
 	protected _deps: AppLoggerServiceDeps;
 	private adminId: number | null = null;
+	private redactedLogger: AppLoggerServiceInterface | null = null;
+	protected errorHandler: ErrorHandlerServiceInterface | null = null;
+	private secrets: SecretsStoreInterface | null = null;
 
 	constructor(
 		deps: AppLoggerServiceDeps,
@@ -110,6 +115,22 @@ export class AppLoggerService
 		return AppLoggerService.instance;
 	}
 
+	public setErrorHandler(errorHandler: ErrorHandlerServiceInterface): void {
+		this.errorHandler = errorHandler;
+	}
+
+	public setUpSecrets(secrets: SecretsStoreInterface): void {
+		this.secrets = secrets;
+		this.setupRedactedLogger();
+		console.info('SecretsStore injected and redacted logger setup.');
+	}
+
+	private setupRedactedLogger(): void {
+		if (this.redactedLogger || !this.secrets)
+			this.redactedLogger = this.createRedactedLogger();
+		this.logInfo('Redacted logger initialized.');
+	}
+
 	private createRedactedLogger(): AppLoggerServiceInterface {
 		const redactedLogger: AppLoggerServiceInterface = Object.create(this);
 
@@ -131,7 +152,7 @@ export class AppLoggerService
 			): void => {
 				const redactedMeta =
 					typeof meta === 'object'
-						? this._deps.secretsStore.redactSecrets(meta)
+						? this.secrets?.redactSecrets(meta)
 						: meta;
 				originalMethod(message, redactedMeta);
 			}) as typeof originalMethod;
@@ -143,7 +164,7 @@ export class AppLoggerService
 	}
 
 	public getLogger(): AppLoggerServiceInterface {
-		return this as AppLoggerServiceInterface;
+		return this.redactedLogger ? this.redactedLogger : this;
 	}
 
 	public getRedactedLogger(): AppLoggerServiceInterface {
@@ -177,11 +198,18 @@ export class AppLoggerService
 			this.logError(
 				`Logstash error: ${error instanceof Error ? error.message : error}`
 			);
-			this._deps.errorHandler.handleError({
-				...this._deps.HandleErrorStaticParameters,
-				error: logstashError,
-				details: { reason: 'Failed to create Logstash transport' }
-			});
+			if (this.errorHandler) {
+				this.errorHandler.handleError({
+					...this._deps.HandleErrorStaticParameters,
+					error: logstashError,
+					details: { reason: 'Failed to create Logstash transport' }
+				});
+			} else {
+				this.handleError(
+					'Failed to create Logstash transport',
+					logstashError
+				);
+			}
 			return null;
 		}
 	}
@@ -237,16 +265,6 @@ export class AppLoggerService
 		}
 	}
 
-	public getCallerInfo(): string {
-		const stack = new Error().stack;
-		if (stack) {
-			const stackLines = stack.split('\n');
-			const callerLine = stackLines[3]?.trim();
-			return callerLine || 'Unknown caller';
-		}
-		return 'No stack trace available';
-	}
-
 	public setAdminId(adminId: number): void {
 		this.adminId = adminId;
 	}
@@ -286,20 +304,6 @@ export class AppLoggerService
 		return details;
 	}
 
-	public isAppLogger(
-		logger: AppLoggerServiceInterface | Console | undefined
-	): logger is AppLoggerServiceInterface {
-		return (
-			logger !== undefined &&
-			logger !== null &&
-			typeof logger.error === 'function' &&
-			typeof logger.warn === 'function' &&
-			typeof logger.debug === 'function' &&
-			typeof logger.info === 'function' &&
-			typeof logger.log === 'function'
-		);
-	}
-
 	protected get __deps(): AppLoggerServiceDeps {
 		return this._deps;
 	}
@@ -327,6 +331,17 @@ export class AppLoggerService
 		});
 
 		return Object.fromEntries(sanitizedBody);
+	}
+
+	protected handleError(message: string, error: Error): void {
+		if (this.errorHandler) {
+			this.errorHandler.handleError({
+				error,
+				details: { message }
+			});
+		} else {
+			this.logError(`Error Handler not set. Error: ${message}`);
+		}
 	}
 }
 
@@ -392,9 +407,6 @@ export class ErrorLoggerService
 			),
 			getErrorDetails: ErrorLoggerService.instance.getErrorDetails.bind(
 				ErrorLoggerService.instance
-			),
-			isAppLogger: ErrorLoggerService.instance.isAppLogger.bind(
-				ErrorLoggerService.instance
 			)
 		}) as AppLoggerServiceInterface;
 	}
@@ -419,13 +431,19 @@ export class ErrorLoggerService
 		const errorCount = this.errorCounts.get(error.name) || 0;
 		this.errorCounts.set(error.name, errorCount + 1);
 
-		if (error.severity === this.__deps.ErrorSeverity.FATAL) {
-			this.logError(`FATAL: ${error.message}`, {
-				...details,
-				severity: error.severity
-			});
-		} else if (error.severity === this.__deps.ErrorSeverity.RECOVERABLE) {
-			this.logWarn(`RECOVERABLE: ${error.message}`, { ...details });
+		if (this.errorHandler) {
+			if (error.severity === this.errorHandler.ErrorSeverity.FATAL) {
+				this.logError(`FATAL: ${error.message}`, {
+					...details,
+					severity: error.severity
+				});
+			} else if (
+				error.severity === this.errorHandler.ErrorSeverity.RECOVERABLE
+			) {
+				this.logWarn(`RECOVERABLE: ${error.message}`, { ...details });
+			}
+		} else {
+			this.handleError('Error Handler not set', error);
 		}
 	}
 

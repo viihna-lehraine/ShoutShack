@@ -27,10 +27,9 @@ import { createLogger, format, transports, addColors } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
 import { ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
-import { errorHandler } from '../services/errorHandler';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
-import { sanitizeRequestBody } from '../utils/helpers';
+import { sanitizeRequestBody } from '../utils/validator';
 
 // ****** PARAMETER OBJECTS ****** //
 
@@ -57,6 +56,7 @@ export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServe
 	};
 
 export const envVariables: interfaces.EnvVariableTypes = {
+	baseUrl: process.env.BASE_URL!,
 	batchReEncryptSecretsInterval: parseInt(
 		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!,
 		10
@@ -69,6 +69,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!,
 		10
 	),
+	cpuLimit: parseInt(process.env.CPU_LIMIT!, 10),
 	cronLoggerSetting: parseInt(process.env.CRON_LOGGER_SETTING!),
 	dbDialect: process.env.DB_DIALECT! as
 		| 'mariadb'
@@ -86,6 +87,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	emailPort: parseInt(process.env.EMAIL_PORT!, 10),
 	emailSecure: emailSecureAsBoolean!,
 	emailUser: process.env.EMAIL_USER!,
+	eventLoopLagThreshold: parseInt(process.env.EVENT_LOOP_LAG!, 10),
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
 	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
 	featureEnableIpBlacklist:
@@ -109,13 +111,16 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	fidoChallengeSize: parseInt(process.env.FIDO_CHALLENGE_SIZE!, 10),
 	fidoCryptoParams: fidoCryptoParamsAsArray!,
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH!,
+	ipWhitelistPath: process.env.IP_WHITELIST_PATH!,
 	logExportPath: process.env.LOG_EXPORT_PATH!,
 	logLevel: process.env.LOG_LEVEL! as 'debug' | 'info' | 'warn' | 'error',
 	loggerServiceName: process.env.LOG_SERVICE_NAME!,
 	logStashHost: process.env.LOGSTASH_HOST!,
 	logStashNode: process.env.LOGSTASH_NODE!,
 	logStashPort: parseInt(process.env.LOGSTASH_PORT!, 10),
+	maxCacheSize: parseInt(process.env.MAX_CACHE_SIZE!, 10),
 	memoryLimit: parseInt(process.env.MEMORY_LIMIT!, 10),
+	memoryThreshold: parseInt(process.env.MEMORY_THRESHOLD!, 10),
 	memoryMonitorInterval: parseInt(process.env.MEMORY_MONITOR_INTERVAL!, 10),
 	multerFileSizeLimit: parseInt(process.env.MULTER_FILE_SIZE_LIMIT!, 10),
 	multerStorageDir: process.env.MULTER_STORAGE_DIR!,
@@ -128,6 +133,10 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		10
 	),
 	rateLimiterBasePoints: parseInt(process.env.RATE_LIMITER_BASE_POINTS!, 10),
+	rateLimiterGlobalReset: parseInt(
+		process.env.RATE_LIMITER_GLOBAL_RESET!,
+		10
+	),
 	redisUrl: process.env.REDIS_URL!,
 	rpName: process.env.RP_NAME!,
 	rpIcon: process.env.RP_ICON!,
@@ -247,7 +256,6 @@ export const AppLoggerServiceParameters = {
 	ErrorClasses,
 	ErrorSeverity,
 	HandleErrorStaticParameters,
-	errorHandler,
 	uuidv4,
 	sanitizeRequestBody,
 	fs,

@@ -14,33 +14,21 @@ import process from 'process';
 import { createClient } from 'redis';
 import { login } from './login';
 import { initializeAllMiddleware } from './middleware';
-import { initializeRoutes } from './routers/baseRouter';
-import { configService } from './services/config';
 import { AppError, ErrorClasses, ErrorSeverity } from './errors/errorClasses';
 import { configurePassport } from './auth/passport';
-import { secretsStore } from './services/secrets';
 import { initCsrf } from './middleware/csrf';
-import { initIpBlacklist, preInitIpBlacklist } from './middleware/ipBlacklist';
-import { initializeRateLimitMiddleware } from './middleware/rateLimit';
-import { initializeSecurityHeaders } from './middleware/securityHeaders';
-import { initializeValidatorMiddleware } from './middleware/validator';
-import { initializeSlowdownMiddleware } from './middleware/slowdown';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
 import { blankRequest } from './utils/constants';
 import { InitializeDatabaseStaticParameters } from './index/parameters';
 import { Sequelize } from 'sequelize';
-import {
-	AppLoggerServiceParameters,
-	HandleErrorStaticParameters
-} from './index/parameters';
-import { AppLoggerService, ErrorLoggerService } from './services/logger';
 import { ServiceFactory } from './index/factory';
 import {
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
 } from './index/interfaces';
+import { EnvironmentService } from './services/environment';
 
 let sequelize: Sequelize;
 
@@ -59,25 +47,24 @@ async function start(): Promise<void> {
 					throw new Error('Admin ID not found. Shutting down...');
 				}
 
-				const logger = ServiceFactory.createService(
-					'logger'
-				) as AppLoggerServiceInterface;
-				const errorLogger = ServiceFactory.createService(
-					'errorLogger'
-				) as ErrorLoggerServiceInterface;
-				const errorHandler = ServiceFactory.createService(
-					'errorHandler'
-				) as ErrorHandlerServiceInterface;
+				const logger = ServiceFactory.getLoggerService();
+				const errorLogger = ServiceFactory.getErrorLoggerService();
+				const errorHandler = ServiceFactory.getErrorHandlerService();
+				logger.setErrorHandler(errorHandler);
+				EnvironmentService.getInstance();
+				const configService = ServiceFactory.getConfigService();
 
 				configService.initialize(encryptionKey, gpgPassphrase, adminId);
+				const secrets = ServiceFactory.getSecretsStore();
+				logger.setUpSecrets(secrets);
 
 				setInterval(() => {
-					envSecretsStore.clearExpiredSecretsFromMemory();
-				}, configService.getEnvVariables().clearExpiredSecretsInterval);
+					secrets.clearExpiredSecretsFromMemory();
+				}, configService.getEnvVariable('clearExpiredSecretsInterval'));
 
 				setInterval(() => {
-					envSecretsStore.batchReEncryptSecrets();
-				}, configService.getEnvVariables().batchReEncryptSecretsInterval);
+					secrets.batchReEncryptSecrets();
+				}, configService.getEnvVariable('batchReEncryptSecretsInterval'));
 
 				logger.info(
 					`Secrets store initialized. READY TO ROCK AND ROLL!!!`

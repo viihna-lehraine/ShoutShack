@@ -2,36 +2,38 @@ import { Request, Response, NextFunction } from 'express';
 import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
-import { configService, ConfigService } from '../services/config'; // Use ConfigService
+import { configService, ConfigService } from '../services/config';
 import { APIRouter } from '../routers/apiRouter';
+import { StaticRouter } from '../routers/staticRouter';
 import { MailerService } from '../services/mailer';
 import { RedisService } from '../services/redis';
+import { CacheService } from '../services/cache';
 import { blankRequest } from '../utils/constants';
 import { validateDependencies } from '../utils/helpers';
 import { AppLoggerService, ErrorLoggerService } from '../services/logger';
 import { AppLoggerServiceParameters } from './parameters';
 import { BouncerService } from '../services/bouncer';
-import { DatabaseService } from '../services/database';
-import { EnvironmentService } from '../services/environment';
+import { DatabaseController } from '../controllers/DatabaseController';
 import { ErrorHandlerService } from '../services/errorHandler';
 import { HTTPSServer } from '../services/httpsServer';
 import { MulterUploadService } from '../services/multer';
-import { UserService } from '../services/user';
+import { ResourceManager } from '../services/resourceManager';
+import { UserController } from '../controllers/UserController';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { fileTypeFromBuffer } from 'file-type';
 import {
 	AppLoggerServiceInterface,
-	DatabaseServiceInterface,
-	EnvironmentServiceInterface,
+	DatabaseControllerInterface,
 	ErrorLoggerServiceInterface,
 	HTTPSServerInterface,
 	MailerServiceInterface,
 	MulterUploadServiceInterface,
 	RedisServiceInterface,
+	ResourceManagerInterface,
 	SecretsStoreInterface,
-	UserServiceInterface
+	UserControllerInterface
 } from './interfaces';
 import { SecretsStore } from '../services/secrets';
 
@@ -50,8 +52,6 @@ export class ServiceFactory {
 
 	private static configServiceInstance = configService as ConfigService;
 
-	private static environmentService = EnvironmentService.getInstance();
-
 	private static errorHandlerService = ErrorHandlerService.getInstance(
 		AppLoggerService.getInstance(
 			AppLoggerServiceParameters
@@ -69,16 +69,16 @@ export class ServiceFactory {
 		return BouncerService.getInstance();
 	}
 
+	public static getCacheService(): CacheService {
+		return CacheService.getInstance();
+	}
+
 	public static getConfigService(): ConfigService {
 		return this.configServiceInstance;
 	}
 
-	public static getDatabaseService(): DatabaseServiceInterface {
-		return DatabaseService.getInstance();
-	}
-
-	public static getEnvironmentService(): EnvironmentServiceInterface {
-		return this.environmentService;
+	public static getDatabaseController(): DatabaseControllerInterface {
+		return DatabaseController.getInstance();
 	}
 
 	public static getErrorHandlerService(): ErrorHandlerService {
@@ -94,7 +94,7 @@ export class ServiceFactory {
 	}
 
 	public static getHTTPSServer(app: app.Application): HTTPSServerInterface {
-		const sequelize = this.getDatabaseService().getSequelizeInstance();
+		const sequelize = this.getDatabaseController().getSequelizeInstance();
 		const errorHandler = this.getErrorHandlerService();
 
 		if (!sequelize) {
@@ -153,11 +153,19 @@ export class ServiceFactory {
 		});
 	}
 
+	public static getResourceManager(): ResourceManagerInterface {
+		return ResourceManager.getInstance();
+	}
+
 	public static getSecretsStore(): SecretsStoreInterface {
 		return SecretsStore.getInstance();
 	}
 
-	public static getUserService(): UserServiceInterface {
-		return UserService.getInstance();
+	public static getStaticRouter(): StaticRouter {
+		return StaticRouter.getInstance();
+	}
+
+	public static getUserController(): UserControllerInterface {
+		return UserController.getInstance();
 	}
 }

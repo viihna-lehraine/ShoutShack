@@ -15,6 +15,7 @@ export class TestRouter extends BaseRouter {
 		if (!TestRouter.instance) {
 			TestRouter.instance = new TestRouter();
 		}
+
 		return TestRouter.instance;
 	}
 

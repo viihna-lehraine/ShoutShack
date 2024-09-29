@@ -99,6 +99,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 	): EnvVariableTypes[K] {
 		switch (key) {
 			// strings
+			case 'baseUrl':
 			case 'dbHost':
 			case 'dbName':
 			case 'dbUser':
@@ -106,6 +107,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'emailHost':
 			case 'emailUser':
 			case 'frontendSecretsPath':
+			case 'ipWhitelistPath':
 			case 'logExportPath':
 			case 'loggerServiceName':
 			case 'logStashHost':
@@ -132,17 +134,22 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'batchReEncryptSecretsInterval':
 			case 'blacklistSyncInterval':
 			case 'clearExpiredSecretsInterval':
+			case 'cpuLimit':
 			case 'cronLoggerSetting':
 			case 'dbInitMaxRetries':
 			case 'dbInitRetryAfter':
 			case 'emailPort':
+			case 'eventLoopLagThreshold':
 			case 'fidoChallengeSize':
 			case 'logStashPort':
+			case 'maxCacheSize':
 			case 'memoryLimit':
+			case 'memoryThreshold':
 			case 'memoryMonitorInterval':
 			case 'multerFileSizeLimit':
 			case 'rateLimiterBaseDuration':
 			case 'rateLimiterBasePoints':
+			case 'rateLimiterGlobalReset':
 			case 'secretsRateLimitMaxAttempts':
 			case 'secretsRateLimitWindow':
 			case 'secretsReEncryptionCooldown':

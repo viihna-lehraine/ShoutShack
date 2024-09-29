@@ -29,6 +29,10 @@ export class User
 	public resetPasswordToken!: string | null;
 	public resetPasswordExpires!: Date | null;
 	public isMfaEnabled!: boolean;
+	public totpSecret?: string | null | undefined;
+	public email2faSecret?: string | null | undefined;
+	public email2faToken?: string | null | undefined;
+	public email2faTokenExpires?: Date | null | undefined;
 	public creationDate!: CreationOptional<Date>;
 
 	static initializeModel(sequelize: Sequelize): void {
@@ -78,6 +82,22 @@ export class User
 					type: DataTypes.BOOLEAN,
 					allowNull: false,
 					defaultValue: false
+				},
+				totpSecret: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				email2faSecret: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				email2faToken: {
+					type: DataTypes.STRING,
+					allowNull: true
+				},
+				email2faTokenExpires: {
+					type: DataTypes.DATE,
+					allowNull: true
 				},
 				creationDate: {
 					type: DataTypes.DATE,

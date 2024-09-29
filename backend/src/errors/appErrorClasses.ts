@@ -24,6 +24,22 @@ export class AppAuthenticationError extends AppError {
 	}
 }
 
+export class CacheServiceError extends AppError {
+	constructor(
+		errorMessage: string = 'Cache service-level error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.CACHE_SERVICE_ERROR,
+			details
+		);
+		this.name = 'CacheServiceError';
+	}
+}
+
 export class ConfigurationError extends AppError {
 	constructor(
 		errorMessage: string = 'Internal server error',
@@ -301,6 +317,22 @@ export class InvalidConfigurationError extends AppError {
 	}
 }
 
+export class MiddlewareServiceError extends AppError {
+	constructor(
+		errorMessage: string = 'Middleware Service error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.MIDDLEWARE_SERVICE_ERROR,
+			details
+		);
+		this.name = 'CacheServiceError';
+	}
+}
+
 export class MissingResourceError extends AppError {
 	constructor(resource?: string, details: ErrorDetails = {}) {
 		const errorMessage: string = resource
@@ -390,6 +422,38 @@ export class RateLimitErrorFatal extends AppError {
 			customDetails
 		);
 		this.name = 'RateLimitErrorFatal';
+	}
+}
+
+export class RedisServiceError extends AppError {
+	constructor(
+		errorMessage: string = 'Redis Service error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.REDIS_SERVICE_ERROR,
+			details
+		);
+		this.name = 'CacheServiceError';
+	}
+}
+
+export class ResourceManagerError extends AppError {
+	constructor(
+		errorMessage: string = 'Resource Manager error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.REDIS_SERVICE_ERROR,
+			details
+		);
+		this.name = 'CacheServiceError';
 	}
 }
 
@@ -594,6 +658,7 @@ export class ValidationError extends AppError {
 
 export const AppErrorClasses = {
 	AppAuthenticationError,
+	CacheServiceError,
 	ConfigurationError,
 	ConfigurationErrorFatal,
 	ConcurrencyError,
@@ -607,10 +672,13 @@ export const AppErrorClasses = {
 	ExpressRouteError,
 	ExternalServiceErrorFatal,
 	InsufficientStorageError,
+	MiddlewareServiceError,
 	MissingResourceError,
 	PartialServiceFailureWarning,
 	QuotaExceededErrorFatal,
 	RateLimitErrorFatal,
+	RedisServiceError,
+	ResourceManagerError,
 	ServiceDegradedError,
 	ServiceDegradedErrorMinor,
 	ServiceUnavailableError,

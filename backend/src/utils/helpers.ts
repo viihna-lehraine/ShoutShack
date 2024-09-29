@@ -1,37 +1,39 @@
-import { DependencyInterface } from '../index/interfaces';
+import {
+	AppLoggerServiceInterface,
+	DependencyInterface
+} from '../index/interfaces';
 
-export function sanitizeRequestBody(
-	body: Record<string, unknown>
-): Record<string, unknown> {
-	const sanitizedBody = new Map(Object.entries(body));
-	const sensitiveFields = [
-		'email',
-		'key',
-		'newPassword',
-		'oldPassword',
-		'passphrase',
-		'password',
-		'secret',
-		'token',
-		'username'
-	];
+export function isAppLogger(
+	logger: AppLoggerServiceInterface | Console | undefined
+): logger is AppLoggerServiceInterface {
+	return (
+		logger !== undefined &&
+		logger !== null &&
+		typeof logger.error === 'function' &&
+		typeof logger.warn === 'function' &&
+		typeof logger.debug === 'function' &&
+		typeof logger.info === 'function' &&
+		typeof logger.log === 'function'
+	);
+}
 
-	sensitiveFields.forEach(field => {
-		if (sanitizedBody.has(field)) {
-			sanitizedBody.set(field, '[REDACTED]');
-		}
-	});
-
-	return Object.fromEntries(sanitizedBody);
+export function getCallerInfo(): string {
+	const stack = new Error().stack;
+	if (stack) {
+		const stackLines = stack.split('\n');
+		const callerLine = stackLines[3]?.trim();
+		return callerLine || 'Unknown caller';
+	}
+	return 'No stack trace available';
 }
 
 export function validateDependencies(
 	dependencies: DependencyInterface[],
 	logger: AppLoggerServiceInterface
 ): void {
-	const logInfo = isAppLogger(appLogger) ? appLogger.info : console.info;
-	const logWarn = isAppLogger(appLogger) ? appLogger.warn : console.warn;
-	const logError = isAppLogger(appLogger) ? appLogger.error : console.error;
+	const logInfo = isAppLogger(logger) ? logger.info : console.info;
+	const logWarn = isAppLogger(logger) ? logger.warn : console.warn;
+	const logError = isAppLogger(logger) ? logger.error : console.error;
 
 	const callerInfo = getCallerInfo();
 
@@ -68,8 +70,8 @@ export function validateDependencies(
 			error instanceof Error ? error.message : 'Unknown error';
 		const stack = error instanceof Error ? error.stack : 'No stack trace';
 
-		if (isAppLogger(appLogger)) {
-			appLogger.error('An error occurred during dependency validation', {
+		if (isAppLogger(logger)) {
+			logger.error('An error occurred during dependency validation', {
 				stack: stack ?? 'No stack trace',
 				message: message ?? 'Unknown error'
 			});
@@ -81,10 +83,4 @@ export function validateDependencies(
 		}
 		throw error;
 	}
-}
-
-export function isErrorLoggerService(
-	service: LoggerService
-): service is ErrorLoggerService {
-	return (service as ErrorLoggerService).logAppError !== undefined;
 }
