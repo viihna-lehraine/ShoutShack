@@ -3,6 +3,16 @@ import {
 	DependencyInterface
 } from '../index/interfaces';
 
+export function getCallerInfo(): string {
+	const stack = new Error().stack;
+	if (stack) {
+		const stackLines = stack.split('\n');
+		const callerLine = stackLines[3]?.trim();
+		return callerLine || 'Unknown caller';
+	}
+	return 'No stack trace available';
+}
+
 export function isAppLogger(
 	logger: AppLoggerServiceInterface | Console | undefined
 ): logger is AppLoggerServiceInterface {
@@ -15,16 +25,6 @@ export function isAppLogger(
 		typeof logger.info === 'function' &&
 		typeof logger.log === 'function'
 	);
-}
-
-export function getCallerInfo(): string {
-	const stack = new Error().stack;
-	if (stack) {
-		const stackLines = stack.split('\n');
-		const callerLine = stackLines[3]?.trim();
-		return callerLine || 'Unknown caller';
-	}
-	return 'No stack trace available';
 }
 
 export function validateDependencies(
@@ -83,4 +83,24 @@ export function validateDependencies(
 		}
 		throw error;
 	}
+}
+
+export async function withRetry<T>(
+	operation: () => Promise<T> | T,
+	maxRetries: number,
+	delayMs: number
+): Promise<T> {
+	let attempts = 0;
+	while (attempts < maxRetries) {
+		try {
+			return await operation();
+		} catch (error) {
+			attempts++;
+			if (attempts >= maxRetries) {
+				throw error;
+			}
+			await new Promise(resolve => setTimeout(resolve, delayMs));
+		}
+	}
+	throw new Error('Exceeded maximum retry attempts');
 }

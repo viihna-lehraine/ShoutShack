@@ -2,7 +2,7 @@ import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
 import net from 'net';
 import { Sequelize } from 'sequelize';
-import { Application, Request, Response } from 'express';
+import express, { Application, Request, Response } from 'express';
 import { constants as cryptoConstants } from 'crypto';
 import { validateDependencies } from '../utils/helpers';
 import {
@@ -198,8 +198,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 		} catch (error) {
 			this.handleError(error, 'FLUSH_REDIS');
 		}
-
-		this.secrets.batchReEncryptSecrets();
 	}
 
 	public async shutdownServer(): Promise<void> {
@@ -263,7 +261,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async fetchResponse(req: Request): Promise<any> {
+	private async fetchResponse(req: Request): Promise<unknown> {
 		if (req.url.startsWith('/api')) {
 			return await this.handleApiRequest(req);
 		} else if (req.url.startsWith('/static')) {
@@ -273,32 +271,16 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async handleApiRequest(req: Request): Promise<any> {
+	private async handleApiRequest(req: Request): Promise<unknown> {
 		const apiRouter = express.Router();
 
-		const userRoutes = initializeUserRoutes({
-			// Pass the necessary dependencies here
-			UserRoutes,
-			argon2,
-			jwt,
-			axios,
-			bcrypt,
-			uuidv4,
-			xss,
-			generateConfirmationEmailTemplate,
-			getTransporter,
-			totpMfa
-		});
+		// set up user routes AND VALIDATON
 
-		const validationRoutes = initializeValidationRoutes({
-			// validator: /* your validator instance */
-		});
-
-		apiRouter.use('/users', userRoutes);
-		apiRouter.use('/validate', validationRoutes);
+		// apiRouter.use('/users', userRoutes);
+		// apiRouter.use('/validate', validationRoutes);
 
 		return new Promise((resolve, reject) => {
-			apiRouter(req, {} as Response, (err: any) => {
+			apiRouter(req, {} as Response, (err: unknown) => {
 				if (err) {
 					reject(err);
 				} else {

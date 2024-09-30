@@ -98,6 +98,12 @@ export class RedisService implements RedisServiceInterface {
 		if (!this.redisClient) throw new Error('Redis client is not connected');
 		try {
 			const result = await this.redisClient.get(key);
+
+			if (!result) {
+				this.logger.info(`Key ${key} not found or expired in Redis`);
+				return null;
+			}
+
 			return result ? JSON.parse(result) : null;
 		} catch (error) {
 			this.handleRedisError(
@@ -127,7 +133,7 @@ export class RedisService implements RedisServiceInterface {
 				await this.redisClient.set(key, valueString);
 			}
 			this.logger.info(
-				`Key ${key} set in Redis with expiration ${expiration}`
+				`Key ${key} set in Redis with expiration ${expiration ?? 'no expiration'}`
 			);
 		} catch (error) {
 			this.handleRedisError(

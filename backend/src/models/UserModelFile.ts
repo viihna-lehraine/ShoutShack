@@ -8,11 +8,9 @@ import {
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword } from '../auth/hash';
-import { validateDependencies } from '../utils/helpers';
 import { UserAttributesInterface } from '../index/interfaces';
-import { ServiceFactory } from 'src/index/factory';
+import { ServiceFactory } from '../index/factory';
 
-const logger = ServiceFactory.getLoggerService();
 const errorLogger = ServiceFactory.getErrorLoggerService();
 const errorHandler = ServiceFactory.getErrorHandlerService();
 
@@ -135,12 +133,24 @@ export class User
 	}
 }
 
-export function createUserModel(sequelize: Sequelize): typeof User {
+export function createUserModel(): typeof User {
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger || console
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					`Failed to initialize User model: Sequelize instance not found`,
+					{
+						exposeToClient: false
+					}
+				);
+			errorLogger.logInfo(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			throw databaseError;
+		}
+
 		User.initializeModel(sequelize);
 		return User;
 	} catch (dbError) {

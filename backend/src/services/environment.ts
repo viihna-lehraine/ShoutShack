@@ -115,9 +115,11 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'npmLogPath':
 			case 'primaryLogPath':
 			case 'redisUrl':
+			case 'revokedTokenRetentionPeriod':
 			case 'rpName':
 			case 'rpIcon':
 			case 'rpId':
+			case 'rpOrigin':
 			case 'secretsFilePath1':
 			case 'serverDataFilePath1':
 			case 'serverDataFilePath2':
@@ -125,6 +127,8 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'serverDataFilePath4':
 			case 'staticRootPath':
 			case 'tempDir':
+			case 'tokenExpiryListPath':
+			case 'tokenRevokedListPath':
 			case 'tlsCertPath1':
 			case 'tlsKeyPath1':
 			case 'yubicoApiUrl':
@@ -140,6 +144,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'dbInitRetryAfter':
 			case 'emailPort':
 			case 'eventLoopLagThreshold':
+			case 'fido2Timeout':
 			case 'fidoChallengeSize':
 			case 'logStashPort':
 			case 'maxCacheSize':
@@ -150,11 +155,12 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'rateLimiterBaseDuration':
 			case 'rateLimiterBasePoints':
 			case 'rateLimiterGlobalReset':
+			case 'secretsExpiryTimeout':
 			case 'secretsRateLimitMaxAttempts':
 			case 'secretsRateLimitWindow':
-			case 'secretsReEncryptionCooldown':
 			case 'serverPort':
 			case 'slowdownThreshold':
+			case 'tokenCacheDuration':
 				return Number(value) as EnvVariableTypes[K];
 
 			// boolean

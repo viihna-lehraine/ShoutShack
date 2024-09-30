@@ -3,9 +3,11 @@ import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
 import { configService, ConfigService } from '../services/config';
-import { APIRouter } from '../routers/apiRouter';
-import { StaticRouter } from '../routers/staticRouter';
+import { APIRouter } from '../routers/ApiRouter';
+import { BackupCodeService } from '../auth/BackupCode';
+import { StaticRouter } from '../routers/StaticRouter';
 import { MailerService } from '../services/mailer';
+import { EmailMFAService } from '../auth/EmailMfa';
 import { RedisService } from '../services/redis';
 import { CacheService } from '../services/cache';
 import { blankRequest } from '../utils/constants';
@@ -13,12 +15,20 @@ import { validateDependencies } from '../utils/helpers';
 import { AppLoggerService, ErrorLoggerService } from '../services/logger';
 import { AppLoggerServiceParameters } from './parameters';
 import { BouncerService } from '../services/bouncer';
+import { JWTService } from '../auth/JWT';
 import { DatabaseController } from '../controllers/DatabaseController';
 import { ErrorHandlerService } from '../services/errorHandler';
-import { HTTPSServer } from '../services/httpsServer';
+import { FIDO2Service } from '../auth/FIDO2';
+import { HTTPSServer } from '../services/HTTPS';
 import { MulterUploadService } from '../services/multer';
 import { ResourceManager } from '../services/resourceManager';
+import { PassportAuthService } from '../auth/PassportAuth';
+import { PassportAuthMiddlewareService } from '../middleware/PassportAuthMiddleware';
+import { JWTAuthMiddlewareService } from '../middleware/JWTAuthMiddleware';
+import { PasswordService } from '../auth/Password';
 import { UserController } from '../controllers/UserController';
+import { TOTPService } from '../auth/TOTP';
+import { YubicoOTPService } from '../auth/YubicoOTP';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -26,14 +36,19 @@ import { fileTypeFromBuffer } from 'file-type';
 import {
 	AppLoggerServiceInterface,
 	DatabaseControllerInterface,
+	EmailMFAServiceInterface,
 	ErrorLoggerServiceInterface,
 	HTTPSServerInterface,
+	JWTAuthMiddlewareServiceInterface,
+	JWTServiceInterface,
 	MailerServiceInterface,
 	MulterUploadServiceInterface,
+	PassportAuthMiddlewareServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface,
 	SecretsStoreInterface,
-	UserControllerInterface
+	UserControllerInterface,
+	YubicoOTPServiceInterface
 } from './interfaces';
 import { SecretsStore } from '../services/secrets';
 
@@ -65,6 +80,10 @@ export class ServiceFactory {
 		return APIRouter.getInstance();
 	}
 
+	public static getBackupCodeService(): BackupCodeService {
+		return BackupCodeService.getInstance();
+	}
+
 	public static getBouncerService(): BouncerService {
 		return BouncerService.getInstance();
 	}
@@ -81,16 +100,20 @@ export class ServiceFactory {
 		return DatabaseController.getInstance();
 	}
 
+	public static getEmailMFAService(): EmailMFAServiceInterface {
+		return EmailMFAService.getInstance();
+	}
+
 	public static getErrorHandlerService(): ErrorHandlerService {
 		return this.errorHandlerService;
 	}
 
-	public static getLoggerService(): AppLoggerServiceInterface {
-		return this.loggerService as AppLoggerService;
-	}
-
 	public static getErrorLoggerService(): ErrorLoggerServiceInterface {
 		return this.errorLoggerService as ErrorLoggerService;
+	}
+
+	public static getFIDO2Service(): FIDO2Service {
+		return FIDO2Service.getInstance();
 	}
 
 	public static getHTTPSServer(app: app.Application): HTTPSServerInterface {
@@ -118,6 +141,18 @@ export class ServiceFactory {
 		return HTTPSServer.getInstance(app, sequelize);
 	}
 
+	public static getLoggerService(): AppLoggerServiceInterface {
+		return this.loggerService as AppLoggerService;
+	}
+
+	public static getJWTAuthMiddlewareService(): JWTAuthMiddlewareServiceInterface {
+		return JWTAuthMiddlewareService.getInstance();
+	}
+
+	public static getJWTService(): JWTServiceInterface {
+		return JWTService.getInstance();
+	}
+
 	public static getMailerService(): MailerServiceInterface {
 		return MailerService.getInstance({
 			nodemailer,
@@ -140,6 +175,18 @@ export class ServiceFactory {
 			errorHandler: this.getErrorHandlerService(),
 			validateDependencies
 		});
+	}
+
+	public static getPassportAuthService(): PassportAuthService {
+		return PassportAuthService.getInstance();
+	}
+
+	public static getPassportAuthMiddlewareService(): PassportAuthMiddlewareServiceInterface {
+		return PassportAuthMiddlewareService.getInstance();
+	}
+
+	public static getPasswordService(): PasswordService {
+		return PasswordService.getInstance();
 	}
 
 	public static getRedisService(): RedisServiceInterface {
@@ -165,7 +212,17 @@ export class ServiceFactory {
 		return StaticRouter.getInstance();
 	}
 
+	public static getTOTPService(): TOTPService {
+		return TOTPService.getInstance();
+	}
+
 	public static getUserController(): UserControllerInterface {
 		return UserController.getInstance();
+	}
+
+	public static getYubicoOTPService(
+		yub: YubicoOTPServiceInterface
+	): YubicoOTPService {
+		return YubicoOTPService.getInstance(yub);
 	}
 }

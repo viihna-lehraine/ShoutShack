@@ -12,18 +12,13 @@ import { ServiceFactory } from '../index/factory';
 export class BouncerService implements BouncerServiceInterface {
 	private static instance: BouncerService | null = null;
 	private static configService: ConfigServiceInterface;
-
-	private readonly RATE_LIMIT_BASE_POINTS = Number(
-		BouncerService.configService.getEnvVariable('rateLimiterBasePoints')
-	)!;
-	private readonly RATE_LIMIT_BASE_DURATION = Number(
-		BouncerService.configService.getEnvVariable('rateLimiterBaseDuration')
-	)!;
+	private readonly RATE_LIMIT_BASE_POINTS =
+		BouncerService.configService.getEnvVariable('rateLimiterBasePoints');
+	private readonly RATE_LIMIT_BASE_DURATION =
+		BouncerService.configService.getEnvVariable('rateLimiterBaseDuration');
 	private readonly SYNC_INTERVAL =
-		Number(
-			BouncerService.configService.getEnvVariable('blacklistSyncInterval')
-		) || 3600000;
-
+		BouncerService.configService.getEnvVariable('blacklistSyncInterval') ||
+		3600000;
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
@@ -466,6 +461,36 @@ export class BouncerService implements BouncerServiceInterface {
 	public async isTemporarilyBlacklisted(ip: string): Promise<boolean> {
 		const temporaryBlacklistKey = `temporaryBlacklist_${ip}`;
 		return !!(await this.redisService.get<boolean>(temporaryBlacklistKey));
+	}
+
+	public async isBlacklisted(ip: string): Promise<boolean> {
+		try {
+			await this.loadIpBlacklist();
+
+			return this.blacklist.includes(ip);
+		} catch (error) {
+			this.logger.error(
+				`Error checking if IP ${ip} is blacklisted: ${error}`
+			);
+			return false;
+		}
+	}
+
+	public async isBlacklistedOrTemporarilyBlacklisted(ip: string): Promise<{
+		isBlacklisted: boolean;
+		isTemporarilyBlacklisted: boolean;
+	}> {
+		try {
+			const isBlacklisted = await this.isBlacklisted(ip);
+			const isTemporarilyBlacklisted =
+				await this.isTemporarilyBlacklisted(ip);
+			return { isBlacklisted, isTemporarilyBlacklisted };
+		} catch (error) {
+			this.logger.error(
+				`Error checking if IP ${ip} is blacklisted or temporarily blacklisted: ${error}`
+			);
+			return { isBlacklisted: false, isTemporarilyBlacklisted: false };
+		}
 	}
 
 	public async preInitIpBlacklist(): Promise<void> {

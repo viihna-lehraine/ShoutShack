@@ -24,6 +24,22 @@ export class AppAuthenticationError extends AppError {
 	}
 }
 
+export class AuthControllerError extends AppError {
+	constructor(
+		errorMessage: string = 'Authentication controller error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.AUTH_CONTROLLER_ERROR,
+			details
+		);
+		this.name = 'AuthControllerError';
+	}
+}
+
 export class CacheServiceError extends AppError {
 	constructor(
 		errorMessage: string = 'Cache service-level error',
@@ -352,6 +368,22 @@ export class MissingResourceError extends AppError {
 	}
 }
 
+export class PassportAuthServiceError extends AppError {
+	constructor(
+		errorMessage: string = 'Passport Auth Service error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.PASSPORT_AUTH_SERVICE_ERROR,
+			details
+		);
+		this.name = 'PassportAuthServiceError';
+	}
+}
+
 export class PartialServiceFailureWarning extends AppError {
 	constructor(serviceName?: string, details: ErrorDetails = {}) {
 		const errorMessage: string = serviceName
@@ -658,6 +690,7 @@ export class ValidationError extends AppError {
 
 export const AppErrorClasses = {
 	AppAuthenticationError,
+	AuthControllerError,
 	CacheServiceError,
 	ConfigurationError,
 	ConfigurationErrorFatal,
@@ -674,6 +707,7 @@ export const AppErrorClasses = {
 	InsufficientStorageError,
 	MiddlewareServiceError,
 	MissingResourceError,
+	PassportAuthServiceError,
 	PartialServiceFailureWarning,
 	QuotaExceededErrorFatal,
 	RateLimitErrorFatal,

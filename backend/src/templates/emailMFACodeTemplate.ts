@@ -1,7 +1,7 @@
 import { ServiceFactory } from 'src/index/factory';
 import { validateDependencies } from '../utils/helpers';
 
-const generate2FactorEmailTemplate = (
+export const generateEmailMFATemplate = (
 	username: string,
 	emailVerificationCode: string
 ): string => {
@@ -73,7 +73,7 @@ const generate2FactorEmailTemplate = (
     	      <body>
     	          <div class="container">
     	              <div class="header">
-    	                  <h1>Guestbook - Your Login Code</h1>
+    	                  <h1>BrainBlot - Your Login Code</h1>
     	              </div>
     	              <div class="content">
     	                  <p>Hello, ${username},</p>
@@ -98,5 +98,3 @@ const generate2FactorEmailTemplate = (
 		);
 	}
 };
-
-export default generate2FactorEmailTemplate;

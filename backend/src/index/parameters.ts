@@ -13,8 +13,6 @@ import passport, { session } from 'passport';
 import { inRange } from 'range_check';
 import { validateDependencies } from '../utils/helpers';
 import { blankRequest } from '../utils/constants';
-import { secretsStore } from '../services/secrets';
-import { createJwt } from '../auth/jwt';
 import * as interfaces from './interfaces';
 import { initCsrf } from '../middleware/csrf';
 import {
@@ -101,6 +99,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	featureLoadTestRoutes: process.env.FEATURE_LOAD_TEST_ROUTES! === 'true',
 	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING! === 'true',
 	featureHonorCipherOrder: process.env.FEATURE_HONOR_CIPHER_ORDER! === 'true',
+	fido2Timeout: Number(process.env.FIDO2_TIMEOUT!),
 	fidoAuthRequireResidentKey: fidoAuthRequireResidentKeyAsBoolean!,
 	fidoAuthUserVerification: process.env
 		.FIDO_AUTHENTICATOR_USER_VERIFICATION! as
@@ -138,19 +137,20 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		10
 	),
 	redisUrl: process.env.REDIS_URL!,
+	revokedTokenRetentionPeriod: Number(
+		process.env.REVOKED_TOKEN_RETENTION_PERIOD!
+	),
 	rpName: process.env.RP_NAME!,
 	rpIcon: process.env.RP_ICON!,
 	rpId: process.env.RP_ID!,
+	rpOrigin: process.env.RP_ORIGIN!,
+	secretsExpiryTimeout: parseInt(process.env.SECRETS_EXPIRY_TIMEOUT!, 10),
 	secretsFilePath1: process.env.SECRETS_FILE_PATH_1!,
 	secretsRateLimitMaxAttempts: parseInt(
 		process.env.SECRETS_RATE_LIMIT_MAX_ATTEMPTS!,
 		10
 	),
 	secretsRateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW!, 10),
-	secretsReEncryptionCooldown: parseInt(
-		process.env.SECRETS_RE_ENCRYPTION_COOLDOWN!,
-		10
-	),
 	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1!,
 	serverDataFilePath2: process.env.SERVER_DATA_FILE_PATH_2!,
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3!,
@@ -161,6 +161,9 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	tempDir: process.env.TEMP_DIR!,
 	tlsCertPath1: process.env.TLS_CERT_PATH_1!,
 	tlsKeyPath1: process.env.TLS_KEY_PATH_1!,
+	tokenExpiryListPath: process.env.TOKEN_REVOCATION_LIST_PATH!,
+	tokenRevokedListPath: process.env.TOKEN_BLACKLIST_PATH!,
+	tokenCacheDuration: Number(process.env.TOKEN_CACHE_DURATION!),
 	yubicoApiUrl: process.env.YUBICO_API_URL!
 };
 
@@ -208,11 +211,6 @@ export const InitIpBlacklistParameters: interfaces.InitIpBlacklistInterface = {
 	validateDependencies
 };
 
-export const InitJwtAuthParameters: interfaces.InitJwtAuthInterface = {
-	verifyJwt: createJwt().verifyJwt,
-	validateDependencies
-};
-
 export const InitMiddlewareStaticParameters = {
 	authenticateOptions: { session: false },
 	cookieParser,
@@ -252,7 +250,6 @@ export const AppLoggerServiceParameters = {
 	},
 	DailyRotateFile,
 	LogStashTransport,
-	secretsStore,
 	ErrorClasses,
 	ErrorSeverity,
 	HandleErrorStaticParameters,

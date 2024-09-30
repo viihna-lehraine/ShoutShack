@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { BaseRouter } from './baseRouter';
+import { BaseRouter } from './BaseRouter';
 
 export class TestRouter extends BaseRouter {
 	private static instance: TestRouter | null = null;

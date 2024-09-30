@@ -1,6 +1,12 @@
 import { Model } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
-import { NextFunction, Request, Response, Router } from 'express';
+import {
+	NextFunction,
+	Request,
+	RequestHandler,
+	Response,
+	Router
+} from 'express';
 import { AppError, ClientError, ErrorClasses } from '../errors/errorClasses';
 import RedisStore from 'connect-redis';
 import { Transporter } from 'nodemailer';
@@ -9,6 +15,13 @@ import { Session } from 'express-session';
 import { User } from '../models/UserModelFile';
 import { InferAttributes, WhereOptions } from 'sequelize/types';
 import { RedisClientType } from 'redis';
+import { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
+import {
+	AttestationResult,
+	Fido2AttestationResult,
+	PublicKeyCredentialCreationOptions,
+	PublicKeyCredentialRequestOptions
+} from 'fido2-lib';
 
 //
 ///
@@ -59,12 +72,6 @@ export interface BackupCodeInterface {
 	used: boolean;
 }
 
-export interface BackupCodeServiceInterface {
-	UserMfa: typeof import('../models/UserMfaModelFile').UserMfa;
-	crypto: typeof import('crypto');
-	bcrypt: typeof import('bcrypt');
-}
-
 export interface CacheMetrics {
 	cacheHits: number;
 	cacheMisses: number;
@@ -93,15 +100,6 @@ export interface CsrfMiddlewareInterface {
 export interface DependencyInterface {
 	name: string;
 	instance: unknown;
-}
-
-export interface EmailMFAInterface {
-	bcrypt: typeof import('bcrypt');
-	jwt: typeof import('jsonwebtoken');
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
 }
 
 export interface EnvVariableTypes {
@@ -135,6 +133,7 @@ export interface EnvVariableTypes {
 	featureHttpsRedirect: boolean;
 	featureLoadTestRoutes: boolean;
 	featureSequelizeLogging: boolean;
+	fido2Timeout: number;
 	fidoAuthRequireResidentKey: boolean;
 	fidoAuthUserVerification:
 		| 'required'
@@ -165,13 +164,15 @@ export interface EnvVariableTypes {
 	rateLimiterBasePoints: number;
 	rateLimiterGlobalReset: number;
 	redisUrl: string;
+	revokedTokenRetentionPeriod: number;
 	rpName: string;
 	rpIcon: string;
 	rpId: string;
+	rpOrigin: string;
+	secretsExpiryTimeout: number;
 	secretsFilePath1: string;
 	secretsRateLimitMaxAttempts: number;
 	secretsRateLimitWindow: number;
-	secretsReEncryptionCooldown: number;
 	serverDataFilePath1: string;
 	serverDataFilePath2: string;
 	serverDataFilePath3: string;
@@ -182,6 +183,9 @@ export interface EnvVariableTypes {
 	tempDir: string;
 	tlsCertPath1: string;
 	tlsKeyPath1: string;
+	tokenExpiryListPath: string;
+	tokenRevokedListPath: string;
+	tokenCacheDuration: number;
 	yubicoApiUrl: string;
 }
 
@@ -296,14 +300,6 @@ export interface InitIpBlacklistInterface {
 	) => void;
 }
 
-export interface InitJwtAuthInterface {
-	verifyJwt: (token: string) => Promise<string | object | null>;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		appLogger: AppLoggerServiceInterface
-	) => void;
-}
-
 export interface InitMiddlewareParameters {
 	authenticateOptions: import('passport').AuthenticateOptions;
 	cookieParser: typeof import('cookie-parser');
@@ -312,8 +308,6 @@ export interface InitMiddlewareParameters {
 	fsModule: typeof import('fs');
 	hpp: typeof import('hpp');
 	initCsrf: typeof import('../middleware/csrf').initCsrf;
-	initJwtAuth: typeof import('../middleware/jwtAuth').initJwtAuth;
-	initializePassportAuthMiddleware: typeof import('../middleware/passportAuth').initializePassportAuthMiddleware;
 	initializeSecurityHeaders: typeof import('../middleware/securityHeaders').initializeSecurityHeaders;
 	morgan: typeof import('morgan');
 	passport: typeof import('passport');
@@ -321,11 +315,6 @@ export interface InitMiddlewareParameters {
 	randomBytes: typeof import('crypto').randomBytes;
 	RedisStore: RedisStore;
 	verifyJwt: (token: string) => Promise<string | object | null>;
-}
-
-export interface JwtUserInterface {
-	id: string;
-	username: string;
 }
 
 export interface LoadIpBlacklistInterface {
@@ -384,29 +373,21 @@ export interface ModelOperations<T> {
 	destroy: (options: { where: { id: number } }) => Promise<number>;
 }
 
-export interface PassportAuthMiddlewareDependencies {
-	passport: import('passport').PassportStatic;
-	authenticateOptions: import('passport').AuthenticateOptions;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-}
-
-export interface PassportServiceInterface {
-	readonly passport: import('passport').PassportStatic;
-	readonly UserModel: ReturnType<
-		typeof import('../models/UserModelFile').createUserModel
-	>;
-	readonly argon2: typeof import('argon2');
-}
-
 export interface RouteParams {
 	app: import('express').Application;
 }
 
 export interface SecretsMap {
-	[key: string]: string;
+	DB_PASSWORD: string;
+	DB_HOST: string;
+	EMAIL_MFA_KEY: string;
+	JWT_SECRET: string;
+	PEPPER: string;
+	REDIS_PASSWORD: string;
+	REDIS_URL: string;
+	SMTP_TOKEN: string;
+	YUBICO_CLIENT_ID: string;
+	YUBICO_SECRET_KEY: string;
 }
 
 export interface SecurityHeadersInterface {
@@ -469,10 +450,6 @@ export interface TLSKeys {
 export interface TOTPMFA {
 	QRCode: typeof import('qrcode');
 	speakeasy: typeof import('speakeasy');
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
 }
 
 export interface TOTPSecretInterface {
@@ -544,17 +521,7 @@ export interface YubClientInterface {
 	): void;
 }
 
-export interface YubicoOtpMFAInterface {
-	execSync: typeof import('child_process').execSync;
-	getDirectoryPath: () => string;
-	yub: typeof import('yub');
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-}
-
-export interface YubicoOtpOptionsInterface {
+export interface YubicoOTPOptionsInterface {
 	clientId: number;
 	apiKey: string;
 	apiUrl: string;
@@ -595,8 +562,42 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 	setErrorHandler(errorHandler: ErrorHandlerServiceInterface): void;
 }
 
+export interface AuthControllerInterface {
+	initializeAuthMiddleware(): Promise<void>;
+	initializeJWTAuthMiddleware(): RequestHandler;
+	initializePassportAuthMiddleware(): RequestHandler;
+	loginUser(
+		email: string,
+		password: string
+	): Promise<{ success: boolean; token?: string }>;
+	generateResetToken(user: UserInstanceInterface): Promise<string | null>;
+	validateResetToken(
+		userId: string,
+		token: string
+	): Promise<UserInstanceInterface | null>;
+	comparePassword(
+		user: UserInstanceInterface,
+		password: string
+	): Promise<boolean>;
+	resetPassword(
+		user: UserInstanceInterface,
+		newPassword: string
+	): Promise<UserInstanceInterface | null>;
+	enableMfa(userId: string): Promise<boolean>;
+	disableMfa(userId: string): Promise<boolean>;
+	recoverPassword(email: string): Promise<void>;
+	generateTOTP(
+		userId: string
+	): Promise<{ secret: string; qrCodeUrl: string }>;
+	verifyTOTP(userId: string, token: string): Promise<boolean>;
+}
+
 export interface BaseRouterInterface {
 	getRouter(): Router;
+}
+
+export interface BackupCodeServiceInterface {
+	generateBackupCodes(id: string): Promise<string[]> | string[];
 }
 
 export interface BouncerServiceInterface {
@@ -626,11 +627,17 @@ export interface BouncerServiceInterface {
 	loadIpBlacklist(): Promise<void>;
 	syncBlacklistFromRedisToFile(): Promise<void>;
 	temporaryBlacklist(ip: string): Promise<void>;
+	isBlacklisted(ip: string): Promise<boolean>;
 	isTemporarilyBlacklisted(ip: string): Promise<boolean>;
+	isBlacklistedOrTemporarilyBlacklisted(ip: string): Promise<{
+		isBlacklisted: boolean;
+		isTemporarilyBlacklisted: boolean;
+	}>;
 	dynamicRateLimiter(): Promise<void>;
 }
 
 export interface CacheServiceInterface {
+	getCacheMetrics(service: string): CacheMetrics;
 	get<T>(key: string, service: string): Promise<T | null>;
 	set<T>(
 		key: string,
@@ -640,9 +647,9 @@ export interface CacheServiceInterface {
 	): Promise<void>;
 	del(key: string, service: string): Promise<void>;
 	exists(key: string, service: string): Promise<boolean>;
+	cleanupExpiredEntries(): void;
 	flushCache(service: string): Promise<void>;
 	closeConnection(): Promise<void>;
-	getCacheMetrics(service: string): CacheMetrics;
 }
 
 export interface ConfigSecretsInterface {
@@ -693,6 +700,18 @@ export interface DeclareWebServerOptionsInterface {
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	) => void;
+}
+
+export interface EmailMFAServiceInterface {
+	generateEmailMFACode({ bcrypt, jwt }: EmailMFAServiceDeps): Promise<{
+		emailMFACode: string;
+		emailMFAToken: string;
+	}>;
+	verifyEmailMFACode(
+		token: string,
+		emailMFACode: string,
+		jwt: EmailMFAServiceDeps['jwt']
+	): Promise<boolean>;
 }
 
 export interface EnvironmentServiceInterface {
@@ -749,14 +768,38 @@ export interface ErrorHandlerServiceInterface {
 	setShutdownHandler(shutdownFn: () => Promise<void>): void;
 }
 
+export interface FIDO2ServiceInterface {
+	initializeFIDO2Service(): Promise<void>;
+	generateFIDO2RegistrationOptions(
+		user: FidoUserInterface
+	): Promise<PublicKeyCredentialCreationOptions>;
+	verifyFIDO2Registration(
+		attestation: AttestationResult,
+		expectedChallenge: string
+	): Promise<Fido2AttestationResult>;
+	generateFIDO2AuthenticationOptions(
+		user: FidoUserInterface
+	): Promise<PublicKeyCredentialRequestOptions>;
+	invalidateFido2Cache(userId: string, action: string): Promise<void>;
+}
+
 export interface HTTPSServerInterface {
 	initialize: () => Promise<void>;
 	startServer: () => Promise<void>;
 	shutdownServer: () => Promise<void>;
 }
 
-export interface MiddlewareServiceInterface {
-	//
+export interface JWTAuthMiddlewareServiceInterface {
+	initializeJWTAuthMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void | Response>;
+}
+
+export interface JWTServiceInterface {
+	generateJWT(id: string, username: string): Promise<string>;
+	verifyJWT(token: string): Promise<string | JwtPayload | null>;
 }
 
 export interface MulterUploadServiceInterface {
@@ -767,6 +810,23 @@ export interface MulterUploadServiceInterface {
 		validationCallback?: (file: Express.Multer.File) => boolean
 	): import('multer').Multer | undefined;
 	onUploadSuccess(callback: (file: Express.Multer.File) => void): void;
+}
+
+export interface PassportAuthMiddlewareServiceInterface {
+	initializePassportAuthMiddleware({
+		passport,
+		authenticateOptions,
+		validateDependencies
+	}: PassportAuthMiddlewareServiceDeps): RequestHandler;
+}
+
+export interface PasswordServiceInterface {
+	hashPassword(password: string, pepper: string): Promise<string>;
+	comparePassword(
+		storedPassword: string,
+		providedPassword: string,
+		pepper: string
+	): Promise<boolean>;
 }
 
 export interface RedisServiceInterface {
@@ -813,19 +873,29 @@ export interface ResourceManagerInterface {
 }
 
 export interface SecretsStoreInterface {
-	initializeEncryptionKey(encryptionKey: string): void;
 	loadSecrets(dependencies: ConfigSecretsInterface): Promise<void>;
 	storeSecret(key: string, secret: string): Promise<void>;
+	retrieveSecret(
+		key: keyof SecretsMap,
+		usageCallback: (secret: string) => void
+	): Promise<string | null>;
 	retrieveSecrets(
-		secretKeys: string | string[]
-	): Record<string, string | null> | string | null;
-	reEncryptSecret(secretKey: string): Promise<void>;
+		secretKeys: (keyof SecretsMap)[],
+		usageCallback: (secrets: Partial<SecretsMap>) => void
+	): Promise<Partial<SecretsMap> | null>;
 	redactSecrets(
 		logData: string | Record<string, unknown> | unknown[]
 	): Promise<string | Record<string, unknown> | unknown[]>;
 	clearExpiredSecretsFromMemory(): void;
 	clearSecretsFromMemory(secretKeys: string | string[]): void;
-	batchReEncryptSecrets(): void;
+	batchClearSecrets(): Promise<void>;
+}
+
+export interface TOTPServiceInterface {
+	generateTOTPSecret(): TOTPSecretInterface;
+	generateTOTPToken(secret: string): Promise<string>;
+	verifyTOTPToken(secret: string, token: string): boolean;
+	generateQRCode(otpauth_url: string): Promise<string>;
 }
 
 export interface UserControllerInterface {
@@ -835,18 +905,6 @@ export interface UserControllerInterface {
 	createUser(
 		userDetails: Omit<UserAttributesInterface, 'id' | 'creationDate'>
 	): Promise<UserInstanceInterface | null>;
-	loginUser(
-		email: string,
-		password: string
-	): Promise<{ success: boolean; token?: string }>;
-	comparePassword(
-		user: UserInstanceInterface,
-		password: string
-	): Promise<boolean>;
-	resetPassword(
-		user: UserInstanceInterface,
-		newPassword: string
-	): Promise<UserInstanceInterface | null>;
 	findUserByEmail(email: string): Promise<UserInstanceInterface | null>;
 	updateUser(
 		user: UserInstanceInterface,
@@ -854,21 +912,7 @@ export interface UserControllerInterface {
 	): Promise<UserInstanceInterface | null>;
 	deleteUser(userId: string): Promise<boolean>;
 	verifyUserAccount(userId: string): Promise<boolean>;
-	generateResetToken(user: UserInstanceInterface): Promise<string | null>;
-	validateResetToken(
-		userId: string,
-		token: string
-	): Promise<UserInstanceInterface | null>;
-	enableMfa(userId: string): Promise<boolean>;
-	disableMfa(userId: string): Promise<boolean>;
 	findUserById(userId: string): Promise<UserInstanceInterface | null>;
-	recoverPassword(email: string): Promise<void>;
-	generateEmail2FA(email: string): Promise<void>;
-	verifyEmail2FA(email: string, email2FACode: string): Promise<boolean>;
-	generateTOTP(
-		userId: string
-	): Promise<{ secret: string; qrCodeUrl: string }>;
-	verifyTOTP(userId: string, token: string): Promise<boolean>;
 }
 
 export interface ValidatorServiceInterface {
@@ -883,6 +927,13 @@ export interface ValidatorServiceInterface {
 		res: Response,
 		next: NextFunction
 	): Response | void;
+}
+
+export interface YubicoOTPServiceInterface {
+	initializeYubicoOTP(): Promise<void>;
+	init(clientId: string, secretKey: string): YubClientInterface;
+	validateYubicoOTP(otp: string): Promise<boolean>;
+	generateYubicoOTPOptions(): Promise<YubicoOTPOptionsInterface>;
 }
 
 export type HTTPSServerOptions = import('tls').SecureContextOptions;
@@ -950,12 +1001,34 @@ export interface AppLoggerServiceDeps {
 	};
 	DailyRotateFile: typeof import('winston-daily-rotate-file');
 	LogStashTransport: typeof import('winston-logstash');
-	secretsStore: typeof import('../services/secrets').secretsStore;
 	ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
 	HandleErrorStaticParameters: typeof import('../index/parameters').HandleErrorStaticParameters;
 	uuidv4: typeof import('uuid').v4;
 	fs: typeof import('fs');
 	Sequelize: typeof import('sequelize').Sequelize;
+}
+
+export interface BackupCodeServiceDeps {
+	UserMfa: typeof import('../models/UserMfaModelFile').UserMfa;
+	crypto: typeof import('crypto');
+	bcrypt: typeof import('bcrypt');
+}
+
+export interface EmailMFAServiceDeps {
+	bcrypt: {
+		genSalt: (rounds: number) => Promise<string>;
+	};
+	jwt: {
+		sign: (
+			payload: string | object | Buffer,
+			secretOrPrivateKey: Secret,
+			options?: SignOptions
+		) => string;
+		verify: (
+			token: string,
+			secretOrPublicKey: Secret
+		) => string | JwtPayload;
+	};
 }
 
 export interface ErrorLoggerServiceDeps {
@@ -988,6 +1061,15 @@ export interface MulterUploadServiceDeps {
 	logger: AppLoggerServiceInterface;
 	errorLogger: AppLoggerServiceInterface;
 	errorHandler: ErrorHandlerServiceInterface;
+}
+
+export interface PassportAuthMiddlewareServiceDeps {
+	passport: import('passport').PassportStatic;
+	authenticateOptions: import('passport').AuthenticateOptions;
+	validateDependencies: (
+		dependencies: DependencyInterface[],
+		logger: AppLoggerServiceInterface
+	) => void;
 }
 
 export interface RedisServiceDeps {

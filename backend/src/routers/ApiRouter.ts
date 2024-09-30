@@ -1,4 +1,4 @@
-import { BaseRouter } from './baseRouter';
+import { BaseRouter } from './BaseRouter';
 import {
 	CacheServiceInterface,
 	UserControllerInterface

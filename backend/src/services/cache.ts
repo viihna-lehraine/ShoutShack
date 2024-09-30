@@ -8,6 +8,7 @@ import {
 } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
+import { withRetry } from '../utils/helpers';
 
 export class CacheService implements CacheServiceInterface {
 	private static instance: CacheService | null = null;
@@ -100,7 +101,7 @@ export class CacheService implements CacheServiceInterface {
 					} else {
 						this.updateMetrics(service, 'hit');
 						this.logger.info(
-							`Memory cache hit for key: ${namespacedKey} by service: ${service}`
+							`Memory cache hit for key: ${namespacedKey}`
 						);
 						return memoryEntry.value as T;
 					}
@@ -108,26 +109,26 @@ export class CacheService implements CacheServiceInterface {
 			}
 
 			const redisValue = await this.redisService.get<T>(namespacedKey);
+
 			if (redisValue) {
 				const defaultExpiration =
 					Date.now() + this.getServiceTTL(service) * 1000;
+
 				if (!serviceMemoryCache) {
 					this.memoryCache.set(service, new Map());
 				}
+
 				this.memoryCache.get(service)?.set(namespacedKey, {
 					value: redisValue,
 					expiration: defaultExpiration
 				});
 				this.updateMetrics(service, 'redisHit');
-				this.logger.info(
-					`Fetched key: ${namespacedKey} from Redis for service: ${service} and added to memory cache`
-				);
+				this.logger.info(`Fetched key: ${namespacedKey} from Redis`);
 			} else {
 				this.updateMetrics(service, 'miss');
-				this.logger.info(
-					`Cache miss for key: ${namespacedKey} by service: ${service}`
-				);
+				this.logger.info(`Cache miss for key: ${namespacedKey}`);
 			}
+
 			return redisValue;
 		} catch (error) {
 			this.handleCacheError(
@@ -170,7 +171,7 @@ export class CacheService implements CacheServiceInterface {
 			);
 
 			this.logger.info(
-				`Key ${namespacedKey} set by service ${service} with TTL ${
+				`Key ${namespacedKey} set with TTL ${
 					expirationInSeconds || this.getServiceTTL(service)
 				} seconds in both memory and Redis cache`
 			);
@@ -353,9 +354,36 @@ export class CacheService implements CacheServiceInterface {
 		}
 	}
 
+	public cleanupExpiredEntries(): void {
+		withRetry(
+			() => {
+				for (const [service, cache] of this.memoryCache.entries()) {
+					for (const [key, { expiration }] of cache.entries()) {
+						if (expiration && Date.now() > expiration) {
+							cache.delete(key);
+							this.logger.info(
+								`Expired memory cache entry removed for key: ${key} from service: ${service}`
+							);
+						}
+					}
+				}
+			},
+			3,
+			1000
+		).catch(error => {
+			this.logger.error(
+				`Error cleaning up expired memory cache entries after retries: ${error}`
+			);
+		});
+	}
+
 	public async closeConnection(): Promise<void> {
 		try {
-			await this.redisService.cleanUpRedisClient();
+			await withRetry(
+				async () => await this.redisService.cleanUpRedisClient(),
+				3,
+				1000
+			);
 		} catch (error) {
 			this.handleCacheError(
 				error,

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import path from 'path';
-import { BaseRouter } from './baseRouter';
+import { BaseRouter } from './BaseRouter';
 import { validateDependencies } from '../utils/helpers';
 
 export class StaticRouter extends BaseRouter {
