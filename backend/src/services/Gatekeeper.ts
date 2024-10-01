@@ -3,21 +3,20 @@ import path from 'path';
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import {
-	BouncerServiceInterface,
-	ConfigServiceInterface,
+	GatekeeperServiceInterface,
 	SlowdownSessionInterface
 } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 
-export class BouncerService implements BouncerServiceInterface {
-	private static instance: BouncerService | null = null;
-	private static configService: ConfigServiceInterface;
+export class GatekeeperService implements GatekeeperServiceInterface {
+	private static instance: GatekeeperService | null = null;
+	private static envConfig = ServiceFactory.getEnvConfigService();
 	private readonly RATE_LIMIT_BASE_POINTS =
-		BouncerService.configService.getEnvVariable('rateLimiterBasePoints');
+		GatekeeperService.envConfig.getEnvVariable('rateLimiterBasePoints');
 	private readonly RATE_LIMIT_BASE_DURATION =
-		BouncerService.configService.getEnvVariable('rateLimiterBaseDuration');
+		GatekeeperService.envConfig.getEnvVariable('rateLimiterBaseDuration');
 	private readonly SYNC_INTERVAL =
-		BouncerService.configService.getEnvVariable('blacklistSyncInterval') ||
+		GatekeeperService.envConfig.getEnvVariable('blacklistSyncInterval') ||
 		3600000;
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
@@ -27,6 +26,7 @@ export class BouncerService implements BouncerServiceInterface {
 	private resourceManager = ServiceFactory.getResourceManager();
 	private rateLimiter: RateLimiterMemory;
 	private blacklistKey = 'ipBlacklist';
+	private whitelistKey = 'ipWhitelist';
 	private rateLimitPrefix = 'rateLimit_';
 	private blacklist: string[] = [];
 	private whitelist: string[] = [];
@@ -37,8 +37,8 @@ export class BouncerService implements BouncerServiceInterface {
 			points: this.RATE_LIMIT_BASE_POINTS,
 			duration: this.RATE_LIMIT_BASE_DURATION
 		});
-
 		this.preInitIpBlacklist();
+		this.preInitIpWhitelist();
 		this.resourceManager = ServiceFactory.getResourceManager();
 
 		setInterval(
@@ -47,11 +47,12 @@ export class BouncerService implements BouncerServiceInterface {
 		);
 	}
 
-	public static getInstance(): BouncerService {
-		if (!BouncerService.instance) {
-			BouncerService.instance = new BouncerService();
+	public static getInstance(): GatekeeperService {
+		if (!GatekeeperService.instance) {
+			GatekeeperService.instance = new GatekeeperService();
 		}
-		return BouncerService.instance;
+
+		return GatekeeperService.instance;
 	}
 
 	public async dynamicRateLimiter(): Promise<void> {
@@ -169,10 +170,10 @@ export class BouncerService implements BouncerServiceInterface {
 	private async incrementRateLimit(ip: string): Promise<void> {
 		const rateLimitKey = `${this.rateLimitPrefix}${ip}`;
 		const basePoints = Number(
-			BouncerService.configService.getEnvVariable('rateLimiterBasePoints')
+			GatekeeperService.envConfig.getEnvVariable('rateLimiterBasePoints')
 		);
 		const baseDuration = Number(
-			BouncerService.configService.getEnvVariable(
+			GatekeeperService.envConfig.getEnvVariable(
 				'rateLimiterBaseDuration'
 			)
 		);
@@ -236,7 +237,7 @@ export class BouncerService implements BouncerServiceInterface {
 
 	public slowdownMiddleware() {
 		const slowdownThreshold = Number(
-			BouncerService.configService.getEnvVariable('slowdownThreshold')
+			GatekeeperService.envConfig.getEnvVariable('slowdownThreshold')
 		);
 		return (
 			req: Request & { session: SlowdownSessionInterface },
@@ -313,7 +314,8 @@ export class BouncerService implements BouncerServiceInterface {
 			const clientIp = req.ip;
 
 			if (!clientIp) {
-				return res.status(500).json({ error: 'Bad request' });
+				res.status(500).json({ error: 'Bad request' });
+				return;
 			}
 
 			if (this.whitelist.includes(clientIp)) {
@@ -325,16 +327,19 @@ export class BouncerService implements BouncerServiceInterface {
 					this.logger.info(
 						`Temporarily blocked request from IP: ${clientIp}`
 					);
-					return res
-						.status(403)
-						.json({ error: 'Access temporarily denied.' });
+
+					res.status(403).json({
+						error: 'Access temporarily denied.'
+					});
+					return;
 				}
 
 				if (this.blacklist.includes(clientIp)) {
 					this.logger.info(
 						`Blocked request from blacklisted IP: ${clientIp}`
 					);
-					return res.status(403).json({ error: 'Access denied' });
+					res.status(403).json({ error: 'Access denied' });
+					return;
 				}
 
 				next();
@@ -386,9 +391,12 @@ export class BouncerService implements BouncerServiceInterface {
 	}
 
 	private async loadWhitelist(): Promise<void> {
-		this.whitelist = BouncerService.configService
+		this.whitelist = GatekeeperService.envConfig
 			.getEnvVariable('ipWhitelistPath')
 			.split(',');
+		this.logger.info(
+			`Whitelist initialized with ${this.whitelist.length} IPs.`
+		);
 	}
 
 	private async saveIpBlacklist(): Promise<void> {
@@ -521,22 +529,21 @@ export class BouncerService implements BouncerServiceInterface {
 
 	private async preInitIpWhitelist(): Promise<void> {
 		try {
-			let cachedWhitelist = await this.cacheService.get<string[]>(
+			const cachedWhitelist = await this.cacheService.get<string[]>(
 				this.whitelistKey,
-				'bouncerService'
+				'gatekeeperService'
 			);
 
 			if (!cachedWhitelist) {
 				this.logger.info(
 					'IP whitelist not found in cache, loading from configuration...'
 				);
-				this.whitelist = BouncerService.configService
-					.getEnvVariable('ipWhitelistPath')
-					.split(',');
+
+				await this.loadWhitelist();
 				await this.cacheService.set(
 					this.whitelistKey,
 					this.whitelist,
-					'bouncerService',
+					'gatekeeperService',
 					3600
 				);
 			} else {
@@ -549,7 +556,7 @@ export class BouncerService implements BouncerServiceInterface {
 		}
 	}
 
-	public async syncBlacklistFromRedisToFile(): Promise<void> {
+	private async syncBlacklistFromRedisToFile(): Promise<void> {
 		try {
 			const blacklist = await this.redisService.get<string[]>(
 				this.blacklistKey
@@ -560,7 +567,7 @@ export class BouncerService implements BouncerServiceInterface {
 				await this.cacheService.set(
 					this.blacklistKey,
 					this.blacklist,
-					'bouncerService',
+					'gatekeeperService',
 					3600
 				);
 				await this.saveIpBlacklistToFile();
@@ -607,7 +614,7 @@ export class BouncerService implements BouncerServiceInterface {
 	): string {
 		return path.resolve(
 			__dirname,
-			BouncerService.configService.getEnvVariable(envVariable)
+			GatekeeperService.envConfig.getEnvVariable(envVariable)
 		);
 	}
 

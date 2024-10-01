@@ -6,12 +6,14 @@ import {
 	MulterUploadServiceDeps,
 	MulterUploadServiceInterface
 } from '../index/interfaces';
+import { ServiceFactory } from '../index/factory';
 
 export class MulterUploadService
 	extends EventEmitter
 	implements MulterUploadServiceInterface
 {
 	private static instance: MulterUploadService | null = null;
+	private envConfig = ServiceFactory.getEnvConfigService();
 	private readonly _deps: MulterUploadServiceDeps;
 	public fileSizeLimit: number;
 	public storageDir: string;
@@ -27,11 +29,11 @@ export class MulterUploadService
 		super();
 		this._deps = deps;
 		this.setMaxListeners(5);
-		this.fileSizeLimit = deps.configService.getEnvVariable(
+		this.fileSizeLimit = this.envConfig.getEnvVariable(
 			'multerFileSizeLimit'
 		);
-		this.storageDir = deps.configService.getEnvVariable('multerStorageDir');
-		this.uploadDir = deps.configService.getEnvVariable('multerUploadDir');
+		this.storageDir = this.envConfig.getEnvVariable('multerStorageDir');
+		this.uploadDir = this.envConfig.getEnvVariable('multerUploadDir');
 		this.allowedMimeTypes =
 			allowedMimeTypes.length > 0
 				? allowedMimeTypes
@@ -49,8 +51,7 @@ export class MulterUploadService
 					instance: deps.fileTypeFromBuffer
 				},
 				{ name: 'fs', instance: deps.fs },
-				{ name: 'path', instance: deps.path },
-				{ name: 'configService', instance: deps.configService }
+				{ name: 'path', instance: deps.path }
 			],
 			deps.logger
 		);

@@ -1,6 +1,6 @@
-import { AppErrorClasses } from './appErrorClasses';
-import { ClientErrorClasses } from './clientErrorClasses';
-import { ERROR_CODES } from './errorCodes';
+import { AppErrorClasses } from './AppErrorClasses';
+import { ClientErrorClasses } from './ClientErrorClasses';
+import { ERROR_CODES } from '../config/errorCodes';
 
 export interface ErrorDetails {
 	retryAfter?: number | undefined;

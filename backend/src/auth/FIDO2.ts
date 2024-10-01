@@ -29,10 +29,9 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 	private logger: AppLoggerServiceInterface;
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private configService = ServiceFactory.getConfigService();
+	private envConfig = ServiceFactory.getEnvConfigService();
 	private cacheService = ServiceFactory.getCacheService();
-	private timeout =
-		this.configService.getEnvVariable('fido2Timeout') || 50000;
+	private timeout = this.envConfig.getEnvVariable('fido2Timeout') || 50000;
 
 	constructor() {
 		this.logger =
@@ -58,16 +57,16 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 		}
 
 		try {
-			const rpId = this.configService.getEnvVariable('rpId');
-			const rpName = this.configService.getEnvVariable('rpName');
+			const rpId = this.envConfig.getEnvVariable('rpId');
+			const rpName = this.envConfig.getEnvVariable('rpName');
 			const challengeSize =
-				this.configService.getEnvVariable('fidoChallengeSize');
+				this.envConfig.getEnvVariable('fidoChallengeSize');
 			const cryptoParams =
-				this.configService.getEnvVariable('fidoCryptoParams');
-			const requireResidentKey = this.configService.getEnvVariable(
+				this.envConfig.getEnvVariable('fidoCryptoParams');
+			const requireResidentKey = this.envConfig.getEnvVariable(
 				'fidoAuthRequireResidentKey'
 			);
-			const userVerification = this.configService.getEnvVariable(
+			const userVerification = this.envConfig.getEnvVariable(
 				'fidoAuthUserVerification'
 			);
 			const validUserVerificationValues: UserVerification[] = [
@@ -194,9 +193,9 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 
 			const u2fAttestationExpectations: ExpectedAttestationResult = {
 				challenge: expectedChallenge,
-				origin: this.configService.getEnvVariable('rpOrigin'),
+				origin: this.envConfig.getEnvVariable('rpOrigin'),
 				factor: 'either' as FidoFactor,
-				rpId: this.configService.getEnvVariable('rpId')
+				rpId: this.envConfig.getEnvVariable('rpId')
 			};
 
 			const result = await this.FIDO2!.attestationResult(
@@ -277,7 +276,7 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 
 			const assertionExpectations: ExpectedAssertionResult = {
 				challenge: expectedChallenge,
-				origin: this.configService.getEnvVariable('rpOrigin'),
+				origin: this.envConfig.getEnvVariable('rpOrigin'),
 				factor: 'either' as FidoFactor,
 				publicKey,
 				prevCounter: previousCounter,

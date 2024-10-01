@@ -3,11 +3,10 @@ import { BaseRouter } from './BaseRouter';
 
 export class TestRouter extends BaseRouter {
 	private static instance: TestRouter | null = null;
-	private nodeEnv: string;
+	private nodeEnv = this.envConfig.getEnvVariable('nodeEnv');
 
 	private constructor() {
 		super();
-		this.nodeEnv = this.configService.getEnvVariable('nodeEnv');
 		this.setUpRoutes();
 	}
 

@@ -12,19 +12,19 @@ import morgan from 'morgan';
 import passport, { session } from 'passport';
 import { inRange } from 'range_check';
 import { validateDependencies } from '../utils/helpers';
-import { blankRequest } from '../utils/constants';
+import { blankRequest } from '../config/constants';
 import * as interfaces from './interfaces';
-import { initCsrf } from '../middleware/csrf';
+import { initCsrf } from '../middleware/CSRF';
 import {
 	fidoAuthRequireResidentKeyAsBoolean,
 	fidoCryptoParamsAsArray,
 	emailSecureAsBoolean,
 	tlsCiphers
-} from '../utils/constants';
+} from '../config/constants';
 import { createLogger, format, transports, addColors } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
-import { ErrorClasses, ErrorSeverity } from '../errors/errorClasses';
+import { ErrorClasses, ErrorSeverity } from '../errors/ErrorClasses';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
 import { sanitizeRequestBody } from '../utils/validator';
@@ -55,20 +55,16 @@ export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServe
 
 export const envVariables: interfaces.EnvVariableTypes = {
 	baseUrl: process.env.BASE_URL!,
-	batchReEncryptSecretsInterval: parseInt(
-		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!,
-		10
+	batchReEncryptSecretsInterval: Number(
+		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!
 	),
-	blacklistSyncInterval: parseInt(
-		process.env.BLACKLIST_SYNC_INTERVAL!,
-		3600000
+	blacklistSyncInterval: Number(process.env.BLACKLIST_SYNC_INTERVAL!),
+	clearExpiredSecretsInterval: Number(
+		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!
 	),
-	clearExpiredSecretsInterval: parseInt(
-		process.env.TZ_CLEAR_EXPIRED_SECRETS_INTERVAL!,
-		10
-	),
-	cpuLimit: parseInt(process.env.CPU_LIMIT!, 10),
-	cronLoggerSetting: parseInt(process.env.CRON_LOGGER_SETTING!),
+	cpuLimit: Number(process.env.CPU_LIMIT!),
+	cpuThreshold: Number(process.env.CPU_THRESHOLD!),
+	cronLoggerSetting: Number(process.env.CRON_LOGGER_SETTING!),
 	dbDialect: process.env.DB_DIALECT! as
 		| 'mariadb'
 		| 'mssql'
@@ -76,16 +72,16 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		| 'postgres'
 		| 'sqlite',
 	dbHost: process.env.DB_HOST! || 'localhost',
-	dbInitMaxRetries: parseInt(process.env.DB_INIT_MAX_RETRIES!, 10),
-	dbInitRetryAfter: parseInt(process.env.DB_INIT_RETRY_AFTER!, 10),
+	dbInitMaxRetries: Number(process.env.DB_INIT_MAX_RETRIES!),
+	dbInitRetryAfter: Number(process.env.DB_INIT_RETRY_AFTER!),
 	dbName: process.env.DB_NAME!,
 	dbUser: process.env.DB_USER!,
 	diskPath: process.env.DISK_PATH!,
 	emailHost: process.env.EMAIL_HOST!,
-	emailPort: parseInt(process.env.EMAIL_PORT!, 10),
+	emailPort: Number(process.env.EMAIL_PORT!),
 	emailSecure: emailSecureAsBoolean!,
 	emailUser: process.env.EMAIL_USER!,
-	eventLoopLagThreshold: parseInt(process.env.EVENT_LOOP_LAG!, 10),
+	eventLoopLagThreshold: Number(process.env.EVENT_LOOP_LAG!),
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
 	featureDbSync: process.env.FEATURE_DB_SYNC === 'true',
 	featureEnableIpBlacklist:
@@ -107,7 +103,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		| 'preferred'
 		| 'discouraged'
 		| 'enterprise',
-	fidoChallengeSize: parseInt(process.env.FIDO_CHALLENGE_SIZE!, 10),
+	fidoChallengeSize: Number(process.env.FIDO_CHALLENGE_SIZE!),
 	fidoCryptoParams: fidoCryptoParamsAsArray!,
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH!,
 	ipWhitelistPath: process.env.IP_WHITELIST_PATH!,
@@ -116,26 +112,21 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	loggerServiceName: process.env.LOG_SERVICE_NAME!,
 	logStashHost: process.env.LOGSTASH_HOST!,
 	logStashNode: process.env.LOGSTASH_NODE!,
-	logStashPort: parseInt(process.env.LOGSTASH_PORT!, 10),
-	maxCacheSize: parseInt(process.env.MAX_CACHE_SIZE!, 10),
-	memoryLimit: parseInt(process.env.MEMORY_LIMIT!, 10),
-	memoryThreshold: parseInt(process.env.MEMORY_THRESHOLD!, 10),
-	memoryMonitorInterval: parseInt(process.env.MEMORY_MONITOR_INTERVAL!, 10),
-	multerFileSizeLimit: parseInt(process.env.MULTER_FILE_SIZE_LIMIT!, 10),
+	logStashPort: Number(process.env.LOGSTASH_PORT!),
+	maxCacheSize: Number(process.env.MAX_CACHE_SIZE!),
+	maxRedisCacheSize: Number(process.env.MAX_REDIS_CACHE_SIZE!),
+	memoryLimit: Number(process.env.MEMORY_LIMIT!),
+	memoryThreshold: Number(process.env.MEMORY_THRESHOLD!),
+	memoryMonitorInterval: Number(process.env.MEMORY_MONITOR_INTERVAL!),
+	multerFileSizeLimit: Number(process.env.MULTER_FILE_SIZE_LIMIT!),
 	multerStorageDir: process.env.MULTER_STORAGE_DIR!,
 	multerUploadDir: process.env.UPLOAD_DIR!,
 	nodeEnv: process.env.NODE_ENV! as 'development' | 'testing' | 'production',
 	npmLogPath: process.env.SERVER_NPM_LOG_PATH!,
 	primaryLogPath: process.env.SERVER_LOG_PATH!,
-	rateLimiterBaseDuration: parseInt(
-		process.env.RATE_LIMITER_BASE_DURATION!,
-		10
-	),
-	rateLimiterBasePoints: parseInt(process.env.RATE_LIMITER_BASE_POINTS!, 10),
-	rateLimiterGlobalReset: parseInt(
-		process.env.RATE_LIMITER_GLOBAL_RESET!,
-		10
-	),
+	rateLimiterBaseDuration: Number(process.env.RATE_LIMITER_BASE_DURATION!),
+	rateLimiterBasePoints: Number(process.env.RATE_LIMITER_BASE_POINTS!),
+	rateLimiterGlobalReset: Number(process.env.RATE_LIMITER_GLOBAL_RESET!),
 	redisUrl: process.env.REDIS_URL!,
 	revokedTokenRetentionPeriod: Number(
 		process.env.REVOKED_TOKEN_RETENTION_PERIOD!
@@ -144,19 +135,18 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	rpIcon: process.env.RP_ICON!,
 	rpId: process.env.RP_ID!,
 	rpOrigin: process.env.RP_ORIGIN!,
-	secretsExpiryTimeout: parseInt(process.env.SECRETS_EXPIRY_TIMEOUT!, 10),
+	secretsExpiryTimeout: Number(process.env.SECRETS_EXPIRY_TIMEOUT!),
 	secretsFilePath1: process.env.SECRETS_FILE_PATH_1!,
-	secretsRateLimitMaxAttempts: parseInt(
-		process.env.SECRETS_RATE_LIMIT_MAX_ATTEMPTS!,
-		10
+	secretsRateLimitMaxAttempts: Number(
+		process.env.SECRETS_RATE_LIMIT_MAX_ATTEMPTS!
 	),
-	secretsRateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW!, 10),
+	secretsRateLimitWindow: Number(process.env.RATE_LIMIT_WINDOW!),
 	serverDataFilePath1: process.env.SERVER_DATA_FILE_PATH_1!,
 	serverDataFilePath2: process.env.SERVER_DATA_FILE_PATH_2!,
 	serverDataFilePath3: process.env.SERVER_DATA_FILE_PATH_3!,
 	serverDataFilePath4: process.env.SERVER_DATA_FILE_PATH_4!,
-	serverPort: parseInt(process.env.SERVER_PORT!, 10),
-	slowdownThreshold: parseInt(process.env.SLOWDOWN_THRESHOLD!, 10),
+	serverPort: Number(process.env.SERVER_PORT!),
+	slowdownThreshold: Number(process.env.SLOWDOWN_THRESHOLD!),
 	staticRootPath: process.env.STATIC_ROOT_PATH!,
 	tempDir: process.env.TEMP_DIR!,
 	tlsCertPath1: process.env.TLS_CERT_PATH_1!,

@@ -3,45 +3,32 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import {
-	EnvironmentServiceInterface,
+	EnvConfigServiceInterface,
 	EnvVariableTypes,
-	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
 	FeatureFlagTypes
 } from '../index/interfaces';
-import { AppLoggerService, ErrorLoggerService } from './logger';
-import { ErrorHandlerService } from './errorHandler';
-import {
-	AppLoggerServiceParameters,
-	HandleErrorStaticParameters
-} from '../index/parameters';
+import { HandleErrorStaticParameters } from '../index/parameters';
+import { ServiceFactory } from '../index/factory';
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
-export class EnvironmentService implements EnvironmentServiceInterface {
-	private static instance: EnvironmentService;
-
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
+export class EnvConfigService implements EnvConfigServiceInterface {
+	private static instance: EnvConfigService;
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
 
 	private constructor() {
-		this.errorLogger = ErrorLoggerService.getInstance(
-			AppLoggerServiceParameters
-		) as ErrorLoggerServiceInterface;
-		this.errorHandler = ErrorHandlerService.getInstance(
-			AppLoggerService.getInstance(AppLoggerServiceParameters),
-			this.errorLogger
-		) as ErrorHandlerServiceInterface;
 		this.loadEnv();
 	}
 
-	public static getInstance(): EnvironmentService {
-		if (!EnvironmentService.instance) {
-			EnvironmentService.instance = new EnvironmentService();
+	public static getInstance(): EnvConfigService {
+		if (!EnvConfigService.instance) {
+			EnvConfigService.instance = new EnvConfigService();
 		}
 
-		return EnvironmentService.instance;
+		return EnvConfigService.instance;
 	}
 
 	private loadEnv(): void {
@@ -139,6 +126,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'blacklistSyncInterval':
 			case 'clearExpiredSecretsInterval':
 			case 'cpuLimit':
+			case 'cpuThreshold':
 			case 'cronLoggerSetting':
 			case 'dbInitMaxRetries':
 			case 'dbInitRetryAfter':
@@ -148,6 +136,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'fidoChallengeSize':
 			case 'logStashPort':
 			case 'maxCacheSize':
+			case 'maxRedisCacheSize':
 			case 'memoryLimit':
 			case 'memoryThreshold':
 			case 'memoryMonitorInterval':
@@ -171,6 +160,7 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 			case 'featureEnableJwtAuth':
 			case 'featureEnableLogStash':
 			case 'featureEnableRateLimit':
+			case 'featureEnableResourceAutoScaling':
 			case 'featureEnableSession':
 			case 'featureEncryptSecretsStore':
 			case 'featureHonorCipherOrder':
@@ -214,6 +204,9 @@ export class EnvironmentService implements EnvironmentServiceInterface {
 				process.env.FEATURE_ENABLE_RATE_LIMIT
 			)!,
 			enableRedis: this.parseBoolean(process.env.FEATURE_ENABLE_REDIS),
+			enableResourceAutoScaling: this.parseBoolean(
+				process.env.FEATURE_ENABLE_RESOURCE_AUTO_SCALING
+			),
 			encryptSecretsStore: this.parseBoolean(
 				process.env.FEATURE_ENCRYPT_STORE
 			),

@@ -6,27 +6,6 @@ import { ServiceFactory } from '../index/factory';
 const errorLogger = ServiceFactory.getErrorLoggerService();
 const errorHandler = ServiceFactory.getErrorHandlerService();
 
-export function handleValidationErrors(
-	req: Request,
-	res: Response,
-	next: NextFunction
-): Response | void {
-	const errors = validationResult(req);
-
-	if (!errors.isEmpty()) {
-		const errorDetails: Record<string, unknown> = {
-			message: 'Validation failed',
-			errors: errors.array()
-		};
-		errorLogger.logError('Validation failed', { errors: errors.array() });
-		errorHandler.expressErrorHandler()(errorDetails, req, res, next);
-
-		return res.status(400).json({ errors: errors.array() });
-	}
-
-	next();
-}
-
 export function sanitizeInput(input: string): string {
 	return xss(input.trim());
 }
@@ -34,7 +13,7 @@ export function sanitizeInput(input: string): string {
 export async function sanitizeRequestBody(
 	body: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-	const { sensitiveFields } = await import('./constants').then(module => ({
+	const { sensitiveFields } = await import('../config/constants').then(module => ({
 		sensitiveFields: module.sensitiveFields
 	}));
 
@@ -83,6 +62,27 @@ export function validateBlotEntry(
 
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
+		return res.status(400).json({ errors: errors.array() });
+	}
+
+	next();
+}
+
+export function handleValidationErrors(
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Response | void {
+	const errors = validationResult(req);
+
+	if (!errors.isEmpty()) {
+		const errorDetails: Record<string, unknown> = {
+			message: 'Validation failed',
+			errors: errors.array()
+		};
+		errorLogger.logError('Validation failed', { errors: errors.array() });
+		errorHandler.expressErrorHandler()(errorDetails, req, res, next);
+
 		return res.status(400).json({ errors: errors.array() });
 	}
 

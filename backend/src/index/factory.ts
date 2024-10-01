@@ -2,55 +2,69 @@ import { Request, Response, NextFunction } from 'express';
 import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
-import { configService, ConfigService } from '../services/config';
 import { APIRouter } from '../routers/ApiRouter';
 import { BackupCodeService } from '../auth/BackupCode';
 import { StaticRouter } from '../routers/StaticRouter';
-import { MailerService } from '../services/mailer';
+import { MailerService } from '../services/Mailer';
 import { EmailMFAService } from '../auth/EmailMfa';
-import { RedisService } from '../services/redis';
-import { CacheService } from '../services/cache';
-import { blankRequest } from '../utils/constants';
+import { RedisService } from '../services/Redis';
+import { CacheService } from '../services/Cache';
+import { blankRequest } from '../config/constants';
 import { validateDependencies } from '../utils/helpers';
-import { AppLoggerService, ErrorLoggerService } from '../services/logger';
+import { AppLoggerService, ErrorLoggerService } from '../services/Logger';
 import { AppLoggerServiceParameters } from './parameters';
-import { BouncerService } from '../services/bouncer';
+import { GatekeeperService } from '../services/Gatekeeper';
 import { JWTService } from '../auth/JWT';
 import { DatabaseController } from '../controllers/DatabaseController';
-import { ErrorHandlerService } from '../services/errorHandler';
+import { ErrorHandlerService } from '../services/ErrorHandler';
 import { FIDO2Service } from '../auth/FIDO2';
+import { HelmetMiddlwareService } from '../middleware/Helmet';
 import { HTTPSServer } from '../services/HTTPS';
-import { MulterUploadService } from '../services/multer';
-import { ResourceManager } from '../services/resourceManager';
-import { PassportAuthService } from '../auth/PassportAuth';
-import { PassportAuthMiddlewareService } from '../middleware/PassportAuthMiddleware';
-import { JWTAuthMiddlewareService } from '../middleware/JWTAuthMiddleware';
+import { MulterUploadService } from '../services/MulterUpload';
+import { ResourceManager } from '../services/ResourceManager';
+import { PassportService } from '../auth/Passport';
+import { AccessControlMiddlewareService } from '../middleware/AccessControl';
+import { PassportAuthMiddlewareService } from '../middleware/PassportAuth';
+import { JWTAuthMiddlewareService } from '../middleware/JWTAuth';
 import { PasswordService } from '../auth/Password';
 import { UserController } from '../controllers/UserController';
 import { TOTPService } from '../auth/TOTP';
 import { YubicoOTPService } from '../auth/YubicoOTP';
+import { CSRFMiddlewareService } from '../middleware/CSRF';
+import { EnvConfigService } from '../services/EnvConfig';
+import { AuthController } from '../controllers/AuthController';
+import { MiddlewareStatusService } from '../middleware/MiddlewareStatus';
+import { HealthCheckService } from '../services/HealthCheck';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { fileTypeFromBuffer } from 'file-type';
+import { csrfOptions } from '../config/middlewareOptions';
 import {
+	AccessControlMiddlewareServiceInterface,
 	AppLoggerServiceInterface,
+	AuthControllerInterface,
 	DatabaseControllerInterface,
 	EmailMFAServiceInterface,
+	EnvConfigServiceInterface,
 	ErrorLoggerServiceInterface,
+	HealthCheckServiceInterface,
+	HelmetMiddlwareServiceInterface,
 	HTTPSServerInterface,
 	JWTAuthMiddlewareServiceInterface,
 	JWTServiceInterface,
 	MailerServiceInterface,
+	MiddlewareStatusServiceInterface,
 	MulterUploadServiceInterface,
 	PassportAuthMiddlewareServiceInterface,
+	PassportServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface,
-	SecretsStoreInterface,
 	UserControllerInterface,
+	VaultServiceInterface,
 	YubicoOTPServiceInterface
 } from './interfaces';
-import { SecretsStore } from '../services/secrets';
+import { VaultService } from '../services/Vault';
 
 const defaultReq: Request = {} as Request;
 const defaultRes: Response = {} as Response;
@@ -65,8 +79,6 @@ export class ServiceFactory {
 		AppLoggerServiceParameters
 	);
 
-	private static configServiceInstance = configService as ConfigService;
-
 	private static errorHandlerService = ErrorHandlerService.getInstance(
 		AppLoggerService.getInstance(
 			AppLoggerServiceParameters
@@ -76,24 +88,28 @@ export class ServiceFactory {
 		) as ErrorLoggerService
 	);
 
+	public static getAccessControlMiddlewareService(): AccessControlMiddlewareServiceInterface {
+		return AccessControlMiddlewareService.getInstance();
+	}
+
 	public static getAPIRouter(): APIRouter {
 		return APIRouter.getInstance();
+	}
+
+	public static getAuthController(): AuthControllerInterface {
+		return AuthController.getInstance();
 	}
 
 	public static getBackupCodeService(): BackupCodeService {
 		return BackupCodeService.getInstance();
 	}
 
-	public static getBouncerService(): BouncerService {
-		return BouncerService.getInstance();
-	}
-
 	public static getCacheService(): CacheService {
 		return CacheService.getInstance();
 	}
 
-	public static getConfigService(): ConfigService {
-		return this.configServiceInstance;
+	public static getCSRFMiddlewareService(): CSRFMiddlewareService {
+		return CSRFMiddlewareService.getInstance(csrfOptions);
 	}
 
 	public static getDatabaseController(): DatabaseControllerInterface {
@@ -102,6 +118,10 @@ export class ServiceFactory {
 
 	public static getEmailMFAService(): EmailMFAServiceInterface {
 		return EmailMFAService.getInstance();
+	}
+
+	public static getEnvConfigService(): EnvConfigServiceInterface {
+		return EnvConfigService.getInstance();
 	}
 
 	public static getErrorHandlerService(): ErrorHandlerService {
@@ -114,6 +134,18 @@ export class ServiceFactory {
 
 	public static getFIDO2Service(): FIDO2Service {
 		return FIDO2Service.getInstance();
+	}
+
+	public static getGatekeeperService(): GatekeeperService {
+		return GatekeeperService.getInstance();
+	}
+
+	public static getHealthCheckService(): HealthCheckServiceInterface {
+		return HealthCheckService.getInstance();
+	}
+
+	public static getHelmetMiddlewareService(): HelmetMiddlwareServiceInterface {
+		return HelmetMiddlwareService.getInstance();
 	}
 
 	public static getHTTPSServer(app: app.Application): HTTPSServerInterface {
@@ -157,10 +189,14 @@ export class ServiceFactory {
 		return MailerService.getInstance({
 			nodemailer,
 			emailUser: String(
-				this.getConfigService().getEnvVariable('emailUser')
+				this.getEnvConfigService().getEnvVariable('emailUser')
 			),
 			validateDependencies
 		});
+	}
+
+	public static getMiddlewareStatusService(): MiddlewareStatusServiceInterface {
+		return MiddlewareStatusService.getInstance();
 	}
 
 	public static getMulterUploadService(): MulterUploadServiceInterface {
@@ -171,14 +207,13 @@ export class ServiceFactory {
 			path,
 			logger: this.getLoggerService(),
 			errorLogger: this.getErrorLoggerService(),
-			configService: this.getConfigService(),
 			errorHandler: this.getErrorHandlerService(),
 			validateDependencies
 		});
 	}
 
-	public static getPassportAuthService(): PassportAuthService {
-		return PassportAuthService.getInstance();
+	public static getPassportService(): PassportServiceInterface {
+		return PassportService.getInstance();
 	}
 
 	public static getPassportAuthMiddlewareService(): PassportAuthMiddlewareServiceInterface {
@@ -204,8 +239,8 @@ export class ServiceFactory {
 		return ResourceManager.getInstance();
 	}
 
-	public static getSecretsStore(): SecretsStoreInterface {
-		return SecretsStore.getInstance();
+	public static getVaultService(): VaultServiceInterface {
+		return VaultService.getInstance();
 	}
 
 	public static getStaticRouter(): StaticRouter {

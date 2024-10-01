@@ -5,18 +5,9 @@ import { Sequelize } from 'sequelize';
 import express, { Application, Request, Response } from 'express';
 import { constants as cryptoConstants } from 'crypto';
 import { validateDependencies } from '../utils/helpers';
-import {
-	AppLoggerServiceInterface,
-	ConfigServiceInterface,
-	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
-	HTTPSServerOptions,
-	RedisServiceInterface,
-	SecretsStoreInterface,
-	HTTPSServerInterface
-} from '../index/interfaces';
+import { HTTPSServerOptions, HTTPSServerInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
-import { tlsCiphers } from '../utils/constants';
+import { tlsCiphers } from '../config/constants';
 
 export class HTTPSServer implements HTTPSServerInterface {
 	public static instance: HTTPSServer | null = null;
@@ -27,23 +18,16 @@ export class HTTPSServer implements HTTPSServerInterface {
 	private connections: Set<net.Socket> = new Set();
 	private options: HTTPSServerOptions | undefined;
 	private port: number;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
-	private configService: ConfigServiceInterface;
-	private redisService: RedisServiceInterface;
-	private secrets: SecretsStoreInterface;
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private envConfig = ServiceFactory.getEnvConfigService();
+	private redisService = ServiceFactory.getRedisService();
 
 	constructor(app: Application, sequelize: Sequelize) {
 		this.app = app;
 		this.sequelize = sequelize;
-		this.logger = ServiceFactory.getLoggerService();
-		this.errorLogger = ServiceFactory.getErrorLoggerService();
-		this.errorHandler = ServiceFactory.getErrorHandlerService();
-		this.configService = ServiceFactory.getConfigService();
-		this.redisService = ServiceFactory.getRedisService();
-		this.secrets = ServiceFactory.getSecretsStore();
-		this.port = this.configService.getEnvVariable('serverPort');
+		this.port = this.envConfig.getEnvVariable('serverPort');
 	}
 
 	public static getInstance(
@@ -81,10 +65,8 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.logger
 			);
 
-			const tlsKeyPath1 =
-				this.configService.getEnvVariable('tlsKeyPath1');
-			const tlsCertPath1 =
-				this.configService.getEnvVariable('tlsCertPath1');
+			const tlsKeyPath1 = this.envConfig.getEnvVariable('tlsKeyPath1');
+			const tlsCertPath1 = this.envConfig.getEnvVariable('tlsCertPath1');
 
 			if (
 				typeof tlsKeyPath1 !== 'string' ||
@@ -101,8 +83,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 					cryptoConstants.SSL_OP_NO_TLSv1_1,
 				ciphers: tlsCiphers.join(':'),
 				honorCipherOrder:
-					this.configService.getFeatureFlags().honorCipherOrder ===
-					true
+					this.envConfig.getFeatureFlags().honorCipherOrder === true
 			};
 		} catch (error) {
 			const serviceError =
@@ -180,7 +161,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 			this.handleError(error, 'DATABASE_CLOSE');
 		}
 
-		if (this.configService.getFeatureFlags().enableRedis) {
+		if (this.envConfig.getFeatureFlags().enableRedis) {
 			try {
 				const redisClient = await this.redisService.getRedisClient();
 				if (redisClient) {

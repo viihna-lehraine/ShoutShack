@@ -7,35 +7,26 @@ import {
 	randomBytes
 } from 'crypto';
 import path from 'path';
-import { hashConfig } from '../utils/constants';
+import { hashConfig } from '../config/constants';
 import {
-	AppLoggerServiceInterface,
 	ConfigSecretsInterface,
-	EnvironmentServiceInterface,
-	ErrorLoggerServiceInterface,
-	ErrorHandlerServiceInterface,
 	SecretsMap,
-	SecretsStoreInterface
+	VaultServiceInterface
 } from '../index/interfaces';
-import {
-	AppLoggerServiceParameters,
-	HandleErrorStaticParameters
-} from '../index/parameters';
-import { EnvironmentService } from './environment';
-import { ErrorHandlerService } from './errorHandler';
-import { AppLoggerService, ErrorLoggerService } from './logger';
+import { HandleErrorStaticParameters } from '../index/parameters';
 import { withRetry } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory';
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
 const PLACEHOLDER = '[REDACTED]';
 
-export class SecretsStore implements SecretsStoreInterface {
-	private static instance: SecretsStore;
-	private environmentService: EnvironmentServiceInterface;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
+export class VaultService implements VaultServiceInterface {
+	private static instance: VaultService;
+	private envConfig = ServiceFactory.getEnvConfigService();
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
 	private secrets: Map<
 		string,
 		{
@@ -55,36 +46,24 @@ export class SecretsStore implements SecretsStoreInterface {
 	> = new Map();
 
 	private constructor(encryptionKey: string, gpgPassphase: string) {
-		this.environmentService = EnvironmentService.getInstance();
-		this.logger = AppLoggerService.getInstance(
-			AppLoggerServiceParameters
-		) as AppLoggerServiceInterface;
-		this.errorLogger = ErrorLoggerService.getInstance(
-			AppLoggerServiceParameters
-		) as ErrorLoggerServiceInterface;
-		this.errorHandler = ErrorHandlerService.getInstance(
-			this.logger,
-			this.errorLogger
-		) as ErrorHandlerServiceInterface;
 		this.maxAttempts = Number(
-			this.environmentService.getEnvVariable(
-				'secretsRateLimitMaxAttempts'
-			)
+			this.envConfig.getEnvVariable('secretsRateLimitMaxAttempts')
 		);
 		this.rateLimitWindow = Number(
-			this.environmentService.getEnvVariable('secretsRateLimitWindow')
+			this.envConfig.getEnvVariable('secretsRateLimitWindow')
 		);
 		this.initializeEncryptionKey(encryptionKey);
 		this.loadAndSecureSecrets(gpgPassphase);
+		this.encryptGPGPassphraseInMemory(gpgPassphase);
 	}
 
-	public static getInstance(): SecretsStore {
-		if (!SecretsStore.instance) {
+	public static getInstance(): VaultService {
+		if (!VaultService.instance) {
 			throw new Error(
 				'SecretsStore not initialized. Ensure it is initialized after login.'
 			);
 		}
-		return SecretsStore.instance;
+		return VaultService.instance;
 	}
 
 	private async loadAndSecureSecrets(gpgPassphrase: string): Promise<void> {
@@ -92,10 +71,7 @@ export class SecretsStore implements SecretsStoreInterface {
 			await withRetry(
 				async () => {
 					const secretsFilePath =
-						this.environmentService.getEnvVariable(
-							'secretsFilePath1'
-						);
-
+						this.envConfig.getEnvVariable('secretsFilePath1');
 					const decryptedSecrets = execSync(
 						`sops -d --output-type json --passphrase ${gpgPassphrase} ${secretsFilePath}`
 					).toString();
@@ -111,19 +87,16 @@ export class SecretsStore implements SecretsStoreInterface {
 							isDecrypted: false,
 							lastAccessed: Date.now()
 						});
-
 						this.clearMemory(secrets[key]);
 					}
-
-					this.encryptGPGPassphraseInMemory(gpgPassphrase);
-					this.clearMemory(gpgPassphrase);
 
 					this.logger.info(
 						'Secrets loaded, encrypted, and secured successfully.'
 					);
 				},
 				5,
-				1000
+				1000,
+				true
 			);
 		} catch (error) {
 			this.handleLoadSecretsError(error);
@@ -133,14 +106,15 @@ export class SecretsStore implements SecretsStoreInterface {
 	public static initialize(
 		encryptionKey: string,
 		gpgPassphrase: string
-	): SecretsStore {
-		if (!SecretsStore.instance) {
-			SecretsStore.instance = new SecretsStore(
+	): VaultService {
+		if (!VaultService.instance) {
+			VaultService.instance = new VaultService(
 				encryptionKey,
 				gpgPassphrase
 			);
 		}
-		return SecretsStore.instance;
+
+		return VaultService.instance;
 	}
 
 	private initializeEncryptionKey(encryptionKey: string): void {
@@ -151,20 +125,19 @@ export class SecretsStore implements SecretsStoreInterface {
 		this.logger.info('Encryption key initialized.');
 	}
 
-	public async loadSecrets(
+	private async loadSecrets(
 		dependencies: ConfigSecretsInterface
 	): Promise<void> {
 		const { execSync, getDirectoryPath, gpgPassphrase } = dependencies;
 		const secretsPath = path.join(
 			getDirectoryPath(),
-			this.environmentService.getEnvVariable('secretsFilePath1')
+			this.envConfig.getEnvVariable('secretsFilePath1')
 		);
 
 		try {
 			const decryptedSecrets = execSync(
 				`sops -d --output-type json --passphrase ${gpgPassphrase} ${secretsPath}`
 			).toString();
-
 			const secrets = JSON.parse(decryptedSecrets);
 
 			for (const key in secrets) {
@@ -185,7 +158,6 @@ export class SecretsStore implements SecretsStoreInterface {
 				'Secrets loaded and cleared from memory successfully'
 			);
 
-			this.encryptGPGPassphraseInMemory(gpgPassphrase);
 			this.clearMemory(gpgPassphrase);
 		} catch (error) {
 			this.handleLoadSecretsError(error);
@@ -194,12 +166,14 @@ export class SecretsStore implements SecretsStoreInterface {
 
 	public async storeSecret(key: string, secret: string): Promise<void> {
 		const { encryptedValue, hash } = await this.encryptSecret(secret);
+
 		this.secrets.set(key, {
 			encryptedValue,
 			hash,
 			isDecrypted: false,
 			lastAccessed: Date.now()
 		});
+		this.logger.info(`Secret ${key} stored successfully.`);
 	}
 
 	public async retrieveSecret(
@@ -214,7 +188,10 @@ export class SecretsStore implements SecretsStoreInterface {
 				}
 
 				const secretData = this.secrets.get(key);
-				if (!secretData) return null;
+				if (!secretData) {
+					this.logger.error(`Secret ${key} not found.`);
+					return null;
+				}
 
 				const decryptedSecret = this.decryptSecret(
 					secretData.encryptedValue
@@ -225,13 +202,13 @@ export class SecretsStore implements SecretsStoreInterface {
 				} finally {
 					this.clearMemory(decryptedSecret);
 					this.logger.debug(
-						`Decrypted secret ${key} wiped from memory`
+						`Decrypted secret ${key} wiped from memory.`
 					);
 				}
 
 				return decryptedSecret;
 			},
-			3,
+			5,
 			1000
 		);
 	}
@@ -245,21 +222,29 @@ export class SecretsStore implements SecretsStoreInterface {
 		await withRetry(
 			async () => {
 				for (const key of secretKeys) {
+					if (this.isRateLimited(key)) {
+						this.logger.warn(
+							`Rate limit exceeded for secret: ${key}`
+						);
+
+						continue;
+					}
+
 					const secretData = this.secrets.get(key);
 
 					if (!secretData) {
-						this.logger.error(`Secret ${key} not found`);
+						this.logger.error(`Secret ${key} not found.`);
 					} else {
 						const decryptedSecret = this.decryptSecret(
 							secretData.encryptedValue
 						);
+						result[key] = decryptedSecret;
 
 						try {
-							result[key] = decryptedSecret;
-						} finally {
 							this.clearMemory(decryptedSecret);
+						} finally {
 							this.logger.debug(
-								`Decrypted secret ${key} wiped from memory`
+								`Decrypted secret ${key} wiped from memory.`
 							);
 						}
 					}
@@ -276,11 +261,14 @@ export class SecretsStore implements SecretsStoreInterface {
 
 	private clearMemory(secret: string | Buffer): void {
 		if (typeof secret === 'string') {
-			secret = '\0'.repeat(secret.length);
+			for (let i = 0; i < secret.length; i++) {
+				secret = [...secret].map(() => '\0').join('');
+			}
 		} else if (Buffer.isBuffer(secret)) {
 			secret.fill(0);
 		}
 		secret = null as unknown as string | Buffer;
+		this.logger.debug(`Memory cleared for secret.c`);
 	}
 
 	public async redactSecrets(
@@ -332,21 +320,6 @@ export class SecretsStore implements SecretsStoreInterface {
 		return decrypted.toString();
 	}
 
-	private async redactInString(
-		logData: string,
-		secretHashes: string[]
-	): Promise<string> {
-		for (const hash of secretHashes) {
-			const isMatch = await argon2.verify(hash, logData);
-
-			if (isMatch) {
-				return logData.replace(new RegExp(logData, 'g'), PLACEHOLDER);
-			}
-		}
-
-		return logData;
-	}
-
 	private async traverseAndRedact(
 		data: Record<string, unknown> | unknown[],
 		secretsHashes: string[]
@@ -364,7 +337,6 @@ export class SecretsStore implements SecretsStoreInterface {
 			);
 		} else if (typeof data === 'object' && data !== null) {
 			const result: Record<string, unknown> = {};
-
 			for (const [key, value] of Object.entries(data)) {
 				if (typeof value === 'object' && value !== null) {
 					result[key] = await this.traverseAndRedact(
@@ -374,7 +346,6 @@ export class SecretsStore implements SecretsStoreInterface {
 				} else if (typeof value === 'string') {
 					for (const hash of secretsHashes) {
 						const isMatch = await argon2.verify(hash, value);
-
 						if (isMatch) {
 							result[key] = PLACEHOLDER;
 							break;
@@ -388,6 +359,20 @@ export class SecretsStore implements SecretsStoreInterface {
 			return result;
 		}
 		return data;
+	}
+
+	private async redactInString(
+		logData: string,
+		secretHashes: string[]
+	): Promise<string> {
+		for (const hash of secretHashes) {
+			const isMatch = await argon2.verify(hash, logData);
+			if (isMatch) {
+				return logData.replace(new RegExp(logData, 'g'), PLACEHOLDER);
+			}
+		}
+
+		return logData;
 	}
 
 	private getSecretsHashes(): string[] {
@@ -409,7 +394,6 @@ export class SecretsStore implements SecretsStoreInterface {
 			rateData.attempts = 1;
 			rateData.lastAttempt = currentTime;
 			this.secretAccessAttempts.set(key, rateData);
-
 			return false;
 		}
 
@@ -429,22 +413,29 @@ export class SecretsStore implements SecretsStoreInterface {
 		try {
 			const gpgPassphrase = this.decryptGPGPassphraseInMemory();
 
-			this.loadSecrets({
-				...dependencies,
-				gpgPassphrase
-			})
-				.then(() => {
-					this.logger.info('Secrets refreshed successfully');
-				})
-				.catch(error => {
-					this.logger.error('Failed to refresh secrets', { error });
-					throw error;
-				});
+			withRetry(
+				async () => {
+					this.loadSecrets({
+						...dependencies,
+						gpgPassphrase
+					})
+						.then(() => {
+							this.logger.info('Secrets refreshed successfully');
+						})
+						.catch(error => {
+							throw new Error(
+								`Failed to refresh secrets: ${error.message}`
+							);
+						});
 
-			this.clearMemory(gpgPassphrase);
+					this.clearMemory(gpgPassphrase);
+				},
+				5,
+				1000,
+				true
+			);
 		} catch (error) {
-			this.logger.error('Failed to refresh secrets', { error });
-			throw error;
+			this.handleRefreshSecretsError(error);
 		}
 	}
 
@@ -452,27 +443,11 @@ export class SecretsStore implements SecretsStoreInterface {
 		if (!this.encryptionKey) {
 			throw new Error('Encryption key is not initialized');
 		}
+
 		return createHash('sha256').update(this.encryptionKey!).digest();
 	}
 
-	private reEncryptSecretsFile(
-		secretsPath: string,
-		decryptedGPGPassphrase: string
-	): void {
-		try {
-			execSync(
-				`sops -e --passphrase ${decryptedGPGPassphrase} ${secretsPath}`
-			);
-			this.logger.debug(`Secrets file re-encrypted successfully`);
-		} catch (error) {
-			this.logger.error(
-				`Failed to re-encrypt secrets file\n${error instanceof Error ? error.message : String(error)}`
-			);
-			throw error;
-		}
-	}
-
-	private encryptGPGPassphraseInMemory(secret: string): string {
+	private encryptGPGPassphraseInMemory(gpgPassphrase: string): string {
 		const iv = randomBytes(ivLength);
 		const cipher = createCipheriv(
 			algorithm,
@@ -480,7 +455,7 @@ export class SecretsStore implements SecretsStoreInterface {
 			iv
 		);
 		const encrypted = Buffer.concat([
-			cipher.update(secret, 'utf-8'),
+			cipher.update(gpgPassphrase, 'utf-8'),
 			cipher.final()
 		]);
 
@@ -493,7 +468,15 @@ export class SecretsStore implements SecretsStoreInterface {
 			throw new Error('No GPG passphrase found in memory');
 		}
 
-		return this.decryptSecret(this.encryptedGpgPassphrase);
+		const decryptedPassphrase = this.decryptSecret(
+			this.encryptedGpgPassphrase
+		);
+
+		try {
+			return decryptedPassphrase;
+		} finally {
+			this.clearMemory(decryptedPassphrase);
+		}
 	}
 
 	public clearExpiredSecretsFromMemory(): void {
@@ -503,9 +486,7 @@ export class SecretsStore implements SecretsStoreInterface {
 
 			if (
 				isTimeElapsed >=
-					this.environmentService.getEnvVariable(
-						'secretsExpiryTimeout'
-					) &&
+					this.envConfig.getEnvVariable('secretsExpiryTimeout') &&
 				secretData.isDecrypted
 			) {
 				this.clearMemory(secretData.encryptedValue);
@@ -527,13 +508,13 @@ export class SecretsStore implements SecretsStoreInterface {
 			const secretData = this.secrets.get(key);
 
 			if (!secretData) {
-				this.logger.error(`Secret ${key} not found`);
+				this.logger.error(`Secret ${key} not found.`);
 				return;
 			}
 
 			if (!secretData.isDecrypted) {
 				this.logger.debug(
-					`Secret ${key} is already cleared from memory`
+					`Secret ${key} is already cleared from memory.`
 				);
 			}
 
@@ -542,7 +523,7 @@ export class SecretsStore implements SecretsStoreInterface {
 				isDecrypted: false
 			});
 
-			this.logger.debug(`Secret ${key} has been cleared from memory`);
+			this.logger.debug(`Secret ${key} has been cleared from memory.`);
 		});
 	}
 
@@ -559,17 +540,16 @@ export class SecretsStore implements SecretsStoreInterface {
 						isDecrypted: false,
 						lastAccessed: currentTime
 					});
-
 					this.logger.info(
-						`Secret ${key} cleared from memory successfully`
+						`Secret ${key} cleared from memory successfully.`
 					);
 				} else {
-					this.logger.debug(`Secret ${key} is already encrypted`);
+					this.logger.debug(`Secret ${key} is already encrypted.`);
 				}
 			}
 
 			this.logger.info(
-				'Batch clearing of decrypted secrets completed successfully'
+				'Batch clearing of decrypted secrets completed successfully.'
 			);
 		} catch (error) {
 			const clearError =
@@ -589,23 +569,26 @@ export class SecretsStore implements SecretsStoreInterface {
 				`Failed to load secrets: ${error instanceof Error ? error.message : String(error)}`,
 				{ originalError: error }
 			);
-		const details: Record<string, unknown> = {
-			requestId: 'N/A',
-			adminId: 'N/A',
-			action: 'secrets_load',
-			timestamp: new Date().toISOString(),
-			additionalInfo: {
-				ip: 'N/A',
-				userAgent: 'N/A'
-			}
-		};
 		this.errorLogger.logError(
-			`{ ${secretsLoadError.message}\n${details} }`
+			`{ ${secretsLoadError.message}\n${secretsLoadError.message} }`
 		);
 		this.errorHandler.handleError({
 			...HandleErrorStaticParameters,
 			error: secretsLoadError
 		});
 		throw secretsLoadError;
+	}
+
+	private handleRefreshSecretsError(error: unknown): void {
+		const secretsRefreshError =
+			new this.errorHandler.ErrorClasses.ConfigurationError(
+				`Failed to refresh secrets: ${error instanceof Error ? error.message : String(error)}`,
+				{ originalError: error }
+			);
+		this.errorLogger.logError(secretsRefreshError.message);
+		this.errorHandler.handleError({
+			error: secretsRefreshError
+		});
+		throw secretsRefreshError;
 	}
 }

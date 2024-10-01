@@ -1,8 +1,4 @@
 import { BaseRouter } from './BaseRouter';
-import {
-	CacheServiceInterface,
-	UserControllerInterface
-} from '../index/interfaces';
 import { NextFunction, Request, Response } from 'express';
 import { ServiceFactory } from '../index/factory';
 import { check } from 'express-validator';
@@ -10,13 +6,11 @@ import { handleValidationErrors } from '../utils/validator';
 
 export class APIRouter extends BaseRouter {
 	private static instance: APIRouter | null = null;
-	private userController: UserControllerInterface;
-	private cacheService: CacheServiceInterface;
+	private userController = ServiceFactory.getUserController();
+	private authController = ServiceFactory.getAuthController();
 
 	constructor() {
 		super();
-		this.userController = ServiceFactory.getUserController();
-		this.cacheService = ServiceFactory.getCacheService();
 		this.setUpRoutes();
 	}
 
@@ -70,12 +64,6 @@ export class APIRouter extends BaseRouter {
 						);
 						return res.json(result);
 					} catch (err) {
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
-						);
 						next(err);
 						return;
 					}
@@ -107,7 +95,7 @@ export class APIRouter extends BaseRouter {
 					}
 
 					try {
-						const result = await this.userController.loginUser(
+						const result = await this.authController.loginUser(
 							req.body.email,
 							req.body.password
 						);
@@ -119,12 +107,6 @@ export class APIRouter extends BaseRouter {
 						);
 						return res.json(result);
 					} catch (err) {
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
-						);
 						next(err);
 						return;
 					}
@@ -153,7 +135,7 @@ export class APIRouter extends BaseRouter {
 					}
 
 					try {
-						await this.userController.recoverPassword(
+						await this.authController.recoverPassword(
 							req.body.email
 						);
 						const response = {
@@ -168,12 +150,6 @@ export class APIRouter extends BaseRouter {
 						return res.json(response);
 					} catch (err) {
 						this.errorLogger.logError('Password recovery failed');
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
-						);
 						next(err);
 						return;
 					}
@@ -199,7 +175,7 @@ export class APIRouter extends BaseRouter {
 					}
 
 					try {
-						const result = await this.userController.generateTOTP(
+						const result = await this.authController.generateTOTP(
 							req.body.userId
 						);
 						await this.cacheService.set(
@@ -211,12 +187,6 @@ export class APIRouter extends BaseRouter {
 						return res.json(result);
 					} catch (err) {
 						this.errorLogger.logError('TOTP generation failed');
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
-						);
 						next(err);
 						return;
 					}
@@ -234,19 +204,13 @@ export class APIRouter extends BaseRouter {
 			this.asyncHandler(
 				async (req: Request, res: Response, next: NextFunction) => {
 					try {
-						const isValid = await this.userController.verifyTOTP(
+						const isValid = await this.authController.verifyTOTP(
 							req.body.userId,
 							req.body.token
 						);
 						return res.json({ isValid });
 					} catch (err) {
 						this.errorLogger.logError('TOTP verification failed');
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
-						);
 						next(err);
 						return;
 					}
@@ -275,7 +239,7 @@ export class APIRouter extends BaseRouter {
 					}
 
 					try {
-						await this.userController.generateEmail2FA(
+						await this.authController.generateEmailMFACode(
 							req.body.email
 						);
 						const response = { message: '2FA code sent' };
@@ -289,12 +253,6 @@ export class APIRouter extends BaseRouter {
 					} catch (err) {
 						this.errorLogger.logError(
 							'Email 2FA generation failed'
-						);
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
 						);
 						next(err);
 						return;
@@ -319,7 +277,7 @@ export class APIRouter extends BaseRouter {
 				async (req: Request, res: Response, next: NextFunction) => {
 					try {
 						const isValid =
-							await this.userController.verifyEmail2FA(
+							await this.authController.verifyEmail2FACode(
 								req.body.email,
 								req.body.email2FACode
 							);
@@ -327,12 +285,6 @@ export class APIRouter extends BaseRouter {
 					} catch (err) {
 						this.errorLogger.logError(
 							'Email 2FA verification failed'
-						);
-						this.errorHandler.expressErrorHandler()(
-							err as Error,
-							req,
-							res,
-							next
 						);
 						next(err);
 						return;

@@ -5,8 +5,8 @@ import {
 	createQuotaExceededMessage,
 	createRetryMessage,
 	defaultRetryAfter
-} from './errorClasses';
-import { ERROR_CODES } from './errorCodes';
+} from './ErrorClasses';
+import { ERROR_CODES } from '../config/errorCodes';
 
 export class AppAuthenticationError extends AppError {
 	constructor(
@@ -283,6 +283,22 @@ export class FallbackSuccessInfo extends AppError {
 	}
 }
 
+export class HealthCheckError extends AppError {
+	constructor(
+		errorMessage: string = 'Health check error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.HEALTH_CHECK_ERROR,
+			details
+		);
+		this.name = 'HealthCheckError';
+	}
+}
+
 export class InsufficientStorageError extends AppError {
 	constructor(
 		requiredSpace?: number,
@@ -486,6 +502,22 @@ export class ResourceManagerError extends AppError {
 			details
 		);
 		this.name = 'CacheServiceError';
+	}
+}
+
+export class RootMiddlewareError extends AppError {
+	constructor(
+		errorMessage: string = 'Root middleware error',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.WARNING || ErrorSeverity.FATAL,
+			ERROR_CODES.ROOT_MIDDLEWARE_ERROR,
+			details
+		);
+		this.name = 'RootMiddlewareError';
 	}
 }
 
@@ -704,6 +736,7 @@ export const AppErrorClasses = {
 	ExpressError,
 	ExpressRouteError,
 	ExternalServiceErrorFatal,
+	HealthCheckError,
 	InsufficientStorageError,
 	MiddlewareServiceError,
 	MissingResourceError,
@@ -713,6 +746,7 @@ export const AppErrorClasses = {
 	RateLimitErrorFatal,
 	RedisServiceError,
 	ResourceManagerError,
+	RootMiddlewareError,
 	ServiceDegradedError,
 	ServiceDegradedErrorMinor,
 	ServiceUnavailableError,

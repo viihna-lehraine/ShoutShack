@@ -1,4 +1,4 @@
-import { FallbackSuccessInfo } from './appErrorClasses';
+import { FallbackSuccessInfo } from './AppErrorClasses';
 import {
 	ClientError,
 	ErrorDetails,
@@ -6,8 +6,8 @@ import {
 	createQuotaExceededMessage,
 	createRetryMessage,
 	defaultRetryAfter
-} from './errorClasses';
-import { ERROR_CODES } from './errorCodes';
+} from './ErrorClasses';
+import { ERROR_CODES } from '../config/errorCodes';
 
 export class AutoCorrectedInputWarning extends ClientError {
 	constructor(fieldName?: string, details: ErrorDetails = {}) {

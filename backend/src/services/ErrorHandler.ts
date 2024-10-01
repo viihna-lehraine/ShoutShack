@@ -4,7 +4,7 @@ import {
 	ErrorClasses,
 	ErrorSeverity,
 	ErrorSeverityType
-} from '../errors/errorClasses';
+} from '../errors/ErrorClasses';
 import { NextFunction, Request, Response } from 'express';
 import {
 	AppLoggerServiceInterface,

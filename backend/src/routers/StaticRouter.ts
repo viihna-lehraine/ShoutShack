@@ -9,8 +9,7 @@ export class StaticRouter extends BaseRouter {
 
 	private constructor() {
 		super();
-		this.staticRootPath =
-			this.configService.getEnvVariable('staticRootPath');
+		this.staticRootPath = this.envConfig.getEnvVariable('staticRootPath');
 		this.validateConfiguration();
 		this.setUpRoutes();
 	}
@@ -59,25 +58,18 @@ export class StaticRouter extends BaseRouter {
 	): void {
 		res.sendFile(filePath, error => {
 			if (error) {
-				const expressError =
-					new this.errorHandler.ErrorClasses.ExpressError(
-						`Error serving static file ${route}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-						{ exposeToClient: false }
-					);
-				this.errorLogger.logError(expressError.message);
-				this.errorHandler.expressErrorHandler()(
-					expressError,
-					req,
-					res,
-					next
+				this.errorLogger.logError(
+					`Error serving static file ${route}: ${error instanceof Error ? error.message : 'Unknown error'}`
 				);
 				this.errorHandler.sendClientErrorResponse({
 					message: `${filePath} not found`,
 					statusCode: 404,
 					res
 				});
+				next(error);
 			} else {
 				this.logger.debug(`Served static file: ${route}`);
+				next();
 			}
 		});
 	}

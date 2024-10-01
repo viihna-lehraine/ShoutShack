@@ -88,19 +88,28 @@ export function validateDependencies(
 export async function withRetry<T>(
 	operation: () => Promise<T> | T,
 	maxRetries: number,
-	delayMs: number
+	delayMs: number,
+	exponentialBackoff: boolean = false
 ): Promise<T> {
 	let attempts = 0;
+
 	while (attempts < maxRetries) {
 		try {
 			return await operation();
 		} catch (error) {
 			attempts++;
+
 			if (attempts >= maxRetries) {
 				throw error;
 			}
-			await new Promise(resolve => setTimeout(resolve, delayMs));
+
+			const delay = exponentialBackoff
+				? delayMs * Math.pow(2, attempts - 1)
+				: delayMs;
+
+			await new Promise(resolve => setTimeout(resolve, delay));
 		}
 	}
+
 	throw new Error('Exceeded maximum retry attempts');
 }

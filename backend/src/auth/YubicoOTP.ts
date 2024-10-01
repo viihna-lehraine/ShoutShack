@@ -14,8 +14,8 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private configService = ServiceFactory.getConfigService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private envConfig = ServiceFactory.getEnvConfigService();
+	private secrets = ServiceFactory.getVaultService();
 	private cacheService = ServiceFactory.getCacheService();
 	private yubClient: YubClientInterface | undefined;
 	private ttl = serviceTTLConfig.YubicoOtpService || serviceTTLConfig.default;
@@ -182,7 +182,7 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 		try {
 			this.logger.info('Generating Yubico OTP options.');
 
-			const apiUrl = this.configService.getEnvVariable(
+			const apiUrl = this.envConfig.getEnvVariable(
 				'yubicoApiUrl'
 			) as string;
 

@@ -1,37 +1,22 @@
 import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
-import {
-	AppLoggerServiceInterface,
-	ConfigServiceInterface,
-	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
-	MailerServiceDeps,
-	MailerServiceInterface,
-	SecretsStoreInterface
-} from '../index/interfaces';
+import { MailerServiceDeps, MailerServiceInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
-import {} from './config';
 
 export class MailerService implements MailerServiceInterface {
 	private static instance: MailerService | null = null;
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private envConfig = ServiceFactory.getEnvConfigService();
+	private secrets = ServiceFactory.getVaultService();
 	private transporter: Transporter | null = null;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
-	private configService: ConfigServiceInterface;
-	private secrets: SecretsStoreInterface;
 
 	private constructor(
 		private nodemailer: typeof import('nodemailer'),
 		private emailUser: string
-	) {
-		this.logger = ServiceFactory.getLoggerService();
-		this.errorLogger = ServiceFactory.getErrorLoggerService();
-		this.errorHandler = ServiceFactory.getErrorHandlerService();
-		this.configService = ServiceFactory.getConfigService();
-		this.secrets = ServiceFactory.getSecretsStore();
-	}
+	) {}
 
 	public static getInstance(deps: MailerServiceDeps): MailerService {
 		deps.validateDependencies(
@@ -66,37 +51,28 @@ export class MailerService implements MailerServiceInterface {
 		try {
 			this.validateMailerDependencies();
 
-			const smtpToken = this.secrets.retrieveSecrets('SMTP_TOKEN');
+			const smtpToken = this.secrets.retrieveSecret(
+				'SMTP_TOKEN',
+				secret => secret
+			);
 
-			let smtpTokenValue: string;
-			if (typeof smtpToken === 'string') {
-				smtpTokenValue = smtpToken;
-			} else if (
-				smtpToken &&
-				typeof smtpToken === 'object' &&
-				smtpToken.SMTP_TOKEN
-			) {
-				smtpTokenValue = smtpToken.SMTP_TOKEN;
-			} else {
-				const dependencyError =
-					new this.errorHandler.ErrorClasses.DependencyErrorRecoverable(
-						'Unable to retrieve a valid SMTP token for Mailer Service transport creation',
-						{ exposeToClient: false }
+			if (typeof smtpToken !== 'string') {
+				const smtpTokenError =
+					new this.errorHandler.ErrorClasses.ConfigurationError(
+						'Invalid SMTP token'
 					);
-				this.errorLogger.logError(dependencyError.message);
-				this.errorHandler.handleError({
-					error: dependencyError || Error || 'Secret not found'
-				});
-				throw dependencyError;
+				this.errorLogger.logError(smtpTokenError.message);
+				this.errorHandler.handleError({ error: smtpTokenError });
+				throw smtpTokenError;
 			}
 
 			const transportOptions: SMTPTransport.Options = {
-				host: this.configService.getEnvVariable('emailHost'),
-				port: this.configService.getEnvVariable('emailPort'),
-				secure: this.configService.getEnvVariable('emailSecure'),
+				host: this.envConfig.getEnvVariable('emailHost'),
+				port: this.envConfig.getEnvVariable('emailPort'),
+				secure: this.envConfig.getEnvVariable('emailSecure'),
 				auth: {
 					user: this.emailUser,
-					pass: smtpTokenValue
+					pass: smtpToken
 				}
 			};
 

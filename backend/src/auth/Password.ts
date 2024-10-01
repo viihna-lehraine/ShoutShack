@@ -1,5 +1,5 @@
 import { PasswordServiceInterface } from '../index/interfaces';
-import { hashConfig } from '../utils/constants';
+import { hashConfig } from '../config/constants';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
@@ -8,7 +8,7 @@ export class PasswordService implements PasswordServiceInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private secrets = ServiceFactory.getVaultService();
 
 	private constructor() {}
 
@@ -26,7 +26,10 @@ export class PasswordService implements PasswordServiceInterface {
 				this.logger || console
 			);
 
-			const pepper = this.secrets.retrieveSecrets('PEPPER');
+			const pepper = this.secrets.retrieveSecret(
+				'PEPPER',
+				secret => secret
+			);
 			if (!pepper || typeof pepper !== 'string') {
 				const hashConfigError =
 					new this.errorHandler.ErrorClasses.ConfigurationError(
@@ -52,7 +55,6 @@ export class PasswordService implements PasswordServiceInterface {
 			return '';
 		} finally {
 			this.logger.debug('Password hashed successfully');
-			this.secrets.reEncryptSecret('PEPPER');
 		}
 	}
 
@@ -61,7 +63,10 @@ export class PasswordService implements PasswordServiceInterface {
 		providedPassword: string
 	): Promise<boolean> {
 		try {
-			const pepper = this.secrets.retrieveSecrets('PEPPER');
+			const pepper = this.secrets.retrieveSecret(
+				'PEPPER',
+				secret => secret
+			);
 			if (!pepper || typeof pepper !== 'string') {
 				this.logger.error(
 					'Failed to retrieve pepper from secrets for password comparison'

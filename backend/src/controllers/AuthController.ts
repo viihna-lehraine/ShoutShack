@@ -18,7 +18,7 @@ export class AuthController implements AuthControllerInterface {
 	private JWTAuthMiddlewareService =
 		ServiceFactory.getJWTAuthMiddlewareService();
 	private JWTService = ServiceFactory.getJWTService();
-	private passportAuthService = ServiceFactory.getPassportAuthService();
+	private passportAuthService = ServiceFactory.getPassportService();
 	private passportAuthMiddlewareService =
 		ServiceFactory.getPassportAuthMiddlewareService();
 	private passwordService = ServiceFactory.getPasswordService();
@@ -28,7 +28,7 @@ export class AuthController implements AuthControllerInterface {
 	protected logger = ServiceFactory.getLoggerService();
 	protected errorLogger = ServiceFactory.getErrorLoggerService();
 	protected errorHandler = ServiceFactory.getErrorHandlerService();
-	protected secrets = ServiceFactory.getSecretsStore();
+	protected secrets = ServiceFactory.getVaultService();
 	protected mailer = ServiceFactory.getMailerService();
 	private sequelize =
 		ServiceFactory.getDatabaseController().getSequelizeInstance();
@@ -50,10 +50,7 @@ export class AuthController implements AuthControllerInterface {
 
 		const UserModel = createUserModel();
 
-		await this.passportAuthService.configurePassport({
-			passport,
-			UserModel
-		});
+		await this.passportAuthService.configurePassport(passport, UserModel);
 	}
 
 	public initializeJWTAuthMiddleware(): RequestHandler {
@@ -436,10 +433,51 @@ export class AuthController implements AuthControllerInterface {
 		}
 	}
 
-	public async verifyEmailMFA(
+	public async generateEmailMFACode(email: string): Promise<boolean> {
+		try {
+			const user = await this.findUserByEmail(email);
+			if (!user) {
+				throw new this.errorHandler.ErrorClasses.MissingResourceError(
+					'User not found'
+				);
+			}
+
+			const { emailMFACode, emailMFAToken } =
+				await this.emailMFAService.generateEmailMFACode({
+					bcrypt: await this.loadBcrypt(),
+					jwt: await this.loadJwt()
+				});
+
+			await this.cacheService.set(
+				`mfaToken:${user.email}`,
+				emailMFAToken,
+				'auth',
+				1800
+			);
+
+			const emailTemplate = generateEmailMFATemplate(
+				user.username,
+				emailMFACode
+			);
+			const transporter = await this.mailer.getTransporter();
+			await transporter.sendMail({
+				to: user.email,
+				subject: 'Your Login Code',
+				html: emailTemplate
+			});
+
+			this.logger.info(`MFA code sent to user: ${user.email}`);
+			return true;
+		} catch (error) {
+			this.logger.error('Error generating Email MFA code', { error });
+			throw error;
+		}
+	}
+
+	public async verifyEmail2FACode(
 		email: string,
 		email2FACode: string
-	): Promise<{ success: boolean; token?: string }> {
+	): Promise<boolean> {
 		try {
 			const user = await this.findUserByEmail(email);
 			if (!user) {
@@ -461,29 +499,12 @@ export class AuthController implements AuthControllerInterface {
 				);
 			}
 
-			const cacheKey = `mfaToken:${user.userId}`;
-			const cachedToken = await this.cacheService.get<string>(
-				cacheKey,
-				'auth'
+			this.logger.info(
+				`MFA verification successful for user: ${user.email}`
 			);
-
-			if (!cachedToken) {
-				const token = await this.JWTService.generateJWT(
-					String(user.userId),
-					user.username
-				);
-				await this.cacheService.set(
-					cacheKey,
-					token,
-					'auth',
-					serviceTTLConfig.JWTService || serviceTTLConfig.default
-				);
-				return { success: true, token };
-			}
-
-			return { success: true, token: cachedToken as string };
+			return true;
 		} catch (error) {
-			this.logger.error('MFA verification failed', { error });
+			this.logger.error('Error verifying Email MFA', { error });
 			throw error;
 		}
 	}

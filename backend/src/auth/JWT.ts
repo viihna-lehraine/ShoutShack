@@ -9,7 +9,7 @@ export class JWTService implements JWTServiceInterface {
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
 	private cacheService = ServiceFactory.getCacheService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private secrets = ServiceFactory.getVaultService();
 
 	private constructor() {}
 

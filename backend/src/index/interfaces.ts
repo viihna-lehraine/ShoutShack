@@ -1,13 +1,14 @@
 import { Model } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
 import {
+	Application,
 	NextFunction,
 	Request,
 	RequestHandler,
 	Response,
 	Router
 } from 'express';
-import { AppError, ClientError, ErrorClasses } from '../errors/errorClasses';
+import { AppError, ClientError, ErrorClasses } from '../errors/ErrorClasses';
 import RedisStore from 'connect-redis';
 import { Transporter } from 'nodemailer';
 import { Sequelize } from 'sequelize';
@@ -29,8 +30,29 @@ import {
 ///
 //
 
-import '../../types/custom/yub.js';
-import '../../types/custom/winston-logstash';
+import '../../types/custom/yub.d.ts';
+
+import '../../types/custom/winston-logstash.d.ts';
+
+//
+///
+//// ***** CUSTOM TYPES AND TYPE DECLARATIONS ***** //
+///
+//
+
+export type FeatureFlagValueType =
+	(typeof import('../index/parameters').FeatureFlagNames)[FeatureFlagNamesType];
+
+export type FeatureFlagNamesType =
+	keyof typeof import('../index/parameters').FeatureFlagNames;
+
+export type FidoFactor = 'first' | 'second' | 'either';
+
+export type EnvVariableInterface = string | number | boolean | undefined;
+
+export type HTTPSServerOptions = import('tls').SecureContextOptions;
+
+export type LoggerServiceInterface = ErrorLoggerServiceInterface;
 
 //
 ///
@@ -43,6 +65,7 @@ export interface BaseExpressInterface {
 	res: import('express').Response;
 	next: import('express').NextFunction;
 }
+
 //
 ///
 ////  ***** FUNCTION INTERFACES ***** //
@@ -55,7 +78,7 @@ export interface HandleErrorFnInterface {
 
 //
 ///
-//// ***** MAIN INTERFACE LIST ***** //
+//// ***** BASE INTERFACE LIST ***** //
 ///
 //
 
@@ -78,8 +101,10 @@ export interface CacheMetrics {
 	cacheSize?: number;
 }
 
-export interface CreateFeatureEnablerInterface {
-	readonly configService: typeof import('../services/config').configService;
+export interface ConfigSecretsInterface {
+	readonly execSync: typeof import('child_process').execSync;
+	readonly getDirectoryPath: () => string;
+	readonly gpgPassphrase: string;
 }
 
 export interface CreateJwtInterface {
@@ -108,6 +133,7 @@ export interface EnvVariableTypes {
 	blacklistSyncInterval: number;
 	clearExpiredSecretsInterval: number;
 	cpuLimit: number;
+	cpuThreshold: number;
 	cronLoggerSetting: number;
 	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
 	dbHost: string;
@@ -127,6 +153,7 @@ export interface EnvVariableTypes {
 	featureEnableJwtAuth: boolean;
 	featureEnableLogStash: boolean;
 	featureEnableRateLimit: boolean;
+	featureEnableResourceAutoScaling: boolean;
 	featureEnableSession: boolean;
 	featureEncryptSecretsStore: boolean;
 	featureHonorCipherOrder: boolean;
@@ -151,6 +178,7 @@ export interface EnvVariableTypes {
 	logStashNode: string;
 	logStashPort: number;
 	maxCacheSize: number;
+	maxRedisCacheSize: number;
 	memoryLimit: number;
 	memoryThreshold: number;
 	memoryMonitorInterval: number;
@@ -240,7 +268,6 @@ export interface GeneratePasskeyInterface {
 
 export interface GeneratePasskeyInterface {
 	user: FidoUserInterface;
-	configService: typeof import('../services/config').configService;
 	logger: AppLoggerServiceInterface;
 }
 
@@ -262,7 +289,7 @@ export interface HandleErrorInterface {
 	error: unknown;
 	req?: Request;
 	details?: Record<string, unknown>;
-	severity?: import('../errors/errorClasses').ErrorSeverityType;
+	severity?: import('../errors/ErrorClasses').ErrorSeverityType;
 	action?: string;
 	userId?: string;
 	sequelize?: Sequelize;
@@ -270,10 +297,6 @@ export interface HandleErrorInterface {
 
 export interface HashPasswordInterface {
 	password: string;
-}
-
-export interface InitCsrfInterface {
-	csrf: typeof import('csrf');
 }
 
 export interface InitDatabaseInterface {
@@ -307,8 +330,6 @@ export interface InitMiddlewareParameters {
 	express: typeof import('express');
 	fsModule: typeof import('fs');
 	hpp: typeof import('hpp');
-	initCsrf: typeof import('../middleware/csrf').initCsrf;
-	initializeSecurityHeaders: typeof import('../middleware/securityHeaders').initializeSecurityHeaders;
 	morgan: typeof import('morgan');
 	passport: typeof import('passport');
 	session: typeof import('express-session');
@@ -388,17 +409,6 @@ export interface SecretsMap {
 	SMTP_TOKEN: string;
 	YUBICO_CLIENT_ID: string;
 	YUBICO_SECRET_KEY: string;
-}
-
-export interface SecurityHeadersInterface {
-	helmetOptions?: typeof import('../config/securityOptions').helmetOptions;
-	permissionsPolicyOptions?: {
-		[key: string]: string[];
-	};
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
 }
 
 export interface SendClientErrorResponseInterface {
@@ -538,6 +548,11 @@ export interface YubResponseInterface {
 ///
 //
 
+export interface AccessControlMiddlewareServiceInterface {
+	restrictTo(...allowedRoles: string[]): RequestHandler;
+	hasPermission(...requiredPermissions: string[]): RequestHandler;
+}
+
 export interface AppLoggerServiceInterface extends WinstonLogger {
 	getRedactedLogger(): AppLoggerServiceInterface;
 	logDebug(message: string, details?: Record<string, unknown>): void;
@@ -558,7 +573,7 @@ export interface AppLoggerServiceInterface extends WinstonLogger {
 		userId?: string | null,
 		additionalData?: Record<string, unknown>
 	): Record<string, unknown>;
-	setUpSecrets(secrets: SecretsStoreInterface): void;
+	setUpSecrets(secrets: VaultServiceInterface): void;
 	setErrorHandler(errorHandler: ErrorHandlerServiceInterface): void;
 }
 
@@ -586,6 +601,8 @@ export interface AuthControllerInterface {
 	enableMfa(userId: string): Promise<boolean>;
 	disableMfa(userId: string): Promise<boolean>;
 	recoverPassword(email: string): Promise<void>;
+	generateEmailMFACode(email: string): Promise<boolean>;
+	verifyEmail2FACode(email: string, email2FACode: string): Promise<boolean>;
 	generateTOTP(
 		userId: string
 	): Promise<{ secret: string; qrCodeUrl: string }>;
@@ -598,42 +615,6 @@ export interface BaseRouterInterface {
 
 export interface BackupCodeServiceInterface {
 	generateBackupCodes(id: string): Promise<string[]> | string[];
-}
-
-export interface BouncerServiceInterface {
-	rateLimitMiddleware(): (
-		req: Request,
-		res: Response,
-		next: NextFunction
-	) => Promise<void>;
-	slowdownMiddleware(): (
-		req: Request & { session: SlowdownSessionInterface },
-		res: Response,
-		next: NextFunction
-	) => void;
-	throttleRequests(): (
-		req: Request,
-		res: Response,
-		next: NextFunction
-	) => Promise<void | Response>;
-	ipBlacklistMiddleware(): (
-		req: Request,
-		res: Response,
-		next: NextFunction
-	) => Promise<void>;
-	addIpToBlacklist(ip: string): Promise<void>;
-	removeIpFromBlacklist(ip: string): Promise<void>;
-	preInitIpBlacklist(): Promise<void>;
-	loadIpBlacklist(): Promise<void>;
-	syncBlacklistFromRedisToFile(): Promise<void>;
-	temporaryBlacklist(ip: string): Promise<void>;
-	isBlacklisted(ip: string): Promise<boolean>;
-	isTemporarilyBlacklisted(ip: string): Promise<boolean>;
-	isBlacklistedOrTemporarilyBlacklisted(ip: string): Promise<{
-		isBlacklisted: boolean;
-		isTemporarilyBlacklisted: boolean;
-	}>;
-	dynamicRateLimiter(): Promise<void>;
 }
 
 export interface CacheServiceInterface {
@@ -652,26 +633,12 @@ export interface CacheServiceInterface {
 	closeConnection(): Promise<void>;
 }
 
-export interface ConfigSecretsInterface {
-	readonly logger: AppLoggerServiceInterface;
-	readonly execSync: typeof import('child_process').execSync;
-	readonly getDirectoryPath: () => string;
-	readonly gpgPassphrase: string;
-}
-
-export interface ConfigServiceInterface {
-	logger: AppLoggerServiceInterface;
-	getLogger(): AppLoggerServiceInterface;
-	getErrorLogger(): ErrorLoggerServiceInterface;
-	getEnvVariable<K extends keyof EnvVariableTypes>(
-		key: K
-	): EnvVariableTypes[K];
-	getFeatureFlags(): FeatureFlagTypes;
-	getSecrets(
-		keys: string | string[],
-		logger: AppLoggerServiceInterface
-	): Record<string, string | undefined> | string | undefined;
-	refreshSecrets(dependencies: ConfigSecretsInterface): void;
+export interface CSRFMiddlewareServiceInterface {
+	initializeCSRFMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void>;
 }
 
 export interface DatabaseControllerInterface {
@@ -714,7 +681,7 @@ export interface EmailMFAServiceInterface {
 	): Promise<boolean>;
 }
 
-export interface EnvironmentServiceInterface {
+export interface EnvConfigServiceInterface {
 	getEnvVariable<K extends keyof EnvVariableTypes>(
 		key: K
 	): EnvVariableTypes[K];
@@ -737,12 +704,12 @@ export interface ErrorLoggerServiceInterface extends AppLoggerServiceInterface {
 
 export interface ErrorHandlerServiceInterface {
 	ErrorClasses: typeof ErrorClasses;
-	ErrorSeverity: typeof import('../errors/errorClasses').ErrorSeverity;
+	ErrorSeverity: typeof import('../errors/ErrorClasses').ErrorSeverity;
 	handleError(params: {
 		error: unknown;
 		req?: Request;
 		details?: Record<string, unknown>;
-		severity?: import('../errors/errorClasses').ErrorSeverityType;
+		severity?: import('../errors/ErrorClasses').ErrorSeverityType;
 		action?: string;
 		userId?: string;
 		sequelize?: Sequelize;
@@ -783,6 +750,57 @@ export interface FIDO2ServiceInterface {
 	invalidateFido2Cache(userId: string, action: string): Promise<void>;
 }
 
+export interface GatekeeperServiceInterface {
+	rateLimitMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void>;
+	slowdownMiddleware(): (
+		req: Request & { session: SlowdownSessionInterface },
+		res: Response,
+		next: NextFunction
+	) => void;
+	throttleRequests(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void | Response>;
+	ipBlacklistMiddleware(): (
+		req: Request,
+		res: Response,
+		next: NextFunction
+	) => Promise<void>;
+	addIpToBlacklist(ip: string): Promise<void>;
+	removeIpFromBlacklist(ip: string): Promise<void>;
+	preInitIpBlacklist(): Promise<void>;
+	loadIpBlacklist(): Promise<void>;
+	temporaryBlacklist(ip: string): Promise<void>;
+	isBlacklisted(ip: string): Promise<boolean>;
+	isTemporarilyBlacklisted(ip: string): Promise<boolean>;
+	isBlacklistedOrTemporarilyBlacklisted(ip: string): Promise<{
+		isBlacklisted: boolean;
+		isTemporarilyBlacklisted: boolean;
+	}>;
+	dynamicRateLimiter(): Promise<void>;
+}
+
+export interface HealthCheckServiceInterface {
+	performHealthCheck(): Promise<Record<string, unknown>>;
+}
+
+export interface HelmetMiddlwareServiceInterface {
+	initializeHelmetMiddleware(app: Application): Promise<void>;
+	applyHelmet(app: Application): Promise<void>;
+	applyCSP(app: Application): Promise<void>;
+	applyExpectCT(app: Application): Promise<void>;
+	applyPermissionsPolicy(app: Application): Promise<void>;
+	helmetOptions?: typeof import('../config/middlewareOptions').helmetOptions;
+	permissionsPolicyOptions?: {
+		[key: string]: string[];
+	};
+}
+
 export interface HTTPSServerInterface {
 	initialize: () => Promise<void>;
 	startServer: () => Promise<void>;
@@ -800,6 +818,12 @@ export interface JWTAuthMiddlewareServiceInterface {
 export interface JWTServiceInterface {
 	generateJWT(id: string, username: string): Promise<string>;
 	verifyJWT(token: string): Promise<string | JwtPayload | null>;
+}
+
+export interface MiddlewareStatusServiceInterface {
+	setStatus(middlewareName: string, status: 'on' | 'off'): void;
+	getStatus(middlewareName: string): 'on' | 'off' | undefined | void;
+	isMiddlewareOn(middlewareName: string): boolean;
 }
 
 export interface MulterUploadServiceInterface {
@@ -844,13 +868,6 @@ export interface RedisServiceInterface {
 }
 
 export interface ResourceManagerInterface {
-	performHealthCheck(): Promise<Record<string, unknown>>;
-	monitorEventLoopLag(): void;
-	monitorCPU(): void;
-	monitorMemoryUsage(): void;
-	monitorDiskUsage(): void;
-	monitorCacheSize(): void;
-	monitorNetworkUsage(): void;
 	getCpuUsage(): Array<{ core: number; usage: string }>;
 	getMemoryUsage(): {
 		heapUsed: number;
@@ -870,25 +887,6 @@ export interface ResourceManagerInterface {
 		expiration: number
 	): Promise<void>;
 	getFromCache<T>(key: string, service: string): Promise<T | null>;
-}
-
-export interface SecretsStoreInterface {
-	loadSecrets(dependencies: ConfigSecretsInterface): Promise<void>;
-	storeSecret(key: string, secret: string): Promise<void>;
-	retrieveSecret(
-		key: keyof SecretsMap,
-		usageCallback: (secret: string) => void
-	): Promise<string | null>;
-	retrieveSecrets(
-		secretKeys: (keyof SecretsMap)[],
-		usageCallback: (secrets: Partial<SecretsMap>) => void
-	): Promise<Partial<SecretsMap> | null>;
-	redactSecrets(
-		logData: string | Record<string, unknown> | unknown[]
-	): Promise<string | Record<string, unknown> | unknown[]>;
-	clearExpiredSecretsFromMemory(): void;
-	clearSecretsFromMemory(secretKeys: string | string[]): void;
-	batchClearSecrets(): Promise<void>;
 }
 
 export interface TOTPServiceInterface {
@@ -929,14 +927,30 @@ export interface ValidatorServiceInterface {
 	): Response | void;
 }
 
+export interface VaultServiceInterface {
+	storeSecret(key: string, secret: string): Promise<void>;
+	retrieveSecret(
+		key: keyof SecretsMap,
+		usageCallback: (secret: string) => void
+	): Promise<string | null>;
+	retrieveSecrets(
+		secretKeys: (keyof SecretsMap)[],
+		usageCallback: (secrets: Partial<SecretsMap>) => void
+	): Promise<Partial<SecretsMap> | null>;
+	redactSecrets(
+		logData: string | Record<string, unknown> | unknown[]
+	): Promise<string | Record<string, unknown> | unknown[]>;
+	clearExpiredSecretsFromMemory(): void;
+	clearSecretsFromMemory(secretKeys: string | string[]): void;
+	batchClearSecrets(): Promise<void>;
+}
+
 export interface YubicoOTPServiceInterface {
 	initializeYubicoOTP(): Promise<void>;
 	init(clientId: string, secretKey: string): YubClientInterface;
 	validateYubicoOTP(otp: string): Promise<boolean>;
 	generateYubicoOTPOptions(): Promise<YubicoOTPOptionsInterface>;
 }
-
-export type HTTPSServerOptions = import('tls').SecureContextOptions;
 
 ///
 //// ***** SERVICE DEPENDENCY INTERFACES ***** /////////
@@ -1001,7 +1015,7 @@ export interface AppLoggerServiceDeps {
 	};
 	DailyRotateFile: typeof import('winston-daily-rotate-file');
 	LogStashTransport: typeof import('winston-logstash');
-	ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
+	ErrorClasses: typeof import('../errors/ErrorClasses').ErrorClasses;
 	HandleErrorStaticParameters: typeof import('../index/parameters').HandleErrorStaticParameters;
 	uuidv4: typeof import('uuid').v4;
 	fs: typeof import('fs');
@@ -1036,7 +1050,7 @@ export interface ErrorLoggerServiceDeps {
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	) => void;
-	readonly ErrorClasses: typeof import('../errors/errorClasses').ErrorClasses;
+	readonly ErrorClasses: typeof import('../errors/ErrorClasses').ErrorClasses;
 	readonly ErrorSeverity: string;
 	readonly handleError: ErrorHandlerServiceInterface['handleError'];
 }
@@ -1053,7 +1067,6 @@ export interface MulterUploadServiceDeps {
 	fileTypeFromBuffer: typeof import('file-type').fileTypeFromBuffer;
 	fs: typeof import('fs');
 	path: typeof import('path');
-	configService: typeof import('../services/config').configService;
 	validateDependencies: (
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
@@ -1070,6 +1083,13 @@ export interface PassportAuthMiddlewareServiceDeps {
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	) => void;
+}
+
+export interface PassportServiceInterface {
+	configurePassport(
+		passport: import('passport').PassportStatic,
+		UserModel: typeof import('../models/UserModelFile').User
+	): Promise<void>;
 }
 
 export interface RedisServiceDeps {
@@ -1132,5 +1152,3 @@ export interface UserControllerDeps {
 //// ***** INTERFACE REDIRECTS ***** /////////
 ///
 //
-
-export type LoggerServiceInterface = ErrorLoggerServiceInterface;

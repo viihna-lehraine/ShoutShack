@@ -11,7 +11,7 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private secrets = ServiceFactory.getVaultService();
 
 	private constructor() {}
 
@@ -60,6 +60,7 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 				);
 			this.errorLogger.logError(utilityError.message);
 			this.errorHandler.handleError({ error: utilityError });
+
 			return { emailMFACode: '', emailMFAToken: '' };
 		}
 	}

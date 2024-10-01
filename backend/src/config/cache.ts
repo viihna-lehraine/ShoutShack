@@ -1,5 +1,6 @@
 export const serviceTTLConfig: Record<string, number> = {
 	APIRouter: 180,
+	CSRF: 30,
 	DatabaseController: 60,
 	FIDO2Service: 30,
 	JWTService: 30,

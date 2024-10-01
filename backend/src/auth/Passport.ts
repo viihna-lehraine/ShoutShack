@@ -5,35 +5,46 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import {
-	PassportAuthServiceInterface,
-	PassportAuthServiceDeps
-} from '../index/interfaces';
+import { PassportServiceInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 
-export class PassportAuthService implements PassportAuthServiceInterface {
-	private static instance: PassportAuthService | null = null;
+export class PassportService implements PassportServiceInterface {
+	private static instance: PassportService | null = null;
 	private PasswordService = ServiceFactory.getPasswordService();
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private secrets = ServiceFactory.getVaultService();
 
 	private constructor() {}
 
-	public static getInstance(): PassportAuthService {
-		if (!PassportAuthService.instance) {
-			PassportAuthService.instance = new PassportAuthService();
+	public static getInstance(): PassportService {
+		if (!PassportService.instance) {
+			PassportService.instance = new PassportService();
 		}
-		return PassportAuthService.instance;
+
+		return PassportService.instance;
 	}
 
-	public async configurePassport({
-		passport,
-		UserModel
-	}: PassportAuthServiceDeps): Promise<void> {
+	public async configurePassport(
+		passport: import('passport').PassportStatic,
+		UserModel: typeof import('../models/UserModelFile').User
+	): Promise<void> {
 		try {
-			const jwtSecret = await this.getJwtSecret();
+			const jwtSecret = this.secrets.retrieveSecret(
+				'JWT_SECRET',
+				secret => secret
+			);
+
+			if (typeof jwtSecret !== 'string') {
+				const jwtSecretError =
+					new this.errorHandler.ErrorClasses.ConfigurationError(
+						'Invalid JWT secret'
+					);
+				this.errorLogger.logError(jwtSecretError.message);
+				this.errorHandler.handleError({ error: jwtSecretError });
+				throw jwtSecretError;
+			}
 
 			const opts: StrategyOptions = {
 				jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -90,7 +101,10 @@ export class PassportAuthService implements PassportAuthServiceInterface {
 							});
 						}
 
-						const pepper = this.secrets.retrieveSecrets('PEPPER');
+						const pepper = this.secrets.retrieveSecret(
+							'PEPPER',
+							secret => secret
+						);
 
 						if (typeof pepper !== 'string') {
 							this.logger.error(
@@ -138,23 +152,6 @@ export class PassportAuthService implements PassportAuthServiceInterface {
 				{ error },
 				'Failed to configure Passport'
 			);
-		}
-	}
-
-	private async getJwtSecret(): Promise<string> {
-		const secretResult = this.secrets.retrieveSecrets('JWT_SECRET');
-
-		if (typeof secretResult === 'string') {
-			return secretResult;
-		} else if (
-			secretResult &&
-			typeof secretResult === 'object' &&
-			secretResult.JWT_SECRET
-		) {
-			return secretResult.JWT_SECRET;
-		} else {
-			this.logger.error('JWT_SECRET is not available.');
-			throw new Error('JWT_SECRET is not available.');
 		}
 	}
 

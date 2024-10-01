@@ -1,30 +1,18 @@
 import { RedisClientType } from 'redis';
-import {
-	AppLoggerServiceInterface,
-	ConfigServiceInterface,
-	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
-	RedisServiceDeps,
-	RedisServiceInterface
-} from '../index/interfaces';
+import { RedisServiceDeps, RedisServiceInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
 	private static instance: RedisService | null = null;
 	private redisClient: RedisClientType | null = null;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
-	private configService: ConfigServiceInterface;
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private envConfig = ServiceFactory.getEnvConfigService();
 
 	private constructor(
 		private readonly createRedisClient: typeof import('redis').createClient
-	) {
-		this.logger = ServiceFactory.getLoggerService();
-		this.errorLogger = ServiceFactory.getErrorLoggerService();
-		this.errorHandler = ServiceFactory.getErrorHandlerService();
-		this.configService = ServiceFactory.getConfigService();
-	}
+	) {}
 
 	public static getInstance(deps: RedisServiceDeps): RedisService {
 		if (!RedisService.instance) {
@@ -47,7 +35,7 @@ export class RedisService implements RedisServiceInterface {
 
 		try {
 			this.redisClient = this.createRedisClient({
-				url: this.configService.getEnvVariable('redisUrl'),
+				url: this.envConfig.getEnvVariable('redisUrl'),
 				socket: {
 					reconnectStrategy: retries => {
 						const retryAfter = Math.min(retries * 100, 3000);

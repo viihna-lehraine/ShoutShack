@@ -5,7 +5,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
 } from '../index/interfaces';
-import { SecretsStoreInterface } from '../index/interfaces';
+import { VaultServiceInterface } from '../index/interfaces';
 import { Op } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';
@@ -19,7 +19,7 @@ export class AppLoggerService
 	private adminId: number | null = null;
 	private redactedLogger: AppLoggerServiceInterface | null = null;
 	protected errorHandler: ErrorHandlerServiceInterface | null = null;
-	private secrets: SecretsStoreInterface | null = null;
+	private secrets: VaultServiceInterface | null = null;
 
 	constructor(
 		deps: AppLoggerServiceDeps,
@@ -119,10 +119,10 @@ export class AppLoggerService
 		this.errorHandler = errorHandler;
 	}
 
-	public setUpSecrets(secrets: SecretsStoreInterface): void {
+	public setUpSecrets(secrets: VaultServiceInterface): void {
 		this.secrets = secrets;
 		this.setupRedactedLogger();
-		console.info('SecretsStore injected and redacted logger setup.');
+		console.info('Vault Service injected and redacted logger setup.');
 	}
 
 	private setupRedactedLogger(): void {
@@ -412,7 +412,7 @@ export class ErrorLoggerService
 	}
 
 	public logAppError(
-		error: import('../errors/errorClasses').AppError,
+		error: import('../errors/ErrorClasses').AppError,
 		sequelize?: import('sequelize').Sequelize,
 		details: Record<string, unknown> = {}
 	): void {
@@ -448,7 +448,7 @@ export class ErrorLoggerService
 	}
 
 	public async logToDatabase(
-		error: import('../errors/errorClasses').AppError,
+		error: import('../errors/ErrorClasses').AppError,
 		sequelize: import('sequelize').Sequelize,
 		retryCount: number = 3
 	): Promise<void> {

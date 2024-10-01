@@ -1,6 +1,12 @@
+import { Options as CSRFOptions } from 'csrf';
 import { HelmetOptions } from "helmet";
 
-export const contentSecurityPolicyOptions = {
+export const csrfOptions: CSRFOptions = {
+	secretLength: 32,
+	saltLength: 8
+};
+
+export const cspOptions = {
 	directives: {
 		connectSrc: [
 			"'self'",
@@ -14,7 +20,7 @@ export const contentSecurityPolicyOptions = {
 		objectSrc: ["'none'"],
 		scriptSrc: ["'self'", 'https://api.haveibeenpwned.com'],
 		styleSrc: ["'self'", "'unsafe-inline'"], // *DEV-NOTE* switch to nonce-based inline style usage
-		upgradeInsecureRequests: [],
+		upgradeInsecureRequests: []
 	},
 	reportOnly: false // set to true to test policy without blocking
 }

@@ -15,8 +15,8 @@ export class UserController implements UserControllerInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private configService = ServiceFactory.getConfigService();
-	private secrets = ServiceFactory.getSecretsStore();
+	private envConfig = ServiceFactory.getEnvConfigService();
+	private secrets = ServiceFactory.getVaultService();
 	private mailer = ServiceFactory.getMailerService();
 
 	constructor(private userModel = User) {
@@ -286,12 +286,12 @@ export class UserController implements UserControllerInterface {
 				expiresIn: '1d'
 			});
 
-			const baseUrl = this.configService.getEnvVariable('baseUrl');
-			const port = this.configService.getEnvVariable('serverPort');
+			const baseUrl = this.envConfig.getEnvVariable('baseUrl');
+			const port = this.envConfig.getEnvVariable('serverPort');
 			const confirmationUrl = `${baseUrl}${port}/api/users/confirm/${confirmationToken}`;
 
 			const mailOptions = {
-				from: this.configService.getEnvVariable('emailUser'),
+				from: this.envConfig.getEnvVariable('emailUser'),
 				to: user.email,
 				subject: 'Please Confirm Your Account',
 				html: `

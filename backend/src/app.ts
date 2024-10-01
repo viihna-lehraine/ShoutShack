@@ -12,14 +12,12 @@ import os from 'os';
 import passport from 'passport';
 import process from 'process';
 import { createClient } from 'redis';
-import { login } from './login';
-import { initializeAllMiddleware } from './middleware';
-import { AppError, ErrorClasses, ErrorSeverity } from './errors/errorClasses';
+import { login } from './admin';
+import { AppError, ErrorClasses, ErrorSeverity } from './errors/ErrorClasses';
 import { configurePassport } from './auth/passport';
-import { initCsrf } from './middleware/csrf';
 import { initializeModels } from './models/modelsIndex';
 import { createUserModel } from './models/UserModelFile';
-import { blankRequest } from './utils/constants';
+import { blankRequest } from './config/constants';
 import { InitializeDatabaseStaticParameters } from './index/parameters';
 import { Sequelize } from 'sequelize';
 import { ServiceFactory } from './index/factory';
@@ -28,7 +26,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
 } from './index/interfaces';
-import { EnvironmentService } from './services/environment';
+import { EnvironmentService } from './services/EnvConfig';
 
 let sequelize: Sequelize;
 
