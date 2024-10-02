@@ -9,7 +9,6 @@ import {
 	Router
 } from 'express';
 import { AppError, ClientError, ErrorClasses } from '../errors/ErrorClasses';
-import RedisStore from 'connect-redis';
 import { Transporter } from 'nodemailer';
 import { Sequelize } from 'sequelize';
 import { Session } from 'express-session';
@@ -50,21 +49,7 @@ export type FidoFactor = 'first' | 'second' | 'either';
 
 export type EnvVariableInterface = string | number | boolean | undefined;
 
-export type HTTPSServerOptions = import('tls').SecureContextOptions;
-
 export type LoggerServiceInterface = ErrorLoggerServiceInterface;
-
-//
-///
-//// ***** COMMONLY USED TYPE BLOCKS ***** //
-///
-//
-
-export interface BaseExpressInterface {
-	req: import('express').Request;
-	res: import('express').Response;
-	next: import('express').NextFunction;
-}
 
 //
 ///
@@ -90,23 +75,6 @@ export interface AddIpToBlacklistInterface {
 	) => void;
 }
 
-export interface BackupCodeInterface {
-	code: string;
-	used: boolean;
-}
-
-export interface CacheMetrics {
-	cacheHits: number;
-	cacheMisses: number;
-	cacheSize?: number;
-}
-
-export interface ConfigSecretsInterface {
-	readonly execSync: typeof import('child_process').execSync;
-	readonly getDirectoryPath: () => string;
-	readonly gpgPassphrase: string;
-}
-
 export interface CreateJwtInterface {
 	jwt: typeof import('jsonwebtoken');
 	execSync: typeof import('child_process').execSync;
@@ -125,158 +93,6 @@ export interface CsrfMiddlewareInterface {
 export interface DependencyInterface {
 	name: string;
 	instance: unknown;
-}
-
-export interface EnvVariableTypes {
-	baseUrl: string;
-	batchReEncryptSecretsInterval: number;
-	blacklistSyncInterval: number;
-	clearExpiredSecretsInterval: number;
-	cpuLimit: number;
-	cpuThreshold: number;
-	cronLoggerSetting: number;
-	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
-	dbHost: string;
-	dbInitMaxRetries: number;
-	dbInitRetryAfter: number;
-	dbName: string;
-	dbUser: string;
-	diskPath: string;
-	emailHost: string;
-	emailPort: number;
-	emailSecure: boolean;
-	emailUser: string;
-	eventLoopLagThreshold: number;
-	featureApiRoutesCsrf: boolean;
-	featureDbSync: boolean;
-	featureEnableIpBlacklist: boolean;
-	featureEnableJwtAuth: boolean;
-	featureEnableLogStash: boolean;
-	featureEnableRateLimit: boolean;
-	featureEnableResourceAutoScaling: boolean;
-	featureEnableSession: boolean;
-	featureEncryptSecretsStore: boolean;
-	featureHonorCipherOrder: boolean;
-	featureHttpsRedirect: boolean;
-	featureLoadTestRoutes: boolean;
-	featureSequelizeLogging: boolean;
-	fido2Timeout: number;
-	fidoAuthRequireResidentKey: boolean;
-	fidoAuthUserVerification:
-		| 'required'
-		| 'preferred'
-		| 'discouraged'
-		| 'enterprise';
-	fidoChallengeSize: number;
-	fidoCryptoParams: number[];
-	frontendSecretsPath: string;
-	ipWhitelistPath: string;
-	logExportPath: string;
-	loggerServiceName: string;
-	logLevel: 'debug' | 'info' | 'warn' | 'error';
-	logStashHost: string;
-	logStashNode: string;
-	logStashPort: number;
-	maxCacheSize: number;
-	maxRedisCacheSize: number;
-	memoryLimit: number;
-	memoryThreshold: number;
-	memoryMonitorInterval: number;
-	multerFileSizeLimit: number;
-	multerStorageDir: string;
-	multerUploadDir: string;
-	npmLogPath: string;
-	nodeEnv: 'development' | 'testing' | 'production';
-	primaryLogPath: string;
-	rateLimiterBaseDuration: number;
-	rateLimiterBasePoints: number;
-	rateLimiterGlobalReset: number;
-	redisUrl: string;
-	revokedTokenRetentionPeriod: number;
-	rpName: string;
-	rpIcon: string;
-	rpId: string;
-	rpOrigin: string;
-	secretsExpiryTimeout: number;
-	secretsFilePath1: string;
-	secretsRateLimitMaxAttempts: number;
-	secretsRateLimitWindow: number;
-	serverDataFilePath1: string;
-	serverDataFilePath2: string;
-	serverDataFilePath3: string;
-	serverDataFilePath4: string;
-	serverPort: number;
-	staticRootPath: string;
-	slowdownThreshold: number;
-	tempDir: string;
-	tlsCertPath1: string;
-	tlsKeyPath1: string;
-	tokenExpiryListPath: string;
-	tokenRevokedListPath: string;
-	tokenCacheDuration: number;
-	yubicoApiUrl: string;
-}
-
-export interface ExpressErrorHandlerInterface {
-	expressError: AppError | ClientError | Error;
-	req: Request;
-	res: Response;
-	next: NextFunction;
-	fallbackLogger: Console;
-	errorResponse?: string;
-}
-
-export interface ErrorLoggerDetailsInterface {
-	getCallerInfo: () => string;
-	req: import('express').Request;
-	requestIdVal?: string;
-	adminIdVal?: string;
-	userIdVal?: string;
-	actionVal?: string;
-	ipVal?: string;
-	userAgentVal?: string;
-}
-
-export interface FeatureFlagTypes {
-	[key: string]: boolean;
-}
-
-export interface FidoUserInterface {
-	id: string;
-	email: string;
-	username: string;
-	credential: {
-		credentialId: string;
-	}[];
-}
-
-export interface FlushRedisMemoryCacheInterface {
-	readonly req: import('express').Request;
-	readonly res: import('express').Response;
-	readonly next: import('express').NextFunction;
-	readonly blankRequest: import('express').Request;
-	readonly createRedisClient: typeof import('redis').createClient;
-}
-
-export interface GetFeatureFlagsInterface {
-	blankRequest: import('express').Request;
-}
-
-export interface GeneratePasskeyInterface {
-	user: FidoUserInterface;
-}
-
-export interface GeneratePasskeyInterface {
-	user: FidoUserInterface;
-	logger: AppLoggerServiceInterface;
-}
-
-export interface GetRedisClientInterface {
-	readonly req: import('express').Request;
-	readonly res: import('express').Response;
-	readonly next: import('express').NextFunction;
-	readonly blankRequest: import('express').Request;
-	readonly createRedisClient: typeof import('redis').createClient;
 }
 
 export interface HandleCriticalErrorInterface {
@@ -322,22 +138,6 @@ export interface InitIpBlacklistInterface {
 		logger: AppLoggerServiceInterface
 	) => void;
 }
-
-export interface InitMiddlewareParameters {
-	authenticateOptions: import('passport').AuthenticateOptions;
-	cookieParser: typeof import('cookie-parser');
-	cors: typeof import('cors');
-	express: typeof import('express');
-	fsModule: typeof import('fs');
-	hpp: typeof import('hpp');
-	morgan: typeof import('morgan');
-	passport: typeof import('passport');
-	session: typeof import('express-session');
-	randomBytes: typeof import('crypto').randomBytes;
-	RedisStore: RedisStore;
-	verifyJwt: (token: string) => Promise<string | object | null>;
-}
-
 export interface LoadIpBlacklistInterface {
 	fsModule: typeof import('fs').promises;
 }
@@ -394,6 +194,13 @@ export interface ModelOperations<T> {
 	destroy: (options: { where: { id: number } }) => Promise<number>;
 }
 
+export interface RedisMetrics {
+	uptime_in_seconds: number;
+	used_memory: number;
+	connected_clients: number;
+	db0_size?: number;
+}
+
 export interface RouteParams {
 	app: import('express').Application;
 }
@@ -427,10 +234,6 @@ export interface SlowdownConfigInterface {
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	) => void;
-}
-
-export interface SlowdownSessionInterface extends Session {
-	lastRequestTime?: number;
 }
 
 export interface UserInstanceInterface {
@@ -509,6 +312,199 @@ export interface ValidateDependenciesInterface {
 		dependencies: DependencyInterface[],
 		logger: AppLoggerServiceInterface
 	): void;
+}
+
+//
+///
+//// ***** SUB-SERVICE INTERFACES ***** /////////
+///
+//
+
+export interface BackupCodeInterface {
+	code: string;
+	used: boolean;
+}
+
+export interface CacheMetrics {
+	cacheHits: number;
+	cacheMisses: number;
+	cacheSize?: number;
+}
+
+export interface ConfigSecretsInterface {
+	readonly execSync: typeof import('child_process').execSync;
+	readonly getDirectoryPath: () => string;
+	readonly gpgPassphrase: string;
+}
+
+export interface EnvVariableTypes {
+	baseUrl: string;
+	batchReEncryptSecretsInterval: number;
+	blacklistSyncInterval: number;
+	clearExpiredSecretsInterval: number;
+	cpuLimit: number;
+	cpuThreshold: number;
+	cronLoggerSetting: number;
+	dbDialect: 'mariadb' | 'mssql' | 'mysql' | 'postgres' | 'sqlite';
+	dbHost: string;
+	dbInitMaxRetries: number;
+	dbInitRetryAfter: number;
+	dbName: string;
+	dbUser: string;
+	diskPath: string;
+	emailHost: string;
+	emailPort: number;
+	emailSecure: boolean;
+	emailUser: string;
+	eventLoopLagThreshold: number;
+	featureApiRoutesCsrf: boolean;
+	featureDbSync: boolean;
+	featureEnableIpBlacklist: boolean;
+	featureEnableJwtAuth: boolean;
+	featureEnableLogStash: boolean;
+	featureEnableRateLimit: boolean;
+	featureEnableResourceAutoScaling: boolean;
+	featureEnableSession: boolean;
+	featureEncryptSecretsStore: boolean;
+	featureHonorCipherOrder: boolean;
+	featureHttpsRedirect: boolean;
+	featureLoadTestRoutes: boolean;
+	featureSequelizeLogging: boolean;
+	fido2Timeout: number;
+	fidoAuthRequireResidentKey: boolean;
+	fidoAuthUserVerification:
+		| 'required'
+		| 'preferred'
+		| 'discouraged'
+		| 'enterprise';
+	fidoChallengeSize: number;
+	fidoCryptoParams: number[];
+	frontendSecretsPath: string;
+	gracefulShutdownTimeout: number;
+	ipWhitelistPath: string;
+	logExportPath: string;
+	loggerServiceName: string;
+	logLevel: 'debug' | 'info' | 'warn' | 'error';
+	logStashHost: string;
+	logStashNode: string;
+	logStashPort: number;
+	maxCacheSize: number;
+	maxRedisCacheSize: number;
+	memoryLimit: number;
+	memoryThreshold: number;
+	memoryMonitorInterval: number;
+	multerFileSizeLimit: number;
+	multerStorageDir: string;
+	multerUploadDir: string;
+	npmLogPath: string;
+	nodeEnv: 'development' | 'testing' | 'production';
+	primaryLogPath: string;
+	rateLimiterBaseDuration: number;
+	rateLimiterBasePoints: number;
+	rateLimiterGlobalReset: number;
+	redisUrl: string;
+	revokedTokenRetentionPeriod: number;
+	rpName: string;
+	rpIcon: string;
+	rpId: string;
+	rpOrigin: string;
+	secretsExpiryTimeout: number;
+	secretsFilePath1: string;
+	secretsRateLimitMaxAttempts: number;
+	secretsRateLimitWindow: number;
+	serverDataFilePath1: string;
+	serverDataFilePath2: string;
+	serverDataFilePath3: string;
+	serverDataFilePath4: string;
+	serverPort: number;
+	staticRootPath: string;
+	slowdownThreshold: number;
+	tempDir: string;
+	tlsCertPath1: string;
+	tlsKeyPath1: string;
+	tokenExpiryListPath: string;
+	tokenRevokedListPath: string;
+	tokenCacheDuration: number;
+	yubicoApiUrl: string;
+}
+
+export interface FeatureFlagTypes {
+	[key: string]: boolean;
+}
+
+export interface ExpressErrorHandlerInterface {
+	expressError: AppError | ClientError | Error;
+	req: Request;
+	res: Response;
+	next: NextFunction;
+	fallbackLogger: Console;
+	errorResponse?: string;
+}
+
+export interface ErrorLoggerDetailsInterface {
+	getCallerInfo: () => string;
+	req: import('express').Request;
+	requestIdVal?: string;
+	adminIdVal?: string;
+	userIdVal?: string;
+	actionVal?: string;
+	ipVal?: string;
+	userAgentVal?: string;
+}
+
+export interface FidoUserInterface {
+	id: string;
+	email: string;
+	username: string;
+	credential: {
+		credentialId: string;
+	}[];
+}
+
+export interface FlushRedisMemoryCacheInterface {
+	readonly req: import('express').Request;
+	readonly res: import('express').Response;
+	readonly next: import('express').NextFunction;
+	readonly blankRequest: import('express').Request;
+	readonly createRedisClient: typeof import('redis').createClient;
+}
+
+export interface GetFeatureFlagsInterface {
+	blankRequest: import('express').Request;
+}
+
+export interface GeneratePasskeyInterface {
+	user: FidoUserInterface;
+}
+
+export interface GeneratePasskeyInterface {
+	user: FidoUserInterface;
+	logger: AppLoggerServiceInterface;
+}
+
+export interface GetRedisClientInterface {
+	readonly req: import('express').Request;
+	readonly res: import('express').Response;
+	readonly next: import('express').NextFunction;
+	readonly blankRequest: import('express').Request;
+	readonly createRedisClient: typeof import('redis').createClient;
+}
+
+export interface FileTypeRecords {
+	[key: string]: string | string[];
+}
+
+export interface ValidFiles {
+	cssFiles: FileTypeRecords;
+	fontFiles: FileTypeRecords;
+	htmlFiles: FileTypeRecords;
+	iconFiles: FileTypeRecords;
+	imageFiles: FileTypeRecords;
+	jsFiles: FileTypeRecords;
+	logoFiles: FileTypeRecords;
+	mdFiles: FileTypeRecords;
+	txtFiles: FileTypeRecords;
+	xmlFiles: FileTypeRecords;
 }
 
 export interface VerifyPasskeyAuthInterface {
@@ -602,7 +598,7 @@ export interface AuthControllerInterface {
 	disableMfa(userId: string): Promise<boolean>;
 	recoverPassword(email: string): Promise<void>;
 	generateEmailMFACode(email: string): Promise<boolean>;
-	verifyEmail2FACode(email: string, email2FACode: string): Promise<boolean>;
+	verifyEmailMFACode(email: string, email2FACode: string): Promise<boolean>;
 	generateTOTP(
 		userId: string
 	): Promise<{ secret: string; qrCodeUrl: string }>;
@@ -619,6 +615,9 @@ export interface BackupCodeServiceInterface {
 
 export interface CacheServiceInterface {
 	getCacheMetrics(service: string): CacheMetrics;
+	getMemoryCache(
+		service: string
+	): Map<string, { value: unknown; expiration: number | undefined }> | null;
 	get<T>(key: string, service: string): Promise<T | null>;
 	set<T>(
 		key: string,
@@ -656,6 +655,8 @@ export interface DatabaseControllerInterface {
 	): Promise<T | null>;
 	getCachedData<T>(key: string): Promise<T | null>;
 	clearCache(key: string): Promise<void>;
+	getDatabaseInfo(): Promise<Record<string, unknown>>;
+	getDatabaseMetrics(serviceName: string): Promise<Record<string, unknown>>;
 }
 
 export interface DeclareWebServerOptionsInterface {
@@ -757,7 +758,7 @@ export interface GatekeeperServiceInterface {
 		next: NextFunction
 	) => Promise<void>;
 	slowdownMiddleware(): (
-		req: Request & { session: SlowdownSessionInterface },
+		req: Request & { session: Session & { lastRequestTime?: number } },
 		res: Response,
 		next: NextFunction
 	) => void;
@@ -794,7 +795,9 @@ export interface HelmetMiddlwareServiceInterface {
 	applyHelmet(app: Application): Promise<void>;
 	applyCSP(app: Application): Promise<void>;
 	applyExpectCT(app: Application): Promise<void>;
+	applyReferrerPolicy(app: Application): Promise<void>;
 	applyPermissionsPolicy(app: Application): Promise<void>;
+	applyXssFilter(app: Application): Promise<void>;
 	helmetOptions?: typeof import('../config/middlewareOptions').helmetOptions;
 	permissionsPolicyOptions?: {
 		[key: string]: string[];
@@ -865,6 +868,7 @@ export interface RedisServiceInterface {
 	delMultiple(service: string, keys: string[]): Promise<void>;
 	getKeysByPattern(pattern: string): Promise<string[]>;
 	flushCacheByService(service: string): Promise<void>;
+	getRedisInfo(): Promise<RedisMetrics>;
 }
 
 export interface ResourceManagerInterface {
@@ -878,7 +882,9 @@ export interface ResourceManagerInterface {
 	};
 	getDiskUsage(): Promise<Record<string, unknown>>;
 	getNetworkUsage(): Record<string, unknown>[];
+	adjustResources(): void;
 	clearCaches(service: string): Promise<void>;
+	evictCacheEntries(service: string): void;
 	closeIdleConnections(): Promise<void>;
 	saveToCache<T>(
 		key: string,
@@ -887,6 +893,10 @@ export interface ResourceManagerInterface {
 		expiration: number
 	): Promise<void>;
 	getFromCache<T>(key: string, service: string): Promise<T | null>;
+}
+
+export interface StaticRouterInterface {
+	initializeStaticRouter(): Promise<void>;
 }
 
 export interface TOTPServiceInterface {

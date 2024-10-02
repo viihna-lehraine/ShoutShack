@@ -2,6 +2,8 @@ import toobusy from 'toobusy-js';
 import express from 'express';
 import { HealthCheckServiceInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
+import fs from 'fs';
+import os from 'os';
 
 export class HealthCheckService implements HealthCheckServiceInterface {
 	private static instance: HealthCheckService | null = null;
@@ -33,34 +35,36 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 
 	public async performHealthCheck(): Promise<Record<string, unknown>> {
 		try {
-			const databaseInfo = await this.resourceManager.getDatabaseInfo();
-			const httpsServerInfo = await this.httpsServer.getServerInfo();
-			const redisInfo = await this.resourceManager.getRedisInfo();
+			const databaseInfo =
+				await this.databaseController.getDatabaseInfo();
+			const httpsServerInfo = await this.httpsServer.getHTTPSServerInfo();
+			const redisInfo = await this.redisService.getRedisInfo();
 
 			const databaseHealth = {
 				status: databaseInfo ? 'Connected' : 'Not connected',
-				uptime: databaseInfo.uptime_in_seconds,
-				cpuUsed: databaseInfo.used_cpu_sys,
-				memoryUsed: databaseInfo.used_memory,
-				cacheSize: databaseInfo.cacheSize,
-				connectedClients: databaseInfo.connected_clients
+				uptime: databaseInfo?.uptime_in_seconds ?? 0,
+				cpuUsed: databaseInfo?.used_cpu_sys ?? 0,
+				memoryUsed: databaseInfo?.used_memory ?? 0,
+				cacheSize: databaseInfo?.cacheSize ?? 0,
+				connectedClients: databaseInfo?.connected_clients ?? 0
 			};
+
 			const httpsServerHealth = {
 				status: httpsServerInfo ? 'Connected' : 'Not connected',
-				uptime: httpsServerInfo.uptime_in_seconds,
-				cpuUsed: httpsServerInfo.used_cpu_sys,
-				memoryUsed: httpsServerInfo.used_memory,
-				cacheSize: httpsServerInfo.cacheSize,
-				connectedClients: httpsServerInfo.connected_clients,
+				uptime: httpsServerInfo?.uptime_in_seconds ?? 0,
+				cpuUsed: httpsServerInfo?.used_cpu_sys ?? 0,
+				memoryUsed: httpsServerInfo?.used_memory ?? 0,
+				cacheSize: httpsServerInfo?.cacheSize ?? 0,
+				connectedClients: httpsServerInfo?.connected_clients ?? 0,
 				serverMetrics: this.getServerMetrics()
 			};
+
 			const redisHealth = {
 				status: redisInfo ? 'Connected' : 'Not connected',
-				uptime: redisInfo.uptime_in_seconds,
-				cpuUsed: redisInfo.used_cpu_sys,
-				memoryUsed: redisInfo.used_memory,
-				cacheSize: redisInfo.cacheSize,
-				connectedClients: redisInfo.connected_clients
+				uptime: redisInfo?.uptime_in_seconds ?? 0,
+				memoryUsed: redisInfo?.used_memory ?? 0,
+				cacheSize: redisInfo?.db0_size ?? 0,
+				connectedClients: redisInfo?.connected_clients ?? 0
 			};
 
 			const healthSummary: Record<string, unknown> = {
@@ -74,9 +78,10 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 						'healthCheckService'
 					),
 				httpsServerMetrics:
-					this.httpsServer.getServiceMetrics('healthCheckService'),
-				redisServiceMetrics:
-					this.redisService.getServiceMetrics('healthCheckService'),
+					this.httpsServer.getHTTPSServerMetrics(
+						'healthCheckService'
+					),
+				redisServiceMetrics: this.redisService.getRedisInfo(),
 				eventLoopLag: toobusy.lag(),
 				cpuUsage: this.resourceManager.getCpuUsage(),
 				memoryUsage: this.resourceManager.getMemoryUsage(),
@@ -94,8 +99,8 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 				maxRedisCacheSize:
 					this.envConfig.getEnvVariable('maxRedisCacheSize')
 			};
-			this.saveHealthCheckToHistory(healthSummary);
 
+			this.saveHealthCheckToHistory(healthSummary);
 			this.logger.debug(`Health Check: ${JSON.stringify(healthSummary)}`);
 			return healthSummary;
 		} catch (error) {
@@ -140,11 +145,11 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 
 				if (lag > lagThreshold) {
 					this.logger.warn(`High event loop lag detected: ${lag}ms`);
-					this.adjustResources();
+					this.resourceManager.adjustResources();
 				}
 			}, 10000);
 		} catch (error) {
-			this.handleResourceManagerError(
+			this.handleHealthCheckError(
 				error,
 				'EVENT_LOOP_LAG_MONITOR_ERROR',
 				{},
@@ -155,19 +160,19 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 
 	public monitorCPU(): void {
 		setInterval(() => {
-			const cpuUsage = this.getCpuUsage();
+			const cpuUsage = this.resourceManager.getCpuUsage();
 			cpuUsage.forEach(({ core, usage }) => {
 				this.logger.info(`CPU ${core}: Usage ${usage}`);
 			});
-			this.adjustResources();
+			this.resourceManager.adjustResources();
 		}, 5000);
 	}
 
 	public monitorMemoryUsage(): void {
 		setInterval(() => {
-			const memoryUsage = this.getMemoryUsage();
+			const memoryUsage = this.resourceManager.getMemoryUsage();
 			this.logger.info(`Memory Usage: ${JSON.stringify(memoryUsage)}`);
-			const memoryLimit = this.getMemoryThreshold();
+			const memoryLimit = this.envConfig.getEnvVariable('memoryLimit');
 			if (memoryUsage.heapUsed > memoryLimit) {
 				this.logger.warn(
 					`Memory usage exceeded limit (${memoryLimit} bytes). Adjusting resources...`
@@ -203,12 +208,13 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 		const cacheMetrics =
 			this.cacheService.getCacheMetrics('resourceManager');
 		const cacheSize = cacheMetrics.cacheSize;
+
 		if (cacheSize) {
 			if (cacheSize > this.envConfig.getEnvVariable('maxCacheSize')) {
 				this.logger.warn(
 					`Cache size exceeded limit. Clearing old entries...`
 				);
-				this.resourceManager.evictCacheEntries();
+				this.resourceManager.evictCacheEntries('resourceManager');
 			}
 		} else {
 			this.logger.error('Error getting cache size');
@@ -306,8 +312,17 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 			memoryUsage.heapUsed > this.envConfig.getEnvVariable('memoryLimit')
 		) {
 			this.logger.warn('Memory usage high, attempting recovery...');
-			this.resourceManager.clearCaches();
-			this.resourceManager.closeIdleConnections();
+			const serviceName = 'healthCheckService'; // Specify the service name
+
+			this.resourceManager.clearCaches(serviceName).catch(err => {
+				this.logger.error(
+					`Failed to clear caches for service: ${serviceName}`,
+					err
+				);
+			});
+			this.resourceManager.closeIdleConnections().catch(err => {
+				this.logger.error('Failed to close idle connections', err);
+			});
 		}
 	}
 

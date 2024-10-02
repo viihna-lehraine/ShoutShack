@@ -1,5 +1,9 @@
 import { RedisClientType } from 'redis';
-import { RedisServiceDeps, RedisServiceInterface } from '../index/interfaces';
+import {
+	RedisMetrics,
+	RedisServiceDeps,
+	RedisServiceInterface
+} from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
@@ -320,6 +324,61 @@ export class RedisService implements RedisServiceInterface {
 				'Error disconnecting Redis client'
 			);
 		}
+	}
+
+	public async getRedisInfo(): Promise<RedisMetrics> {
+		try {
+			await this.connectRedisClient();
+			if (!this.redisClient) {
+				throw new Error('Redis client is not connected');
+			}
+
+			const info = await this.redisClient.info();
+			const parsedInfo = this.parseRedisInfo(info);
+
+			this.logger.info(`Redis metrics: ${JSON.stringify(parsedInfo)}`);
+			return parsedInfo;
+		} catch (error) {
+			this.handleRedisError(
+				error,
+				'REDIS_METRICS_RETRIEVAL_ERROR',
+				{ reason: 'Failed to retrieve Redis metrics' },
+				`Error retrieving Redis metrics`
+			);
+			throw new Error('Error retrieving Redis metrics');
+		}
+	}
+
+	private parseRedisInfo(info: string): RedisMetrics {
+		const result: Partial<RedisMetrics> = {};
+		const lines = info.split('\n');
+
+		lines.forEach(line => {
+			const [key, value] = line.split(':');
+			if (key && value) {
+				switch (key.trim()) {
+					case 'uptime_in_seconds':
+						result.uptime_in_seconds =
+							parseInt(value.trim(), 10) || 0;
+						break;
+					case 'used_memory':
+						result.used_memory = parseInt(value.trim(), 10) || 0;
+						break;
+					case 'connected_clients':
+						result.connected_clients =
+							parseInt(value.trim(), 10) || 0;
+						break;
+					case 'db0':
+						const sizeMatch = value.match(/keys=(\d+)/);
+						if (sizeMatch) {
+							result.db0_size = parseInt(sizeMatch[1], 10);
+						}
+						break;
+				}
+			}
+		});
+
+		return result as RedisMetrics;
 	}
 
 	private handleRedisFailure(retries: number): void {

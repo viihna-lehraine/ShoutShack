@@ -1,12 +1,10 @@
+import { Request, Response, NextFunction } from 'express';
+import { Session } from 'express-session';
 import fs from 'fs';
 import path from 'path';
-import { Request, Response, NextFunction } from 'express';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
-import {
-	GatekeeperServiceInterface,
-	SlowdownSessionInterface
-} from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
+import { GatekeeperServiceInterface } from '../index/interfaces';
 
 export class GatekeeperService implements GatekeeperServiceInterface {
 	private static instance: GatekeeperService | null = null;
@@ -240,7 +238,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 			GatekeeperService.envConfig.getEnvVariable('slowdownThreshold')
 		);
 		return (
-			req: Request & { session: SlowdownSessionInterface },
+			req: Request & { session: Session & { lastRequestTime?: number } },
 			res: Response,
 			next: NextFunction
 		): void => {
@@ -250,7 +248,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	}
 
 	private handleSlowdown(
-		req: Request & { session: SlowdownSessionInterface },
+		req: Request & { session: Session & { lastRequestTime?: number } },
 		res: Response,
 		next: NextFunction,
 		requestTime: number,

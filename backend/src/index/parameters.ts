@@ -1,26 +1,12 @@
 import * as cryptoConstants from 'constants';
 import { execSync } from 'child_process';
-import RedisStore from 'connect-redis';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import { randomBytes } from 'crypto';
-import express from 'express';
 import fs, { promises as fsPromises } from 'fs';
-import hpp from 'hpp';
 import jwt from 'jsonwebtoken';
-import morgan from 'morgan';
-import passport, { session } from 'passport';
 import { inRange } from 'range_check';
 import { validateDependencies } from '../utils/helpers';
-import { blankRequest } from '../config/constants';
+import { blankRequest } from '../config/express';
 import * as interfaces from './interfaces';
-import { initCsrf } from '../middleware/CSRF';
-import {
-	fidoAuthRequireResidentKeyAsBoolean,
-	fidoCryptoParamsAsArray,
-	emailSecureAsBoolean,
-	tlsCiphers
-} from '../config/constants';
+import { tlsCiphers } from '../config/security';
 import { createLogger, format, transports, addColors } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
@@ -79,7 +65,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	diskPath: process.env.DISK_PATH!,
 	emailHost: process.env.EMAIL_HOST!,
 	emailPort: Number(process.env.EMAIL_PORT!),
-	emailSecure: emailSecureAsBoolean!,
+	emailSecure: process.env.EMAIL_SECURE === 'true',
 	emailUser: process.env.EMAIL_USER!,
 	eventLoopLagThreshold: Number(process.env.EVENT_LOOP_LAG!),
 	featureApiRoutesCsrf: process.env.FEATURE_API_ROUTES_CSRF === 'true',
@@ -89,6 +75,8 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	featureEnableJwtAuth: process.env.FEATURE_ENABLE_JWT_AUTH === 'true',
 	featureEnableLogStash: process.env.FEATURE_ENABLE_LOGSTASH === 'true',
 	featureEnableRateLimit: process.env.FEATURE_ENABLE_RATE_LIMIT === 'true',
+	featureEnableResourceAutoScaling:
+		process.env.FEATURE_ENABLE_RESOURCE_AUTO_SCALING! === 'true',
 	featureEnableSession: process.env.FEATURE_ENABLE_SESSION! === 'true',
 	featureEncryptSecretsStore: process.env.FEATURE_ENCRYPTS_STORE! === 'true',
 	featureHttpsRedirect: process.env.FEATURE_HTTPS_REDIRECT! === 'true',
@@ -96,7 +84,8 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	featureSequelizeLogging: process.env.FEATURE_SEQUELIZE_LOGGING! === 'true',
 	featureHonorCipherOrder: process.env.FEATURE_HONOR_CIPHER_ORDER! === 'true',
 	fido2Timeout: Number(process.env.FIDO2_TIMEOUT!),
-	fidoAuthRequireResidentKey: fidoAuthRequireResidentKeyAsBoolean!,
+	fidoAuthRequireResidentKey:
+		process.env.FIDO_AUTHENTICATOR_REQUIRE_RESIDENT_KEY! === 'true',
 	fidoAuthUserVerification: process.env
 		.FIDO_AUTHENTICATOR_USER_VERIFICATION! as
 		| 'required'
@@ -104,8 +93,9 @@ export const envVariables: interfaces.EnvVariableTypes = {
 		| 'discouraged'
 		| 'enterprise',
 	fidoChallengeSize: Number(process.env.FIDO_CHALLENGE_SIZE!),
-	fidoCryptoParams: fidoCryptoParamsAsArray!,
+	fidoCryptoParams: process.env.FIDO_CRYPTO_PARAMS!.split(',').map(Number),
 	frontendSecretsPath: process.env.FRONTEND_SECRETS_PATH!,
+	gracefulShutdownTimeout: Number(process.env.GRACEFUL_SHUTDOWN_TIMEOUT!),
 	ipWhitelistPath: process.env.IP_WHITELIST_PATH!,
 	logExportPath: process.env.LOG_EXPORT_PATH!,
 	logLevel: process.env.LOG_LEVEL! as 'debug' | 'info' | 'warn' | 'error',
@@ -199,22 +189,6 @@ export const InitIpBlacklistParameters: interfaces.InitIpBlacklistInterface = {
 	fsModule: fs,
 	inRange,
 	validateDependencies
-};
-
-export const InitMiddlewareStaticParameters = {
-	authenticateOptions: { session: false },
-	cookieParser,
-	cors,
-	express,
-	fsModule: fs,
-	hpp,
-	initCsrf,
-	morgan,
-	passport,
-	session,
-	randomBytes,
-	RedisStore,
-	verifyJwt: passport.authenticate('jwt', { session: false })
 };
 
 export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {

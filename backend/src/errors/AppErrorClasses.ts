@@ -299,6 +299,38 @@ export class HealthCheckError extends AppError {
 	}
 }
 
+export class HTTPSClientErrorFatal extends AppError {
+	constructor(
+		errorMessage: string = 'HTTPS Client Error (fatal)',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.FATAL,
+			ERROR_CODES.HTTPS_CLIENT_ERROR_FAL,
+			details
+		);
+		this.name = 'HTTPSClientErrorFatal';
+	}
+}
+
+export class HTTPSServerErrorRecoverable extends AppError {
+	constructor(
+		errorMessage: string = 'HTTPS Server Error (recoverable)',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.RECOVERABLE,
+			ERROR_CODES.HTTPS_SERVER_ERROR_RECOVERABLE,
+			details
+		);
+		this.name = 'HTTPSServerErrorRecoverable';
+	}
+}
+
 export class InsufficientStorageError extends AppError {
 	constructor(
 		requiredSpace?: number,
@@ -737,6 +769,8 @@ export const AppErrorClasses = {
 	ExpressRouteError,
 	ExternalServiceErrorFatal,
 	HealthCheckError,
+	HTTPSClientErrorFatal,
+	HTTPSServerErrorRecoverable,
 	InsufficientStorageError,
 	MiddlewareServiceError,
 	MissingResourceError,

@@ -1,5 +1,5 @@
 import { BaseRouter } from './BaseRouter';
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { ServiceFactory } from '../index/factory';
 import { check } from 'express-validator';
 import { handleValidationErrors } from '../utils/validator';
@@ -11,19 +11,20 @@ export class APIRouter extends BaseRouter {
 
 	constructor() {
 		super();
-		this.setUpRoutes();
+		this.setUpAPIRoutes();
 	}
 
-	public static getInstance(): APIRouter {
+	public static async getInstance(): Promise<APIRouter> {
 		if (!APIRouter.instance) {
 			APIRouter.instance = new APIRouter();
 		}
+
 		return APIRouter.instance;
 	}
 
-	private setUpRoutes(): void {
+	private setUpAPIRoutes(): void {
 		this.router.post(
-			'/register',
+			'/register.html',
 			[
 				check('username')
 					.isLength({ min: 3 })
@@ -219,7 +220,7 @@ export class APIRouter extends BaseRouter {
 		);
 
 		this.router.post(
-			'/generate-email-2fa',
+			'/generate-email-mfa',
 			[
 				check('email')
 					.isEmail()
@@ -229,10 +230,10 @@ export class APIRouter extends BaseRouter {
 			],
 			this.asyncHandler(
 				async (req: Request, res: Response, next: NextFunction) => {
-					const cacheKey = `generate-email-2fa:${req.body.email}`;
+					const cacheKey = `generate-email-mfa:${req.body.email}`;
 					const cachedResponse = await this.cacheService.get(
 						cacheKey,
-						'generateEmail2FA'
+						'generateEmailMFA'
 					);
 					if (cachedResponse) {
 						return res.json(cachedResponse);
@@ -242,17 +243,17 @@ export class APIRouter extends BaseRouter {
 						await this.authController.generateEmailMFACode(
 							req.body.email
 						);
-						const response = { message: '2FA code sent' };
+						const response = { message: 'MFA code sent' };
 						await this.cacheService.set(
 							cacheKey,
 							response,
-							'generateEmail2FA',
+							'generateEmailMFA',
 							3600
 						);
 						return res.json(response);
 					} catch (err) {
 						this.errorLogger.logError(
-							'Email 2FA generation failed'
+							'Email MFA generation failed'
 						);
 						next(err);
 						return;
@@ -262,22 +263,22 @@ export class APIRouter extends BaseRouter {
 		);
 
 		this.router.post(
-			'/verify-email-2fa',
+			'/verify-email-mfa',
 			[
 				check('email')
 					.isEmail()
 					.withMessage('Please provide a valid email address')
 					.normalizeEmail(),
-				check('email2FACode')
+				check('emailMFACode')
 					.notEmpty()
-					.withMessage('2FA code is required'),
+					.withMessage('MFA code is required'),
 				handleValidationErrors
 			],
 			this.asyncHandler(
 				async (req: Request, res: Response, next: NextFunction) => {
 					try {
 						const isValid =
-							await this.authController.verifyEmail2FACode(
+							await this.authController.verifyEmailMFACode(
 								req.body.email,
 								req.body.email2FACode
 							);
@@ -292,5 +293,9 @@ export class APIRouter extends BaseRouter {
 				}
 			)
 		);
+	}
+
+	public getAPIRouter(): Router {
+		return this.router;
 	}
 }

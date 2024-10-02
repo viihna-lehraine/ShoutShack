@@ -2,14 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
-import { APIRouter } from '../routers/ApiRouter';
+import { APIRouter } from '../routers/APIRouter';
 import { BackupCodeService } from '../auth/BackupCode';
 import { StaticRouter } from '../routers/StaticRouter';
 import { MailerService } from '../services/Mailer';
 import { EmailMFAService } from '../auth/EmailMfa';
 import { RedisService } from '../services/Redis';
 import { CacheService } from '../services/Cache';
-import { blankRequest } from '../config/constants';
+import { blankRequest } from '../config/express';
 import { validateDependencies } from '../utils/helpers';
 import { AppLoggerService, ErrorLoggerService } from '../services/Logger';
 import { AppLoggerServiceParameters } from './parameters';
@@ -35,6 +35,8 @@ import { EnvConfigService } from '../services/EnvConfig';
 import { AuthController } from '../controllers/AuthController';
 import { MiddlewareStatusService } from '../middleware/MiddlewareStatus';
 import { HealthCheckService } from '../services/HealthCheck';
+import { TestRouter } from '../routers/TestRouter';
+import { HealthRouter } from '../routers/HealthRouter';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -60,6 +62,7 @@ import {
 	PassportServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface,
+	StaticRouterInterface,
 	UserControllerInterface,
 	VaultServiceInterface,
 	YubicoOTPServiceInterface
@@ -134,6 +137,10 @@ export class ServiceFactory {
 
 	public static getFIDO2Service(): FIDO2Service {
 		return FIDO2Service.getInstance();
+	}
+
+	public static getHealthRouter(): HealthRouter {
+		return HealthRouter.getInstance();
 	}
 
 	public static getGatekeeperService(): GatekeeperService {
@@ -243,8 +250,12 @@ export class ServiceFactory {
 		return VaultService.getInstance();
 	}
 
-	public static getStaticRouter(): StaticRouter {
+	public static getStaticRouter(): StaticRouterInterface {
 		return StaticRouter.getInstance();
+	}
+
+	public static getTestRouter(): TestRouter {
+		return TestRouter.getInstance();
 	}
 
 	public static getTOTPService(): TOTPService {

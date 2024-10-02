@@ -12,6 +12,7 @@ export class ResourceManager implements ResourceManagerInterface {
 	private envConfig = ServiceFactory.getEnvConfigService();
 	private redisService = ServiceFactory.getRedisService();
 	private cacheService = ServiceFactory.getCacheService();
+	private memoryCacheLRU = new Map<string, number>();
 
 	private constructor() {}
 
@@ -251,13 +252,33 @@ export class ResourceManager implements ResourceManagerInterface {
 		}
 	}
 
-	public evictCacheEntries(): void {
-		const keys = Object.keys(this.cacheService.getCache());
-		if (keys.length > this.envConfig.getEnvVariable('maxCacheSize')) {
-			const oldestKey = keys[0];
-			this.cacheService.del(oldestKey);
+	public evictCacheEntries(service: string): void {
+		const maxCacheSize = this.envConfig.getEnvVariable('maxCacheSize');
+
+		const serviceMemoryCache = this.cacheService.getMemoryCache(service);
+
+		if (!serviceMemoryCache || serviceMemoryCache.size <= maxCacheSize) {
+			return;
+		}
+
+		const excessEntries = serviceMemoryCache.size - maxCacheSize;
+		const sortedLRUEntries = Array.from(this.memoryCacheLRU.entries()).sort(
+			(a, b) => a[1] - b[1]
+		);
+
+		for (let i = 0; i < excessEntries; i++) {
+			const [oldestKey] = sortedLRUEntries[i];
+
+			this.cacheService.del(oldestKey, service);
+			this.memoryCacheLRU.delete(oldestKey);
+			this.cacheService.del(oldestKey, service);
+
 			this.logger.info(`Evicted cache entry for key: ${oldestKey}`);
 		}
+	}
+
+	public updateCacheAccessLRU(key: string): void {
+		this.memoryCacheLRU.set(key, Date.now());
 	}
 
 	private autoScaleResources(): void {

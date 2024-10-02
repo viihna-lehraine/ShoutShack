@@ -26,11 +26,22 @@ export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 	}
 
 	public async initializeHelmetMiddleware(app: Application): Promise<void> {
-		await withRetry(() => this.applyHelmet(app), 3, 1000);
-		await withRetry(() => this.applyCSP(app), 3, 1000);
-		await withRetry(() => this.applyExpectCT(app), 3, 1000);
-		await withRetry(() => this.applyPermissionsPolicy(app), 3, 1000);
-		await withRetry(() => this.applyCrossOriginPolicies(app), 3, 1000);
+		try {
+			await withRetry(() => this.applyHelmet(app), 3, 1000);
+			await withRetry(() => this.applyCSP(app), 3, 1000);
+			await withRetry(() => this.applyReferrerPolicy(app), 3, 1000);
+			await withRetry(() => this.applyExpectCT(app), 3, 1000);
+			await withRetry(() => this.applyPermissionsPolicy(app), 3, 1000);
+			await withRetry(() => this.applyCrossOriginPolicies(app), 3, 1000);
+			await withRetry(() => this.applyXssFilter(app), 3, 1000);
+
+			this.logger.info('Helmet middleware initialized successfully');
+		} catch (error) {
+			this.errorLogger.logError(
+				'Failed to initialize Helmet middleware stack'
+			);
+			this.errorHandler.handleError({ error });
+		}
 	}
 
 	public async applyHelmet(app: Application): Promise<void> {
@@ -125,6 +136,26 @@ export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 			this.logger.info('Cross-Origin policies applied successfully');
 		} catch (configError) {
 			this.handleHelmetError('applyCrossOriginPolicies', configError);
+		}
+	}
+
+	public async applyReferrerPolicy(app: Application): Promise<void> {
+		try {
+			this.logger.info('Applying Referrer-Policy');
+			app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
+			this.logger.info('Referrer-Policy applied successfully');
+		} catch (configError) {
+			this.handleHelmetError('applyReferrerPolicy', configError);
+		}
+	}
+
+	public async applyXssFilter(app: Application): Promise<void> {
+		try {
+			this.logger.info('Applying XSS Filter');
+			app.use(helmet.xssFilter());
+			this.logger.info('XSS Filter applied successfully');
+		} catch (configError) {
+			this.handleHelmetError('applyXssFilter', configError);
 		}
 	}
 

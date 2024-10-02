@@ -474,9 +474,9 @@ export class AuthController implements AuthControllerInterface {
 		}
 	}
 
-	public async verifyEmail2FACode(
+	public async verifyEmailMFACode(
 		email: string,
-		email2FACode: string
+		emailMFACode: string
 	): Promise<boolean> {
 		try {
 			const user = await this.findUserByEmail(email);
@@ -489,7 +489,7 @@ export class AuthController implements AuthControllerInterface {
 			const jwt = await this.loadJwt();
 			const isValid = await this.emailMFAService.verifyEmailMFACode(
 				email,
-				email2FACode,
+				emailMFACode,
 				jwt
 			);
 

@@ -1,25 +1,21 @@
-import {
-	AppLoggerServiceInterface,
-	CacheMetrics,
-	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
-	CacheServiceInterface,
-	RedisServiceInterface
-} from '../index/interfaces';
+import { CacheMetrics, CacheServiceInterface } from '../index/interfaces';
 import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
 import { withRetry } from '../utils/helpers';
 
 export class CacheService implements CacheServiceInterface {
 	private static instance: CacheService | null = null;
-	private redisService: RedisServiceInterface;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger: ErrorLoggerServiceInterface;
-	private errorHandler: ErrorHandlerServiceInterface;
+
+	private logger = ServiceFactory.getLoggerService();
+	private errorLogger = ServiceFactory.getErrorLoggerService();
+	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private redisService = ServiceFactory.getRedisService();
+
 	private memoryCache = new Map<
-		string, // service name
+		string,
 		Map<string, { value: unknown; expiration: number | undefined }>
 	>();
+	private memoryCacheLRU = new Map<string, number>();
 	private serviceMetrics: {
 		[service: string]: {
 			cacheHits: number;
@@ -28,12 +24,7 @@ export class CacheService implements CacheServiceInterface {
 		};
 	} = {};
 
-	private constructor() {
-		this.logger = ServiceFactory.getLoggerService();
-		this.errorLogger = ServiceFactory.getErrorLoggerService();
-		this.errorHandler = ServiceFactory.getErrorHandlerService();
-		this.redisService = ServiceFactory.getRedisService();
-	}
+	private constructor() {}
 
 	public static getInstance(): CacheService {
 		if (!CacheService.instance) {
@@ -82,6 +73,12 @@ export class CacheService implements CacheServiceInterface {
 		);
 	}
 
+	public getMemoryCache(
+		service: string
+	): Map<string, { value: unknown; expiration: number | undefined }> | null {
+		return this.memoryCache.get(service) || null;
+	}
+
 	public async get<T>(key: string, service: string): Promise<T | null> {
 		const namespacedKey = this.getNamespacedKey(service, key);
 
@@ -99,6 +96,7 @@ export class CacheService implements CacheServiceInterface {
 							`Memory cache expired for key: ${namespacedKey}`
 						);
 					} else {
+						this.memoryCacheLRU.set(namespacedKey, Date.now());
 						this.updateMetrics(service, 'hit');
 						this.logger.info(
 							`Memory cache hit for key: ${namespacedKey}`
@@ -122,9 +120,12 @@ export class CacheService implements CacheServiceInterface {
 					value: redisValue,
 					expiration: defaultExpiration
 				});
+				this.memoryCacheLRU.set(namespacedKey, Date.now());
+
 				this.updateMetrics(service, 'redisHit');
 				this.logger.info(`Fetched key: ${namespacedKey} from Redis`);
 			} else {
+				// Cache miss
 				this.updateMetrics(service, 'miss');
 				this.logger.info(`Cache miss for key: ${namespacedKey}`);
 			}
@@ -134,11 +135,7 @@ export class CacheService implements CacheServiceInterface {
 			this.handleCacheError(
 				error,
 				'CACHE_GET_ERROR',
-				{
-					reason: `Cache get failed for key ${key}`,
-					key: key || 'unknown',
-					service: service || 'unknown'
-				},
+				{ key, service },
 				`Error fetching key ${namespacedKey} from cache for service ${service}`
 			);
 			return null;
@@ -149,25 +146,29 @@ export class CacheService implements CacheServiceInterface {
 		key: string,
 		value: T,
 		service: string,
-		expirationInSeconds?: number
+		expirationInSeconds?: string | number
 	): Promise<void> {
 		const namespacedKey = this.getNamespacedKey(service, key);
+
 		try {
 			const expiration = expirationInSeconds
-				? Date.now() + expirationInSeconds * 1000
+				? Date.now() + Number(expirationInSeconds) * 1000
 				: Date.now() + this.getServiceTTL(service) * 1000;
 
 			let serviceMemoryCache = this.memoryCache.get(service);
+
 			if (!serviceMemoryCache) {
 				serviceMemoryCache = new Map();
 				this.memoryCache.set(service, serviceMemoryCache);
 			}
+
 			serviceMemoryCache.set(namespacedKey, { value, expiration });
+			this.memoryCacheLRU.set(namespacedKey, Date.now());
 
 			await this.redisService.set(
 				namespacedKey,
 				value,
-				expirationInSeconds
+				Number(expirationInSeconds)
 			);
 
 			this.logger.info(
@@ -179,12 +180,7 @@ export class CacheService implements CacheServiceInterface {
 			this.handleCacheError(
 				error,
 				'CACHE_SET_ERROR',
-				{
-					reason: `Cache set failed for key ${key}`,
-					key: key || 'unknown',
-					expiration: expirationInSeconds || 'unknown',
-					service: service || 'unknown'
-				},
+				{ key, service, expirationInSeconds },
 				`Error setting key ${namespacedKey} in cache for service ${service}`
 			);
 		}

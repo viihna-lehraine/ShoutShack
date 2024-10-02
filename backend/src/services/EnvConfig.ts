@@ -134,6 +134,7 @@ export class EnvConfigService implements EnvConfigServiceInterface {
 			case 'eventLoopLagThreshold':
 			case 'fido2Timeout':
 			case 'fidoChallengeSize':
+			case 'gracefulShutdownTimeout':
 			case 'logStashPort':
 			case 'maxCacheSize':
 			case 'maxRedisCacheSize':
