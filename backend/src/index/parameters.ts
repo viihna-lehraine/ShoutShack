@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken';
 import { inRange } from 'range_check';
 import { validateDependencies } from '../utils/helpers';
 import { blankRequest } from '../config/express';
-import * as interfaces from './interfaces';
 import { tlsCiphers } from '../config/security';
 import { createLogger, format, transports, addColors } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
@@ -14,23 +13,33 @@ import { ErrorClasses, ErrorSeverity } from '../errors/ErrorClasses';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
 import { sanitizeRequestBody } from '../utils/validator';
+import {
+	AddIpToBlacklistInterface,
+	CreateJwtInterface,
+	DeclareWebServerOptionsInterface,
+	InitializeDatabaseInterface,
+	InitIpBlacklistInterface,
+	LoadIpBlacklistInterface,
+	SetUpDatabaseInterface
+} from './interfaces/serviceComponents';
+import { EnvVariableTypes } from './interfaces/env';
 
 // ****** PARAMETER OBJECTS ****** //
 
 export const AddIpToBlacklistStaticParameters: Omit<
-	interfaces.AddIpToBlacklistInterface,
+	AddIpToBlacklistInterface,
 	'ip'
 > = {
 	validateDependencies
 };
 
-export const CreateJwtParameters: interfaces.CreateJwtInterface = {
+export const CreateJwtParameters: CreateJwtInterface = {
 	jwt,
 	execSync,
 	validateDependencies
 };
 
-export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServerOptionsInterface =
+export const DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface =
 	{
 		blankRequest,
 		constants: cryptoConstants,
@@ -39,7 +48,7 @@ export const DeclareWebServerOptionsStaticParameters: interfaces.DeclareWebServe
 		validateDependencies
 	};
 
-export const envVariables: interfaces.EnvVariableTypes = {
+export const envVariables: EnvVariableTypes = {
 	baseUrl: process.env.BASE_URL!,
 	batchReEncryptSecretsInterval: Number(
 		process.env.BATCH_RE_ENCRYPT_SECRETS_INTERVAL!
@@ -118,6 +127,7 @@ export const envVariables: interfaces.EnvVariableTypes = {
 	rateLimiterBasePoints: Number(process.env.RATE_LIMITER_BASE_POINTS!),
 	rateLimiterGlobalReset: Number(process.env.RATE_LIMITER_GLOBAL_RESET!),
 	redisUrl: process.env.REDIS_URL!,
+	requestTimeout: process.env.REQUEST_TIMEOUT!,
 	revokedTokenRetentionPeriod: Number(
 		process.env.REVOKED_TOKEN_RETENTION_PERIOD!
 	),
@@ -180,22 +190,21 @@ export const HandleErrorStaticParameters = {
 	fallbackLogger: console
 };
 
-export const InitializeDatabaseStaticParameters: interfaces.InitializeDatabaseInterface =
-	{
-		blankRequest
-	};
+export const InitializeDatabaseStaticParameters: InitializeDatabaseInterface = {
+	blankRequest
+};
 
-export const InitIpBlacklistParameters: interfaces.InitIpBlacklistInterface = {
+export const InitIpBlacklistParameters: InitIpBlacklistInterface = {
 	fsModule: fs,
 	inRange,
 	validateDependencies
 };
 
-export const LoadIpBlacklistParameters: interfaces.LoadIpBlacklistInterface = {
+export const LoadIpBlacklistParameters: LoadIpBlacklistInterface = {
 	fsModule: fsPromises
 };
 
-export const SetUpDatabaseParameters: interfaces.SetUpDatabaseInterface = {
+export const SetUpDatabaseParameters: SetUpDatabaseInterface = {
 	blankRequest
 };
 

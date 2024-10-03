@@ -1,20 +1,17 @@
 import { Options, QueryTypes, Sequelize, Dialect } from 'sequelize';
 import { AppError } from '../errors/ErrorClasses';
-import {
-	DatabaseControllerInterface,
-	ModelOperations
-} from '../index/interfaces';
+import { DatabaseControllerInterface } from '../index/interfaces/services';
+import { ModelOperations } from '../index/interfaces/models';
 import { ServiceFactory } from '../index/factory';
 import { Logger } from 'winston';
 
 export class DatabaseController implements DatabaseControllerInterface {
-	private static instance: DatabaseController;
+	private static instance: DatabaseController | null = null;
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
 	private envConfig = ServiceFactory.getEnvConfigService();
 	private secrets = ServiceFactory.getVaultService();
-	private redisService = ServiceFactory.getRedisService();
 	private cacheService = ServiceFactory.getCacheService();
 	private sequelizeInstance: Sequelize | null = null;
 	private attempt = 0;
@@ -205,7 +202,10 @@ export class DatabaseController implements DatabaseControllerInterface {
 		const cacheExpiration = 60 * 5;
 
 		try {
-			const cachedData = await this.getCachedData<T[]>(cacheKey);
+			const cachedData = await this.cacheService.get<T[]>(
+				cacheKey,
+				'DatabaseController'
+			);
 			if (cachedData) {
 				this.logger.info(`Cache hit for entries in ${Model.name}`);
 				return cachedData;
@@ -216,7 +216,12 @@ export class DatabaseController implements DatabaseControllerInterface {
 			);
 
 			const entries = await Model.findAll();
-			await this.cacheData(cacheKey, entries, cacheExpiration);
+			await this.cacheService.set(
+				cacheKey,
+				entries,
+				'DatabaseController',
+				cacheExpiration
+			);
 
 			return entries;
 		} catch (error) {
@@ -272,7 +277,6 @@ export class DatabaseController implements DatabaseControllerInterface {
 			}
 
 			this.logger.info(`Deleted ${Model.name} entry with id ${id}`);
-
 			await this.clearCache(`entries_${Model.name}`);
 
 			return true;
@@ -330,7 +334,12 @@ export class DatabaseController implements DatabaseControllerInterface {
 	): Promise<void> {
 		this.logger.info(`Caching data with key: ${key}`);
 		try {
-			await this.redisService.set<T>(key, data, expiration);
+			await this.cacheService.set<T>(
+				key,
+				data,
+				'DatabaseController',
+				expiration
+			);
 		} catch (error) {
 			this.errorLogger.logError(
 				`Error caching data with key ${key}: ${error instanceof Error ? error.message : error}`
@@ -415,20 +424,18 @@ export class DatabaseController implements DatabaseControllerInterface {
 	public async clearCache(key: string): Promise<void> {
 		this.logger.info(`Clearing cache for key: ${key}`);
 		try {
-			await this.redisService.del(key);
+			await this.cacheService.del(key, 'DatabaseController');
+			this.logger.info(`Cache cleared successfully for key: ${key}`);
 		} catch (error) {
 			this.errorLogger.logError(
-				`Error clearing DB Redis cache for key ${key}: ${error instanceof Error ? error.message : error}`
+				`Error clearing cache for key ${key}: ${error instanceof Error ? error.message : error}`
 			);
-			const redisCacheError =
-				new this.errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-					`Error clearing DB Redis cache for key ${key}: ${error instanceof Error ? error.message : error}`,
-					{
-						originalError: error,
-						exposeToClient: false
-					}
-				);
-			this.errorHandler.handleError({ error: redisCacheError });
+			this.handleDBErrorRecoverable(
+				error,
+				'CLEAR_CACHE_FAILED',
+				{ key },
+				`Error clearing cache for key ${key}`
+			);
 		}
 	}
 
@@ -535,6 +542,28 @@ export class DatabaseController implements DatabaseControllerInterface {
 				service: serviceName,
 				status: 'Error retrieving metrics'
 			};
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		this.logger.info('Shutting down database controller...');
+		try {
+			await this.clearIdleConnections();
+
+			this.logger.info('Clearing database cache...');
+
+			await this.cacheService.clearNamespace('DatabaseController');
+
+			this.logger.info('Database cache cleared.');
+
+			this.logger.info('Additional cleanup completed.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Failed to shut down database controller: ${error instanceof Error ? error.message : error}`
+			);
+		} finally {
+			DatabaseController.instance = null;
+			this.logger.info('DatabaseController instance has been nullified.');
 		}
 	}
 

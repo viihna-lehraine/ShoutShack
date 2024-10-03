@@ -1,15 +1,16 @@
-import { JWTServiceInterface } from '../index/interfaces';
+import { JWTServiceInterface } from '../index/interfaces/services';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
 
 export class JWTService implements JWTServiceInterface {
 	private static instance: JWTService | null = null;
+
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
 	private cacheService = ServiceFactory.getCacheService();
-	private secrets = ServiceFactory.getVaultService();
+	private vault = ServiceFactory.getVaultService();
 
 	private constructor() {}
 
@@ -24,8 +25,7 @@ export class JWTService implements JWTServiceInterface {
 	public async generateJWT(id: string, username: string): Promise<string> {
 		try {
 			const secret = await withRetry(
-				() =>
-					this.secrets.retrieveSecret('JWT_SECRET', secret => secret),
+				() => this.vault.retrieveSecret('JWT_SECRET', secret => secret),
 				3,
 				500
 			);
@@ -65,8 +65,7 @@ export class JWTService implements JWTServiceInterface {
 			}
 
 			const secret = await withRetry(
-				() =>
-					this.secrets.retrieveSecret('JWT_SECRET', secret => secret),
+				() => this.vault.retrieveSecret('JWT_SECRET', secret => secret),
 				3,
 				500
 			);
@@ -106,6 +105,24 @@ export class JWTService implements JWTServiceInterface {
 			this.errorLogger.logWarn(utilityError.message);
 			this.errorHandler.handleError({ error: utilityError });
 			return null;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Clearing JWTService cache before shutdown...');
+			await this.cacheService.clearNamespace('jwtService');
+
+			this.logger.info('JWTService cache cleared successfully.');
+			JWTService.instance = null;
+			this.logger.info('JWTService shutdown completed.');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during JWTService shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 }

@@ -4,20 +4,11 @@ import { BaseRouter } from './BaseRouter';
 // *DEV-NOTE* need to create a test page to utilize this router
 
 export class TestRouter extends BaseRouter {
-	private static instance: TestRouter | null = null;
 	private nodeEnv = this.envConfig.getEnvVariable('nodeEnv');
 
 	private constructor() {
 		super();
 		this.setUpTestRoutes();
-	}
-
-	public static async getInstance(): Promise<TestRouter> {
-		if (!TestRouter.instance) {
-			TestRouter.instance = new TestRouter();
-		}
-
-		return TestRouter.instance;
 	}
 
 	private setUpTestRoutes(): void {

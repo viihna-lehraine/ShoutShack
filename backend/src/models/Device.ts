@@ -3,28 +3,13 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
-import { validateDependencies } from '../utils/helpers';
+import { User } from './User';
 import { ServiceFactory } from '../index/factory';
+import { DeviceAttributes } from '../index/interfaces/models';
 
-interface DeviceAttributes {
-	deviceId: number; // primary key, auto-incremented
-	id: string; // foreign key to the User model
-	deviceName: string;
-	deviceType: string;
-	os: string;
-	browser?: string | null;
-	ipAddress: string;
-	lastUsed: Date;
-	isTrusted: boolean;
-	creationDate: Date;
-	lastUpdated: Date;
-}
-
-class Device
+export class Device
 	extends Model<InferAttributes<Device>, InferCreationAttributes<Device>>
 	implements DeviceAttributes
 {
@@ -41,18 +26,25 @@ class Device
 	public lastUpdated!: CreationOptional<Date>;
 }
 
-export default function createDeviceModel(
-	sequelize: Sequelize
-): typeof Device | null {
+export function createDeviceModel(): typeof Device | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize Device model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 
 		Device.init(
 			{
@@ -143,5 +135,3 @@ export default function createDeviceModel(
 		return null;
 	}
 }
-
-export { Device };

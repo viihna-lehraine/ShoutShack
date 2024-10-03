@@ -1,4 +1,4 @@
-import { ResourceManagerInterface } from '../index/interfaces';
+import { ResourceManagerInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import os from 'os';
 import fs from 'fs';
@@ -464,6 +464,33 @@ export class ResourceManager implements ResourceManagerInterface {
 				'OVERLOAD_ERROR',
 				{},
 				'Error handling server overload'
+			);
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down Resource Manager...');
+
+			toobusy.shutdown();
+			this.logger.info('TooBusy.js shutdown complete.');
+
+			this.memoryCacheLRU.clear();
+			this.logger.info('Memory cache (LRU) cleared.');
+
+			await this.clearCaches('resourceManager');
+			this.logger.info('Caches cleared successfully.');
+
+			await this.closeIdleConnections();
+			this.logger.info('Idle database connections closed successfully.');
+
+			this.logger.info('Resource Manager shutdown complete.');
+		} catch (error) {
+			this.handleResourceManagerError(
+				error,
+				'SHUTDOWN_ERROR',
+				{},
+				'Error during Resource Manager shutdown'
 			);
 		}
 	}

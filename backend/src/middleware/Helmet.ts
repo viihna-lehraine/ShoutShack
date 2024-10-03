@@ -5,7 +5,7 @@ import {
 	helmetOptions,
 	permissionsPolicyOptions
 } from '../config/middlewareOptions';
-import { HelmetMiddlwareServiceInterface } from '../index/interfaces';
+import { HelmetMiddlwareServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
 
@@ -156,6 +156,18 @@ export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 			this.logger.info('XSS Filter applied successfully');
 		} catch (configError) {
 			this.handleHelmetError('applyXssFilter', configError);
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down Helmet middleware service...');
+			HelmetMiddlwareService.instance = null;
+			this.logger.info('Helmet middleware service has been shut down.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down Helmet middleware service: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 

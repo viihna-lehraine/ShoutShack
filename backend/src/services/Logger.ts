@@ -1,11 +1,11 @@
 import TransportStream from 'winston-transport';
 import {
-	AppLoggerServiceDeps,
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface
-} from '../index/interfaces';
-import { VaultServiceInterface } from '../index/interfaces';
+	ErrorLoggerServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
+import { AppLoggerServiceDeps } from '../index/interfaces/serviceDeps';
 import { Op } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';
@@ -331,6 +331,26 @@ export class AppLoggerService
 		});
 
 		return Object.fromEntries(sanitizedBody);
+	}
+
+	public async shutdown(): Promise<void> {
+		this.info('Shutting down logger services...');
+
+		await new Promise<void>((resolve, reject) => {
+			this.on('finish', () => {
+				this.info('All logs have been flushed.');
+				resolve();
+			});
+
+			this.on('error', error => {
+				this.error(
+					`Error while shutting down logger: ${error.message}`
+				);
+				reject(error);
+			});
+
+			this.end();
+		});
 	}
 
 	protected handleError(message: string, error: Error): void {

@@ -5,21 +5,12 @@ import { check } from 'express-validator';
 import { handleValidationErrors } from '../utils/validator';
 
 export class APIRouter extends BaseRouter {
-	private static instance: APIRouter | null = null;
 	private userController = ServiceFactory.getUserController();
 	private authController = ServiceFactory.getAuthController();
 
-	constructor() {
+	private constructor() {
 		super();
 		this.setUpAPIRoutes();
-	}
-
-	public static async getInstance(): Promise<APIRouter> {
-		if (!APIRouter.instance) {
-			APIRouter.instance = new APIRouter();
-		}
-
-		return APIRouter.instance;
 	}
 
 	private setUpAPIRoutes(): void {

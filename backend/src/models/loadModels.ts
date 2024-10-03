@@ -1,20 +1,20 @@
 import { Response } from 'express';
 import { Sequelize } from 'sequelize';
-import createAuditLogModel from './AuditLogModelFile';
-import createDataShareOptionsModel from './DataShareOptionsModelFile';
-import createDeviceModel from './DeviceModelFile';
-import { createErrorLogModel } from './ErrorLogModelFile';
-import createFailedLoginAttemptsModel from './FailedLoginAttemptsModelFile';
-import createFeatureRequestModel from './FeatureRequestModelFile';
-import createFeedbackSurveyModel from './FeedbackSurveyModelFile';
-import createGuestbookEntryModel from './GuestbookEntryModelFile';
-import createMultiFactorAuthSetupModel from './MultiFactorAuthSetupModelFile';
-import createRecoveryMethodModel from './RecoveryMethodModelFile';
-import createSecurityEventModel from './SecurityEventModelFile';
-import createSupportRequestModel from './SupportRequestModelFile';
-import createUserMfaModel from './UserMfaModelFile';
-import { createUserModel } from './UserModelFile';
-import createUserSessionModel from './UserSessionModelFile';
+import { createAuditLogModel } from './AuditLog';
+import { createBlotEntryModel } from './BlotEntryAttributes';
+import { createDataShareOptionsModel } from './DataShareOptions';
+import { createDeviceModel } from './Device';
+import { createErrorLogModel } from './ErrorLog';
+import { createFailedLoginAttemptsModel } from './FailedLoginAttempts';
+import { createFeatureRequestModel } from './FeatureRequest';
+import { createFeedbackSurveyModel } from './FeedbackSurvey';
+import { createMFASetupModel } from './MFASetup';
+import { createRecoveryMethodModel } from './RecoveryMethod';
+import { createSecurityEventModel } from './SecurityEvent';
+import { createSupportRequestModel } from './SupportRequest';
+import { createUserMFAModel } from './UserMFA';
+import { createUserModel } from './User';
+import { createUserSessionModel } from './UserSession';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
@@ -22,6 +22,7 @@ let res: Response;
 
 export interface Models {
 	AuditLog: ReturnType<typeof createAuditLogModel> | null;
+	BlotEntry: ReturnType<typeof createBlotEntryModel> | null;
 	DataShareOptions: ReturnType<typeof createDataShareOptionsModel> | null;
 	Device: ReturnType<typeof createDeviceModel> | null;
 	ErrorLog: ReturnType<typeof createErrorLogModel> | null;
@@ -30,15 +31,12 @@ export interface Models {
 	> | null;
 	FeatureRequest: ReturnType<typeof createFeatureRequestModel> | null;
 	FeedbackSurvey: ReturnType<typeof createFeedbackSurveyModel> | null;
-	GuestbookEntry: ReturnType<typeof createGuestbookEntryModel> | null;
-	MultiFactorAuthSetup: ReturnType<
-		typeof createMultiFactorAuthSetupModel
-	> | null;
+	MFASetup: ReturnType<typeof createMFASetupModel> | null;
 	RecoveryMethod: ReturnType<typeof createRecoveryMethodModel>;
 	SecurityEvent: ReturnType<typeof createSecurityEventModel>;
 	SupportRequest: ReturnType<typeof createSupportRequestModel>;
 	User: ReturnType<typeof createUserModel>;
-	UserMfa: ReturnType<typeof createUserMfaModel>;
+	UserMFA: ReturnType<typeof createUserMFAModel>;
 	UserSession: ReturnType<typeof createUserSessionModel>;
 }
 
@@ -50,21 +48,21 @@ export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
 	validateDependencies([{ name: 'sequelize', instance: sequelize }], logger);
 	try {
 		const models: Models = {
-			AuditLog: createAuditLogModel(sequelize),
-			DataShareOptions: createDataShareOptionsModel(sequelize),
-			Device: createDeviceModel(sequelize),
-			ErrorLog: createErrorLogModel(sequelize),
-			FailedLoginAttempts: createFailedLoginAttemptsModel(sequelize),
-			FeatureRequest: createFeatureRequestModel(sequelize),
-			FeedbackSurvey: createFeedbackSurveyModel(sequelize),
-			GuestbookEntry: createGuestbookEntryModel(sequelize),
-			MultiFactorAuthSetup: createMultiFactorAuthSetupModel(sequelize),
-			RecoveryMethod: createRecoveryMethodModel(sequelize),
-			SecurityEvent: createSecurityEventModel(sequelize),
-			SupportRequest: createSupportRequestModel(sequelize),
-			User: createUserModel(sequelize),
-			UserMfa: createUserMfaModel(sequelize),
-			UserSession: createUserSessionModel(sequelize)
+			AuditLog: createAuditLogModel(),
+			BlotEntry: createBlotEntryModel(),
+			DataShareOptions: createDataShareOptionsModel(),
+			Device: createDeviceModel(),
+			ErrorLog: createErrorLogModel(),
+			FailedLoginAttempts: createFailedLoginAttemptsModel(),
+			FeatureRequest: createFeatureRequestModel(),
+			FeedbackSurvey: createFeedbackSurveyModel(),
+			MFASetup: createMFASetupModel(),
+			RecoveryMethod: createRecoveryMethodModel(),
+			SecurityEvent: createSecurityEventModel(),
+			SupportRequest: createSupportRequestModel(),
+			User: createUserModel(),
+			UserMFA: createUserMFAModel(),
+			UserSession: createUserSessionModel()
 		};
 
 		for (const [modelName, modelInstance] of Object.entries(models)) {
@@ -83,7 +81,7 @@ export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
 			foreignKey: 'id',
 			as: 'failedLoginAttempts'
 		});
-		models.User!.hasMany(models.GuestbookEntry!, {
+		models.User!.hasMany(models.BlotEntry!, {
 			foreignKey: 'id',
 			as: 'guestbookEntries'
 		});
@@ -103,7 +101,7 @@ export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
 			foreignKey: 'id',
 			as: 'sessions'
 		});
-		models.User!.hasOne(models.UserMfa!, { foreignKey: 'id', as: 'user' });
+		models.User!.hasOne(models.UserMFA!, { foreignKey: 'id', as: 'user' });
 
 		models.AuditLog!.belongsTo(models.User!, {
 			foreignKey: 'id',
@@ -125,11 +123,11 @@ export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.GuestbookEntry!.belongsTo(models.User!, {
+		models.BlotEntry!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.MultiFactorAuthSetup!.belongsTo(models.User!, {
+		models.MFASetup!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});
@@ -145,7 +143,7 @@ export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
 			foreignKey: 'id',
 			as: 'user'
 		});
-		models.UserMfa!.belongsTo(models.User!, {
+		models.UserMFA!.belongsTo(models.User!, {
 			foreignKey: 'id',
 			as: 'user'
 		});

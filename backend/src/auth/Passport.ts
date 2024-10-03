@@ -5,7 +5,7 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { PassportServiceInterface } from '../index/interfaces';
+import { PassportServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 
 export class PassportService implements PassportServiceInterface {
@@ -28,7 +28,7 @@ export class PassportService implements PassportServiceInterface {
 
 	public async configurePassport(
 		passport: import('passport').PassportStatic,
-		UserModel: typeof import('../models/UserModelFile').User
+		UserModel: typeof import('../models/User').User
 	): Promise<void> {
 		try {
 			const jwtSecret = this.secrets.retrieveSecret(
@@ -152,6 +152,28 @@ export class PassportService implements PassportServiceInterface {
 				{ error },
 				'Failed to configure Passport'
 			);
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down PassportService...');
+			this.logger.info(
+				'Clearing PassportService cache or handlers (if any)...'
+			);
+
+			PassportService.instance = null;
+
+			this.logger.info(
+				'PassportService shutdown completed successfully.'
+			);
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during PassportService shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 

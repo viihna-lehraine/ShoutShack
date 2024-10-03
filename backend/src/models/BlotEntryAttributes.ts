@@ -3,28 +3,18 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
-import { validateDependencies } from '../utils/helpers';
+import { User } from './User';
 import { ServiceFactory } from '../index/factory';
+import { BlotEntryAttributes } from '../index/interfaces/models';
 
-interface GuestbookEntryAttributes {
-	id: string;
-	guestName?: string | null;
-	guestEmail?: string | null;
-	guestMessage: string;
-	guestMessageStyles?: object | null;
-	entryDate: Date;
-}
-
-class GuestbookEntry
+export class BlotEntry
 	extends Model<
-		InferAttributes<GuestbookEntry>,
-		InferCreationAttributes<GuestbookEntry>
+		InferAttributes<BlotEntry>,
+		InferCreationAttributes<BlotEntry>
 	>
-	implements GuestbookEntryAttributes
+	implements BlotEntryAttributes
 {
 	public id!: string;
 	public guestName!: string | null;
@@ -34,20 +24,27 @@ class GuestbookEntry
 	public entryDate!: CreationOptional<Date>;
 }
 
-export default function createGuestbookEntryModel(
-	sequelize: Sequelize
-): typeof GuestbookEntry | null {
+export function createBlotEntryModel(): typeof BlotEntry | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
 
-		GuestbookEntry.init(
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize BlotEntry model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
+		BlotEntry.init(
 			{
 				id: {
 					type: DataTypes.UUID,
@@ -93,17 +90,17 @@ export default function createGuestbookEntryModel(
 			},
 			{
 				sequelize,
-				modelName: 'GuestbookEntry',
+				modelName: 'BlotEntry',
 				timestamps: true
 			}
 		);
 
-		logger.info('GuestbookEntry model initialized successfully');
-		return GuestbookEntry;
+		logger.info('BlotEntry model initialized successfully');
+		return BlotEntry;
 	} catch (dbError) {
 		const databaseError =
 			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-				`Failed to initialize GuestbookEntry model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				`Failed to initialize BlotEntry model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
 				{
 					exposeToClient: false
 				}
@@ -113,5 +110,3 @@ export default function createGuestbookEntryModel(
 		return null;
 	}
 }
-
-export { GuestbookEntry };

@@ -1,9 +1,7 @@
 import { RedisClientType } from 'redis';
-import {
-	RedisMetrics,
-	RedisServiceDeps,
-	RedisServiceInterface
-} from '../index/interfaces';
+import { RedisServiceInterface } from '../index/interfaces/services';
+import { RedisMetrics } from '../index/interfaces/serviceComponents';
+import { RedisServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
@@ -379,6 +377,21 @@ export class RedisService implements RedisServiceInterface {
 		});
 
 		return result as RedisMetrics;
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down Redis client...');
+			await this.cleanUpRedisClient();
+			this.logger.info('Redis client shutdown completed.');
+		} catch (error) {
+			this.logger.error(
+				`Failed to shut down Redis: ${error instanceof Error ? error.message : error}`
+			);
+		} finally {
+			RedisService.instance = null;
+			this.logger.info('RedisService instance has been nullified.');
+		}
 	}
 
 	private handleRedisFailure(retries: number): void {

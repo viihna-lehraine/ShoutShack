@@ -1,12 +1,10 @@
-import {
-	BackupCodeInterface,
-	BackupCodeServiceInterface
-} from '../index/interfaces';
+import { BackupCodeServiceInterface } from '../index/interfaces/services';
+import { BackupCodeInterface } from '../index/interfaces/serviceComponents';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { UserMfa } from '../models/UserMfaModelFile';
+import { UserMFA } from '../models/UserMFA';
 
 export class BackupCodeService implements BackupCodeServiceInterface {
 	private static instance: BackupCodeService | null = null;
@@ -104,7 +102,7 @@ export class BackupCodeService implements BackupCodeServiceInterface {
 				this.logger
 			);
 
-			const user = await UserMfa.findByPk(id);
+			const user = await UserMFA.findByPk(id);
 
 			if (!user) {
 				this.logger.warn(`User with ID ${id} not found`);
@@ -133,7 +131,7 @@ export class BackupCodeService implements BackupCodeServiceInterface {
 		try {
 			validateDependencies([{ name: 'id', instance: id }], this.logger);
 
-			const user = await UserMfa.findByPk(id);
+			const user = await UserMFA.findByPk(id);
 
 			if (!user || !user.backupCodes) {
 				this.logger.warn(`No backup codes found for user ${id}`);
@@ -168,7 +166,7 @@ export class BackupCodeService implements BackupCodeServiceInterface {
 				this.logger
 			);
 
-			const user = await UserMfa.findByPk(id);
+			const user = await UserMFA.findByPk(id);
 
 			if (!user) {
 				this.logger.warn(`User with ID ${id} not found`);
@@ -188,6 +186,20 @@ export class BackupCodeService implements BackupCodeServiceInterface {
 				);
 			this.errorLogger.logError(utilityError.message);
 			this.errorHandler.handleError({ error: utilityError });
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down BackupCodeService...');
+
+			BackupCodeService.instance = null;
+
+			this.logger.info('BackupCodeService shutdown successfully.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down BackupCodeService: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 }

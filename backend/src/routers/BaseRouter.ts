@@ -10,7 +10,7 @@ import { HealthRouter } from './HealthRouter';
 import { StaticRouter } from './StaticRouter';
 import { TestRouter } from './TestRouter';
 import { ServiceFactory } from '../index/factory';
-import { BaseRouterInterface } from '../index/interfaces';
+import { BaseRouterInterface } from '../index/interfaces/services';
 import { sanitizeRequestBody } from '../utils/validator';
 import { validateDependencies } from '../utils/helpers';
 import { withRetry } from '../utils/helpers';
@@ -20,6 +20,8 @@ import passport from 'passport';
 import xss from 'xss';
 
 export class BaseRouter implements BaseRouterInterface {
+	private static instance: BaseRouter | null = null;
+
 	protected router: Router;
 
 	protected logger = ServiceFactory.getLoggerService();
@@ -38,17 +40,29 @@ export class BaseRouter implements BaseRouterInterface {
 	protected staticRouteTable: Record<string, Record<string, string>> = {};
 	protected testRouteTable: Record<string, Record<string, string>> = {};
 
-	constructor() {
+	protected constructor() {
 		this.router = express.Router();
-		this.applyErrorHandler();
-		this.applyMiddlewares();
-		this.initializeBaseRouter();
+	}
+
+	public static async getInstance(): Promise<BaseRouter> {
+		if (!BaseRouter.instance) {
+			BaseRouter.instance = new BaseRouter();
+			await BaseRouter.instance.initializeBaseRouter();
+		}
+
+		return BaseRouter.instance;
+	}
+
+	public getRouter(): Router {
+		return this.router;
 	}
 
 	private async initializeBaseRouter(): Promise<void> {
 		await withRetry(
 			async () => {
+				this.router = express.Router();
 				await this.loadRouteTables();
+				await this.applyMiddlewares();
 				this.setUpRoutes();
 			},
 			10,
@@ -186,7 +200,7 @@ export class BaseRouter implements BaseRouterInterface {
 		});
 	}
 
-	private applyMiddlewares(): void {
+	private async applyMiddlewares(): Promise<void> {
 		const app = express();
 
 		this.applyErrorHandler();
@@ -281,6 +295,49 @@ export class BaseRouter implements BaseRouterInterface {
 		};
 	};
 
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down Base Router...');
+
+			this.logger.info('Clearing API Router cache...');
+			await this.cacheService.clearNamespace('userLogin');
+			await this.cacheService.clearNamespace('recoverPassword');
+			await this.cacheService.clearNamespace('generateTOTP');
+			await this.cacheService.clearNamespace('generateEmailMFA');
+			this.logger.info('APIRouter cache cleared successfully.');
+
+			this.logger.info('Clearing Static Router cache...');
+			await this.cacheService.clearNamespace('static-files');
+			this.logger.info('StaticRouter cache cleared successfully.');
+
+			this.logger.info('Clearing Health Router cache...');
+			await this.cacheService.clearNamespace('healthCheck');
+			this.logger.info('HealthRouter cache cleared successfully.');
+
+			if (
+				this.envConfig.getFeatureFlags().loadTestRoutes &&
+				this.envConfig.getEnvVariable('nodeEnv') !== 'production'
+			) {
+				this.logger.info('Clearing Test Router cache...');
+				await this.cacheService.clearNamespace('test');
+				this.logger.info('TestRouter cache cleared successfully.');
+			}
+
+			this.logger.info(
+				'Base Router extension caches cleared. Completing shutdown process'
+			);
+			BaseRouter.instance = null;
+			this.logger.info('Base Router shutdown complete.');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during APIRouter shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
+		}
+	}
+
 	protected handleRouteError(
 		error: unknown,
 		req: Request,
@@ -306,9 +363,5 @@ export class BaseRouter implements BaseRouterInterface {
 				);
 			}
 		);
-	}
-
-	public getRouter(): Router {
-		return this.router;
 	}
 }

@@ -6,7 +6,7 @@ export const forbiddenFiles = ['.babelrc', '.dockerignore', '.gitignore', '.edit
 
 export const validDirectories = ['assets/', 'css/', 'dist/', 'fonts/', 'images/', 'logos/', '.pdf', 'public/', 'static/', 'styles/', 'utils/']
 
-export const validExtensions = ['.asc', '.css', '.css.map', '.gif', '.html', '.ico', '.jpeg', '.jpg', '.js', '.map', '.md', '.mp3', '.mp4', '.otf', '.png', '.svg', '.ttf', '.txt', '.wav', '.webp', '.xml']
+export const validExtensions = ['.asc', '.bmp', '.css', '.css.map', '.gif', '.html', '.ico', '.jpeg', '.jpg', '.js', '.map', '.md', '.mp3', '.mp4', '.otf', '.png', '.svg', '.ttf', '.txt', '.wav', '.webp', '.xml']
 
 export const validCSSFiles = {
 	main: '/css/main.css',
@@ -103,3 +103,16 @@ export const validXMLFiles = {
 	browserConfig: 'browser-config.xml',
 	sitemap: 'sitemap.xml'
 }
+
+export const validationIntervals = {
+	css: 50000,
+	font: 10000,
+	html: 10000,
+	icon: 15000,
+	image: 20000,
+	js: 5000,
+	logo: 20000,
+	md: 30000,
+	txt: 30000,
+	xml: 30000
+};

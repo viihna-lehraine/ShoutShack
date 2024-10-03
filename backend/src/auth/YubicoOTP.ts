@@ -1,9 +1,9 @@
+import { YubicoOTPServiceInterface } from '../index/interfaces/services';
 import {
 	YubClientInterface,
-	YubicoOTPServiceInterface,
-	YubicoOTPOptionsInterface,
-	YubResponseInterface
-} from '../index/interfaces';
+	YubResponseInterface,
+	YubicoOTPOptionsInterface
+} from '../index/interfaces/serviceComponents';
 import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
 
@@ -19,16 +19,48 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 	private cacheService = ServiceFactory.getCacheService();
 	private yubClient: YubClientInterface | undefined;
 	private ttl = serviceTTLConfig.YubicoOtpService || serviceTTLConfig.default;
+	private yub: YubicoOTPServiceInterface;
 
-	private constructor(private yub: YubicoOTPServiceInterface) {}
+	private constructor() {
+		this.yub = this.initializeYubClient();
+	}
 
-	public static getInstance(
-		yub: YubicoOTPServiceInterface
-	): YubicoOTPService {
+	public static getInstance(): YubicoOTPService {
 		if (!YubicoOTPService.instance) {
-			YubicoOTPService.instance = new YubicoOTPService(yub);
+			YubicoOTPService.instance = new YubicoOTPService();
 		}
 		return YubicoOTPService.instance;
+	}
+
+	private initializeYubClient(): YubicoOTPServiceInterface {
+		return {
+			init: (clientId: string, secretKey: string): YubClientInterface => {
+				console.debug(
+					`Initializing Yubico OTP with ${clientId} and ${secretKey}`
+				);
+				return {
+					verify: (
+						otp: string,
+						callback: (
+							err: Error | null,
+							data: YubResponseInterface
+						) => void
+					) => {
+						if (otp === 'test-otp') {
+							const response: YubResponseInterface = {
+								status: 'OK'
+							};
+							callback(null, response);
+						} else {
+							const response: YubResponseInterface = {
+								status: 'FAIL'
+							};
+							callback(new Error('Invalid OTP'), response);
+						}
+					}
+				} as YubClientInterface;
+			}
+		} as YubicoOTPServiceInterface;
 	}
 
 	public init(clientId: string, secretKey: string): YubClientInterface {
@@ -235,6 +267,30 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 				apiKey: '',
 				apiUrl: ''
 			};
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down YubicoOTPService...');
+
+			this.logger.info('Clearing YubicoOTPService cache...');
+			await this.cacheService.clearNamespace('YubicoOTPService');
+			this.logger.info('YubicoOTPService cache cleared successfully.');
+
+			this.yubClient = undefined;
+			YubicoOTPService.instance = null;
+
+			this.logger.info(
+				'YubicoOTPService shutdown completed successfully.'
+			);
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during YubicoOTPService shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 }

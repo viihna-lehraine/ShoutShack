@@ -1,11 +1,9 @@
 import { ServiceFactory } from '../index/factory';
-import {
-	AuthControllerInterface,
-	UserControllerDeps,
-	UserInstanceInterface
-} from '../index/interfaces';
+import { UserInstanceInterface } from '../index/interfaces/models';
+import { AuthControllerInterface } from '../index/interfaces/services';
+import { UserControllerDeps } from '../index/interfaces/serviceDeps';
 import { validateDependencies } from '../utils/helpers';
-import { createUserModel } from '../models/UserModelFile';
+import { createUserModel } from '../models/User';
 import { generateEmailMFATemplate } from '../templates/emailMFACodeTemplate';
 import passport from 'passport';
 import { RequestHandler } from 'express';
@@ -623,6 +621,26 @@ export class AuthController implements AuthControllerInterface {
 
 	protected async loadZxcvbn(): Promise<UserControllerDeps['zxcvbn']> {
 		return (await import('zxcvbn')).default;
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down AuthController...');
+
+			this.logger.info('Clearing AuthController cache...');
+			await this.cacheService.clearNamespace('AuthController');
+			this.logger.info('AuthController cache cleared successfully.');
+
+			AuthController.instance = null;
+			this.logger.info('AuthController shutdown completed successfully.');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during AuthController shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
+		}
 	}
 
 	protected handleAuthControllerError(

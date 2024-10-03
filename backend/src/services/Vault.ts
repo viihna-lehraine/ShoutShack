@@ -7,12 +7,10 @@ import {
 	randomBytes
 } from 'crypto';
 import path from 'path';
-import { hashConfig } from '../config/constants';
-import {
-	ConfigSecretsInterface,
-	SecretsMap,
-	VaultServiceInterface
-} from '../index/interfaces';
+import { hashConfig } from '../config/security';
+import { SecretsMap } from '../index/interfaces/env';
+import { VaultServiceInterface } from '../index/interfaces/services';
+import { ConfigSecretsInterface } from '../index/interfaces/serviceComponents';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import { withRetry } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
@@ -22,7 +20,7 @@ const ivLength = 16;
 const PLACEHOLDER = '[REDACTED]';
 
 export class VaultService implements VaultServiceInterface {
-	private static instance: VaultService;
+	private static instance: VaultService | null = null;
 	private envConfig = ServiceFactory.getEnvConfigService();
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
@@ -226,7 +224,6 @@ export class VaultService implements VaultServiceInterface {
 						this.logger.warn(
 							`Rate limit exceeded for secret: ${key}`
 						);
-
 						continue;
 					}
 
@@ -238,7 +235,15 @@ export class VaultService implements VaultServiceInterface {
 						const decryptedSecret = this.decryptSecret(
 							secretData.encryptedValue
 						);
-						result[key] = decryptedSecret;
+
+						if (key === 'YUBICO_CLIENT_ID') {
+							result[key] = Number(
+								decryptedSecret
+							) as SecretsMap[typeof key];
+						} else {
+							result[key] =
+								decryptedSecret as SecretsMap[typeof key];
+						}
 
 						try {
 							this.clearMemory(decryptedSecret);
@@ -261,14 +266,14 @@ export class VaultService implements VaultServiceInterface {
 
 	private clearMemory(secret: string | Buffer): void {
 		if (typeof secret === 'string') {
-			for (let i = 0; i < secret.length; i++) {
-				secret = [...secret].map(() => '\0').join('');
-			}
+			const buffer = Buffer.from(secret, 'utf-8');
+			buffer.fill(0);
 		} else if (Buffer.isBuffer(secret)) {
 			secret.fill(0);
 		}
+
 		secret = null as unknown as string | Buffer;
-		this.logger.debug(`Memory cleared for secret.c`);
+		this.logger.debug('Sensitive data cleared from memory.');
 	}
 
 	public async redactSecrets(
@@ -560,6 +565,40 @@ export class VaultService implements VaultServiceInterface {
 			this.logger.error(clearError.message);
 			this.errorHandler.handleError({ error: clearError });
 			throw clearError;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down VaultService...');
+
+			await this.batchClearSecrets();
+
+			if (this.encryptedGpgPassphrase) {
+				this.clearMemory(this.encryptedGpgPassphrase);
+				this.encryptedGpgPassphrase = null;
+				this.logger.info('GPG passphrase cleared from memory.');
+			}
+
+			if (this.encryptionKey) {
+				this.clearMemory(this.encryptionKey);
+				this.encryptionKey = null;
+				this.logger.info('Encryption key cleared from memory.');
+			}
+
+			VaultService.instance = null;
+			this.logger.info('VaultService instance nullified.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error during VaultService shutdown: ${error instanceof Error ? error.message : String(error)}`
+			);
+			const shutdownError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`VaultService shutdown failed: ${error instanceof Error ? error.message : String(error)}`,
+					{ originalError: error }
+				);
+			this.errorHandler.handleError({ error: shutdownError });
+			throw shutdownError;
 		}
 	}
 

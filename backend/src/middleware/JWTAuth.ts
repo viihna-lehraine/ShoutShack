@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ServiceFactory } from '../index/factory';
-import { JWTAuthMiddlewareServiceInterface } from '../index/interfaces';
+import { JWTAuthMiddlewareServiceInterface } from '../index/interfaces/services';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
@@ -13,29 +13,39 @@ export class JWTAuthMiddlewareService
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private bouncerService = ServiceFactory.getBouncerService();
+	private gatekeeperService = ServiceFactory.getGatekeeperService();
 	private cacheService = ServiceFactory.getCacheService();
 	private redisService = ServiceFactory.getRedisService();
 	private expiredTokens: Set<string> = new Set();
 	private revokedTokens: Set<string> = new Set();
 	private expiryListFilePath =
-		ServiceFactory.getConfigService().getEnvVariable('tokenExpiryListPath');
+		ServiceFactory.getEnvConfigService().getEnvVariable(
+			'tokenExpiryListPath'
+		);
 	private revocationListFilePath =
-		ServiceFactory.getConfigService().getEnvVariable(
+		ServiceFactory.getEnvConfigService().getEnvVariable(
 			'tokenRevokedListPath'
 		);
 	private expiryListCacheKey = 'tokenExpirationList';
 	private revocationListCacheKey = 'tokenRevocationList';
 	private cacheDuration =
-		ServiceFactory.getConfigService().getEnvVariable(
+		ServiceFactory.getEnvConfigService().getEnvVariable(
 			'tokenCacheDuration'
 		) || 3600;
+	private cleanupExpiredTokensInterval: NodeJS.Timeout | null = null;
+	private cleanupRevokedTokensInterval: NodeJS.Timeout | null = null;
 
 	private constructor() {
 		this.loadExpiredTokens();
 		this.loadRevokedTokens();
-		setInterval(() => this.cleanupExpiredTokens(), 60 * 1000);
-		setInterval(() => this.cleanupRevokedTokens(), 60 * 1000);
+		this.cleanupExpiredTokensInterval = setInterval(
+			() => this.cleanupExpiredTokens(),
+			60 * 1000
+		);
+		this.cleanupRevokedTokensInterval = setInterval(
+			() => this.cleanupRevokedTokens(),
+			60 * 1000
+		);
 	}
 
 	public static getInstance(): JWTAuthMiddlewareService {
@@ -64,14 +74,14 @@ export class JWTAuthMiddlewareService
 					return res.status(403).json({ error: 'Access denied' });
 				}
 
-				if (await this.bouncerService.isTemporarilyBlacklisted(ip)) {
+				if (await this.gatekeeperService.isTemporarilyBlacklisted(ip)) {
 					this.logger.warn(`IP ${ip} is temporarily blacklisted.`);
 					return res
 						.status(403)
 						.json({ error: 'Access temporarily denied' });
 				}
 
-				if (await this.bouncerService.isBlacklisted(ip)) {
+				if (await this.gatekeeperService.isBlacklisted(ip)) {
 					this.logger.warn(`IP ${ip} is blacklisted.`);
 					return res.status(403).json({ error: 'Access denied' });
 				}
@@ -310,7 +320,7 @@ export class JWTAuthMiddlewareService
 
 	private async cleanupRevokedTokens(): Promise<void> {
 		const revocationRetentionPeriod =
-			ServiceFactory.getConfigService().getEnvVariable(
+			ServiceFactory.getEnvConfigService().getEnvVariable(
 				'revokedTokenRetentionPeriod'
 			) || 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 		const now = Date.now();
@@ -353,8 +363,35 @@ export class JWTAuthMiddlewareService
 			);
 		} finally {
 			if (release) {
-				await release();
+				release();
 			}
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			if (this.cleanupExpiredTokensInterval) {
+				clearInterval(this.cleanupExpiredTokensInterval);
+			}
+			if (this.cleanupRevokedTokensInterval) {
+				clearInterval(this.cleanupRevokedTokensInterval);
+			}
+
+			await this.cacheService.del(
+				this.expiryListCacheKey,
+				'gatekeeperService'
+			);
+			await this.cacheService.del(
+				this.revocationListCacheKey,
+				'gatekeeperService'
+			);
+
+			JWTAuthMiddlewareService.instance = null;
+			this.logger.info('JWTAuthMiddlewareService shutdown successfully.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down JWTAuthMiddlewareService: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 }

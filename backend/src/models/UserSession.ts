@@ -3,23 +3,12 @@ import {
 	InferAttributes,
 	InferCreationAttributes,
 	Model,
-	DataTypes,
-	Sequelize
+	DataTypes
 } from 'sequelize';
-import { User } from './UserModelFile';
+import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
-
-interface UserSessionAttributes {
-	id: string; // UUID for the session record, primary key (from User model)
-	sessionId: number;
-	ipAddress: string;
-	userAgent: string;
-	createdAt: Date;
-	updatedAt?: Date | null;
-	expiresAt: Date;
-	isActive: boolean;
-}
+import { UserSessionAttributes } from '../index/interfaces/models';
 
 export class UserSession
 	extends Model<
@@ -38,14 +27,25 @@ export class UserSession
 	public isActive!: boolean;
 }
 
-export default function createUserSessionModel(
-	sequelize: Sequelize
-): typeof UserSession {
+export function createUserSessionModel(): typeof UserSession | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize UserSession model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger

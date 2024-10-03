@@ -7,8 +7,7 @@ import {
 	Sequelize
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
-import { hashPassword } from '../auth/hash';
-import { UserAttributesInterface } from '../index/interfaces';
+import { UserAttributesInterface } from '../index/interfaces/models';
 import { ServiceFactory } from '../index/factory';
 
 const errorLogger = ServiceFactory.getErrorLoggerService();
@@ -109,27 +108,6 @@ export class User
 				timestamps: true
 			}
 		);
-
-		User.addHook('beforeCreate', async (user: User) => {
-			try {
-				user.password = await hashPassword(user.password);
-			} catch (dbError) {
-				const databaseError =
-					new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-						`Failed to create hashed password: ${
-							dbError instanceof Error
-								? dbError.message
-								: 'Unknown error'
-						}`,
-						{
-							originalError: dbError
-						}
-					);
-				errorLogger.logInfo(databaseError.message);
-				errorHandler.handleError({ error: databaseError || dbError });
-				throw databaseError;
-			}
-		});
 	}
 }
 

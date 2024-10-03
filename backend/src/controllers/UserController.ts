@@ -1,11 +1,11 @@
-import { User } from '../models/UserModelFile';
+import { User } from '../models/User';
 import { validateDependencies } from '../utils/helpers';
+import { UserControllerInterface } from '../index/interfaces/services';
 import {
 	UserAttributesInterface,
-	UserInstanceInterface,
-	UserControllerDeps,
-	UserControllerInterface
-} from '../index/interfaces';
+	UserInstanceInterfaceA
+} from '../index/interfaces/models';
+import { UserControllerDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 import { InferAttributes, WhereOptions } from 'sequelize/types';
 
@@ -34,7 +34,7 @@ export class UserController implements UserControllerInterface {
 		return UserController.instance;
 	}
 
-	private mapToUserInstance(user: User): UserInstanceInterface {
+	private mapToUserInstance(user: User): UserInstanceInterfaceA {
 		return {
 			id: user.id,
 			userId: user.userId || undefined,
@@ -46,8 +46,8 @@ export class UserController implements UserControllerInterface {
 			resetPasswordExpires: user.resetPasswordExpires,
 			isMfaEnabled: user.isMfaEnabled,
 			totpSecret: user.totpSecret,
-			email2faToken: user.email2faToken,
-			email2faTokenExpires: user.email2faTokenExpires,
+			emailMFAToken: user.email2faToken,
+			emailMFATokenExpires: user.email2faTokenExpires,
 			creationDate: user.creationDate,
 			comparePassword: async (
 				password: string,
@@ -64,9 +64,48 @@ export class UserController implements UserControllerInterface {
 		};
 	}
 
+	public async findOne(
+		criteria: WhereOptions<InferAttributes<User>>
+	): Promise<UserInstanceInterfaceB | null> {
+		try {
+			const user = await this.userModel.findOne({ where: criteria });
+			if (!user) {
+				this.logger.debug('User not found with provided criteria');
+
+				return null;
+			}
+
+			return this.mapToUserInstance(user);
+		} catch (error) {
+			this.errorHandler.handleError({ error, action: 'findOne' });
+			return null;
+		}
+	}
+
+	public async findUserById(
+		userId: string
+	): Promise<UserInstanceInterfaceB | null> {
+		try {
+			const user = await this.userModel.findOne({
+				where: { id: userId }
+			});
+
+			if (!user) {
+				this.logger.warn(`User with ID ${userId} not found`);
+				return null;
+			}
+
+			return this.mapToUserInstance(user);
+		} catch (error) {
+			this.logger.error(`Error finding user by ID ${userId}: ${error}`);
+			this.errorHandler.handleError({ error, action: 'findUserById' });
+			return null;
+		}
+	}
+
 	public async findUserByEmail(
 		email: string
-	): Promise<UserInstanceInterface | null> {
+	): Promise<UserInstanceInterfaceB | null> {
 		const user = await this.userModel.findOne({ where: { email } });
 		if (!user) {
 			return null;
@@ -80,7 +119,7 @@ export class UserController implements UserControllerInterface {
 			UserAttributesInterface,
 			'id' | 'creationDate' | 'userId'
 		>
-	): Promise<UserInstanceInterface | null> {
+	): Promise<UserInstanceInterfaceB | null> {
 		try {
 			const isPasswordStrong = await this.checkPasswordStrength(
 				userDetails.password
@@ -156,24 +195,6 @@ export class UserController implements UserControllerInterface {
 		return true;
 	}
 
-	public async findOne(
-		criteria: WhereOptions<InferAttributes<User>>
-	): Promise<UserInstanceInterface | null> {
-		try {
-			const user = await this.userModel.findOne({ where: criteria });
-			if (!user) {
-				this.logger.debug('User not found with provided criteria');
-
-				return null;
-			}
-
-			return this.mapToUserInstance(user);
-		} catch (error) {
-			this.errorHandler.handleError({ error, action: 'findOne' });
-			return null;
-		}
-	}
-
 	public async verifyUserAccount(userId: string): Promise<boolean> {
 		try {
 			const user = await this.userModel.findOne({
@@ -200,27 +221,6 @@ export class UserController implements UserControllerInterface {
 		}
 	}
 
-	public async findUserById(
-		userId: string
-	): Promise<UserInstanceInterface | null> {
-		try {
-			const user = await this.userModel.findOne({
-				where: { id: userId }
-			});
-
-			if (!user) {
-				this.logger.warn(`User with ID ${userId} not found`);
-				return null;
-			}
-
-			return this.mapToUserInstance(user);
-		} catch (error) {
-			this.logger.error(`Error finding user by ID ${userId}: ${error}`);
-			this.errorHandler.handleError({ error, action: 'findUserById' });
-			return null;
-		}
-	}
-
 	private removeUndefinedFields<T>(obj: Partial<T>): Partial<T> {
 		return Object.fromEntries(
 			Object.entries(obj).filter(([, v]) => v !== undefined)
@@ -228,9 +228,9 @@ export class UserController implements UserControllerInterface {
 	}
 
 	public async updateUser(
-		user: UserInstanceInterface,
-		updatedDetails: Partial<UserInstanceInterface>
-	): Promise<UserInstanceInterface | null> {
+		user: UserInstanceInterfaceB,
+		updatedDetails: Partial<UserInstanceInterfaceB>
+	): Promise<UserInstanceInterfaceB | null> {
 		try {
 			const fullUser = await this.userModel.findOne({
 				where: { id: user.id }
@@ -340,6 +340,23 @@ export class UserController implements UserControllerInterface {
 				details: { userId }
 			});
 			return false;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down UserController...');
+
+			UserController.instance = null;
+
+			this.logger.info('UserController shutdown completed.');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during UserController shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 

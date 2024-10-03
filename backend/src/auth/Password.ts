@@ -1,5 +1,5 @@
-import { PasswordServiceInterface } from '../index/interfaces';
-import { hashConfig } from '../config/constants';
+import { PasswordServiceInterface } from '../index/interfaces/services';
+import { hashConfig } from '../config/security';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
@@ -83,6 +83,23 @@ export class PasswordService implements PasswordServiceInterface {
 				action: 'comparePassword'
 			});
 			return false;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down PasswordService...');
+
+			PasswordService.instance = null;
+
+			this.logger.info('PasswordService shutdown completed successfully');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during PasswordService shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 }

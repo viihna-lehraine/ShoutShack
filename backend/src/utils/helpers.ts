@@ -1,7 +1,5 @@
-import {
-	AppLoggerServiceInterface,
-	DependencyInterface
-} from '../index/interfaces';
+import { AppLoggerServiceInterface } from '../index/interfaces/services';
+import { DependencyInterface } from '../index/interfaces/serviceComponents';
 
 export function getCallerInfo(): string {
 	const stack = new Error().stack;

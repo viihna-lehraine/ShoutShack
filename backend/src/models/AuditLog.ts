@@ -2,28 +2,13 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
-import { validateDependencies } from '../utils/helpers';
+import { User } from './User';
 import { ServiceFactory } from '../index/factory';
+import { AuditLogAttributes } from '../index/interfaces/models';
 
-interface AuditLogAttributes {
-	auditId: string;
-	id?: string | null;
-	actionType: string;
-	actionDescription?: string | null;
-	affectedResource?: string | null;
-	previousValue?: string | null;
-	newValue?: string | null;
-	ipAddress: string;
-	userAgent: string;
-	auditLogDate: Date;
-	auditLogUpdateDate?: Date | null;
-}
-
-class AuditLog
+export class AuditLog
 	extends Model<InferAttributes<AuditLog>, InferCreationAttributes<AuditLog>>
 	implements AuditLogAttributes
 {
@@ -40,18 +25,25 @@ class AuditLog
 	public auditLogUpdateDate?: Date | null;
 }
 
-export default function createAuditLogModel(
-	sequelize: Sequelize
-): typeof AuditLog | null {
+export function createAuditLogModel(): typeof AuditLog | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize AuditLog model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 
 		AuditLog.init(
 			{
@@ -123,7 +115,6 @@ export default function createAuditLogModel(
 				},
 				auditLogUpdateDate: {
 					type: DataTypes.DATE,
-					defaultValue: undefined,
 					allowNull: true
 				}
 			},
@@ -149,5 +140,3 @@ export default function createAuditLogModel(
 		return null;
 	}
 }
-
-export { AuditLog };

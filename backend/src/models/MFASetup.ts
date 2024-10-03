@@ -3,31 +3,16 @@ import {
 	InferAttributes,
 	InferCreationAttributes,
 	Model,
-	DataTypes,
-	Sequelize
+	DataTypes
 } from 'sequelize';
-import { User } from './UserModelFile';
+import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
+import { MFASetupAttributes } from '../index/interfaces/models';
 
-interface MultiFactorAuthSetupAttributes {
-	mfaId: number; // primary key for MFA setup record, auto-incremented
-	id: string; // UUID for MFA setup, primary key (from User model)
-	method: 'totp' | 'email' | 'yubico' | 'fido2' | 'passkey';
-	secret?: string | null;
-	publicKey?: string | null;
-	counter?: number | null;
-	isActive: boolean;
-	createdAt: Date;
-	updatedAt: Date;
-}
-
-class MultiFactorAuthSetup
-	extends Model<
-		InferAttributes<MultiFactorAuthSetup>,
-		InferCreationAttributes<MultiFactorAuthSetup>
-	>
-	implements MultiFactorAuthSetupAttributes
+export class MFASetup
+	extends Model<InferAttributes<MFASetup>, InferCreationAttributes<MFASetup>>
+	implements MFASetupAttributes
 {
 	public mfaId!: number;
 	public id!: string;
@@ -40,20 +25,31 @@ class MultiFactorAuthSetup
 	public updatedAt!: CreationOptional<Date>;
 }
 
-export default function createMultiFactorAuthSetupModel(
-	sequelize: Sequelize
-): typeof MultiFactorAuthSetup | null {
+export function createMFASetupModel(): typeof MFASetup | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize MFASetup model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger
 		);
 
-		MultiFactorAuthSetup.init(
+		MFASetup.init(
 			{
 				mfaId: {
 					type: DataTypes.INTEGER,
@@ -117,7 +113,7 @@ export default function createMultiFactorAuthSetupModel(
 			}
 		);
 
-		return MultiFactorAuthSetup;
+		return MFASetup;
 	} catch (dbError) {
 		const databaseError =
 			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
@@ -131,5 +127,3 @@ export default function createMultiFactorAuthSetupModel(
 		return null;
 	}
 }
-
-export { MultiFactorAuthSetup };

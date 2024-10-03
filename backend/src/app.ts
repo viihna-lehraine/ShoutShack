@@ -16,7 +16,7 @@ import { login } from './admin';
 import { AppError, ErrorClasses, ErrorSeverity } from './errors/ErrorClasses';
 import { configurePassport } from './auth/passport';
 import { initializeModels } from './models/modelsIndex';
-import { createUserModel } from './models/UserModelFile';
+import { createUserModel } from './models/User';
 import { blankRequest } from './config/constants';
 import { InitializeDatabaseStaticParameters } from './index/parameters';
 import { Sequelize } from 'sequelize';
@@ -25,7 +25,7 @@ import {
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from './index/interfaces';
+} from './index/interfaces/env';
 import { EnvironmentService } from './services/EnvConfig';
 
 let sequelize: Sequelize;

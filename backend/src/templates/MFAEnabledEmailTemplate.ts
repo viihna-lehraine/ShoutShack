@@ -1,7 +1,7 @@
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
-const generate2FAEnabledEmailTemplate = (username: string): string => {
+export const generateMFAEnabledEmailTemplate = (username: string): string => {
 	const logger = ServiceFactory.getLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
@@ -83,5 +83,3 @@ const generate2FAEnabledEmailTemplate = (username: string): string => {
 		);
 	}
 };
-
-export default generate2FAEnabledEmailTemplate;

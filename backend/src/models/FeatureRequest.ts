@@ -3,8 +3,7 @@ import {
 	Model,
 	InferAttributes,
 	InferCreationAttributes,
-	CreationOptional,
-	Sequelize
+	CreationOptional
 } from 'sequelize';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
@@ -20,7 +19,7 @@ interface FeatureRequestAttributes {
 	featureRequestCloseDate?: Date | null;
 }
 
-class FeatureRequest
+export class FeatureRequest
 	extends Model<
 		InferAttributes<FeatureRequest>,
 		InferCreationAttributes<FeatureRequest>
@@ -37,14 +36,26 @@ class FeatureRequest
 	public featureRequestCloseDate!: Date | null;
 }
 
-export default function createFeatureRequestModel(
-	sequelize: Sequelize
-): typeof FeatureRequest | null {
+export function createFeatureRequestModel(): typeof FeatureRequest | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize FeatureRequest model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger
@@ -110,5 +121,3 @@ export default function createFeatureRequestModel(
 		return null;
 	}
 }
-
-export { FeatureRequest };

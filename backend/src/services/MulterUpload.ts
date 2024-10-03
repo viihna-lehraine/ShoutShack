@@ -2,11 +2,9 @@ import { Request } from 'express';
 import { readFile } from 'fs/promises';
 import EventEmitter from 'events';
 import { FileFilterCallback, Multer } from 'multer';
-import {
-	MulterUploadServiceDeps,
-	MulterUploadServiceInterface
-} from '../index/interfaces';
+import { MulterUploadServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
+import { MulterUploadServiceDeps } from '../index/interfaces/serviceDeps';
 
 export class MulterUploadService
 	extends EventEmitter
@@ -200,7 +198,33 @@ export class MulterUploadService
 	}
 
 	private getDefaultExtensions(): string[] {
-		return ['.jpeg', '.jpg', '.png', '.gif', '.mp4', '.pdf', '.txt'];
+		return [
+			'.bmp',
+			'.gif',
+			'.jpeg',
+			'.jpg',
+			'.mp4',
+			'.pdf',
+			'.png',
+			'.txt',
+			'.wav'
+		];
+	}
+
+	public shutdown(): void {
+		try {
+			this.removeAllListeners();
+			MulterUploadService.instance = null;
+			this._deps.logger.info(
+				'Multer Upload Service shutdown successfully.'
+			);
+		} catch (error) {
+			this._deps.errorLogger.logError(
+				`Error shutting down Multer Upload service: ${
+					error instanceof Error ? error.message : error
+				}`
+			);
+		}
 	}
 
 	private handleError(message: string, error: unknown): void {
@@ -211,8 +235,10 @@ export class MulterUploadService
 				`${message}: ${errorMessage}`,
 				{ exposeToClient: false }
 			);
+
 		this._deps.errorLogger.logError(dependencyError.message);
 		this._deps.errorHandler.handleError({ error: dependencyError });
+
 		throw dependencyError;
 	}
 }

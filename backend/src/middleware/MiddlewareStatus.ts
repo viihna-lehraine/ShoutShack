@@ -1,6 +1,5 @@
-import { MiddlewareStatusServiceInterface } from '../index/interfaces';
+import { MiddlewareStatusServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
-import { withRetry } from '../utils/helpers';
 
 export class MiddlewareStatusService
 	implements MiddlewareStatusServiceInterface
@@ -67,5 +66,21 @@ export class MiddlewareStatusService
 
 	public isMiddlewareOn(middlewareName: string): boolean {
 		return this.getStatus(middlewareName) === 'on';
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.middlewareStatus.clear();
+			this.logger.info(
+				'Middleware Status Service shutdown successfully.'
+			);
+			MiddlewareStatusService.instance = null;
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down Middleware Status Service: ${
+					error instanceof Error ? error.message : error
+				}`
+			);
+		}
 	}
 }

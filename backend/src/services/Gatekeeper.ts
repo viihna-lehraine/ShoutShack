@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { ServiceFactory } from '../index/factory';
-import { GatekeeperServiceInterface } from '../index/interfaces';
+import { GatekeeperServiceInterface } from '../index/interfaces/services';
 
 export class GatekeeperService implements GatekeeperServiceInterface {
 	private static instance: GatekeeperService | null = null;
@@ -22,7 +22,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private cacheService = ServiceFactory.getCacheService();
 	private redisService = ServiceFactory.getRedisService();
 	private resourceManager = ServiceFactory.getResourceManager();
-	private rateLimiter: RateLimiterMemory;
+	private rateLimiter: RateLimiterMemory | null;
 	private blacklistKey = 'ipBlacklist';
 	private whitelistKey = 'ipWhitelist';
 	private rateLimitPrefix = 'rateLimit_';
@@ -54,6 +54,13 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	}
 
 	public async dynamicRateLimiter(): Promise<void> {
+		if (!this.rateLimiter) {
+			this.rateLimiter = new RateLimiterMemory({
+				points: this.RATE_LIMIT_BASE_POINTS,
+				duration: this.RATE_LIMIT_BASE_DURATION
+			});
+		}
+
 		const cpuUsage = this.calculateCpuUsage();
 		const memoryUsage = this.resourceManager.getMemoryUsage()
 			.heapUsedPercentage as number;
@@ -62,6 +69,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 			cpuUsage,
 			memoryUsage
 		);
+
 		this.rateLimiter.points = adjustedPoints;
 	}
 
@@ -105,6 +113,13 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		): Promise<void> => {
 			const ip = req.ip || 'unknown';
 			const rateLimitKey = `${this.rateLimitPrefix}${ip}`;
+
+			if (!this.rateLimiter) {
+				this.rateLimiter = new RateLimiterMemory({
+					points: this.RATE_LIMIT_BASE_POINTS,
+					duration: this.RATE_LIMIT_BASE_DURATION
+				});
+			}
 
 			if (this.whitelist.includes(ip)) {
 				return next();
@@ -624,6 +639,33 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		} catch (error) {
 			this.logger.error('Error during concurrent file access.');
 			throw error;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down GatekeeperService...');
+
+			if (this.SYNC_INTERVAL) {
+				clearInterval(this.SYNC_INTERVAL);
+				this.logger.info('Stopped IP blacklist sync interval.');
+			}
+
+			this.globalRateLimitStats.clear();
+			this.logger.info('Cleared global rate limit stats.');
+
+			this.rateLimiter = null;
+			this.logger.info('Rate limiter memory cleared.');
+
+			GatekeeperService.instance = null;
+			this.logger.info('GatekeeperService shutdown completed.');
+		} catch (error) {
+			const shutdownError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during GatekeeperService shutdown: ${error instanceof Error ? error.message : 'Unknown error'}`
+				);
+			this.errorLogger.logError(shutdownError.message);
+			this.errorHandler.handleError({ error: shutdownError });
 		}
 	}
 }

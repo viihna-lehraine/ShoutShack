@@ -1,6 +1,6 @@
 import toobusy from 'toobusy-js';
 import express from 'express';
-import { HealthCheckServiceInterface } from '../index/interfaces';
+import { HealthCheckServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import fs from 'fs';
 import os from 'os';
@@ -18,6 +18,7 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 	private httpsServer = ServiceFactory.getHTTPSServer(express.application);
 	private healthCheckHistory: Record<string, unknown>[] = [];
 	private thresholdBreaches: Array<Record<string, unknown>> = [];
+	private healthCheckInterval: NodeJS.Timeout | null = null;
 
 	private constructor() {
 		setInterval(() => {
@@ -334,6 +335,34 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 		});
 		if (this.thresholdBreaches.length > 100) {
 			this.thresholdBreaches.shift();
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down HealthCheckService...');
+
+			if (this.healthCheckInterval) {
+				clearInterval(this.healthCheckInterval);
+				this.logger.info('Health check interval cleared.');
+			}
+
+			await this.cacheService.clearNamespace('healthCheckService');
+			this.logger.info('Health check cache cleared.');
+
+			if (toobusy) {
+				toobusy.shutdown();
+				this.logger.info('Toobusy.js shutdown complete.');
+			}
+
+			this.logger.info('HealthCheckService shutdown completed.');
+		} catch (error) {
+			this.handleHealthCheckError(
+				error,
+				'SHUTDOWN_ERROR',
+				{},
+				'Error during HealthCheckService shutdown'
+			);
 		}
 	}
 

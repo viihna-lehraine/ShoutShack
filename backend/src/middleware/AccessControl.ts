@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { AccessControlMiddlewareServiceInterface } from '../index/interfaces';
+import { AccessControlMiddlewareServiceInterface } from '../index/interfaces/services';
+import { ServiceFactory } from '../index/factory';
 
 interface AuthenticatedUser {
 	id: string;
@@ -11,6 +12,8 @@ export class AccessControlMiddlewareService
 	implements AccessControlMiddlewareServiceInterface
 {
 	private static instance: AccessControlMiddlewareService | null = null;
+
+	private logger = ServiceFactory.getLoggerService();
 
 	private constructor() {}
 
@@ -64,5 +67,24 @@ export class AccessControlMiddlewareService
 		return requiredPermissions.every(permission =>
 			userPermissions.includes(permission)
 		);
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger?.info(
+				'Shutting down AccessControlMiddlewareService...'
+			);
+
+			AccessControlMiddlewareService.instance = null;
+
+			this.logger?.info(
+				'AccessControlMiddlewareService shutdown completed.'
+			);
+		} catch (error) {
+			this.logger?.error(
+				'Error during AccessControlMiddlewareService shutdown',
+				error
+			);
+		}
 	}
 }

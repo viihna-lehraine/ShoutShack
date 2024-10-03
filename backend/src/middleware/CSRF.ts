@@ -1,4 +1,4 @@
-import { CSRFMiddlewareServiceInterface } from '../index/interfaces';
+import { CSRFMiddlewareServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { Request, Response, NextFunction } from 'express';
 import Tokens, { Options as CSRFOptions } from 'csrf';
@@ -83,5 +83,17 @@ export class CSRFMiddlewareService implements CSRFMiddlewareServiceInterface {
 	private isWhitelistedRoute(path: string): boolean {
 		const whitelistedRoutes = ['/api/webhook', '/api/special'];
 		return whitelistedRoutes.includes(path);
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down CSRF Middleware Service...');
+			CSRFMiddlewareService.instance = null;
+			this.logger.info('CSRF Middleware Service has been shut down.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down CSRF Middleware service: ${error instanceof Error ? error.message : error}`
+			);
+		}
 	}
 }

@@ -1,4 +1,5 @@
-import { TOTPSecretInterface, TOTPServiceInterface } from '../index/interfaces';
+import { TOTPServiceInterface } from '../index/interfaces/services';
+import { TOTPSecretInterface } from '../index/interfaces/serviceComponents';
 import { ServiceFactory } from '../index/factory';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
@@ -129,6 +130,27 @@ export class TOTPService implements TOTPServiceInterface {
 			this.errorLogger.logWarn(utilityError.message);
 			this.errorHandler.handleError({ error: utilityError });
 			return '';
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down TOTPService...');
+
+			this.logger.info('Clearing TOTPService cache...');
+			await this.cacheService.clearNamespace('TOTPService');
+			this.logger.info('TOTPService cache cleared successfully.');
+
+			TOTPService.instance = null;
+
+			this.logger.info('TOTPService shutdown completed successfully.');
+		} catch (error) {
+			const utilityError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during TOTPService shutdown: ${error instanceof Error ? error.message : error}`
+				);
+			this.errorLogger.logError(utilityError.message);
+			this.errorHandler.handleError({ error: utilityError });
 		}
 	}
 }

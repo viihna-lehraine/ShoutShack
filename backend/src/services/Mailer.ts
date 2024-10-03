@@ -1,6 +1,7 @@
 import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
-import { MailerServiceDeps, MailerServiceInterface } from '../index/interfaces';
+import { MailerServiceDeps } from '../index/interfaces/serviceDeps';
+import { MailerServiceInterface } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
@@ -118,6 +119,20 @@ export class MailerService implements MailerServiceInterface {
 				error: dependencyError || depError || Error || 'Unknown error'
 			});
 			throw dependencyError;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			if (this.transporter) {
+				this.transporter.close();
+				MailerService.instance = null;
+				this.logger.info('Mailer service transporter closed.');
+			}
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down Mailer service: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 }

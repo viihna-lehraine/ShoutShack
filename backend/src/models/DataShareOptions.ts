@@ -3,27 +3,13 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
-import { validateDependencies } from '../utils/helpers';
+import { User } from './User';
 import { ServiceFactory } from '../index/factory';
+import { DataShareOptionsAttributes } from '../index/interfaces/models';
 
-interface DataShareOptionsAttributes {
-	id: string;
-	trackingPixelOption: boolean;
-	featureUsageOption: boolean;
-	pageViewsOption: boolean;
-	interactionDataOption: boolean;
-	deviceTypeOption: boolean;
-	browserInfoOption: boolean;
-	operatingSystemOption: boolean;
-	randomAnonSurveyOption: boolean;
-	lastUpdated: Date;
-}
-
-class DataShareOptions
+export class DataShareOptions
 	extends Model<
 		InferAttributes<DataShareOptions>,
 		InferCreationAttributes<DataShareOptions>
@@ -42,18 +28,25 @@ class DataShareOptions
 	public lastUpdated!: CreationOptional<Date>;
 }
 
-export default function createDataShareOptionsModel(
-	sequelize: Sequelize
-): typeof DataShareOptions | null {
+export function createDataShareOptionsModel(): typeof DataShareOptions | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize DataShareOptions model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 
 		DataShareOptions.init(
 			{
@@ -131,10 +124,8 @@ export default function createDataShareOptionsModel(
 					exposeToClient: false
 				}
 			);
-		errorLogger.logInfo(databaseError.message);
+		errorLogger.logError(databaseError.message);
 		errorHandler.handleError({ error: databaseError });
 		return null;
 	}
 }
-
-export { DataShareOptions };

@@ -3,23 +3,12 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
+import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
-
-interface SecurityEventAttributes {
-	id: string; // UUID for security event, primary key (from User model)
-	eventId: string; // unique event ID, auto-incremented
-	eventType: string;
-	eventDescription?: string | null;
-	ipAddress: string;
-	userAgent: string;
-	securityEventDate: Date;
-	securityEventLastUpdated: Date;
-}
+import { SecurityEventAttributes } from '../index/interfaces/models';
 
 class SecurityEvent
 	extends Model<
@@ -38,14 +27,26 @@ class SecurityEvent
 	public securityEventLastUpdated!: CreationOptional<Date>;
 }
 
-export default function createSecurityEventModel(
-	sequelize: Sequelize
-): typeof SecurityEvent | null {
+export function createSecurityEventModel(): typeof SecurityEvent | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize SecurityEvent model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger
@@ -134,5 +135,3 @@ export default function createSecurityEventModel(
 		return null;
 	}
 }
-
-export { SecurityEvent };

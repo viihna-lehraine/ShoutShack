@@ -1,4 +1,8 @@
-import { CacheMetrics, CacheServiceInterface } from '../index/interfaces';
+import {
+	CacheServiceInterface,
+	RedisServiceInterface
+} from '../index/interfaces/services';
+import { CacheMetrics } from '../index/interfaces/serviceComponents';
 import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
 import { withRetry } from '../utils/helpers';
@@ -9,7 +13,8 @@ export class CacheService implements CacheServiceInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private redisService = ServiceFactory.getRedisService();
+	private redisService: RedisServiceInterface | null =
+		ServiceFactory.getRedisService();
 
 	private memoryCache = new Map<
 		string,
@@ -106,12 +111,11 @@ export class CacheService implements CacheServiceInterface {
 				}
 			}
 
-			const redisValue = await this.redisService.get<T>(namespacedKey);
-
-			if (redisValue) {
+			const redisValue =
+				(await this.redisService?.get<T>(namespacedKey)) ?? null;
+			if (redisValue !== null) {
 				const defaultExpiration =
 					Date.now() + this.getServiceTTL(service) * 1000;
-
 				if (!serviceMemoryCache) {
 					this.memoryCache.set(service, new Map());
 				}
@@ -124,13 +128,13 @@ export class CacheService implements CacheServiceInterface {
 
 				this.updateMetrics(service, 'redisHit');
 				this.logger.info(`Fetched key: ${namespacedKey} from Redis`);
+				return redisValue;
 			} else {
-				// Cache miss
 				this.updateMetrics(service, 'miss');
 				this.logger.info(`Cache miss for key: ${namespacedKey}`);
 			}
 
-			return redisValue;
+			return null;
 		} catch (error) {
 			this.handleCacheError(
 				error,
@@ -165,7 +169,7 @@ export class CacheService implements CacheServiceInterface {
 			serviceMemoryCache.set(namespacedKey, { value, expiration });
 			this.memoryCacheLRU.set(namespacedKey, Date.now());
 
-			await this.redisService.set(
+			await this.redisService?.set(
 				namespacedKey,
 				value,
 				Number(expirationInSeconds)
@@ -186,35 +190,6 @@ export class CacheService implements CacheServiceInterface {
 		}
 	}
 
-	public async del(key: string, service: string): Promise<void> {
-		const namespacedKey = this.getNamespacedKey(service, key);
-		try {
-			const serviceMemoryCache = this.memoryCache.get(service);
-			if (serviceMemoryCache) {
-				serviceMemoryCache.delete(namespacedKey);
-				this.logger.info(
-					`Key ${namespacedKey} deleted from memory cache by service ${service}`
-				);
-			}
-
-			await this.redisService.del(namespacedKey);
-			this.logger.info(
-				`Key ${namespacedKey} deleted from Redis by service ${service}`
-			);
-		} catch (error) {
-			this.handleCacheError(
-				error,
-				'CACHE_DELETE_ERROR',
-				{
-					reason: `Cache delete failed for key ${key}`,
-					key: key || 'unknown',
-					service: service || 'unknown'
-				},
-				`Error deleting key ${namespacedKey} from cache for service ${service}`
-			);
-		}
-	}
-
 	public async exists(key: string, service: string): Promise<boolean> {
 		const namespacedKey = this.getNamespacedKey(service, key);
 		try {
@@ -227,7 +202,7 @@ export class CacheService implements CacheServiceInterface {
 				return true;
 			}
 
-			const redisExists = await this.redisService.exists(namespacedKey);
+			const redisExists = await this.redisService?.exists(namespacedKey);
 			if (redisExists) {
 				this.logger.info(
 					`Key ${namespacedKey} exists in Redis, checked by service ${service}`
@@ -245,14 +220,35 @@ export class CacheService implements CacheServiceInterface {
 			this.handleCacheError(
 				error,
 				'CACHE_EXISTS_ERROR',
-				{
-					reason: `Cache existence check failed for key ${key}`,
-					key: key || 'unknown',
-					service: service || 'unknown'
-				},
+				{ key, service },
 				`Error checking existence of key ${namespacedKey} for service ${service}`
 			);
 			return false;
+		}
+	}
+
+	public async del(key: string, service: string): Promise<void> {
+		const namespacedKey = this.getNamespacedKey(service, key);
+		try {
+			const serviceMemoryCache = this.memoryCache.get(service);
+			if (serviceMemoryCache) {
+				serviceMemoryCache.delete(namespacedKey);
+				this.logger.info(
+					`Key ${namespacedKey} deleted from memory cache by service ${service}`
+				);
+			}
+
+			await this.redisService?.del(namespacedKey);
+			this.logger.info(
+				`Key ${namespacedKey} deleted from Redis by service ${service}`
+			);
+		} catch (error) {
+			this.handleCacheError(
+				error,
+				'CACHE_DELETE_ERROR',
+				{ key, service },
+				`Error deleting key ${namespacedKey} from cache for service ${service}`
+			);
 		}
 	}
 
@@ -279,10 +275,11 @@ export class CacheService implements CacheServiceInterface {
 			}
 
 			if (!serviceMemoryCache || typeof newValue !== 'number') {
-				newValue = await this.redisService.increment(
-					namespacedKey,
-					expirationInSeconds
-				);
+				newValue =
+					(await this.redisService?.increment(
+						namespacedKey,
+						expirationInSeconds
+					)) ?? null;
 				if (newValue !== null) {
 					const expiration = expirationInSeconds
 						? Date.now() + expirationInSeconds * 1000
@@ -330,11 +327,18 @@ export class CacheService implements CacheServiceInterface {
 				);
 			}
 
-			const serviceKeys = await this.redisService.getKeysByPattern(
+			const serviceKeys = await this.redisService?.getKeysByPattern(
 				`${service}:*`
 			);
+
+			if (typeof serviceKeys === 'undefined') {
+				this.logger.warn(
+					`Redis cache flush failed for service: ${service}`
+				);
+				return;
+			}
 			if (serviceKeys.length > 0) {
-				await this.redisService.delMultiple(service, serviceKeys);
+				await this.redisService?.delMultiple(service, serviceKeys);
 				this.logger.info(`Redis cache flushed for service: ${service}`);
 			}
 		} catch (error) {
@@ -373,10 +377,47 @@ export class CacheService implements CacheServiceInterface {
 		});
 	}
 
+	public async clearNamespace(service: string): Promise<void> {
+		try {
+			const serviceMemoryCache = this.memoryCache.get(service);
+
+			if (serviceMemoryCache) {
+				serviceMemoryCache.clear();
+				this.memoryCache.delete(service);
+				this.logger.info(
+					`Memory cache cleared for service: ${service}`
+				);
+			}
+
+			const serviceKeys = await this.redisService?.getKeysByPattern(
+				`${service}:*`
+			);
+
+			if (typeof serviceKeys === 'undefined') {
+				this.logger.warn(
+					`Redis cache clear failed for service: ${service}`
+				);
+				return;
+			}
+
+			if (serviceKeys.length > 0) {
+				await this.redisService?.delMultiple(service, serviceKeys);
+				this.logger.info(`Redis cache cleared for service: ${service}`);
+			}
+		} catch (error) {
+			this.handleCacheError(
+				error,
+				'CACHE_CLEAR_NAMESPACE_ERROR',
+				{ service },
+				`Error clearing cache for service ${service}`
+			);
+		}
+	}
+
 	public async closeConnection(): Promise<void> {
 		try {
 			await withRetry(
-				async () => await this.redisService.cleanUpRedisClient(),
+				async () => await this.redisService?.cleanUpRedisClient(),
 				3,
 				1000
 			);
@@ -388,6 +429,39 @@ export class CacheService implements CacheServiceInterface {
 					reason: `Cache connection close failed`
 				},
 				`Error closing cache connection`
+			);
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info(
+				'Shutting down Redis connection before Cache Service...'
+			);
+			try {
+				await this.redisService?.cleanUpRedisClient();
+				this.logger.info('Redis connection closed successfully.');
+			} catch (redisError) {
+				this.logger.error(
+					`Failed to shut down Redis connection: ${redisError instanceof Error ? redisError.message : redisError}`
+				);
+			}
+
+			this.logger.info('Clearing memory cache in Cache Service...');
+
+			this.memoryCache.clear();
+			this.memoryCacheLRU.clear();
+
+			this.logger.info('Memory cache cleared successfully.');
+
+			this.redisService = null;
+			this.logger.info('Cache service shutdown completed.');
+		} catch (error) {
+			this.handleCacheError(
+				error,
+				'CACHE_SHUTDOWN_ERROR',
+				{},
+				`Error shutting down Cache Service`
 			);
 		}
 	}

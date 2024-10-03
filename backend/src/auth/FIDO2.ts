@@ -13,10 +13,10 @@ import {
 } from 'fido2-lib';
 import {
 	AppLoggerServiceInterface,
-	FIDO2ServiceInterface,
-	FidoUserInterface
-} from '../index/interfaces';
-import { FidoFactor } from '../index/types';
+	FIDO2ServiceInterface
+} from '../index/interfaces/services';
+import { FidoUserInterface } from '../index/interfaces/serviceComponents';
+import { FidoFactor } from '../index/interfaces/types';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
@@ -314,6 +314,30 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 			this.logger.info(`FIDO2 cache invalidated for user ${userId}`);
 		} catch (error) {
 			this.handleError('invalidateFido2Cache', error);
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			if (this.FIDO2) {
+				this.logger.info(
+					'Clearing FIDO2Lib and cache entries before shutdown...'
+				);
+				this.FIDO2 = null;
+
+				await this.cacheService.del('FIDO2Lib', 'auth');
+				this.logger.info(
+					'FIDO2 cache and instance cleared successfully.'
+				);
+				FIDO2Service.instance = null;
+				this.logger.info('FIDO2Service shut down successfully.');
+			} else {
+				this.logger.info(
+					'FIDO2Service is already shut down or uninitialized.'
+				);
+			}
+		} catch (error) {
+			this.handleError('shutdown', error);
 		}
 	}
 

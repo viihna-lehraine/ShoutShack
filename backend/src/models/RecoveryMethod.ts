@@ -3,23 +3,14 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { User } from './UserModelFile';
+import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
+import { RecoveryMethodAttributes } from '../index/interfaces/models';
 
-interface RecoveryMethodAttributes {
-	id: string; // UUID for recovery method, primary key (from User model)
-	isRecoveryActive: boolean;
-	recoveryId: string; // UUID for recovery method, primary key
-	recoveryMethod?: 'email' | 'backupCodes' | null;
-	backupCodes?: string[] | null;
-	recoveryLastUpdated: Date;
-}
-
-class RecoveryMethod
+export class RecoveryMethod
 	extends Model<
 		InferAttributes<RecoveryMethod>,
 		InferCreationAttributes<RecoveryMethod>
@@ -34,14 +25,26 @@ class RecoveryMethod
 	public recoveryLastUpdated!: CreationOptional<Date>;
 }
 
-export default function createRecoveryMethodModel(
-	sequelize: Sequelize
-): typeof RecoveryMethod | null {
+export function createRecoveryMethodModel(): typeof RecoveryMethod | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize RecoveryMethod model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger || console
@@ -107,5 +110,3 @@ export default function createRecoveryMethodModel(
 		return null;
 	}
 }
-
-export { RecoveryMethod };

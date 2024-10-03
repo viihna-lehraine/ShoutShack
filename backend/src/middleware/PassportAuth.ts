@@ -1,8 +1,6 @@
 import { Request, RequestHandler, Response, NextFunction } from 'express';
-import {
-	PassportAuthMiddlewareServiceInterface,
-	PassportAuthMiddlewareServiceDeps
-} from '../index/interfaces';
+import { PassportAuthMiddlewareServiceInterface } from '../index/interfaces/services';
+import { PassportAuthMiddlewareServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 
 export class PassportAuthMiddlewareService
@@ -66,6 +64,20 @@ export class PassportAuthMiddlewareService
 				this.handleError(expressError, req, res, next);
 			}
 		};
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down Passport middleware service...');
+			PassportAuthMiddlewareService.instance = null;
+			this.logger.info('Passport middleware service has been shut down.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down Passport middleware service: ${
+					error instanceof Error ? error.message : error
+				}`
+			);
+		}
 	}
 
 	private handleError(

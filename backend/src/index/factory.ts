@@ -2,9 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import app from 'express';
-import { APIRouter } from '../routers/APIRouter';
 import { BackupCodeService } from '../auth/BackupCode';
-import { StaticRouter } from '../routers/StaticRouter';
 import { MailerService } from '../services/Mailer';
 import { EmailMFAService } from '../auth/EmailMfa';
 import { RedisService } from '../services/Redis';
@@ -35,8 +33,6 @@ import { EnvConfigService } from '../services/EnvConfig';
 import { AuthController } from '../controllers/AuthController';
 import { MiddlewareStatusService } from '../middleware/MiddlewareStatus';
 import { HealthCheckService } from '../services/HealthCheck';
-import { TestRouter } from '../routers/TestRouter';
-import { HealthRouter } from '../routers/HealthRouter';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -46,6 +42,7 @@ import {
 	AccessControlMiddlewareServiceInterface,
 	AppLoggerServiceInterface,
 	AuthControllerInterface,
+	BaseRouterInterface,
 	DatabaseControllerInterface,
 	EmailMFAServiceInterface,
 	EnvConfigServiceInterface,
@@ -62,12 +59,12 @@ import {
 	PassportServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface,
-	StaticRouterInterface,
 	UserControllerInterface,
 	VaultServiceInterface,
 	YubicoOTPServiceInterface
-} from './interfaces';
+} from './interfaces/services';
 import { VaultService } from '../services/Vault';
+import { BaseRouter } from 'src/routers/BaseRouter';
 
 const defaultReq: Request = {} as Request;
 const defaultRes: Response = {} as Response;
@@ -95,16 +92,16 @@ export class ServiceFactory {
 		return AccessControlMiddlewareService.getInstance();
 	}
 
-	public static getAPIRouter(): APIRouter {
-		return APIRouter.getInstance();
-	}
-
 	public static getAuthController(): AuthControllerInterface {
 		return AuthController.getInstance();
 	}
 
 	public static getBackupCodeService(): BackupCodeService {
 		return BackupCodeService.getInstance();
+	}
+
+	public static async getBaseRouter(): Promise<BaseRouterInterface> {
+		return BaseRouter.getInstance();
 	}
 
 	public static getCacheService(): CacheService {
@@ -137,10 +134,6 @@ export class ServiceFactory {
 
 	public static getFIDO2Service(): FIDO2Service {
 		return FIDO2Service.getInstance();
-	}
-
-	public static getHealthRouter(): HealthRouter {
-		return HealthRouter.getInstance();
 	}
 
 	public static getGatekeeperService(): GatekeeperService {
@@ -249,15 +242,6 @@ export class ServiceFactory {
 	public static getVaultService(): VaultServiceInterface {
 		return VaultService.getInstance();
 	}
-
-	public static getStaticRouter(): StaticRouterInterface {
-		return StaticRouter.getInstance();
-	}
-
-	public static getTestRouter(): TestRouter {
-		return TestRouter.getInstance();
-	}
-
 	public static getTOTPService(): TOTPService {
 		return TOTPService.getInstance();
 	}
@@ -266,9 +250,7 @@ export class ServiceFactory {
 		return UserController.getInstance();
 	}
 
-	public static getYubicoOTPService(
-		yub: YubicoOTPServiceInterface
-	): YubicoOTPService {
-		return YubicoOTPService.getInstance(yub);
+	public static getYubicoOTPService(): YubicoOTPServiceInterface {
+		return YubicoOTPService.getInstance();
 	}
 }

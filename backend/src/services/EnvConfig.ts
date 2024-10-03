@@ -2,11 +2,8 @@ import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import {
-	EnvConfigServiceInterface,
-	EnvVariableTypes,
-	FeatureFlagTypes
-} from '../index/interfaces';
+import { EnvVariableTypes, FeatureFlagTypes } from '../index/interfaces/env';
+import { EnvConfigServiceInterface } from '../index/interfaces/services';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import { ServiceFactory } from '../index/factory';
 
@@ -14,7 +11,7 @@ export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
 export class EnvConfigService implements EnvConfigServiceInterface {
-	private static instance: EnvConfigService;
+	private static instance: EnvConfigService | null = null;
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
@@ -102,6 +99,7 @@ export class EnvConfigService implements EnvConfigServiceInterface {
 			case 'npmLogPath':
 			case 'primaryLogPath':
 			case 'redisUrl':
+			case 'requestTimeout':
 			case 'revokedTokenRetentionPeriod':
 			case 'rpName':
 			case 'rpIcon':
@@ -228,5 +226,34 @@ export class EnvConfigService implements EnvConfigServiceInterface {
 
 	private parseBoolean(value: string | undefined): boolean {
 		return value?.toLowerCase() === 'true';
+	}
+
+	private clearAllEnvVariables(): void {
+		Object.keys(process.env).forEach(key => {
+			delete process.env[key];
+		});
+		this.logger.info('All environment variables cleared from memory.');
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Shutting down EnvConfigService...');
+
+			this.clearAllEnvVariables();
+			EnvConfigService.instance = null;
+
+			this.logger.info('EnvConfigService instance nullified.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error during EnvConfigService shutdown: ${error instanceof Error ? error.message : String(error)}`
+			);
+			const shutdownError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`EnvConfigService shutdown failed: ${error instanceof Error ? error.message : String(error)}`,
+					{ originalError: error }
+				);
+			this.errorHandler.handleError({ error: shutdownError });
+			throw shutdownError;
+		}
 	}
 }

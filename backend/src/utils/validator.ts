@@ -13,9 +13,11 @@ export function sanitizeInput(input: string): string {
 export async function sanitizeRequestBody(
 	body: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-	const { sensitiveFields } = await import('../config/constants').then(module => ({
-		sensitiveFields: module.sensitiveFields
-	}));
+	const { sensitiveFields } = await import('../config/security').then(
+		module => ({
+			sensitiveFields: module.sensitiveFields
+		})
+	);
 
 	const sanitize = async (
 		data: Record<string, unknown>

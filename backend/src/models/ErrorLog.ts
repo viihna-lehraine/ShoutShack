@@ -3,25 +3,12 @@ import {
 	DataTypes,
 	InferAttributes,
 	InferCreationAttributes,
-	Model,
-	Sequelize
+	Model
 } from 'sequelize';
-import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
+import { ErrorLogAttributes } from '../index/interfaces/models';
 
-interface ErrorLogAttributes {
-	id: CreationOptional<number>; // primary key, auto-incremented
-	name: string;
-	message: string;
-	statusCode?: number | null;
-	severity: string;
-	errorCode?: string | null;
-	details?: string | Record<string, unknown> | null;
-	timestamp: CreationOptional<Date>;
-	count: number;
-}
-
-class ErrorLog
+export class ErrorLog
 	extends Model<InferAttributes<ErrorLog>, InferCreationAttributes<ErrorLog>>
 	implements ErrorLogAttributes
 {
@@ -36,18 +23,25 @@ class ErrorLog
 	public count!: number;
 }
 
-export function createErrorLogModel(
-	sequelize: Sequelize
-): typeof ErrorLog | null {
+export function createErrorLogModel(): typeof ErrorLog | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
-		validateDependencies(
-			[{ name: 'sequelize', instance: sequelize }],
-			logger
-		);
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize ErrorLog model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
 
 		ErrorLog.init(
 			{
@@ -103,8 +97,7 @@ export function createErrorLogModel(
 			}
 		);
 
-		logger.info('ErrorLog model initialized');
-
+		logger.info('ErrorLog model initialized successfully');
 		return ErrorLog;
 	} catch (loadModelError) {
 		const loadErrorLogModelError =

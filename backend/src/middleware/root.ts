@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { NextFunction, RequestHandler } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { IncomingMessage } from 'http';
 import morgan, { StreamOptions } from 'morgan';
 import rawBody from 'raw-body';
@@ -12,11 +12,39 @@ import {
 	blankRequest,
 	blankResponse,
 	blankNextFunction
-} from '../config/constants';
+} from '../config/express';
 
 interface XMLParsedRequest extends Request {
 	parsedXmlBody?: Record<string, unknown>;
 }
+
+export const xmlParserMiddleware = (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): void => {
+	const contentType = req.headers['content-type'] as string | undefined;
+
+	if (contentType === 'application/xml') {
+		rawBody(req as unknown as IncomingMessage, { encoding: 'utf-8' })
+			.then((xmlData: string) => {
+				try {
+					(req as XMLParsedRequest).parsedXmlBody =
+						new XMLParser().parse(xmlData);
+					next();
+				} catch (err) {
+					res.status(400).send('Invalid XML format');
+					next(err);
+				}
+			})
+			.catch(err => {
+				res.status(500).send('Error reading XML body');
+				next(err);
+			});
+	} else {
+		next();
+	}
+};
 
 export async function applyRootMiddleware(
 	app: express.Application
@@ -28,7 +56,6 @@ export async function applyRootMiddleware(
 	const stream: StreamOptions = {
 		write: (message: string) => logger.info(message.trim())
 	};
-	const xmlParser = new XMLParser();
 
 	const setMiddlewareStatus = (
 		name: string,
@@ -93,27 +120,9 @@ export async function applyRootMiddleware(
 			app.use(cookieParser());
 			return;
 		});
-		await addMiddleware('xmlParser', () => {
-			app.use(((req: unknown, res: Response, next: NextFunction) => {
-				const contentType = (req as Request).get('content-type');
-				if (contentType === 'application/xml') {
-					rawBody(req as IncomingMessage, { encoding: 'utf-8' })
-						.then((xmlData: string) => {
-							try {
-								(req as XMLParsedRequest).parsedXmlBody =
-									new XMLParser().parse(xmlData);
-								next();
-							} catch (err) {
-								res.status(400).send('Invalid XML format');
-							}
-						})
-						.catch(() => {
-							res.status(500).send('Error reading XML body');
-						});
-				} else {
-					next();
-				}
-			}) as unknown as RequestHandler);
+		await addMiddleware('xmlParserMiddleware', () => {
+			app.use(xmlParserMiddleware);
+			return;
 		});
 		await addMiddleware('morganLogger', () => {
 			app.use(morgan('combined', { stream }));

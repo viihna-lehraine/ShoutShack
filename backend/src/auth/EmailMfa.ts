@@ -1,7 +1,5 @@
-import {
-	EmailMFAServiceDeps,
-	EmailMFAServiceInterface
-} from '../index/interfaces';
+import { EmailMFAServiceInterface } from '../index/interfaces/services';
+import { EmailMFAServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 import { JwtPayload } from 'jsonwebtoken';
 
@@ -11,7 +9,7 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 	private logger = ServiceFactory.getLoggerService();
 	private errorLogger = ServiceFactory.getErrorLoggerService();
 	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getVaultService();
+	private vault = ServiceFactory.getVaultService();
 
 	private constructor() {}
 
@@ -32,7 +30,7 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 	}> {
 		try {
 			const emailMFACode = await bcrypt.genSalt(6);
-			const key = await this.secrets.retrieveSecret(
+			const key = await this.vault.retrieveSecret(
 				'EMAIL_MFA_KEY',
 				secret => secret
 			);
@@ -85,7 +83,7 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 			}
 
 			const jwt = await this.loadJwt();
-			const emailMFAKey = await this.secrets.retrieveSecret(
+			const emailMFAKey = await this.vault.retrieveSecret(
 				'EMAIL_MFA_KEY',
 				secret => secret
 			);
@@ -126,6 +124,21 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 				error
 			});
 			throw error;
+		}
+	}
+
+	public async shutdown(): Promise<void> {
+		try {
+			this.logger.info('Clearing MFA tokens from cache...');
+			await this.cacheService.clearNamespace('auth');
+
+			EmailMFAService.instance = null;
+
+			this.logger.info('EmailMFAService shutdown successfully.');
+		} catch (error) {
+			this.errorLogger.logError(
+				`Error shutting down EmailMFAService: ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 

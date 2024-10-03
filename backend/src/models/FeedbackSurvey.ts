@@ -3,38 +3,13 @@ import {
 	DataTypes,
 	Model,
 	InferAttributes,
-	InferCreationAttributes,
-	Sequelize
+	InferCreationAttributes
 } from 'sequelize';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
+import { FeedbackSurveyAttributes } from '../index/interfaces/models';
 
-interface FeedbackSurveyAttributes {
-	surveyId: number;
-	questionGeneralApproval?: number | null;
-	questionServiceQuality?: number | null;
-	questionEaseOfUse?: number | null;
-	questionUserSupport?: number | null;
-	questionHelpGuides?: number | null;
-	questionIsPremiumUser?: boolean | null;
-	questionPremiumValue?: number | null;
-	questionLikelihoodToRecommend?: number | null;
-	questionUsefulFeaturesAndAspects?: object | null;
-	questionFeaturesThatNeedImprovement?: object | null;
-	questionOpenEndedLikeTheMost?: string | null;
-	questionOpenEndedWhatCanWeImprove?: string | null;
-	questionDemoHeardAboutUs?: number | null;
-	questionDemoAgeGroup?: number | null;
-	questionDemoGender?: string | null;
-	questionDemoRegion?: string | null;
-	questionDemoLangPref?: string | null;
-	questionFinalThoughts?: string | null;
-	hasOptedInForFollowUp?: boolean | null;
-	email?: string | null;
-	surveyDate?: CreationOptional<Date>;
-}
-
-class FeedbackSurvey
+export class FeedbackSurvey
 	extends Model<
 		InferAttributes<FeedbackSurvey>,
 		InferCreationAttributes<FeedbackSurvey>
@@ -65,14 +40,26 @@ class FeedbackSurvey
 	public surveyDate!: CreationOptional<Date>;
 }
 
-export default function createFeedbackSurveyModel(
-	sequelize: Sequelize
-): typeof FeedbackSurvey | null {
+export function createFeedbackSurveyModel(): typeof FeedbackSurvey | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize FeedbackSurvey model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger
@@ -238,5 +225,3 @@ export default function createFeedbackSurveyModel(
 		return null;
 	}
 }
-
-export { FeedbackSurvey };

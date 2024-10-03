@@ -2,38 +2,16 @@ import {
 	InferAttributes,
 	InferCreationAttributes,
 	Model,
-	DataTypes,
-	Sequelize
+	DataTypes
 } from 'sequelize';
-import { User } from './UserModelFile';
+import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
+import { UserMFAAttributes } from '../index/interfaces/models';
 
-interface UserMfaAttributes {
-	id: string; // UUID for the MFA record and primary key (from User model)
-	isMfaEnabled: boolean;
-	backupCodes?: string[] | null;
-	isEmail2faEnabled: boolean;
-	isTotp2faEnabled: boolean;
-	isYubicoOtp2faEnabled: boolean;
-	isU2f2faEnabled: boolean;
-	isPasskeyEnabled: boolean;
-	totpSecret: string | null;
-	yubicoOtpPublicId: string | null;
-	yubicoOtpSecretKey: string | null;
-	fido2CredentialId: string | null;
-	fido2PublicKey: string | null;
-	fido2Counter: number | null;
-	fido2AttestationFormat: string | null;
-	passkeyCredentialId: string | null;
-	passkeyPublicKey: string | null;
-	passkeyCounter: number | null;
-	passkeyAttestationFormat: string | null;
-}
-
-class UserMfa
-	extends Model<InferAttributes<UserMfa>, InferCreationAttributes<UserMfa>>
-	implements UserMfaAttributes
+export class UserMFA
+	extends Model<InferAttributes<UserMFA>, InferCreationAttributes<UserMFA>>
+	implements UserMFAAttributes
 {
 	public id!: string;
 	public isMfaEnabled!: boolean;
@@ -56,20 +34,32 @@ class UserMfa
 	public passkeyAttestationFormat!: string | null;
 }
 
-export default function createUserMfaModel(
-	sequelize: Sequelize
-): typeof UserMfa | null {
+export function createUserMFAModel(): typeof UserMFA | null {
 	const logger = ServiceFactory.getLoggerService();
 	const errorLogger = ServiceFactory.getErrorLoggerService();
 	const errorHandler = ServiceFactory.getErrorHandlerService();
 
 	try {
+		const sequelize =
+			ServiceFactory.getDatabaseController().getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize UserMFA model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
 		validateDependencies(
 			[{ name: 'sequelize', instance: sequelize }],
 			logger
 		);
 
-		UserMfa.init(
+		UserMFA.init(
 			{
 				id: {
 					type: DataTypes.UUID,
@@ -168,7 +158,7 @@ export default function createUserMfaModel(
 			}
 		);
 
-		return UserMfa;
+		return UserMFA;
 	} catch (dbError) {
 		const databaseError =
 			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
@@ -182,5 +172,3 @@ export default function createUserMfaModel(
 		return null;
 	}
 }
-
-export { UserMfa };

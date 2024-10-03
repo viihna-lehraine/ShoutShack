@@ -10,7 +10,7 @@ import {
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from '../index/interfaces';
+} from '../index/interfaces/services';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
 import { sanitizeRequestBody } from '../utils/validator';
@@ -296,5 +296,16 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 			});
 			process.exit(1);
 		}
+	}
+
+	public async shutdown(): Promise<void> {
+		this.logger.logInfo('Initiating ErrorHandlerService shutdown...');
+
+		if (this.shutdownFunction) {
+			await this.shutdownFunction();
+			this.logger.logInfo('Error Handler shutdown function completed.');
+		}
+
+		this.logger.logInfo('ErrorHandlerService shutdown completed.');
 	}
 }
