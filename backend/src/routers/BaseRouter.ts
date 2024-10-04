@@ -10,7 +10,18 @@ import { HealthRouter } from './HealthRouter';
 import { StaticRouter } from './StaticRouter';
 import { TestRouter } from './TestRouter';
 import { ServiceFactory } from '../index/factory';
-import { BaseRouterInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	BaseRouterInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	PassportAuthMiddlewareServiceInterface
+} from '../index/interfaces/services';
 import { sanitizeRequestBody } from '../utils/validator';
 import { validateDependencies } from '../utils/helpers';
 import { withRetry } from '../utils/helpers';
@@ -24,29 +35,57 @@ export class BaseRouter implements BaseRouterInterface {
 
 	protected router: Router;
 
-	protected logger = ServiceFactory.getLoggerService();
-	protected errorLogger = ServiceFactory.getErrorLoggerService();
-	protected errorHandler = ServiceFactory.getErrorHandlerService();
-	protected envConfig = ServiceFactory.getEnvConfigService();
-	protected cacheService = ServiceFactory.getCacheService();
-	protected gatekeeperService = ServiceFactory.getGatekeeperService();
-	protected helmetService = ServiceFactory.getHelmetMiddlewareService();
-	protected JWTMiddleware = ServiceFactory.getJWTAuthMiddlewareService();
-	protected passportMiddleware =
-		ServiceFactory.getPassportAuthMiddlewareService();
+	protected logger: AppLoggerServiceInterface;
+	protected errorLogger: ErrorLoggerServiceInterface;
+	protected errorHandler: ErrorHandlerServiceInterface;
+	protected envConfig: EnvConfigServiceInterface;
+	protected cacheService: CacheServiceInterface;
+	protected gatekeeperService: GatekeeperServiceInterface;
+	protected helmetService: HelmetMiddlwareServiceInterface;
+	protected JWTMiddleware: JWTAuthMiddlewareServiceInterface;
+	protected passportMiddleware: PassportAuthMiddlewareServiceInterface;
 
 	protected apiRouteTable: Record<string, Record<string, string>> = {};
 	protected healthRouteTable: Record<string, Record<string, string>> = {};
 	protected staticRouteTable: Record<string, Record<string, string>> = {};
 	protected testRouteTable: Record<string, Record<string, string>> = {};
 
-	protected constructor() {
+	protected constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		helmetService: HelmetMiddlwareServiceInterface,
+		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
+		passportMiddleware: PassportAuthMiddlewareServiceInterface
+	) {
 		this.router = express.Router();
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.cacheService = cacheService;
+		this.gatekeeperService = gatekeeperService;
+		this.helmetService = helmetService;
+		this.JWTMiddleware = JWTMiddleware;
+		this.passportMiddleware = passportMiddleware;
 	}
 
 	public static async getInstance(): Promise<BaseRouter> {
 		if (!BaseRouter.instance) {
-			BaseRouter.instance = new BaseRouter();
+			BaseRouter.instance = new BaseRouter(
+				await ServiceFactory.getLoggerService(),
+				await ServiceFactory.getErrorLoggerService(),
+				await ServiceFactory.getErrorHandlerService(),
+				await ServiceFactory.getEnvConfigService(),
+				await ServiceFactory.getCacheService(),
+				await ServiceFactory.getGatekeeperService(),
+				await ServiceFactory.getHelmetMiddlewareService(),
+				await ServiceFactory.getJWTAuthMiddlewareService(),
+				await ServiceFactory.getPassportAuthMiddlewareService()
+			);
 			await BaseRouter.instance.initializeBaseRouter();
 		}
 
@@ -98,50 +137,59 @@ export class BaseRouter implements BaseRouterInterface {
 	): Promise<void> {
 		const method = req.method;
 		const path = req.path;
+		try {
+			if (
+				this.staticRouteTable[path] &&
+				this.staticRouteTable[path][method]
+			) {
+				return await this.handleRoute(
+					this.staticRouteTable[path][method],
+					req,
+					res,
+					next
+				);
+			}
 
-		if (
-			this.staticRouteTable[path] &&
-			this.staticRouteTable[path][method]
-		) {
-			return await this.handleRoute(
-				this.staticRouteTable[path][method],
-				req,
-				res,
-				next
-			);
+			if (this.apiRouteTable[path] && this.apiRouteTable[path][method]) {
+				return await this.handleRoute(
+					this.apiRouteTable[path][method],
+					req,
+					res,
+					next
+				);
+			}
+
+			if (
+				this.healthRouteTable[path] &&
+				this.healthRouteTable[path][method]
+			) {
+				return await this.handleRoute(
+					this.healthRouteTable[path][method],
+					req,
+					res,
+					next
+				);
+			}
+
+			if (
+				this.testRouteTable[path] &&
+				this.testRouteTable[path][method] &&
+				this.envConfig.getFeatureFlags().loadTestRoutes
+			) {
+				return await this.handleRoute(
+					this.testRouteTable[path][method],
+					req,
+					res,
+					next
+				);
+			}
+
+			const staticRouterInstance =
+				(await StaticRouter.getInstance()) as StaticRouter;
+			await staticRouterInstance.serveNotFoundPage(req, res, next);
+		} catch (error) {
+			this.handleRouteError(error, req, res, next);
 		}
-
-		if (this.apiRouteTable[path] && this.apiRouteTable[path][method]) {
-			return await this.handleRoute(
-				this.apiRouteTable[path][method],
-				req,
-				res,
-				next
-			);
-		}
-
-		if (
-			this.healthRouteTable[path] &&
-			this.healthRouteTable[path][method]
-		) {
-			return await this.handleRoute(
-				this.healthRouteTable[path][method],
-				req,
-				res,
-				next
-			);
-		}
-
-		if (this.testRouteTable[path] && this.testRouteTable[path][method]) {
-			return await this.handleRoute(
-				this.testRouteTable[path][method],
-				req,
-				res,
-				next
-			);
-		}
-
-		res.status(404).json({ message: 'Route not found' });
 	}
 
 	private async handleRoute(

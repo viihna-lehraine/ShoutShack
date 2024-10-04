@@ -1,4 +1,9 @@
-import { BackupCodeServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	BackupCodeServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface
+} from '../index/interfaces/services';
 import { BackupCodeInterface } from '../index/interfaces/serviceComponents';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
@@ -8,15 +13,31 @@ import { UserMFA } from '../models/UserMFA';
 
 export class BackupCodeService implements BackupCodeServiceInterface {
 	private static instance: BackupCodeService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+	}
 
-	public static getInstance(): BackupCodeService {
+	public static async getInstance(): Promise<BackupCodeService> {
 		if (!BackupCodeService.instance) {
-			BackupCodeService.instance = new BackupCodeService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
+			BackupCodeService.instance = new BackupCodeService(
+				logger,
+				errorLogger,
+				errorHandler
+			);
 		}
 		return BackupCodeService.instance;
 	}

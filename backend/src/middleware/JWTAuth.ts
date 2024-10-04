@@ -1,6 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 import { ServiceFactory } from '../index/factory';
-import { JWTAuthMiddlewareServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	RedisServiceInterface
+} from '../index/interfaces/services';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
@@ -10,32 +19,49 @@ export class JWTAuthMiddlewareService
 	implements JWTAuthMiddlewareServiceInterface
 {
 	private static instance: JWTAuthMiddlewareService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private gatekeeperService = ServiceFactory.getGatekeeperService();
-	private cacheService = ServiceFactory.getCacheService();
-	private redisService = ServiceFactory.getRedisService();
+
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private gatekeeperService: GatekeeperServiceInterface;
+	private cacheService: CacheServiceInterface;
+	private redisService: RedisServiceInterface;
+
 	private expiredTokens: Set<string> = new Set();
 	private revokedTokens: Set<string> = new Set();
-	private expiryListFilePath =
-		ServiceFactory.getEnvConfigService().getEnvVariable(
-			'tokenExpiryListPath'
-		);
-	private revocationListFilePath =
-		ServiceFactory.getEnvConfigService().getEnvVariable(
-			'tokenRevokedListPath'
-		);
+	private expiryListFilePath: string;
+	private revocationListFilePath: string;
 	private expiryListCacheKey = 'tokenExpirationList';
 	private revocationListCacheKey = 'tokenRevocationList';
-	private cacheDuration =
-		ServiceFactory.getEnvConfigService().getEnvVariable(
-			'tokenCacheDuration'
-		) || 3600;
+	private cacheDuration: number;
 	private cleanupExpiredTokensInterval: NodeJS.Timeout | null = null;
 	private cleanupRevokedTokensInterval: NodeJS.Timeout | null = null;
 
-	private constructor() {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		cacheService: CacheServiceInterface,
+		redisService: RedisServiceInterface,
+		envConfig: EnvConfigServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.gatekeeperService = gatekeeperService;
+		this.cacheService = cacheService;
+		this.redisService = redisService;
+
+		this.expiryListFilePath = envConfig.getEnvVariable(
+			'tokenExpiryListPath'
+		);
+		this.revocationListFilePath = envConfig.getEnvVariable(
+			'tokenRevokedListPath'
+		);
+		this.cacheDuration =
+			envConfig.getEnvVariable('tokenCacheDuration') || 3600;
+
 		this.loadExpiredTokens();
 		this.loadRevokedTokens();
 		this.cleanupExpiredTokensInterval = setInterval(
@@ -48,9 +74,26 @@ export class JWTAuthMiddlewareService
 		);
 	}
 
-	public static getInstance(): JWTAuthMiddlewareService {
+	public static async getInstance(): Promise<JWTAuthMiddlewareService> {
 		if (!JWTAuthMiddlewareService.instance) {
-			JWTAuthMiddlewareService.instance = new JWTAuthMiddlewareService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const gatekeeperService =
+				await ServiceFactory.getGatekeeperService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const redisService = await ServiceFactory.getRedisService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+
+			JWTAuthMiddlewareService.instance = new JWTAuthMiddlewareService(
+				logger,
+				errorLogger,
+				errorHandler,
+				gatekeeperService,
+				cacheService,
+				redisService,
+				envConfig
+			);
 		}
 
 		return JWTAuthMiddlewareService.instance;
@@ -106,7 +149,7 @@ export class JWTAuthMiddlewareService
 					return res.status(403).json({ error: 'Token expired' });
 				}
 
-				const jwtService = ServiceFactory.getJWTService();
+				const jwtService = await ServiceFactory.getJWTService();
 				const user = await jwtService.verifyJWT(token);
 
 				if (!user) {
@@ -319,10 +362,10 @@ export class JWTAuthMiddlewareService
 	}
 
 	private async cleanupRevokedTokens(): Promise<void> {
+		const envConfig = await ServiceFactory.getEnvConfigService();
 		const revocationRetentionPeriod =
-			ServiceFactory.getEnvConfigService().getEnvVariable(
-				'revokedTokenRetentionPeriod'
-			) || 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+			envConfig.getEnvVariable('revokedTokenRetentionPeriod') ||
+			30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 		const now = Date.now();
 		let revokedTokenRemoved = false;
 

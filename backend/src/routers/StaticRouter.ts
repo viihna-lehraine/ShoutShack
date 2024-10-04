@@ -2,7 +2,18 @@ import { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { BaseRouter } from './BaseRouter';
-import { StaticRouterInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	PassportAuthMiddlewareServiceInterface,
+	StaticRouterInterface
+} from '../index/interfaces/services';
 import { FileTypeRecords } from '../index/interfaces/serviceComponents';
 import { validateDependencies } from '../utils/helpers';
 import { withRetry } from '../utils/helpers';
@@ -40,8 +51,28 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 	private validExtensions: string[] = [];
 	private cacheTTLs = fileCacheTTLConfig;
 
-	private constructor() {
-		super();
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		helmetService: HelmetMiddlwareServiceInterface,
+		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
+		passportMiddleware: PassportAuthMiddlewareServiceInterface
+	) {
+		super(
+			logger,
+			errorLogger,
+			errorHandler,
+			envConfig,
+			cacheService,
+			gatekeeperService,
+			helmetService,
+			JWTMiddleware,
+			passportMiddleware
+		);
 	}
 
 	public async initializeStaticRouter(): Promise<void> {
@@ -193,7 +224,7 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 	}
 
 	// *DEV-NOTE* this should work with Gatekeeper to track any IP that is making directory traversal attempts and act accordingly
-	public async serveStaticFile(
+	private async serveStaticFile(
 		filePath: string,
 		route: string,
 		req: Request,
@@ -231,7 +262,6 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 				}
 
 				const ext = path.extname(resolvedPath);
-
 				let serveFunction: (
 					req: Request,
 					res: Response,
@@ -273,19 +303,36 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 						serveFunction = this.serveNotFoundPage.bind(this);
 				}
 
-				await serveFunction(req, res, next);
+				try {
+					await serveFunction(req, res, next);
 
-				const fileContent = await this.readFileContent(resolvedPath);
-				await this.cacheService.set(
-					cacheKey,
-					fileContent,
-					'static-files',
-					cacheTTL
-				);
+					const fileContent =
+						await this.readFileContent(resolvedPath);
+					await this.cacheService.set(
+						cacheKey,
+						fileContent,
+						'static-files',
+						cacheTTL
+					);
 
-				this.logger.debug(
-					`Served and cached static file: ${route} with TTL: ${cacheTTL} seconds`
-				);
+					this.logger.debug(
+						`Served and cached static file: ${route} with TTL: ${cacheTTL} seconds`
+					);
+				} catch (error) {
+					this.errorLogger.logError(
+						`Error serving static file ${route}: ${
+							error instanceof Error
+								? error.message
+								: 'Unknown error'
+						}`
+					);
+					this.errorHandler.sendClientErrorResponse({
+						message: `${route} not found`,
+						statusCode: 404,
+						res
+					});
+					next(error);
+				}
 			},
 			3,
 			500
@@ -297,7 +344,6 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 	}
 
 	private getCacheKey(route: string): string {
-		// Create a standardized cache key
 		return `static:${route}`;
 	}
 
@@ -342,7 +388,7 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 		});
 	}
 
-	private async serveNotFoundPage(
+	public async serveNotFoundPage(
 		req: Request,
 		res: Response,
 		next: NextFunction
@@ -784,9 +830,9 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 		next: NextFunction
 	): Promise<void> {
 		const filePath = path.normalize(req.url);
-		const resolvedPath = path.resolve(filePath);
+		const resolvedPath = path.resolve(this.staticRootPath, filePath);
 		const isForbiddenDirectory = this.forbiddenDirectories.some(dir =>
-			resolvedPath.includes(dir)
+			resolvedPath.includes(path.resolve(this.staticRootPath, dir))
 		);
 
 		if (isForbiddenDirectory) {
@@ -794,40 +840,50 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 				`Attempted access to forbidden directory: ${req.url}`
 			);
 			res.status(403).json({ message: 'Access denied' });
+
 			return;
 		}
 
 		const isValidDirectory = this.validDirectories.some(dir =>
-			resolvedPath.includes(dir)
+			resolvedPath.includes(path.resolve(this.staticRootPath, dir))
 		);
+
 		if (!isValidDirectory) {
 			this.logger.warn(
 				`Attempted access to invalid directory: ${req.url}`
 			);
 			res.status(403).json({ message: 'Access denied' });
+
 			return;
 		}
 
 		const filename = path.basename(filePath);
 		const fileExt = path.extname(filename);
 
-		if (
-			this.forbiddenFiles.includes(filename) ||
-			this.forbiddenExtensions.includes(fileExt)
-		) {
+		if (this.forbiddenFiles.includes(filename)) {
+			this.logger.warn(`Attempted access to forbidden file: ${filename}`);
+			res.status(403).json({ message: 'Access denied' });
+
+			return;
+		}
+
+		if (this.forbiddenExtensions.includes(fileExt)) {
 			this.logger.warn(
-				`Attempted access to forbidden file or file type: ${filename}`
+				`Attempted access to forbidden file extension: ${fileExt}`
 			);
 			res.status(403).json({ message: 'Access denied' });
+
 			return;
 		}
 
 		const isValidExtension = this.validExtensions.includes(fileExt);
+
 		if (!isValidExtension) {
 			this.logger.warn(
 				`Attempted access to invalid file extension: ${fileExt}`
 			);
 			res.status(403).json({ message: 'Access denied' });
+
 			return;
 		}
 

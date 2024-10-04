@@ -1,24 +1,60 @@
-import { ResourceManagerInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	RedisServiceInterface,
+	ResourceManagerInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import os from 'os';
 import fs from 'fs';
 import toobusy from 'toobusy-js';
 
 export class ResourceManager implements ResourceManagerInterface {
-	private static instance: ResourceManager;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private redisService = ServiceFactory.getRedisService();
-	private cacheService = ServiceFactory.getCacheService();
-	private memoryCacheLRU = new Map<string, number>();
+	private static instance: ResourceManager | null = null;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private redisService: RedisServiceInterface;
+	private cacheService: CacheServiceInterface;
+	private memoryCacheLRU: Map<string, number> = new Map();
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		redisService: RedisServiceInterface,
+		cacheService: CacheServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.redisService = redisService;
+		this.cacheService = cacheService;
+	}
 
-	public static getInstance(): ResourceManager {
+	public static async getInstance(): Promise<ResourceManager> {
 		if (!ResourceManager.instance) {
-			ResourceManager.instance = new ResourceManager();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const redisService = await ServiceFactory.getRedisService();
+			const cacheService = await ServiceFactory.getCacheService();
+
+			ResourceManager.instance = new ResourceManager(
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				redisService,
+				cacheService
+			);
 		}
 
 		return ResourceManager.instance;
@@ -366,8 +402,11 @@ export class ResourceManager implements ResourceManagerInterface {
 	public async closeIdleConnections(): Promise<void> {
 		try {
 			this.logger.info('Closing idle database connections...');
-			const databaseController = ServiceFactory.getDatabaseController();
-			await databaseController.clearIdleConnections();
+
+			const databaseController =
+				await ServiceFactory.getDatabaseController();
+			databaseController.clearIdleConnections();
+
 			this.logger.info('Idle database connections closed successfully');
 
 			this.logger.info(

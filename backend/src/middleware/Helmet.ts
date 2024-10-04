@@ -5,21 +5,42 @@ import {
 	helmetOptions,
 	permissionsPolicyOptions
 } from '../config/middlewareOptions';
-import { HelmetMiddlwareServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	HelmetMiddlwareServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
 
 export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 	private static instance: HelmetMiddlwareService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+	}
 
-	public static getInstance(): HelmetMiddlwareService {
+	public static async getInstance(): Promise<HelmetMiddlwareService> {
 		if (!HelmetMiddlwareService.instance) {
-			HelmetMiddlwareService.instance = new HelmetMiddlwareService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
+			HelmetMiddlwareService.instance = new HelmetMiddlwareService(
+				logger,
+				errorLogger,
+				errorHandler
+			);
 		}
 
 		return HelmetMiddlwareService.instance;

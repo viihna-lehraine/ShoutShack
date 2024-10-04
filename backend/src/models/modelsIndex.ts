@@ -3,9 +3,9 @@ import { loadModels, Models } from './loadModels';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
-const logger = ServiceFactory.getLoggerService();
-const errorLogger = ServiceFactory.getErrorLoggerService();
-const errorHandler = ServiceFactory.getErrorHandlerService();
+const logger = await ServiceFactory.getLoggerService();
+const errorLogger = await ServiceFactory.getErrorLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 let models: Models | null = null;
 let sequelize: Sequelize;

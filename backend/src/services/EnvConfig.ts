@@ -3,7 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { EnvVariableTypes, FeatureFlagTypes } from '../index/interfaces/env';
-import { EnvConfigServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces/services';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import { ServiceFactory } from '../index/factory';
 
@@ -12,17 +17,32 @@ export const __dirname = dirname(__filename);
 
 export class EnvConfigService implements EnvConfigServiceInterface {
 	private static instance: EnvConfigService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	private constructor() {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
 		this.loadEnv();
 	}
 
-	public static getInstance(): EnvConfigService {
+	public static async getInstance(): Promise<EnvConfigService> {
 		if (!EnvConfigService.instance) {
-			EnvConfigService.instance = new EnvConfigService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
+			EnvConfigService.instance = new EnvConfigService(
+				logger,
+				errorLogger,
+				errorHandler
+			);
 		}
 
 		return EnvConfigService.instance;

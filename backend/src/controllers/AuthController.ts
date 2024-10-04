@@ -1,6 +1,23 @@
 import { ServiceFactory } from '../index/factory';
 import { UserInstanceInterface } from '../index/interfaces/models';
-import { AuthControllerInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	AuthControllerInterface,
+	BackupCodeServiceInterface,
+	CacheServiceInterface,
+	EmailMFAServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	JWTServiceInterface,
+	MailerServiceInterface,
+	PassportAuthMiddlewareServiceInterface,
+	PassportServiceInterface,
+	PasswordServiceInterface,
+	TOTPServiceInterface,
+	UserControllerInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { UserControllerDeps } from '../index/interfaces/serviceDeps';
 import { validateDependencies } from '../utils/helpers';
 import { createUserModel } from '../models/User';
@@ -8,34 +25,107 @@ import { generateEmailMFATemplate } from '../templates/emailMFACodeTemplate';
 import passport from 'passport';
 import { RequestHandler } from 'express';
 import { serviceTTLConfig } from '../config/cache';
+import { Sequelize } from 'sequelize';
 
 export class AuthController implements AuthControllerInterface {
 	private static instance: AuthController | null = null;
-	private backupCodeService = ServiceFactory.getBackupCodeService();
-	private emailMFAService = ServiceFactory.getEmailMFAService();
-	private JWTAuthMiddlewareService =
-		ServiceFactory.getJWTAuthMiddlewareService();
-	private JWTService = ServiceFactory.getJWTService();
-	private passportAuthService = ServiceFactory.getPassportService();
-	private passportAuthMiddlewareService =
-		ServiceFactory.getPassportAuthMiddlewareService();
-	private passwordService = ServiceFactory.getPasswordService();
-	private TOTPService = ServiceFactory.getTOTPService();
-	protected UserController = ServiceFactory.getUserController();
-	protected cacheService = ServiceFactory.getCacheService();
-	protected logger = ServiceFactory.getLoggerService();
-	protected errorLogger = ServiceFactory.getErrorLoggerService();
-	protected errorHandler = ServiceFactory.getErrorHandlerService();
-	protected secrets = ServiceFactory.getVaultService();
-	protected mailer = ServiceFactory.getMailerService();
-	private sequelize =
-		ServiceFactory.getDatabaseController().getSequelizeInstance();
+	private backupCodeService: BackupCodeServiceInterface;
+	private emailMFAService: EmailMFAServiceInterface;
+	private JWTAuthMiddlewareService: JWTAuthMiddlewareServiceInterface;
+	private JWTService: JWTServiceInterface;
+	private passportAuthService: PassportServiceInterface;
+	private passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface;
+	private passwordService: PasswordServiceInterface;
+	private TOTPService: TOTPServiceInterface;
+	protected UserController: UserControllerInterface;
+	protected cacheService: CacheServiceInterface;
+	protected logger: AppLoggerServiceInterface;
+	protected errorLogger: ErrorLoggerServiceInterface;
+	protected errorHandler: ErrorHandlerServiceInterface;
+	protected vault: VaultServiceInterface;
+	protected mailer: MailerServiceInterface;
 
-	private constructor() {}
+	private sequelize: Sequelize | null;
 
-	public static getInstance(): AuthController {
+	private constructor(
+		backupCodeService: BackupCodeServiceInterface,
+		emailMFAService: EmailMFAServiceInterface,
+		JWTAuthMiddlewareService: JWTAuthMiddlewareServiceInterface,
+		JWTService: JWTServiceInterface,
+		passportAuthService: PassportServiceInterface,
+		passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface,
+		passwordService: PasswordServiceInterface,
+		TOTPService: TOTPServiceInterface,
+		UserController: UserControllerInterface,
+		cacheService: CacheServiceInterface,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		vault: VaultServiceInterface,
+		mailer: MailerServiceInterface,
+		sequelize: Sequelize | null
+	) {
+		this.backupCodeService = backupCodeService;
+		this.emailMFAService = emailMFAService;
+		this.JWTAuthMiddlewareService = JWTAuthMiddlewareService;
+		this.JWTService = JWTService;
+		this.passportAuthService = passportAuthService;
+		this.passportAuthMiddlewareService = passportAuthMiddlewareService;
+		this.passwordService = passwordService;
+		this.TOTPService = TOTPService;
+		this.UserController = UserController;
+		this.cacheService = cacheService;
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.vault = vault;
+		this.mailer = mailer;
+		this.sequelize = sequelize;
+	}
+
+	public static async getInstance(): Promise<AuthController> {
 		if (!AuthController.instance) {
-			AuthController.instance = new AuthController();
+			const backupCodeService =
+				await ServiceFactory.getBackupCodeService();
+			const emailMFAService = await ServiceFactory.getEmailMFAService();
+			const JWTAuthMiddlewareService =
+				await ServiceFactory.getJWTAuthMiddlewareService();
+			const JWTService = await ServiceFactory.getJWTService();
+			const passportAuthService =
+				await ServiceFactory.getPassportService();
+			const passportAuthMiddlewareService =
+				await ServiceFactory.getPassportAuthMiddlewareService();
+			const passwordService = await ServiceFactory.getPasswordService();
+			const TOTPService = await ServiceFactory.getTOTPService();
+			const UserController = await ServiceFactory.getUserController();
+			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const vault = await ServiceFactory.getVaultService();
+			const mailer = await ServiceFactory.getMailerService();
+			const databaseController =
+				await ServiceFactory.getDatabaseController();
+			const sequelize = await databaseController.getSequelizeInstance();
+
+			AuthController.instance = new AuthController(
+				backupCodeService,
+				emailMFAService,
+				JWTAuthMiddlewareService,
+				JWTService,
+				passportAuthService,
+				passportAuthMiddlewareService,
+				passwordService,
+				TOTPService,
+				UserController,
+				cacheService,
+				logger,
+				errorLogger,
+				errorHandler,
+				vault,
+				mailer,
+				sequelize
+			);
 		}
 
 		return AuthController.instance;
@@ -121,7 +211,7 @@ export class AuthController implements AuthControllerInterface {
 			}
 
 			const argon2 = await this.loadArgon2();
-			const pepper = await this.secrets.retrieveSecret(
+			const pepper = await this.vault.retrieveSecret(
 				'PEPPER',
 				secret => secret
 			);
@@ -136,7 +226,7 @@ export class AuthController implements AuthControllerInterface {
 				);
 			}
 
-			if (user.isMfaEnabled) {
+			if (user.isMFAEnabled) {
 				const mfaResult = await this.handleMFAForLogin(user);
 				return { success: true, requiresMFA: mfaResult };
 			}
@@ -262,8 +352,21 @@ export class AuthController implements AuthControllerInterface {
 		newPassword: string
 	): Promise<UserInstanceInterface | null> {
 		try {
-			const hashedPassword =
-				await this.passwordService.hashPassword(newPassword);
+			const pepper = await this.vault.retrieveSecret(
+				'PEPPER',
+				secret => secret
+			);
+
+			if (!pepper) {
+				throw new this.errorHandler.ErrorClasses.AppAuthenticationError(
+					'PEPPER could not be found'
+				);
+			}
+
+			const hashedPassword = await this.passwordService.hashPassword(
+				newPassword,
+				pepper
+			);
 			user.password = hashedPassword;
 
 			user.resetPasswordToken = null;
@@ -354,7 +457,7 @@ export class AuthController implements AuthControllerInterface {
 				return false;
 			}
 
-			user.isMfaEnabled = true;
+			user.isMFAEnabled = true;
 			await user.save();
 
 			this.logger.info(`MFA enabled for user ${user.username}`);
@@ -378,7 +481,7 @@ export class AuthController implements AuthControllerInterface {
 				return false;
 			}
 
-			user.isMfaEnabled = false;
+			user.isMFAEnabled = false;
 			await user.save();
 
 			this.logger.info(`MFA disabled for user ${user.username}`);

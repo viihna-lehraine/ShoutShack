@@ -1,21 +1,48 @@
-import { PasswordServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	PasswordServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { hashConfig } from '../config/security';
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
 export class PasswordService implements PasswordServiceInterface {
 	private static instance: PasswordService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getVaultService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private secrets: VaultServiceInterface;
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		secrets: VaultServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.secrets = secrets;
+	}
 
-	public static getInstance(): PasswordService {
+	public static async getInstance(): Promise<PasswordService> {
 		if (!PasswordService.instance) {
-			PasswordService.instance = new PasswordService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const secrets = await ServiceFactory.getVaultService();
+
+			PasswordService.instance = new PasswordService(
+				logger,
+				errorLogger,
+				errorHandler,
+				secrets
+			);
 		}
+
 		return PasswordService.instance;
 	}
 

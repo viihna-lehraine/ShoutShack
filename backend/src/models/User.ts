@@ -10,8 +10,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { UserAttributesInterface } from '../index/interfaces/models';
 import { ServiceFactory } from '../index/factory';
 
-const errorLogger = ServiceFactory.getErrorLoggerService();
-const errorHandler = ServiceFactory.getErrorHandlerService();
+const errorLogger = await ServiceFactory.getErrorLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
+const databaseController = await ServiceFactory.getDatabaseController();
 
 export class User
 	extends Model<InferAttributes<User>, InferCreationAttributes<User>>
@@ -25,11 +26,11 @@ export class User
 	public isVerified!: boolean;
 	public resetPasswordToken!: string | null;
 	public resetPasswordExpires!: Date | null;
-	public isMfaEnabled!: boolean;
+	public isMFAEnabled!: boolean;
 	public totpSecret?: string | null | undefined;
-	public email2faSecret?: string | null | undefined;
-	public email2faToken?: string | null | undefined;
-	public email2faTokenExpires?: Date | null | undefined;
+	public emailMFASecret?: string | null | undefined;
+	public emailMFAToken?: string | null | undefined;
+	public emailMFATokenExpires?: Date | null | undefined;
 	public creationDate!: CreationOptional<Date>;
 
 	static initializeModel(sequelize: Sequelize): void {
@@ -75,7 +76,7 @@ export class User
 					type: DataTypes.DATE,
 					allowNull: true
 				},
-				isMfaEnabled: {
+				isMFAEnabled: {
 					type: DataTypes.BOOLEAN,
 					allowNull: false,
 					defaultValue: false
@@ -84,15 +85,15 @@ export class User
 					type: DataTypes.STRING,
 					allowNull: true
 				},
-				email2faSecret: {
+				emailMFASecret: {
 					type: DataTypes.STRING,
 					allowNull: true
 				},
-				email2faToken: {
+				emailMFAToken: {
 					type: DataTypes.STRING,
 					allowNull: true
 				},
-				email2faTokenExpires: {
+				emailMFATokenExpires: {
 					type: DataTypes.DATE,
 					allowNull: true
 				},
@@ -111,10 +112,9 @@ export class User
 	}
 }
 
-export function createUserModel(): typeof User {
+export async function createUserModel(): Promise<typeof User> {
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

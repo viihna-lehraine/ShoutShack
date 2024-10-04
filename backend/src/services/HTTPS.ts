@@ -2,10 +2,43 @@ import gracefulShutdown from 'http-graceful-shutdown';
 import https from 'https';
 import net from 'net';
 import { Sequelize } from 'sequelize';
-import { Application, NextFunction, Request, Response } from 'express';
+import { Application } from 'express';
 import { constants as cryptoConstants } from 'crypto';
 import { validateDependencies } from '../utils/helpers';
-import { HTTPSServerInterface } from '../index/interfaces/services';
+import {
+	AccessControlMiddlewareServiceInterface,
+	AppLoggerServiceInterface,
+	AuthControllerInterface,
+	BackupCodeServiceInterface,
+	BaseRouterInterface,
+	CacheServiceInterface,
+	CSRFMiddlewareServiceInterface,
+	DatabaseControllerInterface,
+	EmailMFAServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	FIDO2ServiceInterface,
+	GatekeeperServiceInterface,
+	HealthCheckServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	HTTPSServerInterface,
+	JWTAuthMiddlewareServiceInterface,
+	JWTServiceInterface,
+	MailerServiceInterface,
+	MiddlewareStatusServiceInterface,
+	MulterUploadServiceInterface,
+	PassportAuthMiddlewareServiceInterface,
+	PassportServiceInterface,
+	PasswordServiceInterface,
+	RedisServiceInterface,
+	ResourceManagerInterface,
+	RootMiddlewareServiceInterface,
+	TOTPServiceInterface,
+	UserControllerInterface,
+	VaultServiceInterface,
+	YubicoOTPServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { tlsCiphers } from '../config/security';
 import { SecureContextOptions } from 'tls';
@@ -14,40 +47,37 @@ import timeout from 'connect-timeout';
 export class HTTPSServer implements HTTPSServerInterface {
 	public static instance: HTTPSServer | null = null;
 
-	private accessControlMiddleware =
-		ServiceFactory.getAccessControlMiddlewareService();
-	private authController = ServiceFactory.getAuthController();
-	private backupCodeService = ServiceFactory.getBackupCodeService();
-	private baseRouter = ServiceFactory.getBaseRouter();
-	private cacheService = ServiceFactory.getCacheService();
-	private csrfMiddleware = ServiceFactory.getCSRFMiddlewareService();
-	private databaseController = ServiceFactory.getDatabaseController();
-	private emailMFAService = ServiceFactory.getEmailMFAService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private fido2Service = ServiceFactory.getFIDO2Service();
-	private gatekeeperService = ServiceFactory.getGatekeeperService();
-	private healthCheckService = ServiceFactory.getHealthCheckService();
-	private helmetMiddleware = ServiceFactory.getHelmetMiddlewareService();
-	private jwtAuthMiddlewareService =
-		ServiceFactory.getJWTAuthMiddlewareService();
-	private jwtService = ServiceFactory.getJWTService();
-	private logger = ServiceFactory.getLoggerService();
-	private mailerService = ServiceFactory.getMailerService();
-	private middlewareStatusService =
-		ServiceFactory.getMiddlewareStatusService();
-	private multerUploadService = ServiceFactory.getMulterUploadService();
-	private passportAuthMiddlewareService =
-		ServiceFactory.getPassportAuthMiddlewareService();
-	private passportService = ServiceFactory.getPassportService();
-	private passwordService = ServiceFactory.getPasswordService();
-	private redisService = ServiceFactory.getRedisService();
-	private resourceManager = ServiceFactory.getResourceManager();
-	private totpService = ServiceFactory.getTOTPService();
-	private userController = ServiceFactory.getUserController();
-	private vault = ServiceFactory.getVaultService();
-	private yubicoOTPService = ServiceFactory.getYubicoOTPService();
+	private accessControlMiddleware: AccessControlMiddlewareServiceInterface;
+	private authController: AuthControllerInterface;
+	private backupCodeService: BackupCodeServiceInterface;
+	private baseRouter: BaseRouterInterface;
+	private cacheService: CacheServiceInterface;
+	private csrfMiddleware: CSRFMiddlewareServiceInterface;
+	private databaseController: DatabaseControllerInterface;
+	private emailMFAService: EmailMFAServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private fido2Service: FIDO2ServiceInterface;
+	private gatekeeperService: GatekeeperServiceInterface;
+	private healthCheckService: HealthCheckServiceInterface;
+	private helmetMiddleware: HelmetMiddlwareServiceInterface;
+	private jwtAuthMiddlewareService: JWTAuthMiddlewareServiceInterface;
+	private jwtService: JWTServiceInterface;
+	private logger: AppLoggerServiceInterface;
+	private mailerService: MailerServiceInterface;
+	private middlewareStatusService: MiddlewareStatusServiceInterface;
+	private multerUploadService: MulterUploadServiceInterface;
+	private passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface;
+	private passportService: PassportServiceInterface;
+	private passwordService: PasswordServiceInterface;
+	private redisService: RedisServiceInterface;
+	private resourceManager: ResourceManagerInterface;
+	private rootMiddlewareService: RootMiddlewareServiceInterface;
+	private totpService: TOTPServiceInterface;
+	private userController: UserControllerInterface;
+	private vault: VaultServiceInterface;
+	private yubicoOTPService: YubicoOTPServiceInterface;
 
 	private server: https.Server | null = null;
 	private app: Application;
@@ -59,22 +89,193 @@ export class HTTPSServer implements HTTPSServerInterface {
 	private requestTimeout: string;
 	private shutdownTimeout: number;
 
-	private constructor(app: Application, sequelize: Sequelize) {
+	private constructor(
+		app: Application,
+		sequelize: Sequelize,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		redisService: RedisServiceInterface,
+		resourceManager: ResourceManagerInterface,
+		healthCheckService: HealthCheckServiceInterface,
+		helmetMiddleware: HelmetMiddlwareServiceInterface,
+		jwtAuthMiddlewareService: JWTAuthMiddlewareServiceInterface,
+		passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface,
+		accessControlMiddleware: AccessControlMiddlewareServiceInterface,
+		authConroller: AuthControllerInterface,
+		backupCodeService: BackupCodeServiceInterface,
+		baseRouter: BaseRouterInterface,
+		csrfMiddleware: CSRFMiddlewareServiceInterface,
+		databaseController: DatabaseControllerInterface,
+		emailMFAService: EmailMFAServiceInterface,
+		fido2Service: FIDO2ServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		jwtService: JWTServiceInterface,
+		mailerService: MailerServiceInterface,
+		middlewareStatusService: MiddlewareStatusServiceInterface,
+		multerUploadService: MulterUploadServiceInterface,
+		passportService: PassportServiceInterface,
+		passwordService: PasswordServiceInterface,
+		rootMiddlewareService: RootMiddlewareServiceInterface,
+		totpService: TOTPServiceInterface,
+		userController: UserControllerInterface,
+		vault: VaultServiceInterface,
+		yubicoOTPService: YubicoOTPServiceInterface
+	) {
 		this.app = app;
 		this.sequelize = sequelize;
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.cacheService = cacheService;
+		this.redisService = redisService;
+		this.resourceManager = resourceManager;
+		this.healthCheckService = healthCheckService;
+		this.helmetMiddleware = helmetMiddleware;
+		this.jwtAuthMiddlewareService = jwtAuthMiddlewareService;
+		this.passportAuthMiddlewareService = passportAuthMiddlewareService;
+		this.accessControlMiddleware = accessControlMiddleware;
+		this.authController = authConroller;
+		this.backupCodeService = backupCodeService;
+		this.baseRouter = baseRouter;
+		this.csrfMiddleware = csrfMiddleware;
+		this.databaseController = databaseController;
+		this.emailMFAService = emailMFAService;
+		this.fido2Service = fido2Service;
+		this.gatekeeperService = gatekeeperService;
+		this.jwtService = jwtService;
+		this.mailerService = mailerService;
+		this.middlewareStatusService = middlewareStatusService;
+		this.multerUploadService = multerUploadService;
+		this.passportService = passportService;
+		this.passwordService = passwordService;
+		this.rootMiddlewareService = rootMiddlewareService;
+		this.totpService = totpService;
+		this.userController = userController;
+		this.vault = vault;
+		this.yubicoOTPService = yubicoOTPService;
+
 		this.port = this.envConfig.getEnvVariable('serverPort');
 		this.requestTimeout =
 			this.envConfig.getEnvVariable('requestTimeout') || '30s';
 		this.shutdownTimeout =
 			this.envConfig.getEnvVariable('gracefulShutdownTimeout') || 30000;
+
+		this.initializeServices();
+
+		setInterval(() => {
+			this.healthCheckService.performHealthCheck();
+		}, 10000);
 	}
 
-	public static getInstance(
+	private async initializeServices(): Promise<void> {
+		this.accessControlMiddleware =
+			await ServiceFactory.getAccessControlMiddlewareService();
+		this.authController = await ServiceFactory.getAuthController();
+		this.backupCodeService = await ServiceFactory.getBackupCodeService();
+		this.baseRouter = await ServiceFactory.getBaseRouter();
+		this.csrfMiddleware = await ServiceFactory.getCSRFMiddlewareService();
+		this.databaseController = await ServiceFactory.getDatabaseController();
+		this.emailMFAService = await ServiceFactory.getEmailMFAService();
+		this.fido2Service = await ServiceFactory.getFIDO2Service();
+		this.gatekeeperService = await ServiceFactory.getGatekeeperService();
+		this.middlewareStatusService =
+			await ServiceFactory.getMiddlewareStatusService();
+		this.multerUploadService =
+			await ServiceFactory.getMulterUploadService();
+		this.passportService = await ServiceFactory.getPassportService();
+		this.passwordService = await ServiceFactory.getPasswordService();
+		this.vault = await ServiceFactory.getVaultService();
+		this.yubicoOTPService = await ServiceFactory.getYubicoOTPService();
+	}
+
+	public static async getInstance(
 		app: Application,
 		sequelize: Sequelize
-	): HTTPSServer {
+	): Promise<HTTPSServer> {
 		if (!HTTPSServer.instance) {
-			HTTPSServer.instance = new HTTPSServer(app, sequelize);
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const redisService = await ServiceFactory.getRedisService();
+			const resourceManager = await ServiceFactory.getResourceManager();
+			const healthCheckService =
+				await ServiceFactory.getHealthCheckService();
+			const helmetMiddleware =
+				await ServiceFactory.getHelmetMiddlewareService();
+			const jwtAuthMiddlewareService =
+				await ServiceFactory.getJWTAuthMiddlewareService();
+			const passportAuthMiddlewareService =
+				await ServiceFactory.getPassportAuthMiddlewareService();
+			const accessControlMiddleware =
+				await ServiceFactory.getAccessControlMiddlewareService();
+			const authConroller = await ServiceFactory.getAuthController();
+			const backupCodeService =
+				await ServiceFactory.getBackupCodeService();
+			const baseRouter = await ServiceFactory.getBaseRouter();
+			const csrfMiddleware =
+				await ServiceFactory.getCSRFMiddlewareService();
+			const databaseController =
+				await ServiceFactory.getDatabaseController();
+			const emailMFAService = await ServiceFactory.getEmailMFAService();
+			const fido2Service = await ServiceFactory.getFIDO2Service();
+			const gatekeeperService =
+				await ServiceFactory.getGatekeeperService();
+			const jwtService = await ServiceFactory.getJWTService();
+			const mailerService = await ServiceFactory.getMailerService();
+			const middlewareStatusService =
+				await ServiceFactory.getMiddlewareStatusService();
+			const multerUploadService =
+				await ServiceFactory.getMulterUploadService();
+			const passportService = await ServiceFactory.getPassportService();
+			const passwordService = await ServiceFactory.getPasswordService();
+			const rootMiddlewareService =
+				await ServiceFactory.getRootMiddlewareService();
+			const totpService = await ServiceFactory.getTOTPService();
+			const userController = await ServiceFactory.getUserController();
+			const vault = await ServiceFactory.getVaultService();
+			const yubicoOTPService = await ServiceFactory.getYubicoOTPService();
+
+			HTTPSServer.instance = new HTTPSServer(
+				app,
+				sequelize,
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				cacheService,
+				redisService,
+				resourceManager,
+				healthCheckService,
+				helmetMiddleware,
+				jwtAuthMiddlewareService,
+				passportAuthMiddlewareService,
+				accessControlMiddleware,
+				authConroller,
+				backupCodeService,
+				baseRouter,
+				csrfMiddleware,
+				databaseController,
+				emailMFAService,
+				fido2Service,
+				gatekeeperService,
+				jwtService,
+				mailerService,
+				middlewareStatusService,
+				multerUploadService,
+				passportService,
+				passwordService,
+				rootMiddlewareService,
+				totpService,
+				userController,
+				vault,
+				yubicoOTPService
+			);
 		}
 
 		return HTTPSServer.instance;
@@ -202,69 +403,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	public async handleRequest(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<void> {
-		const cacheKey = `api:${req.url}`;
-		const serviceName = 'HTTPS_SERVER';
-
-		try {
-			const cachedResponse = await this.cacheService.get<string>(
-				cacheKey,
-				serviceName
-			);
-
-			if (cachedResponse) {
-				res.send(JSON.parse(cachedResponse));
-				return;
-			}
-
-			const response = await this.fetchResponse(req, res, next);
-
-			await this.cacheService.set(
-				cacheKey,
-				JSON.stringify(response),
-				'3600'
-			);
-
-			res.send(response);
-			next();
-		} catch (error) {
-			this.errorLogger.logError(
-				`Error handling handling HTTPS Server request`
-			);
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'HANDLE_REQUEST',
-				{ url: req.url },
-				'Error handling HTTPS Server request'
-			);
-		}
-	}
-
-	private async fetchResponse(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Promise<void> {
-		try {
-			this.logger.info(`Handling request: ${req.method} ${req.url}`);
-
-			const baseRouter = await this.baseRouter;
-
-			baseRouter.getRouter()(req, res, next);
-		} catch (error) {
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'FETCH_RESPONSE',
-				{ url: req.url },
-				'Error fetching response'
-			);
-		}
-	}
-
 	private setupGracefulShutdown(): void {
 		const shutdownTimeout = this.shutdownTimeout;
 
@@ -275,15 +413,17 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.logger.info('Server shutting down...');
 				this.shuttingDown = true;
 
-				await this.cleanupResources();
+				await this.closeConnections();
+				this.logger.info('All active connections closed.');
 
-				this.logger.info('All resources cleaned up successfully.');
+				await this.shutdownServer();
+
+				this.logger.info(
+					'All resources cleaned up and server shut down successfully.'
+				);
 			},
 			finally: async () => {
-				this.logger.info(
-					'All connections closed. Shutting down the server...'
-				);
-				await this.closeConnections();
+				this.logger.info('Graceful shutdown process completed.');
 			}
 		});
 
@@ -294,52 +434,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 			}
 			return next();
 		});
-	}
-
-	private async cleanupResources(): Promise<void> {
-		try {
-			await this.sequelize.close();
-			this.logger.info('Database connection closed.');
-		} catch (error) {
-			this.errorLogger.logWarn('Error closing database connection.');
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'CLOSE_DB_CONNECTION',
-				{},
-				'Error closing database connection'
-			);
-		}
-
-		if (this.envConfig.getFeatureFlags().enableRedis) {
-			try {
-				const redisClient = await this.redisService.getRedisClient();
-				if (redisClient) {
-					await redisClient.quit();
-					this.logger.info('Redis connection closed.');
-				}
-			} catch (error) {
-				this.errorLogger.logWarn('Error closing Redis connection.');
-				this.handleHTTPSServerErrorRecoverable(
-					error,
-					'CLOSE_REDIS_CONNECTION',
-					{},
-					'Error closing Redis connection'
-				);
-			}
-		}
-
-		try {
-			await this.redisService.flushRedisMemoryCache();
-			this.logger.info('Redis memory cache flushed.');
-		} catch (error) {
-			this.errorLogger.logWarn('Error flushing Redis memory cache.');
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'FLUSH_REDIS_CACHE',
-				{},
-				'Error flushing Redis memory cache'
-			);
-		}
 	}
 
 	private async closeConnections(): Promise<void> {
@@ -387,6 +481,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.logger.info('No longer accepting new connections.');
 			});
 
+			await this.shutDownLayer18Services();
 			await this.shutDownLayer17Services();
 			await this.shutDownLayer16Services();
 			await this.shutDownLayer15Services();
@@ -419,15 +514,105 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async shutDownLayer17Services(): Promise<void> {
+	public async getHTTPSServerInfo(): Promise<Record<string, unknown>> {
+		try {
+			if (!this.server) {
+				throw new this.errorHandler.ErrorClasses.ServerNotInitializedError(
+					'HTTPS server is not initialized.'
+				);
+			}
+
+			const uptime = process.uptime();
+			const memoryUsage = process.memoryUsage();
+			const cpuUsage = process.cpuUsage();
+
+			return {
+				status: this.server.listening ? 'Running' : 'Stopped',
+				uptime_in_seconds: uptime,
+				memoryUsage: {
+					heapUsed: memoryUsage.heapUsed,
+					heapTotal: memoryUsage.heapTotal,
+					rss: memoryUsage.rss
+				},
+				cpuUsage: {
+					user: cpuUsage.user / 1000,
+					system: cpuUsage.system / 1000
+				},
+				connections: this.connections.size
+			};
+		} catch (error) {
+			this.logger.error('Error getting HTTPS server info:', { error });
+			throw error;
+		}
+	}
+
+	public async getHTTPSServerMetrics(
+		serviceName: string
+	): Promise<Record<string, unknown>> {
+		try {
+			if (!this.server) {
+				throw new this.errorHandler.ErrorClasses.ServerNotInitializedError(
+					'HTTPS server is not initialized.'
+				);
+			}
+
+			const connectionsCount = this.connections.size;
+			const uptime = process.uptime();
+			const memoryUsage = process.memoryUsage();
+			const cpuUsage = process.cpuUsage();
+			const averageResponseTime =
+				this.rootMiddlewareService.getAverageResponseTime();
+
+			return {
+				serviceName,
+				connectionsCount,
+				uptime_in_seconds: uptime,
+				memoryUsage: {
+					heapUsed: memoryUsage.heapUsed,
+					heapTotal: memoryUsage.heapTotal,
+					rss: memoryUsage.rss
+				},
+				cpuUsage: {
+					user: cpuUsage.user / 1000,
+					system: cpuUsage.system / 1000
+				},
+				averageResponseTime
+			};
+		} catch (error) {
+			this.logger.error(
+				`Error getting HTTPS server metrics for service ${serviceName}:`,
+				{ error }
+			);
+			throw error;
+		}
+	}
+
+	private async shutDownLayer18Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 17 services: Mailer and MulterUpload...'
+			'Shutting down Layer 18 services: Mailer and MulterUpload...'
 		);
 		try {
 			await Promise.all([
 				this.mailerService.shutdown(),
 				this.multerUploadService.shutdown()
 			]);
+			this.logger.info('Layer 18 services have been shut down.');
+		} catch (error) {
+			this.handleHTTPSServerErrorRecoverable(
+				error,
+				'SHUTDOWN_LAYER_18',
+				{},
+				'Error shutting down Layer 18 services'
+			);
+		}
+	}
+
+	private async shutDownLayer17Services(): Promise<void> {
+		this.logger.info(
+			'Shutting down Layer 17 services: Middleware Status...'
+		);
+		try {
+			await this.middlewareStatusService.shutdown();
 			this.logger.info('Layer 17 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -441,10 +626,13 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer16Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 16 services: Middleware Status...'
+			'Shutting down Layer 16 services: CSRF Middleware, Helmet Middleware, JWT Auth Middleware, and Passport Auth Middleware...'
 		);
 		try {
-			await this.middlewareStatusService.shutdown();
+			await this.csrfMiddleware.shutdown();
+			await this.helmetMiddleware.shutdown();
+			await this.jwtAuthMiddlewareService.shutdown();
+			await this.passportAuthMiddlewareService.shutdown();
 			this.logger.info('Layer 16 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -458,27 +646,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer15Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 15 services: CSRF Middleware, Helmet Middleware, JWT Auth Middleware, and Passport Auth Middleware...'
-		);
-		try {
-			await this.csrfMiddleware.shutdown();
-			await this.helmetMiddleware.shutdown();
-			await this.jwtAuthMiddlewareService.shutdown();
-			await this.passportAuthMiddlewareService.shutdown();
-			this.logger.info('Layer 15 services have been shut down.');
-		} catch (error) {
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'SHUTDOWN_LAYER_15',
-				{},
-				'Error shutting down Layer 15 services'
-			);
-		}
-	}
-
-	private async shutDownLayer14Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 14 services: Backup Code, Email MFA, FIDO2, JWT, Passport, Password, TOTP, and Yubico OTP...'
+			'Shutting down Layer 15 services: Backup Code, Email MFA, FIDO2, JWT, Passport, Password, TOTP, and Yubico OTP...'
 		);
 		try {
 			await Promise.all([
@@ -491,6 +659,21 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.totpService.shutdown(),
 				this.yubicoOTPService.shutdown()
 			]);
+			this.logger.info('Layer 15 services have been shut down.');
+		} catch (error) {
+			this.handleHTTPSServerErrorRecoverable(
+				error,
+				'SHUTDOWN_LAYER_15',
+				{},
+				'Error shutting down Layer 15 services'
+			);
+		}
+	}
+
+	private async shutDownLayer14Services(): Promise<void> {
+		this.logger.info('Shutting down Layer 14 services: Auth Controller...');
+		try {
+			await this.authController.shutdown();
 			this.logger.info('Layer 14 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -503,9 +686,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer13Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 13 services: Auth Controller...');
+		this.logger.info('Shutting down Layer 13 services: User Controller...');
 		try {
-			await this.authController.shutdown();
+			await this.userController.shutdown();
 			this.logger.info('Layer 13 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -518,9 +701,12 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer12Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 12 services: User Controller...');
 		try {
-			await this.userController.shutdown();
+			this.logger.info('Shutting down Layer 12 services: Base Router...');
+
+			const baseRouter = await this.baseRouter;
+
+			await baseRouter.shutdown();
 			this.logger.info('Layer 12 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -533,12 +719,11 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer11Services(): Promise<void> {
+		this.logger.info(
+			'Shutting down Layer 11 services: Resource Manager...'
+		);
 		try {
-			this.logger.info('Shutting down Layer 11 services: Base Router...');
-
-			const baseRouter = await this.baseRouter;
-
-			await baseRouter.shutdown();
+			await this.resourceManager.shutdown();
 			this.logger.info('Layer 11 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -551,11 +736,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer10Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 10 services: Resource Manager...'
-		);
+		this.logger.info('Shutting down Layer 10 services: Health Check...');
 		try {
-			await this.resourceManager.shutdown();
+			await this.healthCheckService.shutdown();
 			this.logger.info('Layer 10 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -568,9 +751,11 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer9Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 9 services: Health Check...');
+		this.logger.info(
+			'Shutting down Layer 9 services: Access Control Middleware...'
+		);
 		try {
-			await this.healthCheckService.shutdown();
+			await this.accessControlMiddleware.shutdown();
 			this.logger.info('Layer 9 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -583,11 +768,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer8Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 8 services: Access Control Middleware...'
-		);
+		this.logger.info('Shutting down Layer 8 services: Gatekeeper...');
 		try {
-			await this.accessControlMiddleware.shutdown();
+			await this.gatekeeperService.shutdown();
 			this.logger.info('Layer 8 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -600,10 +783,13 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer7Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 7 services: Gatekeeper...');
+		this.logger.info('Shutting down Layer 7 services: Cache and Redis...');
 		try {
-			await this.gatekeeperService.shutdown();
-			this.logger.info('Layer 7 services have been shut down.');
+			await this.redisService.shutdown();
+			await Promise.all([
+				this.cacheService.shutdown(),
+				this.redisService.shutdown()
+			]);
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
 				error,
@@ -615,13 +801,12 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer6Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 6 services: Cache and Redis...');
+		this.logger.info(
+			'Shutting down Layer 6 services: Database Controller...'
+		);
 		try {
-			await this.redisService.shutdown();
-			await Promise.all([
-				this.cacheService.shutdown(),
-				this.redisService.shutdown()
-			]);
+			await this.databaseController.shutdown();
+			this.logger.info('Layer 6 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
 				error,
@@ -633,11 +818,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer5Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 5 services: Database Controller...'
-		);
+		this.logger.info('Shutting down Layer 4 services: Root Middleware...');
 		try {
-			await this.databaseController.shutdown();
+			await this.rootMiddlewareService.shutdown();
 			this.logger.info('Layer 5 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(

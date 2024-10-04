@@ -26,14 +26,16 @@ class SupportRequest
 	public supportTicketCloseDate?: Date | null;
 }
 
-export function createSupportRequestModel(): typeof SupportRequest | null {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+export async function createSupportRequestModel(): Promise<
+	typeof SupportRequest | null
+> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

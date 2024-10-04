@@ -76,6 +76,35 @@ export class AppLoggerService
 		addColors(AppLoggerService.getCustomLogLevels().colors);
 	}
 
+	public static async getInstance(
+		deps: AppLoggerServiceDeps,
+		logLevel?: string,
+		serviceName?: string
+	): Promise<AppLoggerServiceInterface> {
+		if (!AppLoggerService.instance) {
+			AppLoggerService.instance = new AppLoggerService(
+				deps,
+				logLevel,
+				serviceName
+			);
+
+			await AppLoggerService.instance.initializeAsyncParts();
+		}
+
+		return AppLoggerService.instance;
+	}
+
+	private async initializeAsyncParts(): Promise<void> {
+		try {
+			await this.addLogstashTransport(this.transports); // Await Logstash setup if it's async
+		} catch (error) {
+			this.logError(
+				`Failed to initialize async parts of logger ${error instanceof Error ? error.message : error}`
+			);
+			throw error;
+		}
+	}
+
 	public static getCustomLogLevels(): {
 		levels: Record<string, number>;
 		colors: Record<string, string>;
@@ -98,21 +127,6 @@ export class AppLoggerService
 				notice: 'magenta'
 			}
 		};
-	}
-
-	public static getInstance(
-		deps: AppLoggerServiceDeps,
-		logLevel?: string,
-		serviceName?: string
-	): AppLoggerServiceInterface {
-		if (!AppLoggerService.instance) {
-			AppLoggerService.instance = new AppLoggerService(
-				deps,
-				logLevel,
-				serviceName
-			);
-		}
-		return AppLoggerService.instance;
 	}
 
 	public setErrorHandler(errorHandler: ErrorHandlerServiceInterface): void {
@@ -171,14 +185,22 @@ export class AppLoggerService
 		return this.createRedactedLogger();
 	}
 
-	private addLogstashTransport(transportsArray: TransportStream[]): void {
-		const logStashTransport = this.createLogstashTransport();
-		if (logStashTransport) {
-			transportsArray.push(logStashTransport);
+	private async addLogstashTransport(
+		transportsArray: TransportStream[]
+	): Promise<void> {
+		try {
+			const logStashTransport = await this.createLogstashTransport();
+			if (logStashTransport) {
+				transportsArray.push(logStashTransport);
+			}
+		} catch (error) {
+			this.logError(
+				`Error adding Logstash transport ${error instanceof Error ? error.message : error}`
+			);
 		}
 	}
 
-	private createLogstashTransport(): TransportStream | null {
+	private async createLogstashTransport(): Promise<TransportStream | null> {
 		try {
 			return new this._deps.LogStashTransport({
 				port: parseInt(process.env.LOGSTASH_PORT!, 10),
@@ -204,11 +226,6 @@ export class AppLoggerService
 					error: logstashError,
 					details: { reason: 'Failed to create Logstash transport' }
 				});
-			} else {
-				this.handleError(
-					'Failed to create Logstash transport',
-					logstashError
-				);
 			}
 			return null;
 		}
@@ -381,11 +398,11 @@ export class ErrorLoggerService
 		this.errorCounts = new Map<string, number>();
 	}
 
-	public static override getInstance(
+	public static override async getInstance(
 		deps: AppLoggerServiceDeps,
 		logLevel?: string,
 		serviceName?: string
-	): AppLoggerServiceInterface {
+	): Promise<ErrorLoggerServiceInterface> {
 		if (!ErrorLoggerService.instance) {
 			ErrorLoggerService.instance = new ErrorLoggerService(
 				deps,
@@ -428,7 +445,7 @@ export class ErrorLoggerService
 			getErrorDetails: ErrorLoggerService.instance.getErrorDetails.bind(
 				ErrorLoggerService.instance
 			)
-		}) as AppLoggerServiceInterface;
+		}) as ErrorLoggerServiceInterface;
 	}
 
 	public logAppError(

@@ -5,22 +5,54 @@ import {
 	StrategyOptions,
 	VerifiedCallback
 } from 'passport-jwt';
-import { PassportServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	PassportServiceInterface,
+	PasswordServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 
 export class PassportService implements PassportServiceInterface {
 	private static instance: PassportService | null = null;
-	private PasswordService = ServiceFactory.getPasswordService();
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private secrets = ServiceFactory.getVaultService();
 
-	private constructor() {}
+	private passwordService: PasswordServiceInterface;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private secrets: VaultServiceInterface;
 
-	public static getInstance(): PassportService {
+	private constructor(
+		passwordService: PasswordServiceInterface,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		secrets: VaultServiceInterface
+	) {
+		this.passwordService = passwordService;
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.secrets = secrets;
+	}
+
+	public static async getInstance(): Promise<PassportService> {
 		if (!PassportService.instance) {
-			PassportService.instance = new PassportService();
+			const passwordService = await ServiceFactory.getPasswordService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const secrets = await ServiceFactory.getVaultService();
+
+			PassportService.instance = new PassportService(
+				passwordService,
+				logger,
+				errorLogger,
+				errorHandler,
+				secrets
+			);
 		}
 
 		return PassportService.instance;
@@ -113,11 +145,12 @@ export class PassportService implements PassportServiceInterface {
 							throw new Error('Invalid PEPPER secret');
 						}
 
-						const isMatch =
-							await this.PasswordService.comparePassword(
-								user.password,
-								password
-							);
+						const passwordService =
+							await ServiceFactory.getPasswordService();
+						const isMatch = await passwordService.comparePassword(
+							user.password,
+							password
+						);
 
 						if (isMatch) {
 							this.logger.info(

@@ -1,4 +1,12 @@
-import { YubicoOTPServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	VaultServiceInterface,
+	YubicoOTPServiceInterface
+} from '../index/interfaces/services';
 import {
 	YubClientInterface,
 	YubResponseInterface,
@@ -11,23 +19,53 @@ import '../../types/custom/yub.js';
 
 export class YubicoOTPService implements YubicoOTPServiceInterface {
 	private static instance: YubicoOTPService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private secrets = ServiceFactory.getVaultService();
-	private cacheService = ServiceFactory.getCacheService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private secrets: VaultServiceInterface;
+	private cacheService: CacheServiceInterface;
 	private yubClient: YubClientInterface | undefined;
-	private ttl = serviceTTLConfig.YubicoOtpService || serviceTTLConfig.default;
+
+	private ttl: number;
 	private yub: YubicoOTPServiceInterface;
 
-	private constructor() {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		secrets: VaultServiceInterface,
+		cacheService: CacheServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.secrets = secrets;
+		this.cacheService = cacheService;
+		this.ttl =
+			serviceTTLConfig.YubicoOtpService || serviceTTLConfig.default;
 		this.yub = this.initializeYubClient();
 	}
 
-	public static getInstance(): YubicoOTPService {
+	public static async getInstance(): Promise<YubicoOTPService> {
 		if (!YubicoOTPService.instance) {
-			YubicoOTPService.instance = new YubicoOTPService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const secrets = await ServiceFactory.getVaultService();
+			const cacheService = await ServiceFactory.getCacheService();
+
+			YubicoOTPService.instance = new YubicoOTPService(
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				secrets,
+				cacheService
+			);
 		}
 		return YubicoOTPService.instance;
 	}

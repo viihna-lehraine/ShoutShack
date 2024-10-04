@@ -11,6 +11,12 @@ export interface AddIpToBlacklistInterface {
 	) => void;
 }
 
+export interface AuthenticatedUserInterface {
+	id: string;
+	role: string;
+	permissions: string[];
+}
+
 export interface BackupCodeInterface {
 	code: string;
 	used: boolean;
@@ -275,6 +281,10 @@ export interface VerifyPasskeyAuthInterface {
 export interface VerifyPasskeyRegistrationInterface {
 	attestation: import('fido2-lib').AttestationResult;
 	expectedChallenge: string;
+}
+
+export interface XMLParsedRequest extends Request {
+	parsedXmlBody?: Record<string, unknown>;
 }
 
 export interface YubClientInterface {

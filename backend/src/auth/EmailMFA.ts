@@ -1,21 +1,39 @@
-import { EmailMFAServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EmailMFAServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { EmailMFAServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 import { JwtPayload } from 'jsonwebtoken';
 
 export class EmailMFAService implements EmailMFAServiceInterface {
 	private static instance: EmailMFAService | null = null;
-	private cacheService = ServiceFactory.getCacheService();
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private vault = ServiceFactory.getVaultService();
+	private cacheService!: CacheServiceInterface;
+	private logger!: AppLoggerServiceInterface;
+	private errorLogger!: ErrorLoggerServiceInterface;
+	private errorHandler!: ErrorHandlerServiceInterface;
+	private vault!: VaultServiceInterface;
 
 	private constructor() {}
 
-	public static getInstance(): EmailMFAServiceInterface {
+	public static async getInstance(): Promise<EmailMFAServiceInterface> {
 		if (!EmailMFAService.instance) {
+			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const vault = await ServiceFactory.getVaultService();
+
 			EmailMFAService.instance = new EmailMFAService();
+			EmailMFAService.instance.cacheService = cacheService;
+			EmailMFAService.instance.logger = logger;
+			EmailMFAService.instance.errorLogger = errorLogger;
+			EmailMFAService.instance.errorHandler = errorHandler;
+			EmailMFAService.instance.vault = vault;
 		}
 
 		return EmailMFAService.instance;

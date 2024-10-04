@@ -4,11 +4,29 @@ import fs from 'fs';
 import path from 'path';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { ServiceFactory } from '../index/factory';
-import { GatekeeperServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	GatekeeperServiceInterface,
+	RedisServiceInterface,
+	ResourceManagerInterface
+} from '../index/interfaces/services';
 
 export class GatekeeperService implements GatekeeperServiceInterface {
 	private static instance: GatekeeperService | null = null;
-	private static envConfig = ServiceFactory.getEnvConfigService();
+
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private cacheService: CacheServiceInterface;
+	private redisService: RedisServiceInterface;
+	private resourceManager: ResourceManagerInterface;
+
+	/*
 	private readonly RATE_LIMIT_BASE_POINTS =
 		GatekeeperService.envConfig.getEnvVariable('rateLimiterBasePoints');
 	private readonly RATE_LIMIT_BASE_DURATION =
@@ -16,12 +34,10 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private readonly SYNC_INTERVAL =
 		GatekeeperService.envConfig.getEnvVariable('blacklistSyncInterval') ||
 		3600000;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private cacheService = ServiceFactory.getCacheService();
-	private redisService = ServiceFactory.getRedisService();
-	private resourceManager = ServiceFactory.getResourceManager();
+	*/
+	private RATE_LIMIT_BASE_POINTS: number;
+	private RATE_LIMIT_BASE_DURATION: number;
+	private SYNC_INTERVAL: number;
 	private rateLimiter: RateLimiterMemory | null;
 	private blacklistKey = 'ipBlacklist';
 	private whitelistKey = 'ipWhitelist';
@@ -30,14 +46,39 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private whitelist: string[] = [];
 	private globalRateLimitStats: Map<string, number> = new Map();
 
-	private constructor() {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		redisService: RedisServiceInterface,
+		resourceManager: ResourceManagerInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.cacheService = cacheService;
+		this.redisService = redisService;
+		this.resourceManager = resourceManager;
+
+		this.RATE_LIMIT_BASE_POINTS = Number(
+			this.envConfig.getEnvVariable('rateLimiterBasePoints')
+		);
+		this.RATE_LIMIT_BASE_DURATION = Number(
+			this.envConfig.getEnvVariable('rateLimiterBaseDuration')
+		);
+		this.SYNC_INTERVAL =
+			Number(this.envConfig.getEnvVariable('blacklistSyncInterval')) ||
+			3600000;
+
 		this.rateLimiter = new RateLimiterMemory({
 			points: this.RATE_LIMIT_BASE_POINTS,
 			duration: this.RATE_LIMIT_BASE_DURATION
 		});
 		this.preInitIpBlacklist();
 		this.preInitIpWhitelist();
-		this.resourceManager = ServiceFactory.getResourceManager();
 
 		setInterval(
 			() => this.syncBlacklistFromRedisToFile(),
@@ -45,9 +86,25 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		);
 	}
 
-	public static getInstance(): GatekeeperService {
+	public static async getInstance(): Promise<GatekeeperService> {
 		if (!GatekeeperService.instance) {
-			GatekeeperService.instance = new GatekeeperService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const redisService = await ServiceFactory.getRedisService();
+			const resourceManager = await ServiceFactory.getResourceManager();
+
+			GatekeeperService.instance = new GatekeeperService(
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				cacheService,
+				redisService,
+				resourceManager
+			);
 		}
 
 		return GatekeeperService.instance;
@@ -183,12 +240,10 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private async incrementRateLimit(ip: string): Promise<void> {
 		const rateLimitKey = `${this.rateLimitPrefix}${ip}`;
 		const basePoints = Number(
-			GatekeeperService.envConfig.getEnvVariable('rateLimiterBasePoints')
+			this.envConfig.getEnvVariable('rateLimiterBasePoints')
 		);
 		const baseDuration = Number(
-			GatekeeperService.envConfig.getEnvVariable(
-				'rateLimiterBaseDuration'
-			)
+			this.envConfig.getEnvVariable('rateLimiterBaseDuration')
 		);
 
 		try {
@@ -250,7 +305,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	public slowdownMiddleware() {
 		const slowdownThreshold = Number(
-			GatekeeperService.envConfig.getEnvVariable('slowdownThreshold')
+			this.envConfig.getEnvVariable('slowdownThreshold')
 		);
 		return (
 			req: Request & { session: Session & { lastRequestTime?: number } },
@@ -404,7 +459,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	}
 
 	private async loadWhitelist(): Promise<void> {
-		this.whitelist = GatekeeperService.envConfig
+		this.whitelist = this.envConfig
 			.getEnvVariable('ipWhitelistPath')
 			.split(',');
 		this.logger.info(
@@ -627,7 +682,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	): string {
 		return path.resolve(
 			__dirname,
-			GatekeeperService.envConfig.getEnvVariable(envVariable)
+			this.envConfig.getEnvVariable(envVariable)
 		);
 	}
 

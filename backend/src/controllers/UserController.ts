@@ -1,9 +1,18 @@
 import { User } from '../models/User';
 import { validateDependencies } from '../utils/helpers';
-import { UserControllerInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	MailerServiceInterface,
+	PasswordServiceInterface,
+	UserControllerInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import {
 	UserAttributesInterface,
-	UserInstanceInterfaceA
+	UserInstanceInterface
 } from '../index/interfaces/models';
 import { UserControllerDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
@@ -11,30 +20,64 @@ import { InferAttributes, WhereOptions } from 'sequelize/types';
 
 export class UserController implements UserControllerInterface {
 	private static instance: UserController | null = null;
-	private passwordService = ServiceFactory.getPasswordService();
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private secrets = ServiceFactory.getVaultService();
-	private mailer = ServiceFactory.getMailerService();
+	private passwordService: PasswordServiceInterface;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private secrets: VaultServiceInterface;
+	private mailer: MailerServiceInterface;
+	private userModel: typeof User;
 
-	constructor(private userModel = User) {
+	private constructor(
+		passwordService: PasswordServiceInterface,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		secrets: VaultServiceInterface,
+		mailer: MailerServiceInterface,
+		userModel: typeof User = User
+	) {
+		this.passwordService = passwordService;
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.secrets = secrets;
+		this.mailer = mailer;
+		this.userModel = userModel;
+
 		validateDependencies(
 			[{ name: 'userModel', instance: this.userModel }],
 			this.logger
 		);
 	}
 
-	public static getInstance(): UserController {
+	public static async getInstance(): Promise<UserController> {
 		if (!UserController.instance) {
-			UserController.instance = new UserController();
-		}
+			const passwordService = await ServiceFactory.getPasswordService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const secrets = await ServiceFactory.getVaultService();
+			const mailer = await ServiceFactory.getMailerService();
 
+			UserController.instance = new UserController(
+				passwordService,
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				secrets,
+				mailer
+			);
+		}
 		return UserController.instance;
 	}
 
-	private mapToUserInstance(user: User): UserInstanceInterfaceA {
+	private mapToUserInstance(user: User): UserInstanceInterface {
 		return {
 			id: user.id,
 			userId: user.userId || undefined,
@@ -44,10 +87,10 @@ export class UserController implements UserControllerInterface {
 			isAccountVerified: user.isVerified,
 			resetPasswordToken: user.resetPasswordToken,
 			resetPasswordExpires: user.resetPasswordExpires,
-			isMfaEnabled: user.isMfaEnabled,
+			isMFAEnabled: user.isMFAEnabled,
 			totpSecret: user.totpSecret,
-			emailMFAToken: user.email2faToken,
-			emailMFATokenExpires: user.email2faTokenExpires,
+			emailMFAToken: user.emailMFAToken,
+			emailMFATokenExpires: user.emailMFATokenExpires,
 			creationDate: user.creationDate,
 			comparePassword: async (
 				password: string,
@@ -66,7 +109,7 @@ export class UserController implements UserControllerInterface {
 
 	public async findOne(
 		criteria: WhereOptions<InferAttributes<User>>
-	): Promise<UserInstanceInterfaceB | null> {
+	): Promise<UserInstanceInterface | null> {
 		try {
 			const user = await this.userModel.findOne({ where: criteria });
 			if (!user) {
@@ -84,7 +127,7 @@ export class UserController implements UserControllerInterface {
 
 	public async findUserById(
 		userId: string
-	): Promise<UserInstanceInterfaceB | null> {
+	): Promise<UserInstanceInterface | null> {
 		try {
 			const user = await this.userModel.findOne({
 				where: { id: userId }
@@ -105,7 +148,7 @@ export class UserController implements UserControllerInterface {
 
 	public async findUserByEmail(
 		email: string
-	): Promise<UserInstanceInterfaceB | null> {
+	): Promise<UserInstanceInterface | null> {
 		const user = await this.userModel.findOne({ where: { email } });
 		if (!user) {
 			return null;
@@ -119,7 +162,7 @@ export class UserController implements UserControllerInterface {
 			UserAttributesInterface,
 			'id' | 'creationDate' | 'userId'
 		>
-	): Promise<UserInstanceInterfaceB | null> {
+	): Promise<UserInstanceInterface | null> {
 		try {
 			const isPasswordStrong = await this.checkPasswordStrength(
 				userDetails.password
@@ -133,8 +176,22 @@ export class UserController implements UserControllerInterface {
 				);
 			}
 
+			const pepper = this.secrets.retrieveSecret(
+				'PEPPER',
+				secret => secret
+			);
+
+			if (!pepper || typeof pepper !== 'string') {
+				throw new this.errorHandler.ErrorClasses.ServiceUnavailableError(
+					10,
+					'Invalid pepper',
+					{ exposeToClient: false }
+				);
+			}
+
 			const hashedPassword = await this.passwordService.hashPassword(
-				userDetails.password
+				userDetails.password,
+				pepper
 			);
 			const userUuid = await this.loadUuidv4();
 			const newUser = await this.userModel.create({
@@ -228,9 +285,9 @@ export class UserController implements UserControllerInterface {
 	}
 
 	public async updateUser(
-		user: UserInstanceInterfaceB,
-		updatedDetails: Partial<UserInstanceInterfaceB>
-	): Promise<UserInstanceInterfaceB | null> {
+		user: UserInstanceInterface,
+		updatedDetails: Partial<UserInstanceInterface>
+	): Promise<UserInstanceInterface | null> {
 		try {
 			const fullUser = await this.userModel.findOne({
 				where: { id: user.id }
@@ -241,9 +298,23 @@ export class UserController implements UserControllerInterface {
 				return null;
 			}
 
+			const pepper = this.secrets.retrieveSecret(
+				'PEPPER',
+				secret => secret
+			);
+
+			if (!pepper || typeof pepper !== 'string') {
+				throw new this.errorHandler.ErrorClasses.ServiceUnavailableError(
+					10,
+					'Invalid pepper',
+					{ exposeToClient: false }
+				);
+			}
+
 			if (updatedDetails.password) {
 				const hashedPassword = await this.passwordService.hashPassword(
-					updatedDetails.password
+					updatedDetails.password,
+					pepper
 				);
 				updatedDetails.password = hashedPassword;
 			}

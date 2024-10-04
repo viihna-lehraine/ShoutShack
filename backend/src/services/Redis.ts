@@ -1,33 +1,49 @@
 import { RedisClientType } from 'redis';
-import { RedisServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	RedisServiceInterface
+} from '../index/interfaces/services';
 import { RedisMetrics } from '../index/interfaces/serviceComponents';
 import { RedisServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 
 export class RedisService implements RedisServiceInterface {
 	private static instance: RedisService | null = null;
+
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+
 	private redisClient: RedisClientType | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
 
 	private constructor(
-		private readonly createRedisClient: typeof import('redis').createClient
-	) {}
+		private readonly createRedisClient: typeof import('redis').createClient,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+	}
 
-	public static getInstance(deps: RedisServiceDeps): RedisService {
+	public static async getInstance(
+		deps: RedisServiceDeps
+	): Promise<RedisService> {
 		if (!RedisService.instance) {
-			deps.validateDependencies(
-				[
-					{
-						name: 'createRedisClient',
-						instance: deps.createRedisClient
-					}
-				],
-				ServiceFactory.getLoggerService()
+			RedisService.instance = new RedisService(
+				deps.createRedisClient,
+				await ServiceFactory.getLoggerService(),
+				await ServiceFactory.getErrorLoggerService(),
+				await ServiceFactory.getErrorHandlerService(),
+				await ServiceFactory.getEnvConfigService()
 			);
-			RedisService.instance = new RedisService(deps.createRedisClient);
 		}
 		return RedisService.instance;
 	}

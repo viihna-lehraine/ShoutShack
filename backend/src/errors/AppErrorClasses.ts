@@ -553,6 +553,22 @@ export class RootMiddlewareError extends AppError {
 	}
 }
 
+export class ServerNotInitializedError extends AppError {
+	constructor(
+		errorMessage: string = 'HTTPS Server is not initialized',
+		details: ErrorDetails = {}
+	) {
+		super(
+			errorMessage,
+			500,
+			ErrorSeverity.WARNING,
+			ERROR_CODES.SERVER_NOT_INITIALIZED_ERROR,
+			details
+		);
+		this.name = 'RootMiddlewareError';
+	}
+}
+
 export class ServiceDegradedError extends AppError {
 	constructor(service?: string, details: ErrorDetails = {}) {
 		const errorMessage: string = service
@@ -781,6 +797,7 @@ export const AppErrorClasses = {
 	RedisServiceError,
 	ResourceManagerError,
 	RootMiddlewareError,
+	ServerNotInitializedError,
 	ServiceDegradedError,
 	ServiceDegradedErrorMinor,
 	ServiceUnavailableError,

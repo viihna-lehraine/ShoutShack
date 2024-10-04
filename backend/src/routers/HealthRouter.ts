@@ -2,16 +2,65 @@ import { BaseRouter } from './BaseRouter';
 import { ServiceFactory } from '../index/factory';
 import { Request, Response, NextFunction } from 'express';
 import { serviceTTLConfig } from '../config/cache';
+import {
+	AccessControlMiddlewareServiceInterface,
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	CSRFMiddlewareServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	HealthCheckServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	PassportAuthMiddlewareServiceInterface
+} from '../index/interfaces/services';
 
 export class HealthRouter extends BaseRouter {
-	private healthCheckService = ServiceFactory.getHealthCheckService();
-	private accessControl = ServiceFactory.getAccessControlMiddlewareService();
-	private csrfMiddleware = ServiceFactory.getCSRFMiddlewareService();
-	private cacheTTL = serviceTTLConfig.HealthRouter || 300;
+	private healthCheckService!: HealthCheckServiceInterface;
+	private accessControl!: AccessControlMiddlewareServiceInterface;
+	private csrfMiddleware!: CSRFMiddlewareServiceInterface;
+	private cacheTTL: number = 300;
 
-	private constructor() {
-		super();
-		this.router.use(this.csrfMiddleware.initializeCSRFMiddleware());
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		helmetService: HelmetMiddlwareServiceInterface,
+		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
+		passportMiddleware: PassportAuthMiddlewareServiceInterface
+	) {
+		super(
+			logger,
+			errorLogger,
+			errorHandler,
+			envConfig,
+			cacheService,
+			gatekeeperService,
+			helmetService,
+			JWTMiddleware,
+			passportMiddleware
+		);
+
+		this.initializeServices().then(() => {
+			this.router.use(this.csrfMiddleware.initializeCSRFMiddleware());
+			this.setupRoutes();
+		});
+	}
+
+	private async initializeServices(): Promise<void> {
+		this.healthCheckService = await ServiceFactory.getHealthCheckService();
+		this.accessControl =
+			await ServiceFactory.getAccessControlMiddlewareService();
+		this.csrfMiddleware = await ServiceFactory.getCSRFMiddlewareService();
+		this.cacheTTL = serviceTTLConfig.HealthRouter || 300;
+	}
+
+	private setupRoutes(): void {
 		this.router.get(
 			'/health.html',
 			this.accessControl.restrictTo('admin'),

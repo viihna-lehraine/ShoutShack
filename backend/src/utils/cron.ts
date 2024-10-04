@@ -17,17 +17,17 @@ export interface CronInterface {
 	__dirname: string;
 }
 
-export function createCronJobs({
+export async function createCronJobs({
 	compressing,
 	exec,
 	fs,
 	path,
 	processEnv,
 	sequelize
-}: CronInterface): void {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+}: CronInterface): Promise<void> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 	const __filename = fileURLToPath(import.meta.url);
 	const __dirname = path.dirname(__filename);
 

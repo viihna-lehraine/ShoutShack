@@ -23,14 +23,14 @@ export class ErrorLog
 	public count!: number;
 }
 
-export function createErrorLogModel(): typeof ErrorLog | null {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+export async function createErrorLogModel(): Promise<typeof ErrorLog | null> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

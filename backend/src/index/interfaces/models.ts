@@ -200,43 +200,30 @@ export interface UserAttributesInterface {
 	isVerified: boolean;
 	resetPasswordToken?: string | null;
 	resetPasswordExpires?: Date | null;
-	isMfaEnabled: boolean;
+	isMFAEnabled: boolean;
 	totpSecret?: string | null | undefined;
-	email2faToken?: string | null | undefined;
-	email2faTokenExpires?: Date | null | undefined;
+	emailMFAToken?: string | null | undefined;
+	emailMFATokenExpires?: Date | null | undefined;
 	creationDate: Date;
 }
 
-export interface UserInstanceInterfaceA {
+export interface UserInstanceInterface {
 	id: string;
 	userId?: number | undefined;
 	username: string;
 	password: string;
 	email: string;
 	isAccountVerified: boolean;
+	isMFAEnabled: boolean;
 	resetPasswordToken: string | null;
 	resetPasswordExpires: Date | null;
-	isMfaEnabled: boolean;
 	totpSecret?: string | null | undefined;
+	emailMFAToken?: string | null | undefined;
+	emailMFATokenExpires?: Date | null | undefined;
 	creationDate: Date;
 	comparePassword: (
 		password: string,
 		argon2: typeof import('argon2')
 	) => Promise<boolean>;
-	save: () => Promise<void>;
-}
-
-export interface UserInstanceInterfaceB {
-	id: string;
-	userId?: number | undefined;
-	username: string;
-	password: string;
-	isAccountVerified: boolean;
-	totpSecret?: string | null | undefined;
-	email2faToken?: string | null | undefined;
-	email2faTokenExpires?: Date | null | undefined;
-	comparePassword: (
-		password: string,
-		argon2: typeof import('argon2')
-	) => Promise<boolean>;
+	save(): Promise<void>;
 }

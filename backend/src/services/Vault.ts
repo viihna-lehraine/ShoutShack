@@ -13,6 +13,12 @@ import { VaultServiceInterface } from '../index/interfaces/services';
 import { ConfigSecretsInterface } from '../index/interfaces/serviceComponents';
 import { HandleErrorStaticParameters } from '../index/parameters';
 import { withRetry } from '../utils/helpers';
+import {
+	AppLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 
 const algorithm = 'aes-256-ctr';
@@ -21,10 +27,10 @@ const PLACEHOLDER = '[REDACTED]';
 
 export class VaultService implements VaultServiceInterface {
 	private static instance: VaultService | null = null;
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private envConfig: EnvConfigServiceInterface;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 	private secrets: Map<
 		string,
 		{
@@ -43,7 +49,18 @@ export class VaultService implements VaultServiceInterface {
 		{ attempts: number; lastAttempt: number }
 	> = new Map();
 
-	private constructor(encryptionKey: string, gpgPassphase: string) {
+	private constructor(
+		encryptionKey: string,
+		gpgPassphrase: string,
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
 		this.maxAttempts = Number(
 			this.envConfig.getEnvVariable('secretsRateLimitMaxAttempts')
 		);
@@ -51,17 +68,50 @@ export class VaultService implements VaultServiceInterface {
 			this.envConfig.getEnvVariable('secretsRateLimitWindow')
 		);
 		this.initializeEncryptionKey(encryptionKey);
-		this.loadAndSecureSecrets(gpgPassphase);
-		this.encryptGPGPassphraseInMemory(gpgPassphase);
+		this.loadAndSecureSecrets(gpgPassphrase);
+		this.encryptGPGPassphraseInMemory(gpgPassphrase);
 	}
 
-	public static getInstance(): VaultService {
+	public static async getInstance(): Promise<VaultService> {
 		if (!VaultService.instance) {
 			throw new Error(
 				'SecretsStore not initialized. Ensure it is initialized after login.'
 			);
 		}
+
 		return VaultService.instance;
+	}
+
+	public static async initialize(
+		encryptionKey: string,
+		gpgPassphrase: string
+	): Promise<VaultService> {
+		try {
+			if (!VaultService.instance) {
+				const logger = await ServiceFactory.getLoggerService();
+				const errorLogger =
+					await ServiceFactory.getErrorLoggerService();
+				const errorHandler =
+					await ServiceFactory.getErrorHandlerService();
+				const envConfig = await ServiceFactory.getEnvConfigService();
+
+				VaultService.instance = new VaultService(
+					encryptionKey,
+					gpgPassphrase,
+					logger,
+					errorLogger,
+					errorHandler,
+					envConfig
+				);
+			}
+			return VaultService.instance;
+		} catch (error) {
+			const initializationError = new Error(
+				`Failed to initialize VaultService: ${error instanceof Error ? error.message : String(error)}`
+			);
+			// Log the error here
+			throw initializationError;
+		}
 	}
 
 	private async loadAndSecureSecrets(gpgPassphrase: string): Promise<void> {
@@ -99,20 +149,6 @@ export class VaultService implements VaultServiceInterface {
 		} catch (error) {
 			this.handleLoadSecretsError(error);
 		}
-	}
-
-	public static initialize(
-		encryptionKey: string,
-		gpgPassphrase: string
-	): VaultService {
-		if (!VaultService.instance) {
-			VaultService.instance = new VaultService(
-				encryptionKey,
-				gpgPassphrase
-			);
-		}
-
-		return VaultService.instance;
 	}
 
 	private initializeEncryptionKey(encryptionKey: string): void {

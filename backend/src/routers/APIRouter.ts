@@ -3,13 +3,53 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { ServiceFactory } from '../index/factory';
 import { check } from 'express-validator';
 import { handleValidationErrors } from '../utils/validator';
+import {
+	AppLoggerServiceInterface,
+	AuthControllerInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	PassportAuthMiddlewareServiceInterface,
+	UserControllerInterface
+} from '../index/interfaces/services';
 
 export class APIRouter extends BaseRouter {
-	private userController = ServiceFactory.getUserController();
-	private authController = ServiceFactory.getAuthController();
+	private userController: UserControllerInterface;
+	private authController: AuthControllerInterface;
 
-	private constructor() {
-		super();
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		helmetService: HelmetMiddlwareServiceInterface,
+		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
+		passportMiddleware: PassportAuthMiddlewareServiceInterface
+	) {
+		super(
+			logger,
+			errorLogger,
+			errorHandler,
+			envConfig,
+			cacheService,
+			gatekeeperService,
+			helmetService,
+			JWTMiddleware,
+			passportMiddleware
+		);
+
+		// Initialize the controllers using the ServiceFactory
+		this.userController =
+			ServiceFactory.getUserController() as UserControllerInterface;
+		this.authController =
+			ServiceFactory.getAuthController() as AuthControllerInterface;
+
 		this.setUpAPIRoutes();
 	}
 

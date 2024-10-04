@@ -1,13 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
 import { BaseRouter } from './BaseRouter';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	GatekeeperServiceInterface,
+	HelmetMiddlwareServiceInterface,
+	JWTAuthMiddlewareServiceInterface,
+	PassportAuthMiddlewareServiceInterface
+} from '../index/interfaces/services';
 
 // *DEV-NOTE* need to create a test page to utilize this router
 
 export class TestRouter extends BaseRouter {
 	private nodeEnv = this.envConfig.getEnvVariable('nodeEnv');
 
-	private constructor() {
-		super();
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		gatekeeperService: GatekeeperServiceInterface,
+		helmetService: HelmetMiddlwareServiceInterface,
+		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
+		passportMiddleware: PassportAuthMiddlewareServiceInterface
+	) {
+		super(
+			logger,
+			errorLogger,
+			errorHandler,
+			envConfig,
+			cacheService,
+			gatekeeperService,
+			helmetService,
+			JWTMiddleware,
+			passportMiddleware
+		);
+		this.nodeEnv = this.envConfig.getEnvVariable('nodeEnv');
 		this.setUpTestRoutes();
 	}
 

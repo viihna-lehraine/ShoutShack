@@ -4,7 +4,7 @@ import { createClient } from 'redis';
 import app from 'express';
 import { BackupCodeService } from '../auth/BackupCode';
 import { MailerService } from '../services/Mailer';
-import { EmailMFAService } from '../auth/EmailMfa';
+import { EmailMFAService } from '../auth/EmailMFA';
 import { RedisService } from '../services/Redis';
 import { CacheService } from '../services/Cache';
 import { blankRequest } from '../config/express';
@@ -33,6 +33,7 @@ import { EnvConfigService } from '../services/EnvConfig';
 import { AuthController } from '../controllers/AuthController';
 import { MiddlewareStatusService } from '../middleware/MiddlewareStatus';
 import { HealthCheckService } from '../services/HealthCheck';
+import { RootMiddlewareService } from '../middleware/Root';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -59,6 +60,7 @@ import {
 	PassportServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface,
+	RootMiddlewareServiceInterface,
 	UserControllerInterface,
 	VaultServiceInterface,
 	YubicoOTPServiceInterface
@@ -69,34 +71,30 @@ import { BaseRouter } from 'src/routers/BaseRouter';
 const defaultReq: Request = {} as Request;
 const defaultRes: Response = {} as Response;
 const defaultNext: NextFunction = () => {};
+const loggerServiceParams = AppLoggerServiceParameters;
 
 export class ServiceFactory {
-	private static loggerService = AppLoggerService.getInstance(
-		AppLoggerServiceParameters
-	);
+	private static loggerService: Promise<AppLoggerServiceInterface> | null =
+		null;
 
-	private static errorLoggerService = ErrorLoggerService.getInstance(
-		AppLoggerServiceParameters
-	);
+	private static errorLoggerService: Promise<ErrorLoggerServiceInterface> | null =
+		null;
 
-	private static errorHandlerService = ErrorHandlerService.getInstance(
-		AppLoggerService.getInstance(
-			AppLoggerServiceParameters
-		) as AppLoggerService,
-		ErrorLoggerService.getInstance(
-			AppLoggerServiceParameters
-		) as ErrorLoggerService
-	);
+	private static errorHandlerService: Promise<ErrorHandlerService> | null =
+		null;
 
-	public static getAccessControlMiddlewareService(): AccessControlMiddlewareServiceInterface {
+	private static envConfigService: Promise<EnvConfigServiceInterface> | null =
+		null;
+
+	public static async getAccessControlMiddlewareService(): Promise<AccessControlMiddlewareServiceInterface> {
 		return AccessControlMiddlewareService.getInstance();
 	}
 
-	public static getAuthController(): AuthControllerInterface {
+	public static async getAuthController(): Promise<AuthControllerInterface> {
 		return AuthController.getInstance();
 	}
 
-	public static getBackupCodeService(): BackupCodeService {
+	public static async getBackupCodeService(): Promise<BackupCodeService> {
 		return BackupCodeService.getInstance();
 	}
 
@@ -104,63 +102,84 @@ export class ServiceFactory {
 		return BaseRouter.getInstance();
 	}
 
-	public static getCacheService(): CacheService {
+	public static async getCacheService(): Promise<CacheService> {
 		return CacheService.getInstance();
 	}
 
-	public static getCSRFMiddlewareService(): CSRFMiddlewareService {
+	public static async getCSRFMiddlewareService(): Promise<CSRFMiddlewareService> {
 		return CSRFMiddlewareService.getInstance(csrfOptions);
 	}
 
-	public static getDatabaseController(): DatabaseControllerInterface {
+	public static async getDatabaseController(): Promise<DatabaseControllerInterface> {
 		return DatabaseController.getInstance();
 	}
 
-	public static getEmailMFAService(): EmailMFAServiceInterface {
+	public static async getEmailMFAService(): Promise<EmailMFAServiceInterface> {
 		return EmailMFAService.getInstance();
 	}
 
-	public static getEnvConfigService(): EnvConfigServiceInterface {
-		return EnvConfigService.getInstance();
+	public static async getEnvConfigService(): Promise<EnvConfigServiceInterface> {
+		if (!this.envConfigService) {
+			this.envConfigService = EnvConfigService.getInstance();
+		}
+		return this.envConfigService;
 	}
 
-	public static getErrorHandlerService(): ErrorHandlerService {
+	public static async getErrorHandlerService(): Promise<ErrorHandlerService> {
+		if (!this.errorHandlerService) {
+			const logger = await this.getLoggerService();
+			const errorLogger = await this.getErrorLoggerService();
+			this.errorHandlerService = ErrorHandlerService.getInstance(
+				logger,
+				errorLogger
+			);
+		}
+
 		return this.errorHandlerService;
 	}
 
-	public static getErrorLoggerService(): ErrorLoggerServiceInterface {
-		return this.errorLoggerService as ErrorLoggerService;
+	public static async getErrorLoggerService(): Promise<ErrorLoggerServiceInterface> {
+		if (!this.errorLoggerService) {
+			this.errorLoggerService = ErrorLoggerService.getInstance(
+				loggerServiceParams,
+				'debug',
+				'BrainBlot Backend'
+			);
+		}
+
+		return this.errorLoggerService;
 	}
 
-	public static getFIDO2Service(): FIDO2Service {
+	public static async getFIDO2Service(): Promise<FIDO2Service> {
 		return FIDO2Service.getInstance();
 	}
 
-	public static getGatekeeperService(): GatekeeperService {
+	public static async getGatekeeperService(): Promise<GatekeeperService> {
 		return GatekeeperService.getInstance();
 	}
 
-	public static getHealthCheckService(): HealthCheckServiceInterface {
+	public static async getHealthCheckService(): Promise<HealthCheckServiceInterface> {
 		return HealthCheckService.getInstance();
 	}
 
-	public static getHelmetMiddlewareService(): HelmetMiddlwareServiceInterface {
+	public static async getHelmetMiddlewareService(): Promise<HelmetMiddlwareServiceInterface> {
 		return HelmetMiddlwareService.getInstance();
 	}
 
-	public static getHTTPSServer(app: app.Application): HTTPSServerInterface {
-		const sequelize = this.getDatabaseController().getSequelizeInstance();
-		const errorHandler = this.getErrorHandlerService();
+	public static async getHTTPSServer(
+		app: app.Application
+	): Promise<HTTPSServerInterface> {
+		const databaseController = await this.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
+		const errorHandler = await this.getErrorHandlerService();
 
 		if (!sequelize) {
 			const HTTPSServerError =
 				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
-					`Unable to start web server, as the sequelize instance is not initialized.`,
-					{
-						exposeToClient: false
-					}
+					'Unable to start web server, as the sequelize instance is not initialized.',
+					{ exposeToClient: false }
 				);
-			errorHandler.handleError({
+			await errorHandler.handleError({
 				error: HTTPSServerError,
 				details: {
 					context: 'WEB_SERVER',
@@ -169,62 +188,71 @@ export class ServiceFactory {
 			});
 			throw HTTPSServerError;
 		}
-
 		return HTTPSServer.getInstance(app, sequelize);
 	}
 
-	public static getLoggerService(): AppLoggerServiceInterface {
-		return this.loggerService as AppLoggerService;
-	}
-
-	public static getJWTAuthMiddlewareService(): JWTAuthMiddlewareServiceInterface {
+	public static async getJWTAuthMiddlewareService(): Promise<JWTAuthMiddlewareServiceInterface> {
 		return JWTAuthMiddlewareService.getInstance();
 	}
 
-	public static getJWTService(): JWTServiceInterface {
+	public static async getJWTService(): Promise<JWTServiceInterface> {
 		return JWTService.getInstance();
 	}
 
-	public static getMailerService(): MailerServiceInterface {
+	public static async getLoggerService(): Promise<AppLoggerServiceInterface> {
+		if (!this.loggerService) {
+			this.loggerService = AppLoggerService.getInstance(
+				AppLoggerServiceParameters
+			);
+		}
+
+		return this.loggerService;
+	}
+
+	public static async getMailerService(): Promise<MailerServiceInterface> {
+		const envConfigService = await this.getEnvConfigService();
+
 		return MailerService.getInstance({
 			nodemailer,
-			emailUser: String(
-				this.getEnvConfigService().getEnvVariable('emailUser')
-			),
+			emailUser: envConfigService.getEnvVariable('emailUser'),
 			validateDependencies
 		});
 	}
 
-	public static getMiddlewareStatusService(): MiddlewareStatusServiceInterface {
+	public static async getMiddlewareStatusService(): Promise<MiddlewareStatusServiceInterface> {
 		return MiddlewareStatusService.getInstance();
 	}
 
-	public static getMulterUploadService(): MulterUploadServiceInterface {
+	public static async getMulterUploadService(): Promise<MulterUploadServiceInterface> {
+		const logger = await this.getLoggerService();
+		const errorLogger = await this.getErrorLoggerService();
+		const errorHandler = await this.getErrorHandlerService();
+
 		return MulterUploadService.getInstance({
 			multer,
 			fileTypeFromBuffer,
 			fs,
 			path,
-			logger: this.getLoggerService(),
-			errorLogger: this.getErrorLoggerService(),
-			errorHandler: this.getErrorHandlerService(),
+			logger,
+			errorLogger,
+			errorHandler,
 			validateDependencies
 		});
 	}
 
-	public static getPassportService(): PassportServiceInterface {
+	public static async getPassportService(): Promise<PassportServiceInterface> {
 		return PassportService.getInstance();
 	}
 
-	public static getPassportAuthMiddlewareService(): PassportAuthMiddlewareServiceInterface {
+	public static async getPassportAuthMiddlewareService(): Promise<PassportAuthMiddlewareServiceInterface> {
 		return PassportAuthMiddlewareService.getInstance();
 	}
 
-	public static getPasswordService(): PasswordService {
+	public static async getPasswordService(): Promise<PasswordService> {
 		return PasswordService.getInstance();
 	}
 
-	public static getRedisService(): RedisServiceInterface {
+	public static async getRedisService(): Promise<RedisServiceInterface> {
 		return RedisService.getInstance({
 			req: defaultReq,
 			res: defaultRes,
@@ -235,22 +263,27 @@ export class ServiceFactory {
 		});
 	}
 
-	public static getResourceManager(): ResourceManagerInterface {
+	public static async getResourceManager(): Promise<ResourceManagerInterface> {
 		return ResourceManager.getInstance();
 	}
 
-	public static getVaultService(): VaultServiceInterface {
+	public static async getRootMiddlewareService(): Promise<RootMiddlewareServiceInterface> {
+		return RootMiddlewareService.getInstance();
+	}
+
+	public static async getVaultService(): Promise<VaultServiceInterface> {
 		return VaultService.getInstance();
 	}
-	public static getTOTPService(): TOTPService {
+
+	public static async getTOTPService(): Promise<TOTPService> {
 		return TOTPService.getInstance();
 	}
 
-	public static getUserController(): UserControllerInterface {
+	public static async getUserController(): Promise<UserControllerInterface> {
 		return UserController.getInstance();
 	}
 
-	public static getYubicoOTPService(): YubicoOTPServiceInterface {
+	public static async getYubicoOTPService(): Promise<YubicoOTPServiceInterface> {
 		return YubicoOTPService.getInstance();
 	}
 }

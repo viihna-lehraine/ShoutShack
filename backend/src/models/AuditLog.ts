@@ -25,14 +25,14 @@ export class AuditLog
 	public auditLogUpdateDate?: Date | null;
 }
 
-export function createAuditLogModel(): typeof AuditLog | null {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+export async function createAuditLogModel(): Promise<typeof AuditLog | null> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

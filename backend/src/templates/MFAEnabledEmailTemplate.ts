@@ -1,10 +1,10 @@
 import { validateDependencies } from '../utils/helpers';
 import { ServiceFactory } from '../index/factory';
 
-export const generateMFAEnabledEmailTemplate = (username: string): string => {
-	const logger = ServiceFactory.getLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+const logger = await ServiceFactory.getLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
 
+export const generateMFAEnabledEmailTemplate = (username: string): string => {
 	validateDependencies([{ name: 'username', instance: username }], logger);
 
 	try {

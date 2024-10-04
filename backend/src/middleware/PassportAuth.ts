@@ -1,5 +1,10 @@
 import { Request, RequestHandler, Response, NextFunction } from 'express';
-import { PassportAuthMiddlewareServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	PassportAuthMiddlewareServiceInterface
+} from '../index/interfaces/services';
 import { PassportAuthMiddlewareServiceDeps } from '../index/interfaces/serviceDeps';
 import { ServiceFactory } from '../index/factory';
 
@@ -7,16 +12,32 @@ export class PassportAuthMiddlewareService
 	implements PassportAuthMiddlewareServiceInterface
 {
 	private static instance: PassportAuthMiddlewareService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+	}
 
-	public static getInstance(): PassportAuthMiddlewareService {
+	public static async getInstance(): Promise<PassportAuthMiddlewareService> {
 		if (!PassportAuthMiddlewareService.instance) {
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
 			PassportAuthMiddlewareService.instance =
-				new PassportAuthMiddlewareService();
+				new PassportAuthMiddlewareService(
+					logger,
+					errorLogger,
+					errorHandler
+				);
 		}
 		return PassportAuthMiddlewareService.instance;
 	}

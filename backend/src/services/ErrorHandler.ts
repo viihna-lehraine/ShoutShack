@@ -31,10 +31,10 @@ export class ErrorHandlerService implements ErrorHandlerServiceInterface {
 		this.errorLogger = errorLogger;
 	}
 
-	public static getInstance(
+	public static async getInstance(
 		logger: AppLoggerServiceInterface,
 		errorLogger: ErrorLoggerServiceInterface
-	): ErrorHandlerService {
+	): Promise<ErrorHandlerService> {
 		if (!ErrorHandlerService.instance) {
 			ErrorHandlerService.instance = new ErrorHandlerService(
 				logger,

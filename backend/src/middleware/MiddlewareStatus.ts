@@ -1,20 +1,42 @@
-import { MiddlewareStatusServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	MiddlewareStatusServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 
 export class MiddlewareStatusService
 	implements MiddlewareStatusServiceInterface
 {
 	private static instance: MiddlewareStatusService | null = null;
+
 	private middlewareStatus: Map<string, 'on' | 'off'> = new Map();
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
 
-	private constructor() {}
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+	}
 
-	public static getInstance(): MiddlewareStatusService {
+	public static async getInstance(): Promise<MiddlewareStatusService> {
 		if (!MiddlewareStatusService.instance) {
-			MiddlewareStatusService.instance = new MiddlewareStatusService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
+			MiddlewareStatusService.instance = new MiddlewareStatusService(
+				logger,
+				errorLogger,
+				errorHandler
+			);
 		}
 
 		return MiddlewareStatusService.instance;

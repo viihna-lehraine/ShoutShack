@@ -1,4 +1,11 @@
-import { JWTServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	JWTServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
@@ -6,17 +13,28 @@ import { withRetry } from '../utils/helpers';
 export class JWTService implements JWTServiceInterface {
 	private static instance: JWTService | null = null;
 
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private cacheService = ServiceFactory.getCacheService();
-	private vault = ServiceFactory.getVaultService();
+	private logger!: AppLoggerServiceInterface;
+	private errorLogger!: ErrorLoggerServiceInterface;
+	private errorHandler!: ErrorHandlerServiceInterface;
+	private cacheService!: CacheServiceInterface;
+	private vault!: VaultServiceInterface;
 
 	private constructor() {}
 
-	public static getInstance(): JWTService {
+	public static async getInstance(): Promise<JWTService> {
 		if (!JWTService.instance) {
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const vault = await ServiceFactory.getVaultService();
+
 			JWTService.instance = new JWTService();
+			JWTService.instance.logger = logger;
+			JWTService.instance.errorLogger = errorLogger;
+			JWTService.instance.errorHandler = errorHandler;
+			JWTService.instance.cacheService = cacheService;
+			JWTService.instance.vault = vault;
 		}
 
 		return JWTService.instance;

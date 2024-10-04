@@ -13,6 +13,10 @@ import {
 } from 'fido2-lib';
 import {
 	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
 	FIDO2ServiceInterface
 } from '../index/interfaces/services';
 import { FidoUserInterface } from '../index/interfaces/serviceComponents';
@@ -26,21 +30,32 @@ import '../../types/custom/yub.js';
 export class FIDO2Service implements FIDO2ServiceInterface {
 	private static instance: FIDO2Service | null = null;
 	private FIDO2: Fido2Lib | null = null;
-	private logger: AppLoggerServiceInterface;
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private cacheService = ServiceFactory.getCacheService();
-	private timeout = this.envConfig.getEnvVariable('fido2Timeout') || 50000;
+	private logger!: AppLoggerServiceInterface;
+	private errorLogger!: ErrorLoggerServiceInterface;
+	private errorHandler!: ErrorHandlerServiceInterface;
+	private envConfig!: EnvConfigServiceInterface;
+	private cacheService!: CacheServiceInterface;
+	private timeout: number;
 
-	constructor() {
-		this.logger =
-			ServiceFactory.getLoggerService() as AppLoggerServiceInterface;
+	private constructor() {
+		this.timeout =
+			(this.envConfig.getEnvVariable('fido2Timeout') as number) || 50000;
 	}
 
-	public static getInstance(): FIDO2Service {
+	public static async getInstance(): Promise<FIDO2Service> {
 		if (!FIDO2Service.instance) {
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await ServiceFactory.getLoggerService();
+
 			FIDO2Service.instance = new FIDO2Service();
+			FIDO2Service.instance.errorLogger = errorLogger;
+			FIDO2Service.instance.errorHandler = errorHandler;
+			FIDO2Service.instance.envConfig = envConfig;
+			FIDO2Service.instance.cacheService = cacheService;
+			FIDO2Service.instance.logger = logger;
 		}
 
 		return FIDO2Service.instance;

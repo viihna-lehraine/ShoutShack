@@ -1,34 +1,89 @@
 import toobusy from 'toobusy-js';
 import express from 'express';
-import { HealthCheckServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	DatabaseControllerInterface,
+	EnvConfigServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	HealthCheckServiceInterface,
+	HTTPSServerInterface,
+	RedisServiceInterface,
+	ResourceManagerInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import fs from 'fs';
 import os from 'os';
 
 export class HealthCheckService implements HealthCheckServiceInterface {
 	private static instance: HealthCheckService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private cacheService = ServiceFactory.getCacheService();
-	private redisService = ServiceFactory.getRedisService();
-	private resourceManager = ServiceFactory.getResourceManager();
-	private databaseController = ServiceFactory.getDatabaseController();
-	private httpsServer = ServiceFactory.getHTTPSServer(express.application);
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private cacheService: CacheServiceInterface;
+	private redisService: RedisServiceInterface;
+	private resourceManager: ResourceManagerInterface;
+	private databaseController: DatabaseControllerInterface;
+	private httpsServer: HTTPSServerInterface;
+
 	private healthCheckHistory: Record<string, unknown>[] = [];
 	private thresholdBreaches: Array<Record<string, unknown>> = [];
 	private healthCheckInterval: NodeJS.Timeout | null = null;
 
-	private constructor() {
-		setInterval(() => {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		cacheService: CacheServiceInterface,
+		redisService: RedisServiceInterface,
+		resourceManager: ResourceManagerInterface,
+		databaseController: DatabaseControllerInterface,
+		httpsServer: HTTPSServerInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.cacheService = cacheService;
+		this.redisService = redisService;
+		this.resourceManager = resourceManager;
+		this.databaseController = databaseController;
+		this.httpsServer = httpsServer;
+
+		this.healthCheckInterval = setInterval(() => {
 			this.performHealthCheck();
 		}, 10000);
 	}
 
-	public static getInstance(): HealthCheckService {
+	public static async getInstance(): Promise<HealthCheckService> {
 		if (!HealthCheckService.instance) {
-			HealthCheckService.instance = new HealthCheckService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const cacheService = await ServiceFactory.getCacheService();
+			const redisService = await ServiceFactory.getRedisService();
+			const resourceManager = await ServiceFactory.getResourceManager();
+			const databaseController =
+				await ServiceFactory.getDatabaseController();
+			const httpsServer = await ServiceFactory.getHTTPSServer(
+				express.application
+			);
+
+			HealthCheckService.instance = new HealthCheckService(
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				cacheService,
+				redisService,
+				resourceManager,
+				databaseController,
+				httpsServer
+			);
 		}
 
 		return HealthCheckService.instance;
@@ -51,13 +106,17 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 			};
 
 			const httpsServerHealth = {
-				status: httpsServerInfo ? 'Connected' : 'Not connected',
+				status: httpsServerInfo ? 'Running' : 'Stopped',
 				uptime: httpsServerInfo?.uptime_in_seconds ?? 0,
-				cpuUsed: httpsServerInfo?.used_cpu_sys ?? 0,
-				memoryUsed: httpsServerInfo?.used_memory ?? 0,
-				cacheSize: httpsServerInfo?.cacheSize ?? 0,
-				connectedClients: httpsServerInfo?.connected_clients ?? 0,
-				serverMetrics: this.getServerMetrics()
+				memoryUsed:
+					(httpsServerInfo?.memoryUsage as { heapUsed: number })
+						.heapUsed ?? 0,
+				heapTotal:
+					(httpsServerInfo?.memoryUsage as { heapTotal: number })
+						.heapTotal ?? 0,
+				cpuUsage:
+					(httpsServerInfo?.cpuUsage as { user: number }).user ?? 0,
+				connections: httpsServerInfo?.connections ?? 0
 			};
 
 			const redisHealth = {
@@ -70,19 +129,14 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 
 			const healthSummary: Record<string, unknown> = {
 				timestamp: new Date().toISOString(),
-				databaseStatus: databaseHealth ? 'Connected' : 'Not connected',
-				redisStatus: redisHealth ? 'Connected' : 'Not connected',
+				databaseStatus: databaseHealth.status,
+				httpsServerStatus: httpsServerHealth.status,
+				redisStatus: redisHealth.status,
+				databaseMetrics: databaseHealth,
+				httpsServerMetrics: httpsServerHealth,
+				redisMetrics: redisHealth,
 				cacheServiceMetrics:
 					this.cacheService.getCacheMetrics('healthCheckService'),
-				databaseControllerMetrics:
-					this.databaseController.getDatabaseMetrics(
-						'healthCheckService'
-					),
-				httpsServerMetrics:
-					this.httpsServer.getHTTPSServerMetrics(
-						'healthCheckService'
-					),
-				redisServiceMetrics: this.redisService.getRedisInfo(),
 				eventLoopLag: toobusy.lag(),
 				cpuUsage: this.resourceManager.getCpuUsage(),
 				memoryUsage: this.resourceManager.getMemoryUsage(),
@@ -115,14 +169,24 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 		}
 	}
 
-	public getServerMetrics(): Record<string, unknown> {
-		const serverMetrics =
-			this.httpsServer.getServiceMetrics('healthCheckService');
-		return {
-			averageResponseTime: serverMetrics.averageResponseTime,
-			requestRate: serverMetrics.requestsPerSecond,
-			openConnections: serverMetrics.openConnections
-		};
+	public async getHTTPSServerMetrics(
+		serviceName: string
+	): Promise<Record<string, unknown>> {
+		try {
+			const serverMetrics =
+				await this.httpsServer.getHTTPSServerMetrics(serviceName);
+			return {
+				averageResponseTime: serverMetrics.averageResponseTime,
+				requestRate: serverMetrics.requestsPerSecond,
+				openConnections: serverMetrics.openConnections
+			};
+		} catch (error) {
+			this.logger.error(
+				`Failed to fetch HTTPS server metrics for ${serviceName}`,
+				error
+			);
+			throw error;
+		}
 	}
 
 	public getHealthCheckHistory(): Array<Record<string, unknown>> {

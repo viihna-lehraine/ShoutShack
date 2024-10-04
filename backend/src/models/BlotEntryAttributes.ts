@@ -24,14 +24,14 @@ export class BlotEntry
 	public entryDate!: CreationOptional<Date>;
 }
 
-export function createBlotEntryModel(): typeof BlotEntry | null {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+export async function createBlotEntryModel(): Promise<typeof BlotEntry | null> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

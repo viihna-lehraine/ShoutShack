@@ -1,4 +1,10 @@
-import { TOTPServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	TOTPServiceInterface
+} from '../index/interfaces/services';
 import { TOTPSecretInterface } from '../index/interfaces/serviceComponents';
 import { ServiceFactory } from '../index/factory';
 import speakeasy from 'speakeasy';
@@ -7,17 +13,39 @@ import { serviceTTLConfig } from '../config/cache';
 
 export class TOTPService implements TOTPServiceInterface {
 	private static instance: TOTPService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private cacheService = ServiceFactory.getCacheService();
-	private ttl = serviceTTLConfig.TOTPService || serviceTTLConfig.default;
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private cacheService: CacheServiceInterface;
 
-	private constructor() {}
+	private ttl: number;
 
-	public static getInstance(): TOTPService {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		cacheService: CacheServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.cacheService = cacheService;
+		this.ttl = serviceTTLConfig.TOTPService || serviceTTLConfig.default;
+	}
+
+	public static async getInstance(): Promise<TOTPService> {
 		if (!TOTPService.instance) {
-			TOTPService.instance = new TOTPService();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const cacheService = await ServiceFactory.getCacheService();
+
+			TOTPService.instance = new TOTPService(
+				logger,
+				errorLogger,
+				errorHandler,
+				cacheService
+			);
 		}
 
 		return TOTPService.instance;

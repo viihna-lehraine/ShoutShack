@@ -33,7 +33,7 @@ import {
 	YubicoOTPOptionsInterface
 } from './serviceComponents';
 import { SecretsMap } from './env';
-import { ModelOperations, UserInstanceInterfaceA } from './models';
+import { ModelOperations, UserInstanceInterface } from './models';
 import { EnvVariableTypes, FeatureFlagTypes } from './env';
 import { UserAttributesInterface } from './models';
 import { RedisClientType } from 'redis';
@@ -77,19 +77,19 @@ export interface AuthControllerInterface {
 		email: string,
 		password: string
 	): Promise<{ success: boolean; token?: string }>;
-	generateResetToken(user: UserInstanceInterfaceA): Promise<string | null>;
+	generateResetToken(user: UserInstanceInterface): Promise<string | null>;
 	validateResetToken(
 		userId: string,
 		token: string
-	): Promise<UserInstanceInterfaceA | null>;
+	): Promise<UserInstanceInterface | null>;
 	comparePassword(
-		user: UserInstanceInterfaceA,
+		user: UserInstanceInterface,
 		password: string
 	): Promise<boolean>;
 	resetPassword(
-		user: UserInstanceInterfaceA,
+		user: UserInstanceInterface,
 		newPassword: string
-	): Promise<UserInstanceInterfaceA | null>;
+	): Promise<UserInstanceInterface | null>;
 	enableMfa(userId: string): Promise<boolean>;
 	disableMfa(userId: string): Promise<boolean>;
 	recoverPassword(email: string): Promise<void>;
@@ -318,6 +318,10 @@ export interface HelmetMiddlwareServiceInterface {
 export interface HTTPSServerInterface {
 	initialize: () => Promise<void>;
 	startServer: () => Promise<void>;
+	getHTTPSServerInfo(): Promise<Record<string, unknown>>;
+	getHTTPSServerMetrics(
+		serviceName: string
+	): Promise<Record<string, unknown>>;
 	shutdownServer: () => Promise<void>;
 }
 
@@ -428,8 +432,20 @@ export interface ResourceManagerInterface {
 	shutdown(): Promise<void>;
 }
 
+export interface RootMiddlewareServiceInterface {
+	trackResponseTime(req: Request, res: Response, next: NextFunction): void;
+	calculateRequestsPerSecond(): void;
+	shutdown(): Promise<void>;
+	getAverageResponseTime(): number;
+}
+
 export interface StaticRouterInterface {
 	initializeStaticRouter(): Promise<void>;
+	serveNotFoundPage(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): Promise<void>;
 }
 
 export interface TOTPServiceInterface {
@@ -443,33 +459,19 @@ export interface TOTPServiceInterface {
 export interface UserControllerInterface {
 	findOne(
 		criteria: WhereOptions<InferAttributes<User>>
-	): Promise<UserInstanceInterfaceA | null>;
-	findUserByEmail(email: string): Promise<UserInstanceInterfaceA | null>;
-	findUserById(userId: string): Promise<UserInstanceInterfaceA | null>;
+	): Promise<UserInstanceInterface | null>;
+	findUserByEmail(email: string): Promise<UserInstanceInterface | null>;
+	findUserById(userId: string): Promise<UserInstanceInterface | null>;
 	createUser(
 		userDetails: Omit<UserAttributesInterface, 'id' | 'creationDate'>
-	): Promise<UserInstanceInterfaceA | null>;
+	): Promise<UserInstanceInterface | null>;
 	updateUser(
-		user: UserInstanceInterfaceA,
-		updatedDetails: Partial<UserInstanceInterfaceA>
-	): Promise<UserInstanceInterfaceA | null>;
+		user: UserInstanceInterface,
+		updatedDetails: Partial<UserInstanceInterface>
+	): Promise<UserInstanceInterface | null>;
 	deleteUser(userId: string): Promise<boolean>;
 	verifyUserAccount(userId: string): Promise<boolean>;
 	shutdown(): Promise<void>;
-}
-
-export interface ValidatorServiceInterface {
-	validateEntry(req: Request, res: Response, next: NextFunction): void;
-	registrationValidationRules(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): void;
-	handleValidationErrors(
-		req: Request,
-		res: Response,
-		next: NextFunction
-	): Response | void;
 }
 
 export interface VaultServiceInterface {
@@ -489,6 +491,20 @@ export interface VaultServiceInterface {
 	clearSecretsFromMemory(secretKeys: string | string[]): void;
 	batchClearSecrets(): Promise<void>;
 	shutdown(): Promise<void>;
+}
+
+export interface ValidatorServiceInterface {
+	validateEntry(req: Request, res: Response, next: NextFunction): void;
+	registrationValidationRules(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): void;
+	handleValidationErrors(
+		req: Request,
+		res: Response,
+		next: NextFunction
+	): Response | void;
 }
 
 export interface YubicoOTPServiceInterface {

@@ -24,16 +24,16 @@ export class FailedLoginAttempts
 	public isLocked!: boolean;
 }
 
-export function createFailedLoginAttemptsModel():
-	| typeof FailedLoginAttempts
-	| null {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+export async function createFailedLoginAttemptsModel(): Promise<
+	typeof FailedLoginAttempts | null
+> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	try {
-		const sequelize =
-			ServiceFactory.getDatabaseController().getSequelizeInstance();
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
 
 		if (!sequelize) {
 			const databaseError =

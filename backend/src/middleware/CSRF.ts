@@ -1,4 +1,9 @@
-import { CSRFMiddlewareServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CSRFMiddlewareServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { Request, Response, NextFunction } from 'express';
 import Tokens, { Options as CSRFOptions } from 'csrf';
@@ -6,17 +11,26 @@ import Tokens, { Options as CSRFOptions } from 'csrf';
 export class CSRFMiddlewareService implements CSRFMiddlewareServiceInterface {
 	private static instance: CSRFMiddlewareService | null = null;
 	private csrfProtection: Tokens;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
+	private logger!: AppLoggerServiceInterface;
+	private errorLogger!: ErrorLoggerServiceInterface;
+	private errorHandler!: ErrorHandlerServiceInterface;
 
 	private constructor(options?: CSRFOptions) {
 		this.csrfProtection = new Tokens(options);
 	}
 
-	public static getInstance(options?: CSRFOptions): CSRFMiddlewareService {
+	public static async getInstance(
+		options?: CSRFOptions
+	): Promise<CSRFMiddlewareService> {
 		if (!CSRFMiddlewareService.instance) {
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+
 			CSRFMiddlewareService.instance = new CSRFMiddlewareService(options);
+			CSRFMiddlewareService.instance.logger = logger;
+			CSRFMiddlewareService.instance.errorLogger = errorLogger;
+			CSRFMiddlewareService.instance.errorHandler = errorHandler;
 		}
 
 		return CSRFMiddlewareService.instance;

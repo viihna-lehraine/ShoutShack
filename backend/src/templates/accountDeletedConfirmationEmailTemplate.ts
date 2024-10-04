@@ -1,12 +1,12 @@
 import { ServiceFactory } from '../index/factory';
 import { validateDependencies } from '../utils/helpers';
 
+const logger = await ServiceFactory.getLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
+
 const generateAccountDeletedConfirmationEmailTemplate = (
 	username: string
 ): string => {
-	const logger = ServiceFactory.getLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
-
 	validateDependencies([{ name: 'username', instance: username }], logger);
 
 	try {

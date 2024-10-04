@@ -2,7 +2,10 @@ import { Request } from 'express';
 import { readFile } from 'fs/promises';
 import EventEmitter from 'events';
 import { FileFilterCallback, Multer } from 'multer';
-import { MulterUploadServiceInterface } from '../index/interfaces/services';
+import {
+	EnvConfigServiceInterface,
+	MulterUploadServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { MulterUploadServiceDeps } from '../index/interfaces/serviceDeps';
 
@@ -11,7 +14,9 @@ export class MulterUploadService
 	implements MulterUploadServiceInterface
 {
 	private static instance: MulterUploadService | null = null;
-	private envConfig = ServiceFactory.getEnvConfigService();
+
+	private envConfig: EnvConfigServiceInterface;
+
 	private readonly _deps: MulterUploadServiceDeps;
 	public fileSizeLimit: number;
 	public storageDir: string;
@@ -20,11 +25,13 @@ export class MulterUploadService
 	public allowedExtensions: string[];
 
 	private constructor(
+		envConfig: EnvConfigServiceInterface,
 		deps: MulterUploadServiceDeps,
 		allowedMimeTypes: string[] = [],
 		allowedExtensions: string[] = []
 	) {
 		super();
+		this.envConfig = envConfig;
 		this._deps = deps;
 		this.setMaxListeners(5);
 		this.fileSizeLimit = this.envConfig.getEnvVariable(
@@ -56,13 +63,15 @@ export class MulterUploadService
 		this._deps.logger.info('Multer Upload Service initialized');
 	}
 
-	public static getInstance(
+	public static async getInstance(
 		deps: MulterUploadServiceDeps,
 		allowedMimeTypes: string[] = [],
 		allowedExtensions: string[] = []
-	): MulterUploadService {
+	): Promise<MulterUploadService> {
 		if (!MulterUploadService.instance) {
+			const envConfig = await ServiceFactory.getEnvConfigService();
 			MulterUploadService.instance = new MulterUploadService(
+				envConfig,
 				deps,
 				allowedMimeTypes,
 				allowedExtensions

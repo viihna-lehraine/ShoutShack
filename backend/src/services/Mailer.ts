@@ -1,17 +1,24 @@
 import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
 import { MailerServiceDeps } from '../index/interfaces/serviceDeps';
-import { MailerServiceInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	EnvConfigServiceInterface,
+	ErrorLoggerServiceInterface,
+	ErrorHandlerServiceInterface,
+	MailerServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 export class MailerService implements MailerServiceInterface {
 	private static instance: MailerService | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private secrets = ServiceFactory.getVaultService();
+	private logger!: AppLoggerServiceInterface;
+	private errorLogger!: ErrorLoggerServiceInterface;
+	private errorHandler!: ErrorHandlerServiceInterface;
+	private envConfig!: EnvConfigServiceInterface;
+	private vault!: VaultServiceInterface;
 	private transporter: Transporter | null = null;
 
 	private constructor(
@@ -19,20 +26,34 @@ export class MailerService implements MailerServiceInterface {
 		private emailUser: string
 	) {}
 
-	public static getInstance(deps: MailerServiceDeps): MailerService {
+	public static async getInstance(
+		deps: MailerServiceDeps
+	): Promise<MailerService> {
 		deps.validateDependencies(
 			[
 				{ name: 'nodemailer', instance: deps.nodemailer },
 				{ name: 'emailUser', instance: deps.emailUser }
 			],
-			ServiceFactory.getLoggerService()
+			await ServiceFactory.getLoggerService()
 		);
 
 		if (!MailerService.instance) {
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const vault = await ServiceFactory.getVaultService();
+
 			MailerService.instance = new MailerService(
 				deps.nodemailer,
 				deps.emailUser
 			);
+
+			MailerService.instance.logger = logger;
+			MailerService.instance.errorLogger = errorLogger;
+			MailerService.instance.errorHandler = errorHandler;
+			MailerService.instance.envConfig = envConfig;
+			MailerService.instance.vault = vault;
 		}
 
 		return MailerService.instance;
@@ -52,7 +73,7 @@ export class MailerService implements MailerServiceInterface {
 		try {
 			this.validateMailerDependencies();
 
-			const smtpToken = this.secrets.retrieveSecret(
+			const smtpToken = this.vault.retrieveSecret(
 				'SMTP_TOKEN',
 				secret => secret
 			);

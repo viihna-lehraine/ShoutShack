@@ -41,9 +41,9 @@ export interface Models {
 }
 
 export async function loadModels(sequelize: Sequelize): Promise<Models | null> {
-	const logger = ServiceFactory.getLoggerService();
-	const errorLogger = ServiceFactory.getErrorLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 	validateDependencies([{ name: 'sequelize', instance: sequelize }], logger);
 	try {

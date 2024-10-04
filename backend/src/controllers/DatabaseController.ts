@@ -1,27 +1,51 @@
 import { Options, QueryTypes, Sequelize, Dialect } from 'sequelize';
 import { AppError } from '../errors/ErrorClasses';
-import { DatabaseControllerInterface } from '../index/interfaces/services';
+import {
+	AppLoggerServiceInterface,
+	CacheServiceInterface,
+	DatabaseControllerInterface,
+	EnvConfigServiceInterface,
+	ErrorHandlerServiceInterface,
+	ErrorLoggerServiceInterface,
+	VaultServiceInterface
+} from '../index/interfaces/services';
 import { ModelOperations } from '../index/interfaces/models';
 import { ServiceFactory } from '../index/factory';
 import { Logger } from 'winston';
 
 export class DatabaseController implements DatabaseControllerInterface {
 	private static instance: DatabaseController | null = null;
-	private logger = ServiceFactory.getLoggerService();
-	private errorLogger = ServiceFactory.getErrorLoggerService();
-	private errorHandler = ServiceFactory.getErrorHandlerService();
-	private envConfig = ServiceFactory.getEnvConfigService();
-	private secrets = ServiceFactory.getVaultService();
-	private cacheService = ServiceFactory.getCacheService();
+
+	private logger: AppLoggerServiceInterface;
+	private errorLogger: ErrorLoggerServiceInterface;
+	private errorHandler: ErrorHandlerServiceInterface;
+	private envConfig: EnvConfigServiceInterface;
+	private vault: VaultServiceInterface;
+	private cacheService: CacheServiceInterface;
+
 	private sequelizeInstance: Sequelize | null = null;
 	private attempt = 0;
 
-	private constructor() {
+	private constructor(
+		logger: AppLoggerServiceInterface,
+		errorLogger: ErrorLoggerServiceInterface,
+		errorHandler: ErrorHandlerServiceInterface,
+		envConfig: EnvConfigServiceInterface,
+		vault: VaultServiceInterface,
+		cacheService: CacheServiceInterface
+	) {
+		this.logger = logger;
+		this.errorLogger = errorLogger;
+		this.errorHandler = errorHandler;
+		this.envConfig = envConfig;
+		this.vault = vault;
+		this.cacheService = cacheService;
+
 		const host = this.envConfig.getEnvVariable('dbHost');
 		const username = this.envConfig.getEnvVariable('dbUser');
 		const database = this.envConfig.getEnvVariable('dbName');
 		const dialect = this.envConfig.getEnvVariable('dbDialect');
-		const password = this.secrets.retrieveSecret(
+		const password = this.vault.retrieveSecret(
 			'DB_PASSWORD',
 			secret => secret
 		);
@@ -57,9 +81,23 @@ export class DatabaseController implements DatabaseControllerInterface {
 		this.connect();
 	}
 
-	public static getInstance(): DatabaseController {
+	public static async getInstance(): Promise<DatabaseController> {
 		if (!DatabaseController.instance) {
-			DatabaseController.instance = new DatabaseController();
+			const logger = await ServiceFactory.getLoggerService();
+			const errorLogger = await ServiceFactory.getErrorLoggerService();
+			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const envConfig = await ServiceFactory.getEnvConfigService();
+			const vault = await ServiceFactory.getVaultService();
+			const cacheService = await ServiceFactory.getCacheService();
+
+			DatabaseController.instance = new DatabaseController(
+				logger,
+				errorLogger,
+				errorHandler,
+				envConfig,
+				vault,
+				cacheService
+			);
 		}
 
 		return DatabaseController.instance;
@@ -128,7 +166,7 @@ export class DatabaseController implements DatabaseControllerInterface {
 						: false
 				};
 
-				const dbPassword = this.secrets.retrieveSecret(
+				const dbPassword = this.vault.retrieveSecret(
 					'DB_PASSWORD',
 					secret => secret
 				);

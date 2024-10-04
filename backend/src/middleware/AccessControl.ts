@@ -1,26 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
-import { AccessControlMiddlewareServiceInterface } from '../index/interfaces/services';
+import {
+	AccessControlMiddlewareServiceInterface,
+	AppLoggerServiceInterface
+} from '../index/interfaces/services';
+import { AuthenticatedUserInterface } from '../index/interfaces/serviceComponents';
 import { ServiceFactory } from '../index/factory';
-
-interface AuthenticatedUser {
-	id: string;
-	role: string;
-	permissions: string[];
-}
 
 export class AccessControlMiddlewareService
 	implements AccessControlMiddlewareServiceInterface
 {
 	private static instance: AccessControlMiddlewareService | null = null;
 
-	private logger = ServiceFactory.getLoggerService();
+	private logger: AppLoggerServiceInterface;
 
-	private constructor() {}
+	private constructor(logger: AppLoggerServiceInterface) {
+		this.logger = logger;
+	}
 
-	public static getInstance(): AccessControlMiddlewareService {
+	public static async getInstance(): Promise<AccessControlMiddlewareService> {
 		if (!AccessControlMiddlewareService.instance) {
+			const logger = await ServiceFactory.getLoggerService();
 			AccessControlMiddlewareService.instance =
-				new AccessControlMiddlewareService();
+				new AccessControlMiddlewareService(logger);
 		}
 
 		return AccessControlMiddlewareService.instance;
@@ -28,7 +29,7 @@ export class AccessControlMiddlewareService
 
 	public restrictTo(...allowedRoles: string[]) {
 		return (req: Request, res: Response, next: NextFunction): void => {
-			const user = req.user as AuthenticatedUser;
+			const user = req.user as AuthenticatedUserInterface;
 
 			if (!user || !allowedRoles.includes(user.role)) {
 				res.status(403).json({
@@ -43,7 +44,7 @@ export class AccessControlMiddlewareService
 
 	public hasPermission(...requiredPermissions: string[]) {
 		return (req: Request, res: Response, next: NextFunction): void => {
-			const user = req.user as AuthenticatedUser;
+			const user = req.user as AuthenticatedUserInterface;
 
 			if (
 				!user ||

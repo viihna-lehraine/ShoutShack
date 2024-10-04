@@ -1,13 +1,13 @@
 import { ServiceFactory } from 'src/index/factory';
 import { validateDependencies } from '../utils/helpers';
 
+const logger = await ServiceFactory.getLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
+
 export const generateEmailMFATemplate = (
 	username: string,
 	emailVerificationCode: string
 ): string => {
-	const logger = ServiceFactory.getLoggerService();
-	const errorHandler = ServiceFactory.getErrorHandlerService();
-
 	validateDependencies(
 		[
 			{ name: 'username', instance: username },
