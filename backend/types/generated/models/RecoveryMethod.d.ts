@@ -1,14 +1,6 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
-import { Logger } from '../utils/logger';
-interface RecoveryMethodAttributes {
-    id: string;
-    isRecoveryActive: boolean;
-    recoveryId: string;
-    recoveryMethod?: 'email' | 'backupCodes' | null;
-    backupCodes?: string[] | null;
-    recoveryLastUpdated: Date;
-}
-declare class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, InferCreationAttributes<RecoveryMethod>> implements RecoveryMethodAttributes {
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { RecoveryMethodAttributes } from '../index/interfaces/models';
+export declare class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, InferCreationAttributes<RecoveryMethod>> implements RecoveryMethodAttributes {
     id: string;
     isRecoveryActive: boolean;
     recoveryId: string;
@@ -16,6 +8,5 @@ declare class RecoveryMethod extends Model<InferAttributes<RecoveryMethod>, Infe
     backupCodes: string[] | null;
     recoveryLastUpdated: CreationOptional<Date>;
 }
-export default function createRecoveryMethodModel(sequelize: Sequelize, logger: Logger): typeof RecoveryMethod;
-export { RecoveryMethod };
+export declare function createRecoveryMethodModel(): Promise<typeof RecoveryMethod | null>;
 //# sourceMappingURL=RecoveryMethod.d.ts.map

@@ -26,15 +26,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private redisService: RedisServiceInterface;
 	private resourceManager: ResourceManagerInterface;
 
-	/*
-	private readonly RATE_LIMIT_BASE_POINTS =
-		GatekeeperService.envConfig.getEnvVariable('rateLimiterBasePoints');
-	private readonly RATE_LIMIT_BASE_DURATION =
-		GatekeeperService.envConfig.getEnvVariable('rateLimiterBaseDuration');
-	private readonly SYNC_INTERVAL =
-		GatekeeperService.envConfig.getEnvVariable('blacklistSyncInterval') ||
-		3600000;
-	*/
 	private RATE_LIMIT_BASE_POINTS: number;
 	private RATE_LIMIT_BASE_DURATION: number;
 	private SYNC_INTERVAL: number;
@@ -108,6 +99,12 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		}
 
 		return GatekeeperService.instance;
+	}
+
+	public async initialize(): Promise<void> {
+		await Promise.all([this.loadIpBlacklist(), this.loadWhitelist()]);
+		this.resetGlobalRateLimitStats();
+		await this.syncBlacklistFromRedisToFile();
 	}
 
 	public async dynamicRateLimiter(): Promise<void> {

@@ -32,10 +32,12 @@ export class RootError extends Error {
 		details: ErrorDetails = {}
 	) {
 		super(errorMessage);
+
 		this.statusCode = statusCode;
 		this.severity = severity;
 		this.errorCode = errorCode;
 		this.details = setDefaultDetails(details);
+
 		Error.captureStackTrace(this, this.constructor);
 	}
 }

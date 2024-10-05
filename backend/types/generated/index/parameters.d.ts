@@ -1,0 +1,127 @@
+import fs from 'fs';
+import { format, transports } from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import LogStashTransport from 'winston-logstash';
+import { Sequelize } from 'sequelize';
+import { sanitizeRequestBody } from '../utils/validator';
+import { AddIpToBlacklistInterface, CreateJwtInterface, DeclareWebServerOptionsInterface, InitializeDatabaseInterface, InitIpBlacklistInterface, LoadIpBlacklistInterface, SetUpDatabaseInterface } from './interfaces/serviceComponents';
+import { EnvVariableTypes } from './interfaces/env';
+export declare const AddIpToBlacklistStaticParameters: Omit<AddIpToBlacklistInterface, 'ip'>;
+export declare const CreateJwtParameters: CreateJwtInterface;
+export declare const DeclareWebServerOptionsStaticParameters: DeclareWebServerOptionsInterface;
+export declare const envVariables: EnvVariableTypes;
+export declare const ExpressErrorHandlerStaticParameters: {
+    fallbackLogger: Console;
+};
+export declare const FeatureFlagNames: {
+    readonly API_ROUTES_CSR: "FEATURE_API_ROUTES_CSRF";
+    readonly DB_SYNC: "FEATURE_DB_SYNC";
+    readonly ENABLE_CSRF: "FEATURE_ENABLE_CSRF";
+    readonly ENABLE_IP_BLACKLIST: "FEATURE_ENABLE_IP_BLACKLIST";
+    readonly ENABLE_JWT_AUTH: "FEATURE_ENABLE_JWT_AUTH";
+    readonly ENABLE_LOG_STASH: "FEATURE_ENABLE_LOG_STASH";
+    readonly ENABLE_RATE_LIMIT: "FEATURE_ENABLE_RATE_LIMIT";
+    readonly ENABLE_TLS: "FEATURE_ENABLE_TLS";
+    readonly ENCRYPT_SECRETS_STORE: "FEATURE_ENCRYPT_SECRETS_STORE";
+    readonly HONOR_CIPHER_ORDER: "FEATURE_HONOR_CIPHER_ORDER";
+    readonly HTTPS_REDIRECT: "FEATURE_HTTPS_REDIRECT";
+    readonly LOAD_TEST_ROUTES: "FEATURE_LOAD_TEST_ROUTES";
+    readonly SECURE_HEADERS: "FEATURE_SECURE_HEADERS";
+    readonly SEQUELIZE_LOGGING: "FEATURE_SEQUELIZE_LOGGING";
+};
+export declare const GetFeatureFlagsStaticParameters: {
+    blankRequest: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+};
+export declare const HandleCriticalErrorStaticParameters: {
+    fallbackLogger: Console;
+};
+export declare const HandleErrorStaticParameters: {
+    fallbackLogger: Console;
+};
+export declare const InitializeDatabaseStaticParameters: InitializeDatabaseInterface;
+export declare const InitIpBlacklistParameters: InitIpBlacklistInterface;
+export declare const LoadIpBlacklistParameters: LoadIpBlacklistInterface;
+export declare const SetUpDatabaseParameters: SetUpDatabaseInterface;
+export declare const AppLoggerServiceParameters: {
+    winston: {
+        createLogger: (options?: import("winston").LoggerOptions) => import("winston").Logger;
+        format: typeof format;
+        transports: transports.Transports;
+        addColors: (target: import("winston/lib/winston/config").AbstractConfigSetColors) => any;
+    };
+    DailyRotateFile: typeof DailyRotateFile;
+    LogStashTransport: typeof LogStashTransport;
+    ErrorClasses: {
+        AutoCorrectedInputWarning: typeof import("../errors/ClientErrorClasses").AutoCorrectedInputWarning;
+        ClientAuthenticationError: typeof import("../errors/ClientErrorClasses").ClientAuthenticationError;
+        DeprecatedApiWarning: typeof import("../errors/ClientErrorClasses").DeprecatedApiWarning;
+        ExternalServiceError: typeof import("../errors/ClientErrorClasses").ExternalServiceError;
+        FallbackSuccessInfo: typeof import("../errors/AppErrorClasses").FallbackSuccessInfo;
+        FileProcessingError: typeof import("../errors/ClientErrorClasses").FileProcessingError;
+        ForbiddenError: typeof import("../errors/ClientErrorClasses").ForbiddenError;
+        InvalidCredentialsError: typeof import("../errors/ClientErrorClasses").InvalidCredentialsError;
+        InvalidInputError: typeof import("../errors/ClientErrorClasses").InvalidInputError;
+        InvalidTokenError: typeof import("../errors/ClientErrorClasses").InvalidTokenError;
+        PasswordValidationError: typeof import("../errors/ClientErrorClasses").PasswordValidationError;
+        PermissionDeniedError: typeof import("../errors/ClientErrorClasses").PermissionDeniedError;
+        QuotaExceededErrorRecoverable: typeof import("../errors/ClientErrorClasses").QuotaExceededErrorRecoverable;
+        QuotaExceededErrorWarning: typeof import("../errors/ClientErrorClasses").QuotaExceededErrorWarning;
+        RateLimitErrorRecoverable: typeof import("../errors/ClientErrorClasses").RateLimitErrorRecoverable;
+        RateLimitErrorWarning: typeof import("../errors/ClientErrorClasses").RateLimitErrorWarning;
+        SessionExpiredError: typeof import("../errors/ClientErrorClasses").SessionExpiredError;
+        TimeoutError: typeof import("../errors/ClientErrorClasses").TimeoutError;
+        UserRegistrationError: typeof import("../errors/ClientErrorClasses").UserRegistrationError;
+        AppAuthenticationError: typeof import("../errors/AppErrorClasses").AppAuthenticationError;
+        AuthControllerError: typeof import("../errors/AppErrorClasses").AuthControllerError;
+        CacheServiceError: typeof import("../errors/AppErrorClasses").CacheServiceError;
+        ConfigurationError: typeof import("../errors/AppErrorClasses").ConfigurationError;
+        ConfigurationErrorFatal: typeof import("../errors/AppErrorClasses").ConfigurationErrorFatal;
+        ConcurrencyError: typeof import("../errors/AppErrorClasses").ConcurrencyError;
+        ConflictError: typeof import("../errors/AppErrorClasses").ConflictError;
+        DatabaseErrorFatal: typeof import("../errors/AppErrorClasses").DatabaseErrorFatal;
+        DatabaseErrorRecoverable: typeof import("../errors/AppErrorClasses").DatabaseErrorRecoverable;
+        DataIntegrityError: typeof import("../errors/AppErrorClasses").DataIntegrityError;
+        DependencyErrorFatal: typeof import("../errors/AppErrorClasses").DependencyErrorFatal;
+        DependencyErrorRecoverable: typeof import("../errors/AppErrorClasses").DependencyErrorRecoverable;
+        ExpressError: typeof import("../errors/AppErrorClasses").ExpressError;
+        ExpressRouteError: typeof import("../errors/AppErrorClasses").ExpressRouteError;
+        ExternalServiceErrorFatal: typeof import("../errors/AppErrorClasses").ExternalServiceErrorFatal;
+        HealthCheckError: typeof import("../errors/AppErrorClasses").HealthCheckError;
+        HTTPSClientErrorFatal: typeof import("../errors/AppErrorClasses").HTTPSClientErrorFatal;
+        HTTPSServerErrorRecoverable: typeof import("../errors/AppErrorClasses").HTTPSServerErrorRecoverable;
+        InsufficientStorageError: typeof import("../errors/AppErrorClasses").InsufficientStorageError;
+        MiddlewareServiceError: typeof import("../errors/AppErrorClasses").MiddlewareServiceError;
+        MissingResourceError: typeof import("../errors/AppErrorClasses").MissingResourceError;
+        PassportAuthServiceError: typeof import("../errors/AppErrorClasses").PassportAuthServiceError;
+        PartialServiceFailureWarning: typeof import("../errors/AppErrorClasses").PartialServiceFailureWarning;
+        QuotaExceededErrorFatal: typeof import("../errors/AppErrorClasses").QuotaExceededErrorFatal;
+        RateLimitErrorFatal: typeof import("../errors/AppErrorClasses").RateLimitErrorFatal;
+        RedisServiceError: typeof import("../errors/AppErrorClasses").RedisServiceError;
+        ResourceManagerError: typeof import("../errors/AppErrorClasses").ResourceManagerError;
+        RootMiddlewareError: typeof import("../errors/AppErrorClasses").RootMiddlewareError;
+        ServerNotInitializedError: typeof import("../errors/AppErrorClasses").ServerNotInitializedError;
+        ServiceDegradedError: typeof import("../errors/AppErrorClasses").ServiceDegradedError;
+        ServiceDegradedErrorMinor: typeof import("../errors/AppErrorClasses").ServiceDegradedErrorMinor;
+        ServiceUnavailableError: typeof import("../errors/AppErrorClasses").ServiceUnavailableError;
+        ServiceUnavailableErrorFatal: typeof import("../errors/AppErrorClasses").ServiceUnavailableErrorFatal;
+        SlowApiWarning: typeof import("../errors/AppErrorClasses").SlowApiWarning;
+        UserActionInfo: typeof import("../errors/AppErrorClasses").UserActionInfo;
+        UtilityErrorFatal: typeof import("../errors/AppErrorClasses").UtilityErrorFatal;
+        UtilityErrorRecoverable: typeof import("../errors/AppErrorClasses").UtilityErrorRecoverable;
+        ValidationError: typeof import("../errors/AppErrorClasses").ValidationError;
+    };
+    ErrorSeverity: {
+        readonly FATAL: "fatal";
+        readonly RECOVERABLE: "recoverable";
+        readonly WARNING: "warning";
+        readonly INFO: "info";
+    };
+    HandleErrorStaticParameters: {
+        fallbackLogger: Console;
+    };
+    uuidv4: (<T extends ArrayLike<number>>(options: import("uuid").V4Options | null | undefined, buffer: T, offset?: number) => T) & ((options?: import("uuid").V4Options) => string);
+    sanitizeRequestBody: typeof sanitizeRequestBody;
+    fs: typeof fs;
+    Sequelize: typeof Sequelize;
+};
+//# sourceMappingURL=parameters.d.ts.map

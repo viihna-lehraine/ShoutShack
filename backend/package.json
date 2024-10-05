@@ -1,8 +1,8 @@
 {
-  "name": "guestbook-backend",
+  "name": "brainblot-backend",
   "version": "1.0.0",
   "author": "Viihna Lehraine",
-  "description": "Free, customizable personal Guestbook",
+  "description": "Free, customizable personal guestbook",
   "main": "src/app.mjs",
   "type": "module",
   "scripts": {

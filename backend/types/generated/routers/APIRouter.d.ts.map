@@ -1,0 +1,1 @@
+{"version":3,"file":"APIRouter.d.ts","sourceRoot":"","sources":["../../../src/routers/APIRouter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,cAAc,CAAC;AAC1C,OAAO,EAAmC,MAAM,EAAE,MAAM,SAAS,CAAC;AAkBlE,qBAAa,SAAU,SAAQ,UAAU;IACxC,OAAO,CAAC,cAAc,CAA2B;IACjD,OAAO,CAAC,cAAc,CAA2B;IAEjD,OAAO;YA2BO,kBAAkB;IAKhC,OAAO,CAAC,cAAc;IAiRf,YAAY,IAAI,MAAM;CAG7B"}

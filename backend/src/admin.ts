@@ -190,6 +190,10 @@ export async function login(): Promise<{
 }> {
 	let retries = 3;
 
+	console.log(
+		'Welcome to the application Admin Login. Please enter your credentials.'
+	);
+
 	const { usernameToPasswordMap, usernameToAdminIdMap } =
 		getAdminCredentials();
 	if (!Object.keys(usernameToPasswordMap).length)

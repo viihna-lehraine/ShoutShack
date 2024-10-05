@@ -3,8 +3,8 @@ import { validationResult } from 'express-validator';
 import xss from 'xss';
 import { ServiceFactory } from '../index/factory';
 
-const errorLogger = ServiceFactory.getErrorLoggerService();
-const errorHandler = ServiceFactory.getErrorHandlerService();
+const errorLogger = await ServiceFactory.getErrorLoggerService();
+const errorHandler = await ServiceFactory.getErrorHandlerService();
 
 export function sanitizeInput(input: string): string {
 	return xss(input.trim());

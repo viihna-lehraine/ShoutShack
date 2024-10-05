@@ -18,7 +18,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	PassportAuthMiddlewareServiceInterface
 } from '../index/interfaces/services';
@@ -41,7 +41,7 @@ export class BaseRouter implements BaseRouterInterface {
 	protected envConfig: EnvConfigServiceInterface;
 	protected cacheService: CacheServiceInterface;
 	protected gatekeeperService: GatekeeperServiceInterface;
-	protected helmetService: HelmetMiddlwareServiceInterface;
+	protected helmetService: HelmetMiddlewareServiceInterface;
 	protected JWTMiddleware: JWTAuthMiddlewareServiceInterface;
 	protected passportMiddleware: PassportAuthMiddlewareServiceInterface;
 
@@ -57,7 +57,7 @@ export class BaseRouter implements BaseRouterInterface {
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
-		helmetService: HelmetMiddlwareServiceInterface,
+		helmetService: HelmetMiddlewareServiceInterface,
 		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
 		passportMiddleware: PassportAuthMiddlewareServiceInterface
 	) {

@@ -1,4 +1,3 @@
-import { Logger } from '../utils/logger';
-declare const generateAccountDeletionStartedEmailTemplate: (username: string, logger: Logger) => string;
+declare const generateAccountDeletionStartedEmailTemplate: (username: string) => string;
 export default generateAccountDeletionStartedEmailTemplate;
 //# sourceMappingURL=accountDeletionStartedEmailTemplate.d.ts.map

@@ -1,18 +1,6 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
-import { Logger } from '../utils/logger';
-interface DataShareOptionsAttributes {
-    id: string;
-    trackingPixelOption: boolean;
-    featureUsageOption: boolean;
-    pageViewsOption: boolean;
-    interactionDataOption: boolean;
-    deviceTypeOption: boolean;
-    browserInfoOption: boolean;
-    operatingSystemOption: boolean;
-    randomAnonSurveyOption: boolean;
-    lastUpdated: Date;
-}
-declare class DataShareOptions extends Model<InferAttributes<DataShareOptions>, InferCreationAttributes<DataShareOptions>> implements DataShareOptionsAttributes {
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { DataShareOptionsAttributes } from '../index/interfaces/models';
+export declare class DataShareOptions extends Model<InferAttributes<DataShareOptions>, InferCreationAttributes<DataShareOptions>> implements DataShareOptionsAttributes {
     id: string;
     trackingPixelOption: boolean;
     featureUsageOption: boolean;
@@ -24,6 +12,5 @@ declare class DataShareOptions extends Model<InferAttributes<DataShareOptions>, 
     randomAnonSurveyOption: boolean;
     lastUpdated: CreationOptional<Date>;
 }
-export default function createDataShareOptionsModel(sequelize: Sequelize, logger: Logger): typeof DataShareOptions;
-export { DataShareOptions };
+export declare function createDataShareOptionsModel(): Promise<typeof DataShareOptions | null>;
 //# sourceMappingURL=DataShareOptions.d.ts.map

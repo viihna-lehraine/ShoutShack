@@ -9,7 +9,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	PassportAuthMiddlewareServiceInterface,
 	StaticRouterInterface
@@ -58,7 +58,7 @@ export class StaticRouter extends BaseRouter implements StaticRouterInterface {
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
-		helmetService: HelmetMiddlwareServiceInterface,
+		helmetService: HelmetMiddlewareServiceInterface,
 		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
 		passportMiddleware: PassportAuthMiddlewareServiceInterface
 	) {

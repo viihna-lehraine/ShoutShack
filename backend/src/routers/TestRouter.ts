@@ -7,7 +7,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	PassportAuthMiddlewareServiceInterface
 } from '../index/interfaces/services';
@@ -24,7 +24,7 @@ export class TestRouter extends BaseRouter {
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
-		helmetService: HelmetMiddlwareServiceInterface,
+		helmetService: HelmetMiddlewareServiceInterface,
 		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
 		passportMiddleware: PassportAuthMiddlewareServiceInterface
 	) {

@@ -139,7 +139,7 @@ export class DatabaseController implements DatabaseControllerInterface {
 		}
 	}
 
-	public async initializeDatabase(): Promise<Sequelize> {
+	public async initialize(): Promise<Sequelize> {
 		this.logger.info('Initializing database connection...');
 		return this.tryInitDB();
 	}

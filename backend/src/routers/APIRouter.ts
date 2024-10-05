@@ -11,15 +11,15 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	PassportAuthMiddlewareServiceInterface,
 	UserControllerInterface
 } from '../index/interfaces/services';
 
 export class APIRouter extends BaseRouter {
-	private userController: UserControllerInterface;
-	private authController: AuthControllerInterface;
+	private userController!: UserControllerInterface;
+	private authController!: AuthControllerInterface;
 
 	private constructor(
 		logger: AppLoggerServiceInterface,
@@ -28,7 +28,7 @@ export class APIRouter extends BaseRouter {
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
-		helmetService: HelmetMiddlwareServiceInterface,
+		helmetService: HelmetMiddlewareServiceInterface,
 		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
 		passportMiddleware: PassportAuthMiddlewareServiceInterface
 	) {
@@ -43,14 +43,14 @@ export class APIRouter extends BaseRouter {
 			JWTMiddleware,
 			passportMiddleware
 		);
+		this.initializeServices().then(() => {
+			this.setUpAPIRoutes();
+		});
+	}
 
-		// Initialize the controllers using the ServiceFactory
-		this.userController =
-			ServiceFactory.getUserController() as UserControllerInterface;
-		this.authController =
-			ServiceFactory.getAuthController() as AuthControllerInterface;
-
-		this.setUpAPIRoutes();
+	private async initializeServices(): Promise<void> {
+		this.userController = await ServiceFactory.getUserController();
+		this.authController = await ServiceFactory.getAuthController();
 	}
 
 	private setUpAPIRoutes(): void {

@@ -155,8 +155,8 @@ export interface CSRFMiddlewareServiceInterface {
 }
 
 export interface DatabaseControllerInterface {
+	initialize(): Promise<Sequelize>;
 	getSequelizeInstance(): Sequelize | null;
-	initializeDatabase(): Promise<Sequelize>;
 	clearIdleConnections(): Promise<void>;
 	getEntries<T>(Model: ModelOperations<T>): Promise<T[]>;
 	createEntry<T>(Model: ModelOperations<T>, data: T): Promise<T>;
@@ -260,6 +260,7 @@ export interface FIDO2ServiceInterface {
 }
 
 export interface GatekeeperServiceInterface {
+	initialize(): Promise<void>;
 	rateLimitMiddleware(): (
 		req: Request,
 		res: Response,
@@ -300,7 +301,7 @@ export interface HealthCheckServiceInterface {
 	shutdown(): Promise<void>;
 }
 
-export interface HelmetMiddlwareServiceInterface {
+export interface HelmetMiddlewareServiceInterface {
 	initializeHelmetMiddleware(app: Application): Promise<void>;
 	applyHelmet(app: Application): Promise<void>;
 	applyCSP(app: Application): Promise<void>;
@@ -433,6 +434,7 @@ export interface ResourceManagerInterface {
 }
 
 export interface RootMiddlewareServiceInterface {
+	initialize(): Promise<void>;
 	trackResponseTime(req: Request, res: Response, next: NextFunction): void;
 	calculateRequestsPerSecond(): void;
 	shutdown(): Promise<void>;

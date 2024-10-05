@@ -1,0 +1,44 @@
+import { SecretsMap } from '../index/interfaces/env';
+import { VaultServiceInterface } from '../index/interfaces/services';
+import { ConfigSecretsInterface } from '../index/interfaces/serviceComponents';
+export declare class VaultService implements VaultServiceInterface {
+    private static instance;
+    private envConfig;
+    private logger;
+    private errorLogger;
+    private errorHandler;
+    private secrets;
+    private encryptedGpgPassphrase;
+    private encryptionKey;
+    private maxAttempts;
+    private rateLimitWindow;
+    private secretAccessAttempts;
+    private constructor();
+    static getInstance(): Promise<VaultService>;
+    static initialize(encryptionKey: string, gpgPassphrase: string): Promise<VaultService>;
+    private loadAndSecureSecrets;
+    private initializeEncryptionKey;
+    private loadSecrets;
+    storeSecret(key: string, secret: string): Promise<void>;
+    retrieveSecret(key: keyof SecretsMap, usageCallback: (secret: string) => void): Promise<string | null>;
+    retrieveSecrets(secretKeys: (keyof SecretsMap)[], usageCallback: (secrets: Partial<SecretsMap>) => void): Promise<Partial<SecretsMap> | null>;
+    private clearMemory;
+    redactSecrets(logData: string | Record<string, unknown> | unknown[]): Promise<string | Record<string, unknown> | unknown[]>;
+    private encryptSecret;
+    private decryptSecret;
+    private traverseAndRedact;
+    private redactInString;
+    private getSecretsHashes;
+    private isRateLimited;
+    refreshSecrets(dependencies: ConfigSecretsInterface): void;
+    private getEncryptionKeyHash;
+    private encryptGPGPassphraseInMemory;
+    private decryptGPGPassphraseInMemory;
+    clearExpiredSecretsFromMemory(): void;
+    clearSecretsFromMemory(secretKeys: string | string[]): void;
+    batchClearSecrets(): Promise<void>;
+    shutdown(): Promise<void>;
+    private handleLoadSecretsError;
+    private handleRefreshSecretsError;
+}
+//# sourceMappingURL=Vault.d.ts.map

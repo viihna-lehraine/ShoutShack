@@ -67,6 +67,21 @@ export class RootMiddlewareService implements RootMiddlewareServiceInterface {
 		return RootMiddlewareService.instance;
 	}
 
+	public async initialize(): Promise<void> {
+		try {
+			const app = express();
+			await this.applyMiddlewares(app);
+			this.calculateRequestsPerSecond();
+		} catch (error) {
+			const initializationError =
+				new this.errorHandler.ErrorClasses.UtilityErrorRecoverable(
+					`Error during RootMiddlewareService initialization: ${error instanceof Error ? error.message : 'Unknown error'}`
+				);
+			this.errorLogger.logError(initializationError.message);
+			this.errorHandler.handleError({ error: initializationError });
+		}
+	}
+
 	public trackResponseTime(
 		req: Request,
 		res: Response,
@@ -118,7 +133,7 @@ export class RootMiddlewareService implements RootMiddlewareServiceInterface {
 		this.logger.info(`Error Count: ${this.errorCount}`);
 	}
 
-	public xmlParserMiddleware(
+	private xmlParserMiddleware(
 		req: Request,
 		res: Response,
 		next: NextFunction
@@ -241,7 +256,6 @@ export class RootMiddlewareService implements RootMiddlewareServiceInterface {
 		try {
 			this.logger.info('Shutting down RootMiddlewareService...');
 
-			// Clear the interval tracking requests per second, if it exists
 			if (this.requestStatsInterval) {
 				clearInterval(this.requestStatsInterval);
 				this.logger.info('Cleared requests per second interval.');

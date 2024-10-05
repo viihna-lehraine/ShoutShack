@@ -136,7 +136,7 @@ export class AuthController implements AuthControllerInterface {
 			throw new Error('Sequelize instance is not available');
 		}
 
-		const UserModel = createUserModel();
+		const UserModel = await createUserModel();
 
 		await this.passportAuthService.configurePassport(passport, UserModel);
 	}

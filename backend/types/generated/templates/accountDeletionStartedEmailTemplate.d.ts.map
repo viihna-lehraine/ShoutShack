@@ -1,1 +1,1 @@
-{"version":3,"file":"accountDeletionStartedEmailTemplate.d.ts","sourceRoot":"","sources":["../../../src/templates/accountDeletionStartedEmailTemplate.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,kBAAkB,CAAC;AAI1C,QAAA,MAAM,2CAA2C,aACtC,MAAM,UACR,MAAM,KACZ,MAyFF,CAAC;AAEF,eAAe,2CAA2C,CAAC"}
+{"version":3,"file":"accountDeletionStartedEmailTemplate.d.ts","sourceRoot":"","sources":["../../../src/templates/accountDeletionStartedEmailTemplate.ts"],"names":[],"mappings":"AAMA,QAAA,MAAM,2CAA2C,aACtC,MAAM,KACd,MAmFF,CAAC;AAEF,eAAe,2CAA2C,CAAC"}

@@ -21,7 +21,7 @@ import {
 	FIDO2ServiceInterface,
 	GatekeeperServiceInterface,
 	HealthCheckServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	HTTPSServerInterface,
 	JWTAuthMiddlewareServiceInterface,
 	JWTServiceInterface,
@@ -61,7 +61,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 	private fido2Service: FIDO2ServiceInterface;
 	private gatekeeperService: GatekeeperServiceInterface;
 	private healthCheckService: HealthCheckServiceInterface;
-	private helmetMiddleware: HelmetMiddlwareServiceInterface;
+	private helmetMiddleware: HelmetMiddlewareServiceInterface;
 	private jwtAuthMiddlewareService: JWTAuthMiddlewareServiceInterface;
 	private jwtService: JWTServiceInterface;
 	private logger: AppLoggerServiceInterface;
@@ -100,7 +100,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 		redisService: RedisServiceInterface,
 		resourceManager: ResourceManagerInterface,
 		healthCheckService: HealthCheckServiceInterface,
-		helmetMiddleware: HelmetMiddlwareServiceInterface,
+		helmetMiddleware: HelmetMiddlewareServiceInterface,
 		jwtAuthMiddlewareService: JWTAuthMiddlewareServiceInterface,
 		passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface,
 		accessControlMiddleware: AccessControlMiddlewareServiceInterface,
@@ -481,8 +481,8 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.logger.info('No longer accepting new connections.');
 			});
 
+			await this.shutDownLayer19Services();
 			await this.shutDownLayer18Services();
-			await this.shutDownLayer17Services();
 			await this.shutDownLayer16Services();
 			await this.shutDownLayer15Services();
 			await this.shutDownLayer14Services();
@@ -587,15 +587,27 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
+	private async shutDownLayer19Services(): Promise<void> {
+		this.logger.info('Shutting down Layer 19 services: Health Check...');
+		try {
+			this.healthCheckService.shutdown();
+			this.logger.info('Layer 19 services have been shut down.');
+		} catch (error) {
+			this.handleHTTPSServerErrorRecoverable(
+				error,
+				'SHUTDOWN_LAYER_19',
+				{},
+				'Error shutting down Layer 19 services'
+			);
+		}
+	}
+
 	private async shutDownLayer18Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 18 services: Mailer and MulterUpload...'
+			'Shutting down Layer 18 services: Resource Manager...'
 		);
 		try {
-			await Promise.all([
-				this.mailerService.shutdown(),
-				this.multerUploadService.shutdown()
-			]);
+			await this.resourceManager.shutdown();
 			this.logger.info('Layer 18 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -607,32 +619,15 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async shutDownLayer17Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 17 services: Middleware Status...'
-		);
-		try {
-			await this.middlewareStatusService.shutdown();
-			this.logger.info('Layer 17 services have been shut down.');
-		} catch (error) {
-			this.handleHTTPSServerErrorRecoverable(
-				error,
-				'SHUTDOWN_LAYER_17',
-				{},
-				'Error shutting down Layer 17 services'
-			);
-		}
-	}
-
 	private async shutDownLayer16Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 16 services: CSRF Middleware, Helmet Middleware, JWT Auth Middleware, and Passport Auth Middleware...'
+			'Shutting down Layer 16 services: Mailer and Multer Upload Services...'
 		);
 		try {
-			await this.csrfMiddleware.shutdown();
-			await this.helmetMiddleware.shutdown();
-			await this.jwtAuthMiddlewareService.shutdown();
-			await this.passportAuthMiddlewareService.shutdown();
+			await Promise.all([
+				this.mailerService.shutdown(),
+				this.multerUploadService.shutdown()
+			]);
 			this.logger.info('Layer 16 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -646,18 +641,14 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer15Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 15 services: Backup Code, Email MFA, FIDO2, JWT, Passport, Password, TOTP, and Yubico OTP...'
+			'Shutting down Layer 15 services: CSRF, Helmet, JWT Auth, and Passport Middlewares...'
 		);
 		try {
 			await Promise.all([
-				this.backupCodeService.shutdown(),
-				this.emailMFAService.shutdown(),
-				this.fido2Service.shutdown(),
-				this.jwtService.shutdown(),
-				this.passportService.shutdown(),
-				this.passwordService.shutdown(),
-				this.totpService.shutdown(),
-				this.yubicoOTPService.shutdown()
+				this.csrfMiddleware.shutdown(),
+				this.helmetMiddleware.shutdown(),
+				this.jwtAuthMiddlewareService.shutdown(),
+				this.passportAuthMiddlewareService.shutdown()
 			]);
 			this.logger.info('Layer 15 services have been shut down.');
 		} catch (error) {
@@ -671,9 +662,19 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer14Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 14 services: Auth Controller...');
+		this.logger.info(
+			'Shutting down Layer 14 services: Backup Code, EmailMFA, FIDO2, JWT, Passport, TOTP, and Yubico OTP Services...'
+		);
 		try {
-			await this.authController.shutdown();
+			await Promise.all([
+				this.backupCodeService.shutdown(),
+				this.emailMFAService.shutdown(),
+				this.fido2Service.shutdown(),
+				this.jwtService.shutdown(),
+				this.passportService.shutdown(),
+				this.totpService.shutdown(),
+				this.yubicoOTPService.shutdown()
+			]);
 			this.logger.info('Layer 14 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -686,9 +687,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer13Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 13 services: User Controller...');
+		this.logger.info('Shutting down Layer 13 services: Auth Controller...');
 		try {
-			await this.userController.shutdown();
+			await this.authController.shutdown();
 			this.logger.info('Layer 13 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -701,12 +702,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer12Services(): Promise<void> {
+		this.logger.info('Shutting down Layer 12 services: User Controller...');
 		try {
-			this.logger.info('Shutting down Layer 12 services: Base Router...');
-
-			const baseRouter = await this.baseRouter;
-
-			await baseRouter.shutdown();
+			await this.userController.shutdown();
 			this.logger.info('Layer 12 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -720,10 +718,10 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer11Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 11 services: Resource Manager...'
+			'Shutting down Layer 11 services: Base Router and router extensions (API Router, Health Router, Static Router, etc)...'
 		);
 		try {
-			await this.resourceManager.shutdown();
+			await this.baseRouter.shutdown();
 			this.logger.info('Layer 11 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -736,9 +734,11 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer10Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 10 services: Health Check...');
+		this.logger.info(
+			'Shutting down Layer 10 services: Access Control Middleware...'
+		);
 		try {
-			await this.healthCheckService.shutdown();
+			await this.accessControlMiddleware.shutdown();
 			this.logger.info('Layer 10 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -751,11 +751,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer9Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 9 services: Access Control Middleware...'
-		);
+		this.logger.info('Shutting down Layer 9 services: Gatekeeper...');
 		try {
-			await this.accessControlMiddleware.shutdown();
+			await this.gatekeeperService.shutdown();
 			this.logger.info('Layer 9 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -768,9 +766,12 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer8Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 8 services: Gatekeeper...');
+		this.logger.info('Shutting down Layer 8 services: Cache and Redis...');
 		try {
-			await this.gatekeeperService.shutdown();
+			await Promise.all([
+				this.cacheService.shutdown(),
+				this.redisService.shutdown()
+			]);
 			this.logger.info('Layer 8 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -783,13 +784,11 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer7Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 7 services: Cache and Redis...');
+		this.logger.info(
+			'Shutting down Layer 7 services: Database Controller...'
+		);
 		try {
-			await this.redisService.shutdown();
-			await Promise.all([
-				this.cacheService.shutdown(),
-				this.redisService.shutdown()
-			]);
+			await this.databaseController.shutdown();
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
 				error,
@@ -801,9 +800,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer6Services(): Promise<void> {
-		this.logger.info(
-			'Shutting down Layer 6 services: Database Controller...'
-		);
+		this.logger.info('Shutting down Layer 6 services: Root Middleware...');
 		try {
 			await this.databaseController.shutdown();
 			this.logger.info('Layer 6 services have been shut down.');
@@ -818,9 +815,11 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer5Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 4 services: Root Middleware...');
+		this.logger.info(
+			'Shutting down Layer 5 services: Middleware Status Service...'
+		);
 		try {
-			await this.rootMiddlewareService.shutdown();
+			await this.middlewareStatusService.shutdown();
 			this.logger.info('Layer 5 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(

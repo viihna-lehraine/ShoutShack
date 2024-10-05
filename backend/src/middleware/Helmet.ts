@@ -9,13 +9,16 @@ import {
 	AppLoggerServiceInterface,
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
-	HelmetMiddlwareServiceInterface
+	HelmetMiddlewareServiceInterface
 } from '../index/interfaces/services';
 import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
 
-export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
-	private static instance: HelmetMiddlwareService | null = null;
+export class HelmetMiddlewareService
+	implements HelmetMiddlewareServiceInterface
+{
+	private static instance: HelmetMiddlewareService | null = null;
+
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
@@ -30,20 +33,20 @@ export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 		this.errorHandler = errorHandler;
 	}
 
-	public static async getInstance(): Promise<HelmetMiddlwareService> {
-		if (!HelmetMiddlwareService.instance) {
+	public static async getInstance(): Promise<HelmetMiddlewareService> {
+		if (!HelmetMiddlewareService.instance) {
 			const logger = await ServiceFactory.getLoggerService();
 			const errorLogger = await ServiceFactory.getErrorLoggerService();
 			const errorHandler = await ServiceFactory.getErrorHandlerService();
 
-			HelmetMiddlwareService.instance = new HelmetMiddlwareService(
+			HelmetMiddlewareService.instance = new HelmetMiddlewareService(
 				logger,
 				errorLogger,
 				errorHandler
 			);
 		}
 
-		return HelmetMiddlwareService.instance;
+		return HelmetMiddlewareService.instance;
 	}
 
 	public async initializeHelmetMiddleware(app: Application): Promise<void> {
@@ -183,7 +186,7 @@ export class HelmetMiddlwareService implements HelmetMiddlwareServiceInterface {
 	public async shutdown(): Promise<void> {
 		try {
 			this.logger.info('Shutting down Helmet middleware service...');
-			HelmetMiddlwareService.instance = null;
+			HelmetMiddlewareService.instance = null;
 			this.logger.info('Helmet middleware service has been shut down.');
 		} catch (error) {
 			this.errorLogger.logError(

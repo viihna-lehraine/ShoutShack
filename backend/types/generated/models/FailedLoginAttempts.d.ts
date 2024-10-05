@@ -1,6 +1,6 @@
-import { Model, InferAttributes, InferCreationAttributes, Sequelize } from 'sequelize';
-import { Logger } from '../utils/logger';
-interface FailedLoginAttemptsAttributes {
+import { Model, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { FailedLoginAttemptsAttributes } from '../index/interfaces/models';
+export declare class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, InferCreationAttributes<FailedLoginAttempts>> implements FailedLoginAttemptsAttributes {
     attemptId: string;
     id: string;
     ipAddress: string;
@@ -8,14 +8,5 @@ interface FailedLoginAttemptsAttributes {
     attemptDate: Date;
     isLocked: boolean;
 }
-declare class FailedLoginAttempts extends Model<InferAttributes<FailedLoginAttempts>, InferCreationAttributes<FailedLoginAttempts>> implements FailedLoginAttemptsAttributes {
-    attemptId: string;
-    id: string;
-    ipAddress: string;
-    userAgent: string;
-    attemptDate: Date;
-    isLocked: boolean;
-}
-export default function createFailedLoginAttemptsModel(sequelize: Sequelize, logger: Logger): typeof FailedLoginAttempts;
-export { FailedLoginAttempts };
+export declare function createFailedLoginAttemptsModel(): Promise<typeof FailedLoginAttempts | null>;
 //# sourceMappingURL=FailedLoginAttempts.d.ts.map

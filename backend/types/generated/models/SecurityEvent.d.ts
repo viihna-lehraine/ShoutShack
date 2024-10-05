@@ -1,15 +1,5 @@
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model, Sequelize } from 'sequelize';
-import { Logger } from '../utils/logger';
-interface SecurityEventAttributes {
-    id: string;
-    eventId: string;
-    eventType: string;
-    eventDescription?: string | null;
-    ipAddress: string;
-    userAgent: string;
-    securityEventDate: Date;
-    securityEventLastUpdated: Date;
-}
+import { CreationOptional, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import { SecurityEventAttributes } from '../index/interfaces/models';
 declare class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferCreationAttributes<SecurityEvent>> implements SecurityEventAttributes {
     id: string;
     eventId: string;
@@ -20,6 +10,6 @@ declare class SecurityEvent extends Model<InferAttributes<SecurityEvent>, InferC
     securityEventDate: Date;
     securityEventLastUpdated: CreationOptional<Date>;
 }
-export default function createSecurityEventModel(sequelize: Sequelize, logger: Logger): typeof SecurityEvent;
-export { SecurityEvent };
+export declare function createSecurityEventModel(): Promise<typeof SecurityEvent | null>;
+export {};
 //# sourceMappingURL=SecurityEvent.d.ts.map

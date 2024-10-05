@@ -1,0 +1,1 @@
+{"version":3,"file":"HealthRouter.d.ts","sourceRoot":"","sources":["../../../src/routers/HealthRouter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,cAAc,CAAC;AAmB1C,qBAAa,YAAa,SAAQ,UAAU;IAC3C,OAAO,CAAC,kBAAkB,CAA+B;IACzD,OAAO,CAAC,aAAa,CAA2C;IAChE,OAAO,CAAC,cAAc,CAAkC;IACxD,OAAO,CAAC,QAAQ,CAAe;IAE/B,OAAO;YA6BO,kBAAkB;IAQhC,OAAO,CAAC,WAAW;CA2CnB"}

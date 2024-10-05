@@ -16,7 +16,7 @@ import { JWTService } from '../auth/JWT';
 import { DatabaseController } from '../controllers/DatabaseController';
 import { ErrorHandlerService } from '../services/ErrorHandler';
 import { FIDO2Service } from '../auth/FIDO2';
-import { HelmetMiddlwareService } from '../middleware/Helmet';
+import { HelmetMiddlewareService } from '../middleware/Helmet';
 import { HTTPSServer } from '../services/HTTPS';
 import { MulterUploadService } from '../services/MulterUpload';
 import { ResourceManager } from '../services/ResourceManager';
@@ -49,7 +49,7 @@ import {
 	EnvConfigServiceInterface,
 	ErrorLoggerServiceInterface,
 	HealthCheckServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	HTTPSServerInterface,
 	JWTAuthMiddlewareServiceInterface,
 	JWTServiceInterface,
@@ -162,8 +162,8 @@ export class ServiceFactory {
 		return HealthCheckService.getInstance();
 	}
 
-	public static async getHelmetMiddlewareService(): Promise<HelmetMiddlwareServiceInterface> {
-		return HelmetMiddlwareService.getInstance();
+	public static async getHelmetMiddlewareService(): Promise<HelmetMiddlewareServiceInterface> {
+		return HelmetMiddlewareService.getInstance();
 	}
 
 	public static async getHTTPSServer(

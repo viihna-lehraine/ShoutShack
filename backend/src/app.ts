@@ -3,8 +3,10 @@ import { login } from './admin';
 import { ServiceFactory } from './index/factory';
 import { VaultService } from './services/Vault';
 import { Application } from 'express';
+import { AppLoggerServiceInterface } from './index/interfaces/services';
 
 let app: Application;
+let logger: AppLoggerServiceInterface;
 
 async function start(): Promise<void> {
 	try {
@@ -19,10 +21,16 @@ async function start(): Promise<void> {
 				const logger = await ServiceFactory.getLoggerService();
 				const errorLogger =
 					await ServiceFactory.getErrorLoggerService();
+
+				logger.setAdminId(adminId);
+
 				const errorHandler =
 					await ServiceFactory.getErrorHandlerService();
+
 				logger.setErrorHandler(errorHandler);
-				const envConfig = ServiceFactory.getEnvConfigService();
+
+				const envConfig = await ServiceFactory.getEnvConfigService();
+
 				const vault = await VaultService.initialize(
 					encryptionKey,
 					gpgPassphrase
@@ -40,58 +48,64 @@ async function start(): Promise<void> {
 				logger.info(
 					'Secrets store initialized. READY TO ROCK AND ROLL!!!'
 				);
-				return { vault, logger };
+				return { envConfig, errorLogger, errorHandler, logger, vault };
 			})
-			.then(() => {
+			.then(async () => {
+				const middlewareStatusService =
+					await ServiceFactory.getMiddlewareStatusService();
+				return middlewareStatusService;
+			})
+			.then(async () => {
 				const rootMiddleware =
-					ServiceFactory.getRootMiddlewareService();
+					await ServiceFactory.getRootMiddlewareService();
 				rootMiddleware.initialize();
 				return rootMiddleware;
 			})
-			.then(() => {
+			.then(async () => {
 				const databaseController =
-					ServiceFactory.getDatabaseController();
-				const redisService = ServiceFactory.getRedisService();
-				return Promise.all([
-					databaseController.initialize(),
-					redisService.initialize()
+					await ServiceFactory.getDatabaseController();
+				databaseController.initialize();
+				return databaseController;
+			})
+			.then(async () => {
+				const [cacheService, redisService] = await Promise.all([
+					ServiceFactory.getCacheService(),
+					ServiceFactory.getRedisService()
 				]);
+				return { cacheService, redisService };
 			})
-			.then(() => {
-				const cacheService = ServiceFactory.getCacheService();
-				return cacheService.initialize();
-			})
-			.then(() => {
-				const gatekeeper = ServiceFactory.getGatekeeperService();
+			.then(async () => {
+				const gatekeeper = await ServiceFactory.getGatekeeperService();
 				return gatekeeper.initialize();
 			})
-			.then(() => {
-				const accessControl = ServiceFactory.getAccessControlService();
-				return accessControl.initialize();
+			.then(async () => {
+				const accessControl =
+					await ServiceFactory.getAccessControlMiddlewareService();
+				return accessControl;
 			})
-			.then(() => {
-				const healthCheckService =
-					ServiceFactory.getHealthCheckService();
-				return healthCheckService.initialize();
+			.then(async () => {
+				const baseRouter = await ServiceFactory.getBaseRouter();
+				return baseRouter;
 			})
-			.then(() => {
-				const resourceManager = ServiceFactory.getResourceManager();
-				return resourceManager.initialize();
+			.then(async () => {
+				const userController = await ServiceFactory.getUserController();
+				return userController;
 			})
-			.then(() => {
-				const baseRouter = ServiceFactory.getBaseRouterService();
-				return baseRouter.initialize();
+			.then(async () => {
+				const authController = await ServiceFactory.getAuthController();
+				return authController;
 			})
-			.then(() => {
-				const userController = ServiceFactory.getUserController();
-				return userController.initialize();
-			})
-			.then(() => {
-				const authController = ServiceFactory.getAuthController();
-				return authController.initialize();
-			})
-			.then(() => {
-				const authServices = [
+			.then(async () => {
+				const [
+					backupCodeService,
+					emailMFAService,
+					fido2Service,
+					jwtService,
+					passportService,
+					passwordService,
+					totpService,
+					yubicoOTPService
+				] = await Promise.all([
 					ServiceFactory.getBackupCodeService(),
 					ServiceFactory.getEmailMFAService(),
 					ServiceFactory.getFIDO2Service(),
@@ -100,47 +114,66 @@ async function start(): Promise<void> {
 					ServiceFactory.getPasswordService(),
 					ServiceFactory.getTOTPService(),
 					ServiceFactory.getYubicoOTPService()
-				];
-				return Promise.all(
-					authServices.map(service => service.initialize())
-				);
-			})
-			.then(() => {
-				const csrfMiddleware = ServiceFactory.getCSRFService();
-				const helmetMiddleware = ServiceFactory.getHelmetMiddleware();
-				const jwtAuthMiddleware = ServiceFactory.getJWTAuthMiddleware();
-				const passportAuthMiddleware =
-					ServiceFactory.getPassportAuthMiddleware();
-				return Promise.all([
-					csrfMiddleware.initialize(),
-					helmetMiddleware.initialize(),
-					jwtAuthMiddleware.initialize(),
-					passportAuthMiddleware.initialize()
 				]);
+				return {
+					backupCodeService,
+					emailMFAService,
+					fido2Service,
+					jwtService,
+					passportService,
+					passwordService,
+					totpService,
+					yubicoOTPService
+				};
 			})
-			.then(() => {
-				const middlewareStatusService =
-					ServiceFactory.getMiddlewareStatusService();
-				return middlewareStatusService.initialize();
-			})
-			.then(() => {
-				const mailer = ServiceFactory.getMailerService();
-				const multerService = ServiceFactory.getMulterUploadService();
-				return Promise.all([
-					mailer.initialize(),
-					multerService.initialize()
+			.then(async () => {
+				const [
+					csrfMiddleware,
+					helmetMiddleware,
+					jwtAuthMiddleware,
+					passportAuthMiddleware
+				] = await Promise.all([
+					ServiceFactory.getCSRFMiddlewareService(),
+					ServiceFactory.getHelmetMiddlewareService(),
+					ServiceFactory.getJWTAuthMiddlewareService(),
+					ServiceFactory.getPassportAuthMiddlewareService()
 				]);
+				return {
+					csrfMiddleware,
+					helmetMiddleware,
+					jwtAuthMiddleware,
+					passportAuthMiddleware
+				};
 			})
-			.then(() => {
-				const httpsServer = ServiceFactory.getHTTPSServer(app);
-				return httpsServer.initialize();
+			.then(async () => {
+				const [mailerService, multerUploadService] = await Promise.all([
+					ServiceFactory.getMailerService(),
+					ServiceFactory.getMulterUploadService()
+				]);
+				return {
+					mailerService,
+					multerUploadService
+				};
 			})
-			.then(() => {
-				const logger = ServiceFactory.getLoggerService();
+			.then(async () => {
+				const httpsServer = await ServiceFactory.getHTTPSServer(app);
+				return httpsServer.startServer();
+			})
+			.then(async () => {
+				const resourceManager =
+					await ServiceFactory.getResourceManager();
+				return resourceManager;
+			})
+			.then(async () => {
+				const healthCheckService =
+					await ServiceFactory.getHealthCheckService();
+				return healthCheckService;
+			})
+			.then(async () => {
 				logger.info('All services initialized successfully.');
 			})
 			.catch(error => {
-				const fallbackLogger = ServiceFactory.getLoggerService();
+				const fallbackLogger = logger;
 				if (!fallbackLogger) {
 					console.error(
 						`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`
@@ -154,14 +187,14 @@ async function start(): Promise<void> {
 				}
 			});
 	} catch (error) {
-		const fallbackLogger = ServiceFactory.getLoggerService();
+		const fallbackLogger = await ServiceFactory.getLoggerService();
 		if (!fallbackLogger) {
 			console.error(
 				`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`
 			);
 			process.exit(1);
 		} else {
-			fallbackLogger.error(
+			fallbackLogger.logError(
 				`Critical error occurred during startup\n${error instanceof Error ? error.message : String(error)}`
 			);
 			process.exit(1);

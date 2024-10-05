@@ -12,7 +12,7 @@ import {
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
 	HealthCheckServiceInterface,
-	HelmetMiddlwareServiceInterface,
+	HelmetMiddlewareServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	PassportAuthMiddlewareServiceInterface
 } from '../index/interfaces/services';
@@ -30,7 +30,7 @@ export class HealthRouter extends BaseRouter {
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
-		helmetService: HelmetMiddlwareServiceInterface,
+		helmetService: HelmetMiddlewareServiceInterface,
 		JWTMiddleware: JWTAuthMiddlewareServiceInterface,
 		passportMiddleware: PassportAuthMiddlewareServiceInterface
 	) {
