@@ -10,7 +10,6 @@ import {
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	GatekeeperServiceInterface,
-	RedisServiceInterface,
 	ResourceManagerInterface
 } from '../index/interfaces/main';
 import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
@@ -27,7 +26,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	private errorHandler: ErrorHandlerServiceInterface;
 	private envConfig: EnvConfigServiceInterface;
 	private cacheService: CacheServiceInterface;
-	private redisService: RedisServiceInterface;
 	private resourceManager: ResourceManagerInterface;
 
 	private RATE_LIMIT_BASE_POINTS: number;
@@ -47,7 +45,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		errorHandler: ErrorHandlerServiceInterface,
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
-		redisService: RedisServiceInterface,
 		resourceManager: ResourceManagerInterface
 	) {
 		this.logger = logger;
@@ -55,7 +52,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
 		this.cacheService = cacheService;
-		this.redisService = redisService;
 		this.resourceManager = resourceManager;
 
 		this.RATE_LIMIT_BASE_POINTS = Number(
@@ -76,7 +72,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		this.preInitIpWhitelist();
 
 		setInterval(
-			() => this.syncBlacklistFromRedisToFile(),
+			() => this.syncBlacklistFromCacheToFile(),
 			this.SYNC_INTERVAL
 		);
 	}
@@ -92,8 +88,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 				await EnvConfigServiceFactory.getEnvConfigService();
 			const cacheService =
 				await CacheLayerServiceFactory.getCacheService();
-			const redisService =
-				await CacheLayerServiceFactory.getRedisService();
 			const resourceManager =
 				await ResourceManagerFactory.getResourceManager();
 
@@ -103,7 +97,6 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 				errorHandler,
 				envConfig,
 				cacheService,
-				redisService,
 				resourceManager
 			);
 		}
@@ -114,7 +107,7 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 	public async initialize(): Promise<void> {
 		await Promise.all([this.loadIpBlacklist(), this.loadWhitelist()]);
 		this.resetGlobalRateLimitStats();
-		await this.syncBlacklistFromRedisToFile();
+		await this.syncBlacklistFromCacheToFile();
 	}
 
 	public async dynamicRateLimiter(): Promise<void> {
@@ -196,13 +189,16 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 				);
 
 				if (rateLimitInfo === null) {
-					rateLimitInfo =
-						await this.redisService.get<number>(rateLimitKey);
-				}
-
-				if (rateLimitInfo === null) {
 					const rateLimitRes = await this.rateLimiter.consume(ip);
 					rateLimitInfo = rateLimitRes.remainingPoints;
+				}
+
+				if (!rateLimitInfo) {
+					return this.triggerRateLimitWarning(
+						ip,
+						this.RATE_LIMIT_BASE_POINTS,
+						next
+					);
 				}
 
 				if (rateLimitInfo <= 2) {
@@ -256,46 +252,41 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		try {
 			let currentPoints = await this.cacheService.get<number>(
 				rateLimitKey,
-				'bouncerService'
+				'gatekeeperService'
 			);
 
 			if (currentPoints === null) {
-				currentPoints =
-					(await this.redisService.get<number>(rateLimitKey)) ??
-					basePoints;
+				currentPoints = basePoints;
 			}
 
 			if (currentPoints > 0) {
 				currentPoints -= 1;
-				await this.redisService.set(
-					rateLimitKey,
-					currentPoints,
-					baseDuration
-				);
+
 				await this.cacheService.set(
 					rateLimitKey,
 					currentPoints,
-					'bouncerService',
+					'gatekeeperService',
 					60
 				);
 			} else {
 				const backoffMultiplier =
-					(await this.redisService.get<number>(`backoff_${ip}`)) || 1;
+					(await this.cacheService.get<number>(
+						`backoff_${ip}`,
+						'gatekeeperService'
+					)) || 1;
 				const newDuration = baseDuration * backoffMultiplier;
-				await this.redisService.set(
-					rateLimitKey,
-					basePoints,
-					newDuration
-				);
+
 				await this.cacheService.set(
 					rateLimitKey,
 					basePoints,
 					'bouncerService',
-					60
+					newDuration
 				);
-				await this.redisService.set(
+				await this.cacheService.set(
 					`backoff_${ip}`,
-					backoffMultiplier + 1
+					backoffMultiplier + 1,
+					'gatekeeperService',
+					60
 				);
 				this.logger.info(
 					`Exponential backoff applied for IP ${ip}: ${newDuration} ms`
@@ -427,33 +418,16 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	public async loadIpBlacklist(): Promise<void> {
 		try {
-			let cachedBlacklist = await this.cacheService.get<string[]>(
+			const cachedBlacklist = await this.cacheService.get<string[]>(
 				this.blacklistKey,
 				'bouncerService'
 			);
 
 			if (!cachedBlacklist) {
 				this.logger.info(
-					'IP blacklist not found in cache, retrieving from Redis...'
+					'IP blacklist not found in cache, loading from file...'
 				);
-				cachedBlacklist = await this.redisService.get<string[]>(
-					this.blacklistKey
-				);
-
-				if (!cachedBlacklist) {
-					this.logger.info(
-						'IP blacklist not found in Redis, loading from file...'
-					);
-					await this.loadIpBlacklistFromFile();
-				} else {
-					await this.cacheService.set(
-						this.blacklistKey,
-						cachedBlacklist,
-						'bouncerService',
-						3600
-					);
-					this.blacklist = cachedBlacklist;
-				}
+				await this.loadIpBlacklistFromFile();
 			} else {
 				this.blacklist = cachedBlacklist;
 			}
@@ -476,11 +450,10 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	private async saveIpBlacklist(): Promise<void> {
 		try {
-			await this.redisService.set(this.blacklistKey, this.blacklist);
 			await this.cacheService.set(
 				this.blacklistKey,
 				this.blacklist,
-				'bouncerService',
+				'gatekeeperService',
 				3600
 			);
 		} catch (error) {
@@ -537,13 +510,22 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	public async temporaryBlacklist(ip: string): Promise<void> {
 		const temporaryBlacklistKey = `temporaryBlacklist_${ip}`;
-		await this.redisService.set(temporaryBlacklistKey, true, 3600);
+		await this.cacheService.set(
+			temporaryBlacklistKey,
+			'true',
+			'gatekeeperService',
+			3600
+		);
 		this.logger.info(`IP ${ip} temporarily blacklisted for 1 hour.`);
 	}
 
 	public async isTemporarilyBlacklisted(ip: string): Promise<boolean> {
 		const temporaryBlacklistKey = `temporaryBlacklist_${ip}`;
-		return !!(await this.redisService.get<boolean>(temporaryBlacklistKey));
+		const result = await this.cacheService.get<string>(
+			temporaryBlacklistKey,
+			'gatekeeperService'
+		);
+		return result === 'true';
 	}
 
 	public async isBlacklisted(ip: string): Promise<boolean> {
@@ -578,25 +560,26 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	public async preInitIpBlacklist(): Promise<void> {
 		try {
-			const blacklistInRedis = await this.redisService.get<string[]>(
-				this.blacklistKey
+			const cachedBlacklist = await this.cacheService.get<string[]>(
+				this.blacklistKey,
+				'gatekeeperService'
 			);
-			if (!blacklistInRedis) {
+			if (!cachedBlacklist) {
 				this.logger.info(
-					'IP blacklist not found in Redis, loading from file...'
+					'IP blacklist not found in cache, loading from file...'
 				);
 				await this.loadIpBlacklist();
 				await this.saveIpBlacklist();
 				this.logger.info(
-					'IP blacklist loaded from file and saved to Redis.'
+					'IP blacklist loaded from file and saved to cache.'
 				);
 			} else {
-				this.blacklist = blacklistInRedis;
-				this.logger.info('IP blacklist initialized from Redis.');
+				this.blacklist = cachedBlacklist;
+				this.logger.info('IP blacklist initialized from cache.');
 			}
 		} catch (error) {
 			this.errorLogger.logWarn(
-				`Failed to load IP blacklist from Redis or file.\n${String(error)}`
+				`Failed to load IP blacklist from cache or file.\n${String(error)}`
 			);
 			await this.loadIpBlacklist();
 		}
@@ -631,30 +614,25 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 		}
 	}
 
-	private async syncBlacklistFromRedisToFile(): Promise<void> {
+	private async syncBlacklistFromCacheToFile(): Promise<void> {
 		try {
-			const blacklist = await this.redisService.get<string[]>(
-				this.blacklistKey
+			const blacklist = await this.cacheService.get<string[]>(
+				this.blacklistKey,
+				'gatekeeperService'
 			);
 
 			if (blacklist) {
 				this.blacklist = blacklist;
-				await this.cacheService.set(
-					this.blacklistKey,
-					this.blacklist,
-					'gatekeeperService',
-					3600
-				);
 				await this.saveIpBlacklistToFile();
 				this.logger.info(
-					'IP blacklist successfully synced from Redis to file and cache.'
+					'IP blacklist successfully synced from cache to file.'
 				);
 			} else {
-				this.logger.warn('No IP blacklist found in Redis during sync.');
+				this.logger.warn('No IP blacklist found in cache during sync.');
 			}
 		} catch (error) {
 			this.logger.error(
-				`Error syncing IP blacklist from Redis to file: ${error}`
+				`Error syncing IP blacklist from cache to file: ${error}`
 			);
 		}
 	}

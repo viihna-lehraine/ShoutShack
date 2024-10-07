@@ -10,7 +10,6 @@ import {
 	ErrorHandlerServiceInterface,
 	HealthCheckServiceInterface,
 	HTTPSServerInterface,
-	RedisServiceInterface,
 	ResourceManagerInterface
 } from '../index/interfaces/main';
 import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
@@ -28,7 +27,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 	private errorHandler: ErrorHandlerServiceInterface;
 	private envConfig: EnvConfigServiceInterface;
 	private cacheService: CacheServiceInterface;
-	private redisService: RedisServiceInterface;
 	private resourceManager: ResourceManagerInterface;
 	private databaseController: DatabaseControllerInterface;
 	private httpsServer: HTTPSServerInterface;
@@ -43,7 +41,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 		errorHandler: ErrorHandlerServiceInterface,
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
-		redisService: RedisServiceInterface,
 		resourceManager: ResourceManagerInterface,
 		databaseController: DatabaseControllerInterface,
 		httpsServer: HTTPSServerInterface
@@ -53,7 +50,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
 		this.cacheService = cacheService;
-		this.redisService = redisService;
 		this.resourceManager = resourceManager;
 		this.databaseController = databaseController;
 		this.httpsServer = httpsServer;
@@ -74,8 +70,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 				await EnvConfigServiceFactory.getEnvConfigService();
 			const cacheService =
 				await CacheLayerServiceFactory.getCacheService();
-			const redisService =
-				await CacheLayerServiceFactory.getRedisService();
 			const resourceManager =
 				await ResourceManagerFactory.getResourceManager();
 			const databaseController =
@@ -88,7 +82,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 				errorHandler,
 				envConfig,
 				cacheService,
-				redisService,
 				resourceManager,
 				databaseController,
 				httpsServer
@@ -103,7 +96,6 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 			const databaseInfo =
 				await this.databaseController.getDatabaseInfo();
 			const httpsServerInfo = await this.httpsServer.getHTTPSServerInfo();
-			const redisInfo = await this.redisService.getRedisInfo();
 
 			const databaseHealth = {
 				status: databaseInfo ? 'Connected' : 'Not connected',
@@ -128,22 +120,12 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 				connections: httpsServerInfo?.connections ?? 0
 			};
 
-			const redisHealth = {
-				status: redisInfo ? 'Connected' : 'Not connected',
-				uptime: redisInfo?.uptime_in_seconds ?? 0,
-				memoryUsed: redisInfo?.used_memory ?? 0,
-				cacheSize: redisInfo?.db0_size ?? 0,
-				connectedClients: redisInfo?.connected_clients ?? 0
-			};
-
 			const healthSummary: Record<string, unknown> = {
 				timestamp: new Date().toISOString(),
 				databaseStatus: databaseHealth.status,
 				httpsServerStatus: httpsServerHealth.status,
-				redisStatus: redisHealth.status,
 				databaseMetrics: databaseHealth,
 				httpsServerMetrics: httpsServerHealth,
-				redisMetrics: redisHealth,
 				cacheServiceMetrics:
 					this.cacheService.getCacheMetrics('healthCheckService'),
 				eventLoopLag: toobusy.lag(),

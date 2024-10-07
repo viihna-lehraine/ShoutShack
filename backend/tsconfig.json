@@ -57,6 +57,6 @@
 		"useDefineForClassFields": true,
 		"useUnknownInCatchVariables": true
 	},
-	"include": ["./src/**/*.ts", "./types/**/*.d.ts"],
+	"include": ["./src/**/*.ts", "./types/**/*.d.ts", "../.dev/viihna/old-files/Redis.old-ts"],
 	"exclude": ["./node_modules", "./dist/", "**/*.test.mjs", "**/*.d.ts"]
 }

@@ -3,14 +3,12 @@ import {
 	CacheMetrics,
 	CacheServiceInterface,
 	ErrorHandlerServiceInterface,
-	ErrorLoggerServiceInterface,
-	RedisServiceInterface
+	ErrorLoggerServiceInterface
 } from '../index/interfaces/main';
 import { serviceTTLConfig } from '../config/cache';
 import { withRetry } from '../utils/helpers';
 import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
 import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
-import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
 
 export class CacheService implements CacheServiceInterface {
 	private static instance: CacheService | null = null;
@@ -18,7 +16,6 @@ export class CacheService implements CacheServiceInterface {
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
-	private redisService: RedisServiceInterface | null;
 
 	private memoryCache = new Map<
 		string,
@@ -36,13 +33,11 @@ export class CacheService implements CacheServiceInterface {
 	private constructor(
 		logger: AppLoggerServiceInterface,
 		errorLogger: ErrorLoggerServiceInterface,
-		errorHandler: ErrorHandlerServiceInterface,
-		redisService: RedisServiceInterface
+		errorHandler: ErrorHandlerServiceInterface
 	) {
 		this.logger = logger;
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
-		this.redisService = redisService;
 	}
 
 	public static async getInstance(): Promise<CacheService> {
@@ -50,8 +45,7 @@ export class CacheService implements CacheServiceInterface {
 			CacheService.instance = new CacheService(
 				await LoggerServiceFactory.getLoggerService(),
 				await LoggerServiceFactory.getErrorLoggerService(),
-				await ErrorHandlerServiceFactory.getErrorHandlerService(),
-				await CacheLayerServiceFactory.getRedisService()
+				await ErrorHandlerServiceFactory.getErrorHandlerService()
 			);
 		}
 
@@ -130,28 +124,8 @@ export class CacheService implements CacheServiceInterface {
 				}
 			}
 
-			const redisValue =
-				(await this.redisService?.get<T>(namespacedKey)) ?? null;
-			if (redisValue !== null) {
-				const defaultExpiration =
-					Date.now() + this.getServiceTTL(service) * 1000;
-				if (!serviceMemoryCache) {
-					this.memoryCache.set(service, new Map());
-				}
-
-				this.memoryCache.get(service)?.set(namespacedKey, {
-					value: redisValue,
-					expiration: defaultExpiration
-				});
-				this.memoryCacheLRU.set(namespacedKey, Date.now());
-
-				this.updateMetrics(service, 'redisHit');
-				this.logger.info(`Fetched key: ${namespacedKey} from Redis`);
-				return redisValue;
-			} else {
-				this.updateMetrics(service, 'miss');
-				this.logger.info(`Cache miss for key: ${namespacedKey}`);
-			}
+			this.updateMetrics(service, 'miss');
+			this.logger.info(`Cache miss for key: ${namespacedKey}`);
 
 			return null;
 		} catch (error) {
@@ -188,12 +162,6 @@ export class CacheService implements CacheServiceInterface {
 			serviceMemoryCache.set(namespacedKey, { value, expiration });
 			this.memoryCacheLRU.set(namespacedKey, Date.now());
 
-			await this.redisService?.set(
-				namespacedKey,
-				value,
-				Number(expirationInSeconds)
-			);
-
 			this.logger.info(
 				`Key ${namespacedKey} set with TTL ${
 					expirationInSeconds || this.getServiceTTL(service)
@@ -221,17 +189,8 @@ export class CacheService implements CacheServiceInterface {
 				return true;
 			}
 
-			const redisExists = await this.redisService?.exists(namespacedKey);
-			if (redisExists) {
-				this.logger.info(
-					`Key ${namespacedKey} exists in Redis, checked by service ${service}`
-				);
-				this.updateMetrics(service, 'redisHit');
-				return true;
-			}
-
 			this.logger.info(
-				`Key ${namespacedKey} does not exist in memory or Redis, checked by service ${service}`
+				`Key ${namespacedKey} does not exist in memory, checked by service ${service}`
 			);
 			this.updateMetrics(service, 'miss');
 			return false;
@@ -256,11 +215,6 @@ export class CacheService implements CacheServiceInterface {
 					`Key ${namespacedKey} deleted from memory cache by service ${service}`
 				);
 			}
-
-			await this.redisService?.del(namespacedKey);
-			this.logger.info(
-				`Key ${namespacedKey} deleted from Redis by service ${service}`
-			);
 		} catch (error) {
 			this.handleCacheError(
 				error,
@@ -294,28 +248,23 @@ export class CacheService implements CacheServiceInterface {
 			}
 
 			if (!serviceMemoryCache || typeof newValue !== 'number') {
-				newValue =
-					(await this.redisService?.increment(
-						namespacedKey,
-						expirationInSeconds
-					)) ?? null;
-				if (newValue !== null) {
-					const expiration = expirationInSeconds
-						? Date.now() + expirationInSeconds * 1000
-						: Date.now() + this.getServiceTTL(service) * 1000;
+				newValue = 1;
 
-					if (!serviceMemoryCache) {
-						serviceMemoryCache = new Map();
-						this.memoryCache.set(service, serviceMemoryCache);
-					}
-					serviceMemoryCache.set(namespacedKey, {
-						value: newValue,
-						expiration
-					});
-					this.logger.info(
-						`Fetched incremented value from Redis and added to memory cache for key: ${namespacedKey} by service: ${service}`
-					);
+				if (!serviceMemoryCache) {
+					serviceMemoryCache = new Map();
+					this.memoryCache.set(service, serviceMemoryCache);
 				}
+				const expiration = expirationInSeconds
+					? Date.now() + expirationInSeconds * 1000
+					: Date.now() + this.getServiceTTL(service) * 1000;
+
+				serviceMemoryCache.set(namespacedKey, {
+					value: newValue,
+					expiration
+				});
+				this.logger.info(
+					`Initialized incremented value in memory cache for key: ${namespacedKey} by service: ${service}`
+				);
 			}
 
 			return newValue;
@@ -344,21 +293,10 @@ export class CacheService implements CacheServiceInterface {
 				this.logger.info(
 					`Memory cache flushed for service: ${service}`
 				);
-			}
-
-			const serviceKeys = await this.redisService?.getKeysByPattern(
-				`${service}:*`
-			);
-
-			if (typeof serviceKeys === 'undefined') {
+			} else {
 				this.logger.warn(
-					`Redis cache flush failed for service: ${service}`
+					`No memory cache found for service: ${service}`
 				);
-				return;
-			}
-			if (serviceKeys.length > 0) {
-				await this.redisService?.delMultiple(service, serviceKeys);
-				this.logger.info(`Redis cache flushed for service: ${service}`);
 			}
 		} catch (error) {
 			this.handleCacheError(
@@ -406,22 +344,10 @@ export class CacheService implements CacheServiceInterface {
 				this.logger.info(
 					`Memory cache cleared for service: ${service}`
 				);
-			}
-
-			const serviceKeys = await this.redisService?.getKeysByPattern(
-				`${service}:*`
-			);
-
-			if (typeof serviceKeys === 'undefined') {
+			} else {
 				this.logger.warn(
-					`Redis cache clear failed for service: ${service}`
+					`No memory cache found for service: ${service}`
 				);
-				return;
-			}
-
-			if (serviceKeys.length > 0) {
-				await this.redisService?.delMultiple(service, serviceKeys);
-				this.logger.info(`Redis cache cleared for service: ${service}`);
 			}
 		} catch (error) {
 			this.handleCacheError(
@@ -435,10 +361,8 @@ export class CacheService implements CacheServiceInterface {
 
 	public async closeConnection(): Promise<void> {
 		try {
-			await withRetry(
-				async () => await this.redisService?.cleanUpRedisClient(),
-				3,
-				1000
+			this.logger.info(
+				'No connection to close for memory cache *(LAYER 2 NOT IMPLEMENTED'
 			);
 		} catch (error) {
 			this.handleCacheError(
@@ -454,26 +378,12 @@ export class CacheService implements CacheServiceInterface {
 
 	public async shutdown(): Promise<void> {
 		try {
-			this.logger.info(
-				'Shutting down Redis connection before Cache Service...'
-			);
-			try {
-				await this.redisService?.cleanUpRedisClient();
-				this.logger.info('Redis connection closed successfully.');
-			} catch (redisError) {
-				this.logger.error(
-					`Failed to shut down Redis connection: ${redisError instanceof Error ? redisError.message : redisError}`
-				);
-			}
-
 			this.logger.info('Clearing memory cache in Cache Service...');
 
 			this.memoryCache.clear();
 			this.memoryCacheLRU.clear();
 
 			this.logger.info('Memory cache cleared successfully.');
-
-			this.redisService = null;
 			this.logger.info('Cache service shutdown completed.');
 		} catch (error) {
 			this.handleCacheError(

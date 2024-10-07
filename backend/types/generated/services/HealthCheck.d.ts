@@ -6,7 +6,6 @@ export declare class HealthCheckService implements HealthCheckServiceInterface {
     private errorHandler;
     private envConfig;
     private cacheService;
-    private redisService;
     private resourceManager;
     private databaseController;
     private httpsServer;

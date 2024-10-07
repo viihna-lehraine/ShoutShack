@@ -8,7 +8,6 @@ export declare class GatekeeperService implements GatekeeperServiceInterface {
     private errorHandler;
     private envConfig;
     private cacheService;
-    private redisService;
     private resourceManager;
     private RATE_LIMIT_BASE_POINTS;
     private RATE_LIMIT_BASE_DURATION;
@@ -55,7 +54,7 @@ export declare class GatekeeperService implements GatekeeperServiceInterface {
     }>;
     preInitIpBlacklist(): Promise<void>;
     private preInitIpWhitelist;
-    private syncBlacklistFromRedisToFile;
+    private syncBlacklistFromCacheToFile;
     private handleDependencyError;
     private getFilePath;
     private concurrentFileAccessSafety;

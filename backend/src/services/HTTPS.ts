@@ -31,7 +31,6 @@ import {
 	PassportAuthMiddlewareServiceInterface,
 	PassportServiceInterface,
 	PasswordServiceInterface,
-	RedisServiceInterface,
 	ResourceManagerInterface,
 	RootMiddlewareServiceInterface,
 	TOTPServiceInterface,
@@ -89,7 +88,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 	private passportAuthMiddlewareService: PassportAuthMiddlewareServiceInterface;
 	private passportService: PassportServiceInterface;
 	private passwordService: PasswordServiceInterface;
-	private redisService: RedisServiceInterface;
 	private resourceManager: ResourceManagerInterface;
 	private rootMiddlewareService: RootMiddlewareServiceInterface;
 	private totpService: TOTPServiceInterface;
@@ -115,7 +113,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 		errorHandler: ErrorHandlerServiceInterface,
 		envConfig: EnvConfigServiceInterface,
 		cacheService: CacheServiceInterface,
-		redisService: RedisServiceInterface,
 		resourceManager: ResourceManagerInterface,
 		healthCheckService: HealthCheckServiceInterface,
 		helmetMiddleware: HelmetMiddlewareServiceInterface,
@@ -149,7 +146,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
 		this.cacheService = cacheService;
-		this.redisService = redisService;
 		this.resourceManager = resourceManager;
 		this.healthCheckService = healthCheckService;
 		this.helmetMiddleware = helmetMiddleware;
@@ -228,8 +224,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 				await EnvConfigServiceFactory.getEnvConfigService();
 			const cacheService =
 				await CacheLayerServiceFactory.getCacheService();
-			const redisService =
-				await CacheLayerServiceFactory.getRedisService();
 			const resourceManager =
 				await ResourceManagerFactory.getResourceManager();
 			const healthCheckService =
@@ -282,7 +276,6 @@ export class HTTPSServer implements HTTPSServerInterface {
 				errorHandler,
 				envConfig,
 				cacheService,
-				redisService,
 				resourceManager,
 				healthCheckService,
 				helmetMiddleware,
@@ -817,12 +810,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 	}
 
 	private async shutDownLayer8Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 8 services: Cache and Redis...');
+		this.logger.info('Shutting down Layer 8 services: Cache Service...');
 		try {
-			await Promise.all([
-				this.cacheService.shutdown(),
-				this.redisService.shutdown()
-			]);
+			await this.cacheService.shutdown();
 			this.logger.info('Layer 8 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(

@@ -44,7 +44,6 @@ import {
 	PassportAuthMiddlewareServiceInterface,
 	PassportServiceInterface,
 	PasswordServiceInterface,
-	RedisServiceInterface,
 	ResourceManagerInterface,
 	RootMiddlewareServiceInterface,
 	TOTPServiceInterface,
@@ -152,10 +151,6 @@ export class ServiceFactory {
 
 	public static async getPasswordService(): Promise<PasswordServiceInterface> {
 		return AuthServiceFactory.getPasswordService();
-	}
-
-	public static async getRedisService(): Promise<RedisServiceInterface> {
-		return CacheLayerServiceFactory.getRedisService();
 	}
 
 	public static async getResourceManager(): Promise<ResourceManagerInterface> {

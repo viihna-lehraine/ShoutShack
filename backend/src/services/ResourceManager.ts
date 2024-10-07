@@ -4,7 +4,6 @@ import {
 	EnvConfigServiceInterface,
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
-	RedisServiceInterface,
 	ResourceManagerInterface
 } from '../index/interfaces/main';
 import os from 'os';
@@ -22,7 +21,6 @@ export class ResourceManager implements ResourceManagerInterface {
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
 	private envConfig: EnvConfigServiceInterface;
-	private redisService: RedisServiceInterface;
 	private cacheService: CacheServiceInterface;
 	private memoryCacheLRU: Map<string, number> = new Map();
 
@@ -31,14 +29,12 @@ export class ResourceManager implements ResourceManagerInterface {
 		errorLogger: ErrorLoggerServiceInterface,
 		errorHandler: ErrorHandlerServiceInterface,
 		envConfig: EnvConfigServiceInterface,
-		redisService: RedisServiceInterface,
 		cacheService: CacheServiceInterface
 	) {
 		this.logger = logger;
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
-		this.redisService = redisService;
 		this.cacheService = cacheService;
 	}
 
@@ -51,8 +47,6 @@ export class ResourceManager implements ResourceManagerInterface {
 				await ErrorHandlerServiceFactory.getErrorHandlerService();
 			const envConfig =
 				await EnvConfigServiceFactory.getEnvConfigService();
-			const redisService =
-				await CacheLayerServiceFactory.getRedisService();
 			const cacheService =
 				await CacheLayerServiceFactory.getCacheService();
 
@@ -61,7 +55,6 @@ export class ResourceManager implements ResourceManagerInterface {
 				errorLogger,
 				errorHandler,
 				envConfig,
-				redisService,
 				cacheService
 			);
 		}

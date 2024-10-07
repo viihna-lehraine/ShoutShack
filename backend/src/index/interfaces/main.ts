@@ -1,36 +1,50 @@
-import type { Application, RequestHandler, Router } from 'express';
+import { execSync } from 'child_process';
+import * as cryptoConstants from 'constants';
+import type {
+	Application,
+	NextFunction,
+	Request,
+	RequestHandler,
+	Response,
+	Router
+} from 'express';
 import { Session } from 'express-session';
-import type { User } from '../../models/User';
+import fs, { promises as fsPromises } from 'fs';
+import { inRange } from 'range_check';
+import { v4 as uuidv4 } from 'uuid';
 import type {
 	AttestationResult,
 	Fido2AttestationResult,
 	PublicKeyCredentialCreationOptions,
 	PublicKeyCredentialRequestOptions
 } from 'fido2-lib';
-import { NextFunction, Request, Response } from 'express';
-import { AppError, ClientError } from '../../errors/ErrorClasses';
-import { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
+import jwt, { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import { Transporter } from 'nodemailer';
-import { InferAttributes, Sequelize, WhereOptions } from 'sequelize';
-import fs, { promises as fsPromises } from 'fs';
-import { Logger as WinstonLogger } from 'winston';
-import { SecretsMap } from './env';
-import { ModelOperations, UserInstanceInterface } from './models';
-import { EnvVariableTypes, FeatureFlagTypes } from './env';
-import { UserAttributesInterface } from './models';
-import { RedisClientType } from 'redis';
-import { inRange } from 'range_check';
-import { validateDependencies } from '../../utils/helpers';
-import { blankRequest } from '../../config/express';
-import { tlsCiphers } from '../../config/security';
-import * as cryptoConstants from 'constants';
-import { execSync } from 'child_process';
-import jwt from 'jsonwebtoken';
-import { createLogger, format, transports, addColors } from 'winston';
+import { Sequelize, WhereOptions } from 'sequelize';
+import {
+	addColors,
+	createLogger,
+	format,
+	Logger as WinstonLogger,
+	transports
+} from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LogStashTransport from 'winston-logstash';
-import { ErrorClasses, ErrorSeverity } from '../../errors/ErrorClasses';
-import { v4 as uuidv4 } from 'uuid';
+import { EnvVariableTypes, FeatureFlagTypes, SecretsMap } from './env';
+import {
+	ModelOperations,
+	UserAttributesInterface,
+	UserInstanceInterface
+} from './models';
+import { blankRequest } from '../../config/express';
+import { tlsCiphers } from '../../config/security';
+import {
+	AppError,
+	ClientError,
+	ErrorClasses,
+	ErrorSeverity
+} from '../../errors/ErrorClasses';
+import { validateDependencies } from '../../utils/helpers';
 import { sanitizeRequestBody } from '../../utils/validator';
 
 import '../../../types/custom/winston-logstash';
@@ -389,22 +403,6 @@ export interface PasswordServiceInterface {
 	shutdown(): Promise<void>;
 }
 
-export interface RedisServiceInterface {
-	getRedisClient(): Promise<RedisClientType | null>;
-	get<T>(key: string): Promise<T | null>;
-	set<T>(key: string, value: T, expiration?: number): Promise<void>;
-	del(key: string): Promise<void>;
-	exists(key: string): Promise<boolean>;
-	increment(key: string, expiration?: number): Promise<number | null>;
-	flushRedisMemoryCache(): Promise<void>;
-	cleanUpRedisClient(): Promise<void>;
-	delMultiple(service: string, keys: string[]): Promise<void>;
-	getKeysByPattern(pattern: string): Promise<string[]>;
-	flushCacheByService(service: string): Promise<void>;
-	getRedisInfo(): Promise<RedisMetrics>;
-	shutdown(): Promise<void>;
-}
-
 export interface ResourceManagerInterface {
 	getCpuUsage(): Array<{ core: number; usage: string }>;
 	getMemoryUsage(): {
@@ -457,7 +455,7 @@ export interface TOTPServiceInterface {
 
 export interface UserControllerInterface {
 	findOne(
-		criteria: WhereOptions<InferAttributes<User>>
+		criteria: WhereOptions<UserAttributesInterface>
 	): Promise<UserInstanceInterface | null>;
 	findUserByEmail(email: string): Promise<UserInstanceInterface | null>;
 	findUserById(userId: string): Promise<UserInstanceInterface | null>;
@@ -667,18 +665,6 @@ export interface PassportServiceInterface {
 	shutdown(): Promise<void>;
 }
 
-export interface RedisServiceDeps {
-	req: import('express').Request;
-	res: import('express').Response;
-	next: import('express').NextFunction;
-	createRedisClient: typeof import('redis').createClient;
-	validateDependencies: (
-		dependencies: DependencyInterface[],
-		logger: AppLoggerServiceInterface
-	) => void;
-	blankRequest: import('express').Request;
-}
-
 export interface UserControllerDeps {
 	argon2: {
 		hash(
@@ -825,14 +811,6 @@ export interface FileTypeRecords {
 	[key: string]: string | string[];
 }
 
-export interface FlushRedisMemoryCacheInterface {
-	readonly req: import('express').Request;
-	readonly res: import('express').Response;
-	readonly next: import('express').NextFunction;
-	readonly blankRequest: import('express').Request;
-	readonly createRedisClient: typeof import('redis').createClient;
-}
-
 export interface GetFeatureFlagsInterface {
 	blankRequest: import('express').Request;
 }
@@ -844,14 +822,6 @@ export interface GeneratePasskeyInterface {
 export interface GeneratePasskeyInterface {
 	user: FidoUserInterface;
 	logger: AppLoggerServiceInterface;
-}
-
-export interface GetRedisClientInterface {
-	readonly req: import('express').Request;
-	readonly res: import('express').Response;
-	readonly next: import('express').NextFunction;
-	readonly blankRequest: import('express').Request;
-	readonly createRedisClient: typeof import('redis').createClient;
 }
 
 export interface HandleCriticalErrorInterface {
@@ -925,13 +895,6 @@ export interface MemoryMonitorStats {
 	heapUsed: string;
 	external: string;
 	available: string;
-}
-
-export interface RedisMetrics {
-	uptime_in_seconds: number;
-	used_memory: number;
-	connected_clients: number;
-	db0_size?: number;
 }
 
 export interface RouteParams {

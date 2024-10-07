@@ -27,7 +27,6 @@ export declare class HTTPSServer implements HTTPSServerInterface {
     private passportAuthMiddlewareService;
     private passportService;
     private passwordService;
-    private redisService;
     private resourceManager;
     private rootMiddlewareService;
     private totpService;

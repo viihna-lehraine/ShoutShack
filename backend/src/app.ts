@@ -66,11 +66,8 @@ async function start(): Promise<void> {
 				return databaseController;
 			})
 			.then(async () => {
-				const [cacheService, redisService] = await Promise.all([
-					ServiceFactory.getCacheService(),
-					ServiceFactory.getRedisService()
-				]);
-				return { cacheService, redisService };
+				const cacheService = await ServiceFactory.getCacheService();
+				return cacheService;
 			})
 			.then(async () => {
 				const gatekeeper = await ServiceFactory.getGatekeeperService();

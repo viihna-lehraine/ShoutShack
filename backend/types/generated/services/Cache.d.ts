@@ -4,7 +4,6 @@ export declare class CacheService implements CacheServiceInterface {
     private logger;
     private errorLogger;
     private errorHandler;
-    private redisService;
     private memoryCache;
     private memoryCacheLRU;
     private serviceMetrics;

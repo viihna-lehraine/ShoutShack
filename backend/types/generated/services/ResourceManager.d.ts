@@ -5,7 +5,6 @@ export declare class ResourceManager implements ResourceManagerInterface {
     private errorLogger;
     private errorHandler;
     private envConfig;
-    private redisService;
     private cacheService;
     private memoryCacheLRU;
     private constructor();

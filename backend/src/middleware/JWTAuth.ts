@@ -9,8 +9,7 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	GatekeeperServiceInterface,
-	JWTAuthMiddlewareServiceInterface,
-	RedisServiceInterface
+	JWTAuthMiddlewareServiceInterface
 } from '../index/interfaces/main';
 import { HandleErrorStaticParameters } from '../index/interfaces/main';
 import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
@@ -30,7 +29,6 @@ export class JWTAuthMiddlewareService
 	private errorHandler: ErrorHandlerServiceInterface;
 	private gatekeeperService: GatekeeperServiceInterface;
 	private cacheService: CacheServiceInterface;
-	private redisService: RedisServiceInterface;
 
 	private expiredTokens: Set<string> = new Set();
 	private revokedTokens: Set<string> = new Set();
@@ -48,7 +46,6 @@ export class JWTAuthMiddlewareService
 		errorHandler: ErrorHandlerServiceInterface,
 		gatekeeperService: GatekeeperServiceInterface,
 		cacheService: CacheServiceInterface,
-		redisService: RedisServiceInterface,
 		envConfig: EnvConfigServiceInterface
 	) {
 		this.logger = logger;
@@ -56,7 +53,6 @@ export class JWTAuthMiddlewareService
 		this.errorHandler = errorHandler;
 		this.gatekeeperService = gatekeeperService;
 		this.cacheService = cacheService;
-		this.redisService = redisService;
 
 		this.expiryListFilePath = envConfig.getEnvVariable(
 			'tokenExpiryListPath'
@@ -90,8 +86,6 @@ export class JWTAuthMiddlewareService
 				await GatekeeperServiceFactory.getGatekeeperService();
 			const cacheService =
 				await CacheLayerServiceFactory.getCacheService();
-			const redisService =
-				await CacheLayerServiceFactory.getRedisService();
 			const envConfig =
 				await EnvConfigServiceFactory.getEnvConfigService();
 
@@ -101,7 +95,6 @@ export class JWTAuthMiddlewareService
 				errorHandler,
 				gatekeeperService,
 				cacheService,
-				redisService,
 				envConfig
 			);
 		}
@@ -205,20 +198,15 @@ export class JWTAuthMiddlewareService
 		);
 
 		if (isExpired === null) {
-			isExpired = !!(await this.redisService.get(
-				`expiredToken:${token}`
-			));
+			isExpired = false;
 
-			if (isExpired) {
-				await this.cacheService.set(
-					`expiredToken:${token}`,
-					true,
-					'bouncerService',
-					this.cacheDuration
-				);
-			}
+			await this.cacheService.set(
+				`expiredToken:${token}`,
+				isExpired,
+				'bouncerService',
+				this.cacheDuration
+			);
 		}
-
 		return isExpired;
 	}
 
@@ -233,8 +221,6 @@ export class JWTAuthMiddlewareService
 
 	public async expireToken(token: string, ttl: number): Promise<void> {
 		const remainingTime = ttl - Math.floor(Date.now() / 1000);
-
-		await this.redisService.set(`expiredToken:${token}`, true, ttl);
 
 		await this.cacheService.set(
 			`expiredToken:${token}`,

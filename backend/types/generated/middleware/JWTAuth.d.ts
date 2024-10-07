@@ -7,7 +7,6 @@ export declare class JWTAuthMiddlewareService implements JWTAuthMiddlewareServic
     private errorHandler;
     private gatekeeperService;
     private cacheService;
-    private redisService;
     private expiredTokens;
     private revokedTokens;
     private expiryListFilePath;
