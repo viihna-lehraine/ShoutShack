@@ -1,5 +1,4 @@
-import { CacheServiceInterface } from '../index/interfaces/services';
-import { CacheMetrics } from '../index/interfaces/serviceComponents';
+import { CacheMetrics, CacheServiceInterface } from '../index/interfaces/main';
 export declare class CacheService implements CacheServiceInterface {
     private static instance;
     private logger;

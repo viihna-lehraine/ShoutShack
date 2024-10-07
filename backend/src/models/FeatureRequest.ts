@@ -6,7 +6,7 @@ import {
 	CreationOptional
 } from 'sequelize';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 
 interface FeatureRequestAttributes {
 	featureRequestNumber: number;

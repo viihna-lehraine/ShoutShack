@@ -1,4 +1,4 @@
-import { CSRFMiddlewareServiceInterface } from '../index/interfaces/services';
+import { CSRFMiddlewareServiceInterface } from '../index/interfaces/main';
 import { Request, Response, NextFunction } from 'express';
 import { Options as CSRFOptions } from 'csrf';
 export declare class CSRFMiddlewareService implements CSRFMiddlewareServiceInterface {

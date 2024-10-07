@@ -5,9 +5,12 @@ import {
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
-import { EmailMFAServiceDeps } from '../index/interfaces/serviceDeps';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { EmailMFAServiceDeps } from '../index/interfaces/main';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 import { JwtPayload } from 'jsonwebtoken';
 
 export class EmailMFAService implements EmailMFAServiceInterface {
@@ -20,13 +23,16 @@ export class EmailMFAService implements EmailMFAServiceInterface {
 
 	private constructor() {}
 
-	public static async getInstance(): Promise<EmailMFAServiceInterface> {
+	public static async getInstance(): Promise<EmailMFAService> {
 		if (!EmailMFAService.instance) {
-			const cacheService = await ServiceFactory.getCacheService();
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const vault = await ServiceFactory.getVaultService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const vault = await VaultServiceFactory.getVaultService();
 
 			EmailMFAService.instance = new EmailMFAService();
 			EmailMFAService.instance.cacheService = cacheService;

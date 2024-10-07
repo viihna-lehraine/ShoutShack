@@ -12,8 +12,11 @@ import {
 	PassportServiceInterface,
 	PasswordServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { AuthServiceFactory } from '../index/factory/subfactories/AuthServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 export class PassportService implements PassportServiceInterface {
 	private static instance: PassportService | null = null;
@@ -22,7 +25,7 @@ export class PassportService implements PassportServiceInterface {
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
-	private secrets: VaultServiceInterface;
+	private vault: VaultServiceInterface;
 
 	private constructor(
 		passwordService: PasswordServiceInterface,
@@ -35,23 +38,26 @@ export class PassportService implements PassportServiceInterface {
 		this.logger = logger;
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
-		this.secrets = secrets;
+		this.vault = secrets;
 	}
 
 	public static async getInstance(): Promise<PassportService> {
 		if (!PassportService.instance) {
-			const passwordService = await ServiceFactory.getPasswordService();
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const secrets = await ServiceFactory.getVaultService();
+			const passwordService =
+				await AuthServiceFactory.getPasswordService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const vault = await VaultServiceFactory.getVaultService();
 
 			PassportService.instance = new PassportService(
 				passwordService,
 				logger,
 				errorLogger,
 				errorHandler,
-				secrets
+				vault
 			);
 		}
 
@@ -63,7 +69,7 @@ export class PassportService implements PassportServiceInterface {
 		UserModel: typeof import('../models/User').User
 	): Promise<void> {
 		try {
-			const jwtSecret = this.secrets.retrieveSecret(
+			const jwtSecret = this.vault.retrieveSecret(
 				'JWT_SECRET',
 				secret => secret
 			);
@@ -133,7 +139,7 @@ export class PassportService implements PassportServiceInterface {
 							});
 						}
 
-						const pepper = this.secrets.retrieveSecret(
+						const pepper = this.vault.retrieveSecret(
 							'PEPPER',
 							secret => secret
 						);
@@ -146,10 +152,11 @@ export class PassportService implements PassportServiceInterface {
 						}
 
 						const passwordService =
-							await ServiceFactory.getPasswordService();
+							await AuthServiceFactory.getPasswordService();
 						const isMatch = await passwordService.comparePassword(
 							user.password,
-							password
+							password,
+							pepper
 						);
 
 						if (isMatch) {

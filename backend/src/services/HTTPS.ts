@@ -38,11 +38,29 @@ import {
 	UserControllerInterface,
 	VaultServiceInterface,
 	YubicoOTPServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { AccessControlMiddlewareFactory } from '../index/factory/subfactories/AccessControlMiddlewareFactory';
+import { AuthControllerFactory } from '../index/factory/subfactories/AuthControllerFactory';
+import { AuthServiceFactory } from '../index/factory/subfactories/AuthServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { DatabaseControllerFactory } from '../index/factory/subfactories/DatabaseControllerFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { GatekeeperServiceFactory } from '../index/factory/subfactories/GatekeeperServiceFactory';
+import { MiddlewareFactory } from '../index/factory/subfactories/MiddlewareFactory';
+import { MiddlewareStatusServiceFactory } from '../index/factory/subfactories/MiddlewareStatusServiceFactory';
+import { PassportServiceFactory } from '../index/factory/subfactories/PassportServiceFactory';
+import { PreHTTPSFactory } from '../index/factory/subfactories/PreHTTPSFactory';
+import { ResourceManagerFactory } from '../index/factory/subfactories/ResourceManagerFactory';
+import { RouterFactory } from '../index/factory/subfactories/RouterFactory';
+import { UserControllerFactory } from '../index/factory/subfactories/UserControllerFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 import { tlsCiphers } from '../config/security';
 import { SecureContextOptions } from 'tls';
 import timeout from 'connect-timeout';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { HealthCheckServiceFactory } from '../index/factory/subfactories/HealthCheckServiceFactory';
+import { RootMiddlewareFactory } from '../index/factory/subfactories/RootMiddlewareFactory';
 
 export class HTTPSServer implements HTTPSServerInterface {
 	public static instance: HTTPSServer | null = null;
@@ -173,23 +191,27 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async initializeServices(): Promise<void> {
 		this.accessControlMiddleware =
-			await ServiceFactory.getAccessControlMiddlewareService();
-		this.authController = await ServiceFactory.getAuthController();
-		this.backupCodeService = await ServiceFactory.getBackupCodeService();
-		this.baseRouter = await ServiceFactory.getBaseRouter();
-		this.csrfMiddleware = await ServiceFactory.getCSRFMiddlewareService();
-		this.databaseController = await ServiceFactory.getDatabaseController();
-		this.emailMFAService = await ServiceFactory.getEmailMFAService();
-		this.fido2Service = await ServiceFactory.getFIDO2Service();
-		this.gatekeeperService = await ServiceFactory.getGatekeeperService();
+			await AccessControlMiddlewareFactory.getAccessControlMiddlewareService();
+		this.authController = await AuthControllerFactory.getAuthController();
+		this.backupCodeService =
+			await AuthServiceFactory.getBackupCodeService();
+		this.baseRouter = await RouterFactory.getBaseRouter();
+		this.csrfMiddleware = await MiddlewareFactory.getCSRFMiddleware();
+		this.databaseController =
+			await DatabaseControllerFactory.getDatabaseController();
+		this.emailMFAService = await AuthServiceFactory.getEmailMFAService();
+		this.fido2Service = await AuthServiceFactory.getFIDO2Service();
+		this.gatekeeperService =
+			await GatekeeperServiceFactory.getGatekeeperService();
 		this.middlewareStatusService =
-			await ServiceFactory.getMiddlewareStatusService();
+			await MiddlewareStatusServiceFactory.getMiddlewareStatusService();
 		this.multerUploadService =
-			await ServiceFactory.getMulterUploadService();
-		this.passportService = await ServiceFactory.getPassportService();
-		this.passwordService = await ServiceFactory.getPasswordService();
-		this.vault = await ServiceFactory.getVaultService();
-		this.yubicoOTPService = await ServiceFactory.getYubicoOTPService();
+			await PreHTTPSFactory.getMulterUploadService();
+		this.passportService =
+			await PassportServiceFactory.getPassportService();
+		this.passwordService = await AuthServiceFactory.getPasswordService();
+		this.vault = await VaultServiceFactory.getVaultService();
+		this.yubicoOTPService = await AuthServiceFactory.getYubicoOTPService();
 	}
 
 	public static async getInstance(
@@ -197,49 +219,60 @@ export class HTTPSServer implements HTTPSServerInterface {
 		sequelize: Sequelize
 	): Promise<HTTPSServer> {
 		if (!HTTPSServer.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const redisService = await ServiceFactory.getRedisService();
-			const resourceManager = await ServiceFactory.getResourceManager();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const redisService =
+				await CacheLayerServiceFactory.getRedisService();
+			const resourceManager =
+				await ResourceManagerFactory.getResourceManager();
 			const healthCheckService =
-				await ServiceFactory.getHealthCheckService();
+				await HealthCheckServiceFactory.getHealthCheckService();
 			const helmetMiddleware =
-				await ServiceFactory.getHelmetMiddlewareService();
+				await MiddlewareFactory.getHelmetMiddleware();
 			const jwtAuthMiddlewareService =
-				await ServiceFactory.getJWTAuthMiddlewareService();
+				await MiddlewareFactory.getJWTAuthMiddleware();
 			const passportAuthMiddlewareService =
-				await ServiceFactory.getPassportAuthMiddlewareService();
+				await MiddlewareFactory.getPassportAuthMiddleware();
 			const accessControlMiddleware =
-				await ServiceFactory.getAccessControlMiddlewareService();
-			const authConroller = await ServiceFactory.getAuthController();
+				await AccessControlMiddlewareFactory.getAccessControlMiddlewareService();
+			const authConroller =
+				await AuthControllerFactory.getAuthController();
 			const backupCodeService =
-				await ServiceFactory.getBackupCodeService();
-			const baseRouter = await ServiceFactory.getBaseRouter();
-			const csrfMiddleware =
-				await ServiceFactory.getCSRFMiddlewareService();
+				await AuthServiceFactory.getBackupCodeService();
+			const baseRouter = await RouterFactory.getBaseRouter();
+			const csrfMiddleware = await MiddlewareFactory.getCSRFMiddleware();
 			const databaseController =
-				await ServiceFactory.getDatabaseController();
-			const emailMFAService = await ServiceFactory.getEmailMFAService();
-			const fido2Service = await ServiceFactory.getFIDO2Service();
+				await DatabaseControllerFactory.getDatabaseController();
+			const emailMFAService =
+				await AuthServiceFactory.getEmailMFAService();
+			const fido2Service = await AuthServiceFactory.getFIDO2Service();
 			const gatekeeperService =
-				await ServiceFactory.getGatekeeperService();
-			const jwtService = await ServiceFactory.getJWTService();
-			const mailerService = await ServiceFactory.getMailerService();
+				await GatekeeperServiceFactory.getGatekeeperService();
+			const jwtService = await AuthServiceFactory.getJWTService();
+			const mailerService = await PreHTTPSFactory.getMailerService();
 			const middlewareStatusService =
-				await ServiceFactory.getMiddlewareStatusService();
+				await MiddlewareStatusServiceFactory.getMiddlewareStatusService();
 			const multerUploadService =
-				await ServiceFactory.getMulterUploadService();
-			const passportService = await ServiceFactory.getPassportService();
-			const passwordService = await ServiceFactory.getPasswordService();
+				await PreHTTPSFactory.getMulterUploadService();
+			const passportService =
+				await PassportServiceFactory.getPassportService();
+			const passwordService =
+				await AuthServiceFactory.getPasswordService();
 			const rootMiddlewareService =
-				await ServiceFactory.getRootMiddlewareService();
-			const totpService = await ServiceFactory.getTOTPService();
-			const userController = await ServiceFactory.getUserController();
-			const vault = await ServiceFactory.getVaultService();
-			const yubicoOTPService = await ServiceFactory.getYubicoOTPService();
+				await RootMiddlewareFactory.getRootMiddleware();
+			const totpService = await AuthServiceFactory.getTOTPService();
+			const userController =
+				await UserControllerFactory.getUserController();
+			const vault = await VaultServiceFactory.getVaultService();
+			const yubicoOTPService =
+				await AuthServiceFactory.getYubicoOTPService();
 
 			HTTPSServer.instance = new HTTPSServer(
 				app,
@@ -481,8 +514,9 @@ export class HTTPSServer implements HTTPSServerInterface {
 				this.logger.info('No longer accepting new connections.');
 			});
 
+			await this.shutDownLayer20Services();
 			await this.shutDownLayer19Services();
-			await this.shutDownLayer18Services();
+			await this.shutDownLayer17Services();
 			await this.shutDownLayer16Services();
 			await this.shutDownLayer15Services();
 			await this.shutDownLayer14Services();
@@ -587,10 +621,27 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async shutDownLayer19Services(): Promise<void> {
-		this.logger.info('Shutting down Layer 19 services: Health Check...');
+	private async shutDownLayer20Services(): Promise<void> {
+		this.logger.info('Shutting down Layer 20 services: Health Check...');
 		try {
 			this.healthCheckService.shutdown();
+			this.logger.info('Layer 20 services have been shut down.');
+		} catch (error) {
+			this.handleHTTPSServerErrorRecoverable(
+				error,
+				'SHUTDOWN_LAYER_20',
+				{},
+				'Error shutting down Layer 20 services'
+			);
+		}
+	}
+
+	private async shutDownLayer19Services(): Promise<void> {
+		this.logger.info(
+			'Shutting down Layer 19 services: Resource Manager...'
+		);
+		try {
+			await this.resourceManager.shutdown();
 			this.logger.info('Layer 19 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -602,31 +653,36 @@ export class HTTPSServer implements HTTPSServerInterface {
 		}
 	}
 
-	private async shutDownLayer18Services(): Promise<void> {
+	private async shutDownLayer17Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 18 services: Resource Manager...'
+			'Shutting down Layer 17 services: Mailer and Multer Upload Services...'
 		);
 		try {
-			await this.resourceManager.shutdown();
-			this.logger.info('Layer 18 services have been shut down.');
+			await Promise.all([
+				this.mailerService.shutdown(),
+				this.multerUploadService.shutdown()
+			]);
+			this.logger.info('Layer 17 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
 				error,
-				'SHUTDOWN_LAYER_18',
+				'SHUTDOWN_LAYER_17',
 				{},
-				'Error shutting down Layer 18 services'
+				'Error shutting down Layer 17 services'
 			);
 		}
 	}
 
 	private async shutDownLayer16Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 16 services: Mailer and Multer Upload Services...'
+			'Shutting down Layer 16 services: CSRF, Helmet, JWT Auth, and Passport Middlewares...'
 		);
 		try {
 			await Promise.all([
-				this.mailerService.shutdown(),
-				this.multerUploadService.shutdown()
+				this.csrfMiddleware.shutdown(),
+				this.helmetMiddleware.shutdown(),
+				this.jwtAuthMiddlewareService.shutdown(),
+				this.passportAuthMiddlewareService.shutdown()
 			]);
 			this.logger.info('Layer 16 services have been shut down.');
 		} catch (error) {
@@ -641,15 +697,10 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer15Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 15 services: CSRF, Helmet, JWT Auth, and Passport Middlewares...'
+			'Shutting down Layer 15 services: Passport Auth Service...'
 		);
 		try {
-			await Promise.all([
-				this.csrfMiddleware.shutdown(),
-				this.helmetMiddleware.shutdown(),
-				this.jwtAuthMiddlewareService.shutdown(),
-				this.passportAuthMiddlewareService.shutdown()
-			]);
+			await this.passportService.shutdown();
 			this.logger.info('Layer 15 services have been shut down.');
 		} catch (error) {
 			this.handleHTTPSServerErrorRecoverable(
@@ -663,7 +714,7 @@ export class HTTPSServer implements HTTPSServerInterface {
 
 	private async shutDownLayer14Services(): Promise<void> {
 		this.logger.info(
-			'Shutting down Layer 14 services: Backup Code, EmailMFA, FIDO2, JWT, Passport, TOTP, and Yubico OTP Services...'
+			'Shutting down Layer 14 services: Backup Code, EmailMFA, FIDO2, JWT, TOTP, and Yubico OTP Services...'
 		);
 		try {
 			await Promise.all([

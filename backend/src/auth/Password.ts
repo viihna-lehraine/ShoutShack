@@ -4,17 +4,19 @@ import {
 	ErrorLoggerServiceInterface,
 	PasswordServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import { hashConfig } from '../config/security';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 export class PasswordService implements PasswordServiceInterface {
 	private static instance: PasswordService | null = null;
 	private logger: AppLoggerServiceInterface;
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
-	private secrets: VaultServiceInterface;
+	private vault: VaultServiceInterface;
 
 	private constructor(
 		logger: AppLoggerServiceInterface,
@@ -25,21 +27,23 @@ export class PasswordService implements PasswordServiceInterface {
 		this.logger = logger;
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
-		this.secrets = secrets;
+		this.vault = secrets;
 	}
 
 	public static async getInstance(): Promise<PasswordService> {
 		if (!PasswordService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const secrets = await ServiceFactory.getVaultService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const vault = await VaultServiceFactory.getVaultService();
 
 			PasswordService.instance = new PasswordService(
 				logger,
 				errorLogger,
 				errorHandler,
-				secrets
+				vault
 			);
 		}
 
@@ -53,7 +57,7 @@ export class PasswordService implements PasswordServiceInterface {
 				this.logger || console
 			);
 
-			const pepper = this.secrets.retrieveSecret(
+			const pepper = this.vault.retrieveSecret(
 				'PEPPER',
 				secret => secret
 			);
@@ -90,7 +94,7 @@ export class PasswordService implements PasswordServiceInterface {
 		providedPassword: string
 	): Promise<boolean> {
 		try {
-			const pepper = this.secrets.retrieveSecret(
+			const pepper = this.vault.retrieveSecret(
 				'PEPPER',
 				secret => secret
 			);

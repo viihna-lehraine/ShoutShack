@@ -1,5 +1,5 @@
-import { BackupCodeServiceInterface } from '../index/interfaces/services';
-import { BackupCodeInterface } from '../index/interfaces/serviceComponents';
+import { BackupCodeServiceInterface } from '../index/interfaces/main';
+import { BackupCodeInterface } from '../index/interfaces/main';
 export declare class BackupCodeService implements BackupCodeServiceInterface {
     private static instance;
     private logger;

@@ -3,8 +3,9 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	MiddlewareStatusServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 
 export class MiddlewareStatusService
 	implements MiddlewareStatusServiceInterface
@@ -28,9 +29,11 @@ export class MiddlewareStatusService
 
 	public static async getInstance(): Promise<MiddlewareStatusService> {
 		if (!MiddlewareStatusService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 
 			MiddlewareStatusService.instance = new MiddlewareStatusService(
 				logger,

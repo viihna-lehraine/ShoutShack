@@ -6,11 +6,15 @@ import {
 	ErrorHandlerServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
 import os from 'os';
 import fs from 'fs';
 import toobusy from 'toobusy-js';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { DatabaseControllerFactory } from '../index/factory/subfactories/DatabaseControllerFactory';
 
 export class ResourceManager implements ResourceManagerInterface {
 	private static instance: ResourceManager | null = null;
@@ -40,12 +44,17 @@ export class ResourceManager implements ResourceManagerInterface {
 
 	public static async getInstance(): Promise<ResourceManager> {
 		if (!ResourceManager.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const redisService = await ServiceFactory.getRedisService();
-			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const redisService =
+				await CacheLayerServiceFactory.getRedisService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
 
 			ResourceManager.instance = new ResourceManager(
 				logger,
@@ -404,7 +413,7 @@ export class ResourceManager implements ResourceManagerInterface {
 			this.logger.info('Closing idle database connections...');
 
 			const databaseController =
-				await ServiceFactory.getDatabaseController();
+				await DatabaseControllerFactory.getDatabaseController();
 			databaseController.clearIdleConnections();
 
 			this.logger.info('Idle database connections closed successfully');

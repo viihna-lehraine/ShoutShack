@@ -5,7 +5,7 @@ import {
 	Model
 } from 'sequelize';
 import { User } from './User';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { AuditLogAttributes } from '../index/interfaces/models';
 
 export class AuditLog

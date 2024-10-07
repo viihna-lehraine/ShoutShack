@@ -1,4 +1,4 @@
-import { BaseRouter } from './BaseRouter';
+import { BaseRouter } from './Routers';
 export declare class HealthRouter extends BaseRouter {
     private healthCheckService;
     private accessControl;

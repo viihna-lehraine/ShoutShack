@@ -8,7 +8,7 @@ import {
 } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { UserAttributesInterface } from '../index/interfaces/models';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 
 const errorLogger = await ServiceFactory.getErrorLoggerService();
 const errorHandler = await ServiceFactory.getErrorHandlerService();

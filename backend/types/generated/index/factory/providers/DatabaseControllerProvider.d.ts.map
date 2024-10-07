@@ -1,0 +1,1 @@
+{"version":3,"file":"DatabaseControllerProvider.d.ts","sourceRoot":"","sources":["../../../../../src/index/factory/providers/DatabaseControllerProvider.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,2BAA2B,EAAE,MAAM,uBAAuB,CAAC;AAEpE,qBAAa,0BAA0B;IACtC,OAAO,CAAC,MAAM,CAAC,QAAQ,CAA4C;WAE/C,qBAAqB,IAAI,OAAO,CAAC,2BAA2B,CAAC;CAMjF"}

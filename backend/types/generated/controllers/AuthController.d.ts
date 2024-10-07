@@ -1,6 +1,5 @@
 import { UserInstanceInterface } from '../index/interfaces/models';
-import { AppLoggerServiceInterface, AuthControllerInterface, CacheServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, MailerServiceInterface, UserControllerInterface, VaultServiceInterface } from '../index/interfaces/services';
-import { UserControllerDeps } from '../index/interfaces/serviceDeps';
+import { AppLoggerServiceInterface, AuthControllerInterface, CacheServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, MailerServiceInterface, UserControllerDeps, UserControllerInterface, VaultServiceInterface } from '../index/interfaces/main';
 import { RequestHandler } from 'express';
 export declare class AuthController implements AuthControllerInterface {
     private static instance;

@@ -1,4 +1,4 @@
-import { ServiceFactory } from 'src/index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { validateDependencies } from '../utils/helpers';
 
 const logger = await ServiceFactory.getLoggerService();

@@ -4,10 +4,10 @@ import EventEmitter from 'events';
 import { FileFilterCallback, Multer } from 'multer';
 import {
 	EnvConfigServiceInterface,
+	MulterUploadServiceDeps,
 	MulterUploadServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
-import { MulterUploadServiceDeps } from '../index/interfaces/serviceDeps';
+} from '../index/interfaces/main';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
 
 export class MulterUploadService
 	extends EventEmitter
@@ -69,7 +69,8 @@ export class MulterUploadService
 		allowedExtensions: string[] = []
 	): Promise<MulterUploadService> {
 		if (!MulterUploadService.instance) {
-			const envConfig = await ServiceFactory.getEnvConfigService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
 			MulterUploadService.instance = new MulterUploadService(
 				envConfig,
 				deps,

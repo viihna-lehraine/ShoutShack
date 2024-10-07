@@ -5,7 +5,7 @@ import {
 	InferCreationAttributes,
 	Model
 } from 'sequelize';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { ErrorLogAttributes } from '../index/interfaces/models';
 
 export class ErrorLog

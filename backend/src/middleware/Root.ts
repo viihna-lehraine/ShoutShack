@@ -6,7 +6,6 @@ import morgan, { StreamOptions } from 'morgan';
 import rawBody from 'raw-body';
 import responseTime from 'response-time';
 import { XMLParser } from 'fast-xml-parser';
-import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
 import {
 	blankRequest,
@@ -18,9 +17,12 @@ import {
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	MiddlewareStatusServiceInterface,
-	RootMiddlewareServiceInterface
-} from '../index/interfaces/services';
-import { XMLParsedRequest } from '../index/interfaces/serviceComponents';
+	RootMiddlewareServiceInterface,
+	XMLParsedRequest
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { MiddlewareStatusServiceFactory } from '../index/factory/subfactories/MiddlewareStatusServiceFactory';
 
 export class RootMiddlewareService implements RootMiddlewareServiceInterface {
 	private static instance: RootMiddlewareService | null = null;
@@ -51,11 +53,13 @@ export class RootMiddlewareService implements RootMiddlewareServiceInterface {
 
 	public static async getInstance(): Promise<RootMiddlewareService> {
 		if (!RootMiddlewareService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 			const middlewareStatusService =
-				await ServiceFactory.getMiddlewareStatusService();
+				await MiddlewareStatusServiceFactory.getMiddlewareStatusService();
 			RootMiddlewareService.instance = new RootMiddlewareService(
 				logger,
 				errorLogger,

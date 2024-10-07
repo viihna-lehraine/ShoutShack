@@ -57,6 +57,6 @@
 		"useDefineForClassFields": true,
 		"useUnknownInCatchVariables": true
 	},
-	"include": ["./src/**/*.ts", "./types/**/*.d.ts", "src/auth/JWT.ts"],
+	"include": ["./src/**/*.ts", "./types/**/*.d.ts"],
 	"exclude": ["./node_modules", "./dist/", "**/*.test.mjs", "**/*.d.ts"]
 }

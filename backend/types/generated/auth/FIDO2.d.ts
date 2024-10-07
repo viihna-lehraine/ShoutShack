@@ -1,7 +1,6 @@
 import { AttestationResult, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions, Fido2AttestationResult, Fido2AssertionResult, AssertionResult } from 'fido2-lib';
-import { FIDO2ServiceInterface } from '../index/interfaces/services';
-import { FidoUserInterface } from '../index/interfaces/serviceComponents';
-import '../../types/custom/yub.js';
+import { FIDO2ServiceInterface, FidoUserInterface } from '../index/interfaces/main';
+import '../../types/custom/yub.d.ts';
 export declare class FIDO2Service implements FIDO2ServiceInterface {
     private static instance;
     private FIDO2;

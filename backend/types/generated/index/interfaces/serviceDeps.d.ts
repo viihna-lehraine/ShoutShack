@@ -1,6 +1,6 @@
 import { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import { Transporter } from 'nodemailer';
-import { AppLoggerServiceInterface, ErrorHandlerServiceInterface, MailerServiceInterface, UserControllerInterface } from './services';
+import { AppLoggerServiceInterface, ErrorHandlerServiceInterface, MailerServiceInterface, UserControllerInterface } from './main';
 import { DeclareWebServerOptionsInterface, DependencyInterface, TOTPSecretInterface } from './serviceComponents';
 import '../../../types/custom/winston-logstash';
 export interface APIRouterDeps {
@@ -107,12 +107,12 @@ export interface PassportServiceInterface {
     shutdown(): Promise<void>;
 }
 export interface RedisServiceDeps {
-    readonly req: import('express').Request;
-    readonly res: import('express').Response;
-    readonly next: import('express').NextFunction;
-    readonly createRedisClient: typeof import('redis').createClient;
-    readonly validateDependencies: (dependencies: DependencyInterface[], logger: AppLoggerServiceInterface) => void;
-    readonly blankRequest: import('express').Request;
+    req: import('express').Request;
+    res: import('express').Response;
+    next: import('express').NextFunction;
+    createRedisClient: typeof import('redis').createClient;
+    validateDependencies: (dependencies: DependencyInterface[], logger: AppLoggerServiceInterface) => void;
+    blankRequest: import('express').Request;
 }
 export interface UserControllerDeps {
     argon2: {

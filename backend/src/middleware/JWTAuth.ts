@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { ServiceFactory } from '../index/factory';
+import fs from 'fs';
+import jwt from 'jsonwebtoken';
+import lockfile from 'proper-lockfile';
 import {
 	AppLoggerServiceInterface,
 	CacheServiceInterface,
@@ -9,11 +11,14 @@ import {
 	GatekeeperServiceInterface,
 	JWTAuthMiddlewareServiceInterface,
 	RedisServiceInterface
-} from '../index/interfaces/services';
-import { HandleErrorStaticParameters } from '../index/parameters';
-import fs from 'fs';
-import jwt from 'jsonwebtoken';
-import lockfile from 'proper-lockfile';
+} from '../index/interfaces/main';
+import { HandleErrorStaticParameters } from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { GatekeeperServiceFactory } from '../index/factory/subfactories/GatekeeperServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { AuthServiceFactory } from '../index/factory/subfactories/AuthServiceFactory';
 
 export class JWTAuthMiddlewareService
 	implements JWTAuthMiddlewareServiceInterface
@@ -76,14 +81,19 @@ export class JWTAuthMiddlewareService
 
 	public static async getInstance(): Promise<JWTAuthMiddlewareService> {
 		if (!JWTAuthMiddlewareService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 			const gatekeeperService =
-				await ServiceFactory.getGatekeeperService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const redisService = await ServiceFactory.getRedisService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
+				await GatekeeperServiceFactory.getGatekeeperService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const redisService =
+				await CacheLayerServiceFactory.getRedisService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
 
 			JWTAuthMiddlewareService.instance = new JWTAuthMiddlewareService(
 				logger,
@@ -149,7 +159,7 @@ export class JWTAuthMiddlewareService
 					return res.status(403).json({ error: 'Token expired' });
 				}
 
-				const jwtService = await ServiceFactory.getJWTService();
+				const jwtService = await AuthServiceFactory.getJWTService();
 				const user = await jwtService.verifyJWT(token);
 
 				if (!user) {
@@ -362,7 +372,7 @@ export class JWTAuthMiddlewareService
 	}
 
 	private async cleanupRevokedTokens(): Promise<void> {
-		const envConfig = await ServiceFactory.getEnvConfigService();
+		const envConfig = await EnvConfigServiceFactory.getEnvConfigService();
 		const revocationRetentionPeriod =
 			envConfig.getEnvVariable('revokedTokenRetentionPeriod') ||
 			30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds

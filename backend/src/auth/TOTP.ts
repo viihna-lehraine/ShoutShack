@@ -3,13 +3,15 @@ import {
 	CacheServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
+	TOTPSecretInterface,
 	TOTPServiceInterface
-} from '../index/interfaces/services';
-import { TOTPSecretInterface } from '../index/interfaces/serviceComponents';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { serviceTTLConfig } from '../config/cache';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
 
 export class TOTPService implements TOTPServiceInterface {
 	private static instance: TOTPService | null = null;
@@ -35,10 +37,13 @@ export class TOTPService implements TOTPServiceInterface {
 
 	public static async getInstance(): Promise<TOTPService> {
 		if (!TOTPService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
 
 			TOTPService.instance = new TOTPService(
 				logger,

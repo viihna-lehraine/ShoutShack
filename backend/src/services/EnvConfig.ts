@@ -8,9 +8,10 @@ import {
 	EnvConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from '../index/interfaces/services';
-import { HandleErrorStaticParameters } from '../index/parameters';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { HandleErrorStaticParameters } from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
@@ -34,9 +35,11 @@ export class EnvConfigService implements EnvConfigServiceInterface {
 
 	public static async getInstance(): Promise<EnvConfigService> {
 		if (!EnvConfigService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 
 			EnvConfigService.instance = new EnvConfigService(
 				logger,

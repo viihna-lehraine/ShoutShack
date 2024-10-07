@@ -1,11 +1,11 @@
 import TransportStream from 'winston-transport';
 import {
+	AppLoggerServiceDeps,
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
-import { AppLoggerServiceDeps } from '../index/interfaces/serviceDeps';
+} from '../index/interfaces/main';
 import { Op } from 'sequelize';
 import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';

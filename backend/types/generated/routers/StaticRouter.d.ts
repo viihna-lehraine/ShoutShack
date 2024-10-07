@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import { BaseRouter } from './BaseRouter';
-import { StaticRouterInterface } from '../index/interfaces/services';
+import { BaseRouter } from './Routers';
+import { StaticRouterInterface } from '../index/interfaces/main';
 export declare class StaticRouter extends BaseRouter implements StaticRouterInterface {
     private staticRootPath;
     private validCSSFiles;

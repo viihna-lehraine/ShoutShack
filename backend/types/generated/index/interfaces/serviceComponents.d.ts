@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { AppError, ClientError } from '../../errors/ErrorClasses';
 import { Sequelize } from 'sequelize';
-import { AppLoggerServiceInterface } from './services';
+import { AppLoggerServiceInterface } from './main';
 export interface AddIpToBlacklistInterface {
     ip: string;
     validateDependencies: (dependencies: DependencyInterface[], logger: AppLoggerServiceInterface) => void;

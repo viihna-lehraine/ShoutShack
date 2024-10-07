@@ -6,7 +6,7 @@ import {
 	Model
 } from 'sequelize';
 import { User } from './User';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { BlotEntryAttributes } from '../index/interfaces/models';
 
 export class BlotEntry

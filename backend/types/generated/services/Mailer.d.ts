@@ -1,6 +1,5 @@
 import { Transporter } from 'nodemailer';
-import { MailerServiceDeps } from '../index/interfaces/serviceDeps';
-import { MailerServiceInterface } from '../index/interfaces/services';
+import { MailerServiceDeps, MailerServiceInterface } from '../index/interfaces/main';
 export declare class MailerService implements MailerServiceInterface {
     private nodemailer;
     private emailUser;

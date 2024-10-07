@@ -1,4 +1,4 @@
-import { JWTServiceInterface } from '../index/interfaces/services';
+import { JWTServiceInterface } from '../index/interfaces/main';
 import { JwtPayload } from 'jsonwebtoken';
 export declare class JWTService implements JWTServiceInterface {
     private static instance;

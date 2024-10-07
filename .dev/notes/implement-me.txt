@@ -1,5 +1,0 @@
-Unified logging format - add resource manager info to logs
-
-this.logger.info(
-    `[${new Date().toISOString()}] [ResourceManager] [MethodName]: Memory usage ${usedHeapPercentage.toFixed(2)}%`
-);

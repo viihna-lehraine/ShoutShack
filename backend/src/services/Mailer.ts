@@ -1,16 +1,19 @@
 import { Transporter } from 'nodemailer';
 import { validateDependencies } from '../utils/helpers';
-import { MailerServiceDeps } from '../index/interfaces/serviceDeps';
 import {
 	AppLoggerServiceInterface,
 	EnvConfigServiceInterface,
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
+	MailerServiceDeps,
 	MailerServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 export class MailerService implements MailerServiceInterface {
 	private static instance: MailerService | null = null;
@@ -34,15 +37,18 @@ export class MailerService implements MailerServiceInterface {
 				{ name: 'nodemailer', instance: deps.nodemailer },
 				{ name: 'emailUser', instance: deps.emailUser }
 			],
-			await ServiceFactory.getLoggerService()
+			await LoggerServiceFactory.getLoggerService()
 		);
 
 		if (!MailerService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const vault = await ServiceFactory.getVaultService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const vault = await VaultServiceFactory.getVaultService();
 
 			MailerService.instance = new MailerService(
 				deps.nodemailer,

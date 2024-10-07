@@ -5,10 +5,13 @@ import {
 	ErrorHandlerServiceInterface,
 	JWTServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import { ServiceFactory } from '../index/factory';
 import { withRetry } from '../utils/helpers';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 export class JWTService implements JWTServiceInterface {
 	private static instance: JWTService | null = null;
@@ -23,11 +26,14 @@ export class JWTService implements JWTServiceInterface {
 
 	public static async getInstance(): Promise<JWTService> {
 		if (!JWTService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const vault = await ServiceFactory.getVaultService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const vault = await VaultServiceFactory.getVaultService();
 
 			JWTService.instance = new JWTService();
 			JWTService.instance.logger = logger;

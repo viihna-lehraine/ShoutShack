@@ -6,7 +6,7 @@ import {
 	InferCreationAttributes
 } from 'sequelize';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { FeedbackSurveyAttributes } from '../index/interfaces/models';
 
 export class FeedbackSurvey

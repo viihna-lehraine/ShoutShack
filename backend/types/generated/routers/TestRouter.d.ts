@@ -1,4 +1,4 @@
-import { BaseRouter } from './BaseRouter';
+import { BaseRouter } from './Routers';
 export declare class TestRouter extends BaseRouter {
     private nodeEnv;
     private constructor();

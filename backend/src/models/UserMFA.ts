@@ -6,7 +6,7 @@ import {
 } from 'sequelize';
 import { User } from './User';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { UserMFAAttributes } from '../index/interfaces/models';
 
 export class UserMFA

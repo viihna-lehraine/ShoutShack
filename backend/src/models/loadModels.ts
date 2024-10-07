@@ -16,7 +16,7 @@ import { createUserMFAModel } from './UserMFA';
 import { createUserModel } from './User';
 import { createUserSessionModel } from './UserSession';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 
 let res: Response;
 

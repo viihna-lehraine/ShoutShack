@@ -17,18 +17,22 @@ import {
 	EnvConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
-	FIDO2ServiceInterface
-} from '../index/interfaces/services';
-import { FidoUserInterface } from '../index/interfaces/serviceComponents';
+	FIDO2ServiceInterface,
+	FidoUserInterface
+} from '../index/interfaces/main';
 import { FidoFactor } from '../index/interfaces/types';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
 import { serviceTTLConfig } from '../config/cache';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
 
-import '../../types/custom/yub.js';
+import '../../types/custom/yub.d.ts';
 
 export class FIDO2Service implements FIDO2ServiceInterface {
 	private static instance: FIDO2Service | null = null;
+
 	private FIDO2: Fido2Lib | null = null;
 	private logger!: AppLoggerServiceInterface;
 	private errorLogger!: ErrorLoggerServiceInterface;
@@ -44,11 +48,15 @@ export class FIDO2Service implements FIDO2ServiceInterface {
 
 	public static async getInstance(): Promise<FIDO2Service> {
 		if (!FIDO2Service.instance) {
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const logger = await ServiceFactory.getLoggerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
 
 			FIDO2Service.instance = new FIDO2Service();
 			FIDO2Service.instance.errorLogger = errorLogger;

@@ -1,5 +1,5 @@
 import { EnvVariableTypes, FeatureFlagTypes } from '../index/interfaces/env';
-import { EnvConfigServiceInterface } from '../index/interfaces/services';
+import { EnvConfigServiceInterface } from '../index/interfaces/main';
 export declare const __filename: string;
 export declare const __dirname: string;
 export declare class EnvConfigService implements EnvConfigServiceInterface {

@@ -1,7 +1,5 @@
 import { RedisClientType } from 'redis';
-import { RedisServiceInterface } from '../index/interfaces/services';
-import { RedisMetrics } from '../index/interfaces/serviceComponents';
-import { RedisServiceDeps } from '../index/interfaces/serviceDeps';
+import { RedisMetrics, RedisServiceDeps, RedisServiceInterface } from '../index/interfaces/main';
 export declare class RedisService implements RedisServiceInterface {
     private readonly createRedisClient;
     private static instance;

@@ -1,10 +1,10 @@
-import { PasswordServiceInterface } from '../index/interfaces/services';
+import { PasswordServiceInterface } from '../index/interfaces/main';
 export declare class PasswordService implements PasswordServiceInterface {
     private static instance;
     private logger;
     private errorLogger;
     private errorHandler;
-    private secrets;
+    private vault;
     private constructor();
     static getInstance(): Promise<PasswordService>;
     hashPassword(password: string): Promise<string>;

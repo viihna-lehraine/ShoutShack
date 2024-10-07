@@ -1,8 +1,8 @@
 import {
+	AppLoggerServiceInterface,
 	DependencyInterface,
 	ValidateDependenciesInterface
-} from '../index/interfaces/serviceComponents';
-import { AppLoggerServiceInterface } from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import { validateDependencies } from '../utils/helpers';
 
 export class DependencyValidationService

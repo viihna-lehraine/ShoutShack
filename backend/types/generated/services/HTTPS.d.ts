@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { Application } from 'express';
-import { HTTPSServerInterface } from '../index/interfaces/services';
+import { HTTPSServerInterface } from '../index/interfaces/main';
 export declare class HTTPSServer implements HTTPSServerInterface {
     static instance: HTTPSServer | null;
     private accessControlMiddleware;
@@ -55,8 +55,9 @@ export declare class HTTPSServer implements HTTPSServerInterface {
     shutdownServer(): Promise<void>;
     getHTTPSServerInfo(): Promise<Record<string, unknown>>;
     getHTTPSServerMetrics(serviceName: string): Promise<Record<string, unknown>>;
+    private shutDownLayer20Services;
     private shutDownLayer19Services;
-    private shutDownLayer18Services;
+    private shutDownLayer17Services;
     private shutDownLayer16Services;
     private shutDownLayer15Services;
     private shutDownLayer14Services;

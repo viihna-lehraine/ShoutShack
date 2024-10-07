@@ -1,6 +1,5 @@
 import { RequestHandler } from 'express';
-import { PassportAuthMiddlewareServiceInterface } from '../index/interfaces/services';
-import { PassportAuthMiddlewareServiceDeps } from '../index/interfaces/serviceDeps';
+import { PassportAuthMiddlewareServiceDeps, PassportAuthMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class PassportAuthMiddlewareService implements PassportAuthMiddlewareServiceInterface {
     private static instance;
     private logger;

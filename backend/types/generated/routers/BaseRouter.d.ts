@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { AppLoggerServiceInterface, BaseRouterInterface, CacheServiceInterface, EnvConfigServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, GatekeeperServiceInterface, HelmetMiddlewareServiceInterface, JWTAuthMiddlewareServiceInterface, PassportAuthMiddlewareServiceInterface } from '../index/interfaces/services';
+import { AppLoggerServiceInterface, BaseRouterInterface, CacheServiceInterface, EnvConfigServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, GatekeeperServiceInterface, HelmetMiddlewareServiceInterface, JWTAuthMiddlewareServiceInterface, PassportAuthMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class BaseRouter implements BaseRouterInterface {
     private static instance;
     protected router: Router;

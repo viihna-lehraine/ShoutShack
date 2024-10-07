@@ -8,10 +8,14 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import { ModelOperations } from '../index/interfaces/models';
-import { ServiceFactory } from '../index/factory';
 import { Logger } from 'winston';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 export class DatabaseController implements DatabaseControllerInterface {
 	private static instance: DatabaseController | null = null;
@@ -83,12 +87,16 @@ export class DatabaseController implements DatabaseControllerInterface {
 
 	public static async getInstance(): Promise<DatabaseController> {
 		if (!DatabaseController.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const vault = await ServiceFactory.getVaultService();
-			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const vault = await VaultServiceFactory.getVaultService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
 
 			DatabaseController.instance = new DatabaseController(
 				logger,

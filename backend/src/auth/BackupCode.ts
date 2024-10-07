@@ -3,13 +3,14 @@ import {
 	BackupCodeServiceInterface,
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface
-} from '../index/interfaces/services';
-import { BackupCodeInterface } from '../index/interfaces/serviceComponents';
+} from '../index/interfaces/main';
+import { BackupCodeInterface } from '../index/interfaces/main';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { UserMFA } from '../models/UserMFA';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 
 export class BackupCodeService implements BackupCodeServiceInterface {
 	private static instance: BackupCodeService | null = null;
@@ -29,9 +30,11 @@ export class BackupCodeService implements BackupCodeServiceInterface {
 
 	public static async getInstance(): Promise<BackupCodeService> {
 		if (!BackupCodeService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 
 			BackupCodeService.instance = new BackupCodeService(
 				logger,

@@ -1,4 +1,4 @@
-import { HealthCheckServiceInterface } from '../index/interfaces/services';
+import { HealthCheckServiceInterface } from '../index/interfaces/main';
 export declare class HealthCheckService implements HealthCheckServiceInterface {
     private static instance;
     private logger;

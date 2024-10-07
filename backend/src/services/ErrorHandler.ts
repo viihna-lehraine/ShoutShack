@@ -10,7 +10,7 @@ import {
 	AppLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import { v4 as uuidv4 } from 'uuid';
 import { Sequelize } from 'sequelize';
 import { sanitizeRequestBody } from '../utils/validator';

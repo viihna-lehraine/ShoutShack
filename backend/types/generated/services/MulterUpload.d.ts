@@ -1,7 +1,6 @@
 import EventEmitter from 'events';
 import { Multer } from 'multer';
-import { MulterUploadServiceInterface } from '../index/interfaces/services';
-import { MulterUploadServiceDeps } from '../index/interfaces/serviceDeps';
+import { MulterUploadServiceDeps, MulterUploadServiceInterface } from '../index/interfaces/main';
 export declare class MulterUploadService extends EventEmitter implements MulterUploadServiceInterface {
     private static instance;
     private envConfig;

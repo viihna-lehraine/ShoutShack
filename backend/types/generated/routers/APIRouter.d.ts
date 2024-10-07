@@ -1,4 +1,4 @@
-import { BaseRouter } from './BaseRouter';
+import { BaseRouter } from './Routers';
 import { Router } from 'express';
 export declare class APIRouter extends BaseRouter {
     private userController;

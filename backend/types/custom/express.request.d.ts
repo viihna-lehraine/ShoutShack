@@ -4,14 +4,14 @@ declare global {
 	namespace Express {
 	  interface User {
 		id: string;
-		userId: number;
+		userId?: number | undefined;
 		username: string;
 		password: string;
 		email: string;
 		isVerified: boolean;
 		resetPasswordToken: string | null;
 		resetPasswordExpires: Date | null;
-		isMfaEnabled: boolean;
+		isMFAEnabled: boolean;
 		creationDate: Date;
 		}
 

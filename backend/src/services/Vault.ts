@@ -9,17 +9,21 @@ import {
 import path from 'path';
 import { hashConfig } from '../config/security';
 import { SecretsMap } from '../index/interfaces/env';
-import { VaultServiceInterface } from '../index/interfaces/services';
-import { ConfigSecretsInterface } from '../index/interfaces/serviceComponents';
-import { HandleErrorStaticParameters } from '../index/parameters';
+import {
+	ConfigSecretsInterface,
+	VaultServiceInterface
+} from '../index/interfaces/main';
+import { HandleErrorStaticParameters } from '../index/interfaces/main';
 import { withRetry } from '../utils/helpers';
 import {
 	AppLoggerServiceInterface,
 	EnvConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
 
 const algorithm = 'aes-256-ctr';
 const ivLength = 16;
@@ -88,12 +92,13 @@ export class VaultService implements VaultServiceInterface {
 	): Promise<VaultService> {
 		try {
 			if (!VaultService.instance) {
-				const logger = await ServiceFactory.getLoggerService();
+				const logger = await LoggerServiceFactory.getLoggerService();
 				const errorLogger =
-					await ServiceFactory.getErrorLoggerService();
+					await LoggerServiceFactory.getErrorLoggerService();
 				const errorHandler =
-					await ServiceFactory.getErrorHandlerService();
-				const envConfig = await ServiceFactory.getEnvConfigService();
+					await ErrorHandlerServiceFactory.getErrorHandlerService();
+				const envConfig =
+					await EnvConfigServiceFactory.getEnvConfigService();
 
 				VaultService.instance = new VaultService(
 					encryptionKey,

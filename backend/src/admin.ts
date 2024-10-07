@@ -7,6 +7,11 @@ import { stdout as output } from 'process';
 import readline from 'readline';
 import { createLogger, format } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+export const __filename = fileURLToPath(import.meta.url);
+export const __dirname = dirname(__filename);
 
 config({ path: path.resolve(__dirname, '../config/env/backend.startup.env') });
 

@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import {
 	AccessControlMiddlewareServiceInterface,
 	AppLoggerServiceInterface
-} from '../index/interfaces/services';
-import { AuthenticatedUserInterface } from '../index/interfaces/serviceComponents';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { AuthenticatedUserInterface } from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
 
 export class AccessControlMiddlewareService
 	implements AccessControlMiddlewareServiceInterface
@@ -19,7 +19,7 @@ export class AccessControlMiddlewareService
 
 	public static async getInstance(): Promise<AccessControlMiddlewareService> {
 		if (!AccessControlMiddlewareService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
 			AccessControlMiddlewareService.instance =
 				new AccessControlMiddlewareService(logger);
 		}

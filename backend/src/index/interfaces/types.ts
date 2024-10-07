@@ -1,10 +1,10 @@
-import { ErrorLoggerServiceInterface } from './services';
+import { ErrorLoggerServiceInterface } from './main';
 
 export type FeatureFlagValueType =
-	(typeof import('../parameters').FeatureFlagNames)[FeatureFlagNamesType];
+	(typeof import('../interfaces/main').FeatureFlagNames)[FeatureFlagNamesType];
 
 export type FeatureFlagNamesType =
-	keyof typeof import('../parameters').FeatureFlagNames;
+	keyof typeof import('../interfaces/main').FeatureFlagNames;
 
 export type FidoFactor = 'first' | 'second' | 'either';
 

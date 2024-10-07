@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import xss from 'xss';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 
 const errorLogger = await ServiceFactory.getErrorLoggerService();
 const errorHandler = await ServiceFactory.getErrorHandlerService();

@@ -4,11 +4,13 @@ import {
 	EnvConfigServiceInterface,
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
+	RedisMetrics,
+	RedisServiceDeps,
 	RedisServiceInterface
-} from '../index/interfaces/services';
-import { RedisMetrics } from '../index/interfaces/serviceComponents';
-import { RedisServiceDeps } from '../index/interfaces/serviceDeps';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
 
 export class RedisService implements RedisServiceInterface {
 	private static instance: RedisService | null = null;
@@ -39,10 +41,10 @@ export class RedisService implements RedisServiceInterface {
 		if (!RedisService.instance) {
 			RedisService.instance = new RedisService(
 				deps.createRedisClient,
-				await ServiceFactory.getLoggerService(),
-				await ServiceFactory.getErrorLoggerService(),
-				await ServiceFactory.getErrorHandlerService(),
-				await ServiceFactory.getEnvConfigService()
+				await LoggerServiceFactory.getLoggerService(),
+				await LoggerServiceFactory.getErrorLoggerService(),
+				await ErrorHandlerServiceFactory.getErrorHandlerService(),
+				await EnvConfigServiceFactory.getEnvConfigService()
 			);
 		}
 		return RedisService.instance;

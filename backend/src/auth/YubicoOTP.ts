@@ -5,15 +5,17 @@ import {
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	VaultServiceInterface,
-	YubicoOTPServiceInterface
-} from '../index/interfaces/services';
-import {
 	YubClientInterface,
-	YubResponseInterface,
-	YubicoOTPOptionsInterface
-} from '../index/interfaces/serviceComponents';
-import { ServiceFactory } from '../index/factory';
+	YubicoOTPOptionsInterface,
+	YubicoOTPServiceInterface,
+	YubResponseInterface
+} from '../index/interfaces/main';
 import { serviceTTLConfig } from '../config/cache';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
 
 import '../../types/custom/yub.js';
 
@@ -23,7 +25,7 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
 	private envConfig: EnvConfigServiceInterface;
-	private secrets: VaultServiceInterface;
+	private vault: VaultServiceInterface;
 	private cacheService: CacheServiceInterface;
 	private yubClient: YubClientInterface | undefined;
 
@@ -35,14 +37,14 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 		errorLogger: ErrorLoggerServiceInterface,
 		errorHandler: ErrorHandlerServiceInterface,
 		envConfig: EnvConfigServiceInterface,
-		secrets: VaultServiceInterface,
+		vault: VaultServiceInterface,
 		cacheService: CacheServiceInterface
 	) {
 		this.logger = logger;
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
-		this.secrets = secrets;
+		this.vault = vault;
 		this.cacheService = cacheService;
 		this.ttl =
 			serviceTTLConfig.YubicoOtpService || serviceTTLConfig.default;
@@ -51,19 +53,23 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 
 	public static async getInstance(): Promise<YubicoOTPService> {
 		if (!YubicoOTPService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const secrets = await ServiceFactory.getVaultService();
-			const cacheService = await ServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const vault = await VaultServiceFactory.getVaultService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
 
 			YubicoOTPService.instance = new YubicoOTPService(
 				logger,
 				errorLogger,
 				errorHandler,
 				envConfig,
-				secrets,
+				vault,
 				cacheService
 			);
 		}
@@ -122,7 +128,7 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 		try {
 			this.logger.info('Initializing Yubico OTP Utility.');
 
-			const yubiSecrets = await this.secrets.retrieveSecrets(
+			const yubiSecrets = await this.vault.retrieveSecrets(
 				['YUBICO_CLIENT_ID', 'YUBICO_SECRET_KEY'],
 				secrets => secrets
 			);
@@ -256,8 +262,7 @@ export class YubicoOTPService implements YubicoOTPServiceInterface {
 				'yubicoApiUrl'
 			) as string;
 
-			// Await the retrieval of secrets
-			const yubiSecrets = await this.secrets.retrieveSecrets(
+			const yubiSecrets = await this.vault.retrieveSecrets(
 				['YUBICO_CLIENT_ID', 'YUBICO_SECRET_KEY'],
 				secrets => secrets
 			);

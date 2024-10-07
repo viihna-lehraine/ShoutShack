@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { loadModels, Models } from './loadModels';
 import { validateDependencies } from '../utils/helpers';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 
 const logger = await ServiceFactory.getLoggerService();
 const errorLogger = await ServiceFactory.getErrorLoggerService();

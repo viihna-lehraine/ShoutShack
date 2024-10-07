@@ -1,7 +1,6 @@
 import { User } from '../models/User';
-import { UserControllerInterface } from '../index/interfaces/services';
+import { UserControllerDeps, UserControllerInterface } from '../index/interfaces/main';
 import { UserAttributesInterface, UserInstanceInterface } from '../index/interfaces/models';
-import { UserControllerDeps } from '../index/interfaces/serviceDeps';
 import { InferAttributes, WhereOptions } from 'sequelize/types';
 export declare class UserController implements UserControllerInterface {
     private static instance;
@@ -10,7 +9,7 @@ export declare class UserController implements UserControllerInterface {
     private errorLogger;
     private errorHandler;
     private envConfig;
-    private secrets;
+    private vault;
     private mailer;
     private userModel;
     private constructor();

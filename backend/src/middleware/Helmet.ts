@@ -10,9 +10,10 @@ import {
 	ErrorLoggerServiceInterface,
 	ErrorHandlerServiceInterface,
 	HelmetMiddlewareServiceInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
 import { withRetry } from '../utils/helpers';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 
 export class HelmetMiddlewareService
 	implements HelmetMiddlewareServiceInterface
@@ -35,9 +36,11 @@ export class HelmetMiddlewareService
 
 	public static async getInstance(): Promise<HelmetMiddlewareService> {
 		if (!HelmetMiddlewareService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
 
 			HelmetMiddlewareService.instance = new HelmetMiddlewareService(
 				logger,

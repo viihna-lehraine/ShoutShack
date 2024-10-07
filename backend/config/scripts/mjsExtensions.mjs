@@ -10,56 +10,81 @@ const distDir = resolve(__dirname, '../../dist');
 console.log('mjsExtensions script has started.');
 
 async function renameJsToMjs(dir) {
-	const list = await fs.readdir(dir, { withFileTypes: true });
+	try {
+		const list = await fs.readdir(dir, { withFileTypes: true });
 
-	for (const file of list) {
-		const filePath = join(dir, file.name);
-		if (file.isDirectory()) {
-			await renameJsToMjs(filePath);
-		} else if (file.isFile() && file.name.endsWith('.js')) {
-			const newFilePath = filePath.replace(/\.js$/, '.mjs');
-			await fs.rename(filePath, newFilePath);
-			const relativeFilePath = relative(distDir, newFilePath);
-			console.log(`Renamed ${relativeFilePath}`);
+		for (const file of list) {
+			const filePath = join(dir, file.name);
+			if (file.isDirectory()) {
+				console.log(
+					`Entering directory: ${relative(distDir, filePath)}`
+				);
+				await renameJsToMjs(filePath);
+			} else if (file.isFile() && file.name.endsWith('.js')) {
+				const newFilePath = filePath.replace(/\.js$/, '.mjs');
+				console.log(
+					`Renaming ${relative(distDir, filePath)} to ${relative(distDir, newFilePath)}`
+				);
+				await fs.rename(filePath, newFilePath);
+				console.log(`Renamed ${relative(distDir, newFilePath)}`);
+			}
 		}
+	} catch (error) {
+		console.error(`Error renaming files in ${dir}:`, error);
 	}
 }
 
 async function findMjsFiles(dir) {
-	const results = [];
-	const list = await fs.readdir(dir, { withFileTypes: true });
+	try {
+		const results = [];
+		const list = await fs.readdir(dir, { withFileTypes: true });
 
-	for (const file of list) {
-		const filePath = join(dir, file.name);
-		if (file.isDirectory()) {
-			const subDirFiles = await findMjsFiles(filePath);
-			results.push(...subDirFiles);
-		} else if (file.isFile() && file.name.endsWith('.mjs')) {
-			results.push(filePath);
+		for (const file of list) {
+			const filePath = join(dir, file.name);
+			if (file.isDirectory()) {
+				console.log(
+					`Searching in directory: ${relative(distDir, filePath)}`
+				);
+				const subDirFiles = await findMjsFiles(filePath);
+				results.push(...subDirFiles);
+			} else if (file.isFile() && file.name.endsWith('.mjs')) {
+				results.push(filePath);
+			}
 		}
+		return results;
+	} catch (error) {
+		console.error(`Error finding .mjs files in ${dir}:`, error);
+		return []; // Return an empty array in case of an error
 	}
-	return results;
 }
 
 async function fixImportStatements(filePath) {
-	let fileContent = await fs.readFile(filePath, 'utf8');
-	let modified = false;
+	try {
+		const fileContent = await fs.readFile(filePath, 'utf8');
+		let modified = false;
 
-	fileContent = fileContent.replace(
-		/import\s+([\s\S]*?)\s+from\s+['"](\.{1,2}\/[^'"]+?)(\.js|\.mjs)?['"]/g,
-		(fullMatch, imports, path) => {
-			const updatedPath = `import ${imports.trim()} from '${path}.mjs'`;
-			const relativeFilePath = relative(distDir, filePath);
+		const updatedContent = fileContent.replace(
+			/import\s+([\s\S]*?)\s+from\s+['"](\.{1,2}\/[^'"]+?)(\.js|\.mjs)?['"]/g,
+			(fullMatch, imports, path) => {
+				const updatedPath = `import ${imports.trim()} from '${path}.mjs'`;
+				console.log(
+					`Updating imports in ${relative(distDir, filePath)} - ${fullMatch} -> ${updatedPath}`
+				);
+				modified = true;
+				return updatedPath;
+			}
+		);
+
+		if (modified) {
+			await fs.writeFile(filePath, updatedContent, 'utf8');
 			console.log(
-				`Updated ${relativeFilePath} - ${fullMatch} -> ${updatedPath}`
+				`Successfully updated imports in ${relative(distDir, filePath)}`
 			);
-			modified = true;
-			return updatedPath;
+		} else {
+			console.log(`No imports updated in ${relative(distDir, filePath)}`);
 		}
-	);
-
-	if (modified) {
-		await fs.writeFile(filePath, fileContent, 'utf8');
+	} catch (error) {
+		console.error(`Error processing imports in ${filePath}:`, error);
 	}
 }
 
@@ -72,6 +97,7 @@ async function processFiles() {
 		if (files.length === 0) {
 			console.log('No .mjs files found.');
 		} else {
+			console.log(`Found ${files.length} .mjs files. Processing...`);
 			await Promise.all(files.map(file => fixImportStatements(file)));
 		}
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AccessControlMiddlewareServiceInterface } from '../index/interfaces/services';
+import { AccessControlMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class AccessControlMiddlewareService implements AccessControlMiddlewareServiceInterface {
     private static instance;
     private logger;

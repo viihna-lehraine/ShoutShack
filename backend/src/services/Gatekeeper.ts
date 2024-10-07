@@ -3,7 +3,6 @@ import { Session } from 'express-session';
 import fs from 'fs';
 import path from 'path';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { ServiceFactory } from '../index/factory';
 import {
 	AppLoggerServiceInterface,
 	CacheServiceInterface,
@@ -13,7 +12,12 @@ import {
 	GatekeeperServiceInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { ResourceManagerFactory } from '../index/factory/subfactories/ResourceManagerFactory';
 
 export class GatekeeperService implements GatekeeperServiceInterface {
 	private static instance: GatekeeperService | null = null;
@@ -79,13 +83,19 @@ export class GatekeeperService implements GatekeeperServiceInterface {
 
 	public static async getInstance(): Promise<GatekeeperService> {
 		if (!GatekeeperService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const redisService = await ServiceFactory.getRedisService();
-			const resourceManager = await ServiceFactory.getResourceManager();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const redisService =
+				await CacheLayerServiceFactory.getRedisService();
+			const resourceManager =
+				await ResourceManagerFactory.getResourceManager();
 
 			GatekeeperService.instance = new GatekeeperService(
 				logger,

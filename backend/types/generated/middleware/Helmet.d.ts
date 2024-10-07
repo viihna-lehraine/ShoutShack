@@ -1,5 +1,5 @@
 import { Application } from 'express';
-import { HelmetMiddlewareServiceInterface } from '../index/interfaces/services';
+import { HelmetMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class HelmetMiddlewareService implements HelmetMiddlewareServiceInterface {
     private static instance;
     private logger;

@@ -1,5 +1,6 @@
+import fs from 'fs';
+import os from 'os';
 import toobusy from 'toobusy-js';
-import express from 'express';
 import {
 	AppLoggerServiceInterface,
 	CacheServiceInterface,
@@ -11,10 +12,14 @@ import {
 	HTTPSServerInterface,
 	RedisServiceInterface,
 	ResourceManagerInterface
-} from '../index/interfaces/services';
-import { ServiceFactory } from '../index/factory';
-import fs from 'fs';
-import os from 'os';
+} from '../index/interfaces/main';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { DatabaseControllerFactory } from '../index/factory/subfactories/DatabaseControllerFactory';
+import { HTTPSServerFactory } from '../index/factory/subfactories/HTTPSServerFactory';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { ResourceManagerFactory } from '../index/factory/subfactories/ResourceManagerFactory';
 
 export class HealthCheckService implements HealthCheckServiceInterface {
 	private static instance: HealthCheckService | null = null;
@@ -60,18 +65,22 @@ export class HealthCheckService implements HealthCheckServiceInterface {
 
 	public static async getInstance(): Promise<HealthCheckService> {
 		if (!HealthCheckService.instance) {
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const cacheService = await ServiceFactory.getCacheService();
-			const redisService = await ServiceFactory.getRedisService();
-			const resourceManager = await ServiceFactory.getResourceManager();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const redisService =
+				await CacheLayerServiceFactory.getRedisService();
+			const resourceManager =
+				await ResourceManagerFactory.getResourceManager();
 			const databaseController =
-				await ServiceFactory.getDatabaseController();
-			const httpsServer = await ServiceFactory.getHTTPSServer(
-				express.application
-			);
+				await DatabaseControllerFactory.getDatabaseController();
+			const httpsServer = await HTTPSServerFactory.getHTTPSServer();
 
 			HealthCheckService.instance = new HealthCheckService(
 				logger,

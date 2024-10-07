@@ -7,16 +7,21 @@ import {
 	ErrorLoggerServiceInterface,
 	MailerServiceInterface,
 	PasswordServiceInterface,
+	UserControllerDeps,
 	UserControllerInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
+} from '../index/interfaces/main';
 import {
 	UserAttributesInterface,
 	UserInstanceInterface
 } from '../index/interfaces/models';
-import { UserControllerDeps } from '../index/interfaces/serviceDeps';
-import { ServiceFactory } from '../index/factory';
 import { InferAttributes, WhereOptions } from 'sequelize/types';
+import { AuthServiceFactory } from '../index/factory/subfactories/AuthServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { EnvConfigServiceFactory } from '../index/factory/subfactories/EnvConfigServiceFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
+import { PreHTTPSFactory } from '../index/factory/subfactories/PreHTTPSFactory';
 
 export class UserController implements UserControllerInterface {
 	private static instance: UserController | null = null;
@@ -25,7 +30,7 @@ export class UserController implements UserControllerInterface {
 	private errorLogger: ErrorLoggerServiceInterface;
 	private errorHandler: ErrorHandlerServiceInterface;
 	private envConfig: EnvConfigServiceInterface;
-	private secrets: VaultServiceInterface;
+	private vault: VaultServiceInterface;
 	private mailer: MailerServiceInterface;
 	private userModel: typeof User;
 
@@ -44,7 +49,7 @@ export class UserController implements UserControllerInterface {
 		this.errorLogger = errorLogger;
 		this.errorHandler = errorHandler;
 		this.envConfig = envConfig;
-		this.secrets = secrets;
+		this.vault = secrets;
 		this.mailer = mailer;
 		this.userModel = userModel;
 
@@ -56,13 +61,17 @@ export class UserController implements UserControllerInterface {
 
 	public static async getInstance(): Promise<UserController> {
 		if (!UserController.instance) {
-			const passwordService = await ServiceFactory.getPasswordService();
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const envConfig = await ServiceFactory.getEnvConfigService();
-			const secrets = await ServiceFactory.getVaultService();
-			const mailer = await ServiceFactory.getMailerService();
+			const passwordService =
+				await AuthServiceFactory.getPasswordService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const envConfig =
+				await EnvConfigServiceFactory.getEnvConfigService();
+			const secrets = await VaultServiceFactory.getVaultService();
+			const mailer = await PreHTTPSFactory.getMailerService();
 
 			UserController.instance = new UserController(
 				passwordService,
@@ -176,7 +185,7 @@ export class UserController implements UserControllerInterface {
 				);
 			}
 
-			const pepper = this.secrets.retrieveSecret(
+			const pepper = this.vault.retrieveSecret(
 				'PEPPER',
 				secret => secret
 			);
@@ -298,7 +307,7 @@ export class UserController implements UserControllerInterface {
 				return null;
 			}
 
-			const pepper = this.secrets.retrieveSecret(
+			const pepper = this.vault.retrieveSecret(
 				'PEPPER',
 				secret => secret
 			);
@@ -339,7 +348,7 @@ export class UserController implements UserControllerInterface {
 
 	private async sendConfirmationEmail(user: User): Promise<void> {
 		try {
-			const jwtSecret = this.secrets.retrieveSecret(
+			const jwtSecret = this.vault.retrieveSecret(
 				'JWT_SECRET',
 				secret => secret
 			);

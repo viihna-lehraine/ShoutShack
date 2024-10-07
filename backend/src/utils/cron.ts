@@ -4,7 +4,7 @@ import fs from 'fs';
 import cron from 'node-cron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { Sequelize } from 'sequelize';
 
 export interface CronInterface {

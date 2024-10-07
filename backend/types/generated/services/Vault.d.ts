@@ -1,6 +1,5 @@
 import { SecretsMap } from '../index/interfaces/env';
-import { VaultServiceInterface } from '../index/interfaces/services';
-import { ConfigSecretsInterface } from '../index/interfaces/serviceComponents';
+import { ConfigSecretsInterface, VaultServiceInterface } from '../index/interfaces/main';
 export declare class VaultService implements VaultServiceInterface {
     private static instance;
     private envConfig;

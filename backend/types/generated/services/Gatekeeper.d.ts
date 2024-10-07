@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Session } from 'express-session';
-import { GatekeeperServiceInterface } from '../index/interfaces/services';
+import { GatekeeperServiceInterface } from '../index/interfaces/main';
 export declare class GatekeeperService implements GatekeeperServiceInterface {
     private static instance;
     private logger;

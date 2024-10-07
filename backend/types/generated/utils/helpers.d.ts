@@ -1,5 +1,4 @@
-import { AppLoggerServiceInterface } from '../index/interfaces/services';
-import { DependencyInterface } from '../index/interfaces/serviceComponents';
+import { AppLoggerServiceInterface, DependencyInterface } from '../index/interfaces/main';
 export declare function getCallerInfo(): string;
 export declare function isAppLogger(logger: AppLoggerServiceInterface | Console | undefined): logger is AppLoggerServiceInterface;
 export declare function validateDependencies(dependencies: DependencyInterface[], logger: AppLoggerServiceInterface): void;

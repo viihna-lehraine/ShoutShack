@@ -1,5 +1,4 @@
-import { AppLoggerServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, VaultServiceInterface } from '../index/interfaces/services';
-import { AppLoggerServiceDeps } from '../index/interfaces/serviceDeps';
+import { AppLoggerServiceDeps, AppLoggerServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, VaultServiceInterface } from '../index/interfaces/main';
 import { Logger as WinstonLogger } from 'winston';
 import { Request } from 'express';
 export declare class AppLoggerService extends WinstonLogger implements AppLoggerServiceInterface {

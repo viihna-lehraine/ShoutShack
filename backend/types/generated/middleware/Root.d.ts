@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { RootMiddlewareServiceInterface } from '../index/interfaces/services';
+import { RootMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class RootMiddlewareService implements RootMiddlewareServiceInterface {
     private static instance;
     private logger;

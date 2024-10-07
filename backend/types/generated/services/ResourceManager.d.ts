@@ -1,4 +1,4 @@
-import { ResourceManagerInterface } from '../index/interfaces/services';
+import { ResourceManagerInterface } from '../index/interfaces/main';
 export declare class ResourceManager implements ResourceManagerInterface {
     private static instance;
     private logger;

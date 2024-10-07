@@ -1,14 +1,16 @@
 import {
 	AppLoggerServiceInterface,
+	CacheMetrics,
 	CacheServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface,
 	RedisServiceInterface
-} from '../index/interfaces/services';
-import { CacheMetrics } from '../index/interfaces/serviceComponents';
-import { ServiceFactory } from '../index/factory';
+} from '../index/interfaces/main';
 import { serviceTTLConfig } from '../config/cache';
 import { withRetry } from '../utils/helpers';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
 
 export class CacheService implements CacheServiceInterface {
 	private static instance: CacheService | null = null;
@@ -46,10 +48,10 @@ export class CacheService implements CacheServiceInterface {
 	public static async getInstance(): Promise<CacheService> {
 		if (!CacheService.instance) {
 			CacheService.instance = new CacheService(
-				await ServiceFactory.getLoggerService(),
-				await ServiceFactory.getErrorLoggerService(),
-				await ServiceFactory.getErrorHandlerService(),
-				await ServiceFactory.getRedisService()
+				await LoggerServiceFactory.getLoggerService(),
+				await LoggerServiceFactory.getErrorLoggerService(),
+				await ErrorHandlerServiceFactory.getErrorHandlerService(),
+				await CacheLayerServiceFactory.getRedisService()
 			);
 		}
 

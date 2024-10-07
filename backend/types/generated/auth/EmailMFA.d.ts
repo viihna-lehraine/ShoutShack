@@ -1,5 +1,5 @@
-import { EmailMFAServiceInterface } from '../index/interfaces/services';
-import { EmailMFAServiceDeps } from '../index/interfaces/serviceDeps';
+import { EmailMFAServiceInterface } from '../index/interfaces/main';
+import { EmailMFAServiceDeps } from '../index/interfaces/main';
 export declare class EmailMFAService implements EmailMFAServiceInterface {
     private static instance;
     private cacheService;
@@ -8,7 +8,7 @@ export declare class EmailMFAService implements EmailMFAServiceInterface {
     private errorHandler;
     private vault;
     private constructor();
-    static getInstance(): Promise<EmailMFAServiceInterface>;
+    static getInstance(): Promise<EmailMFAService>;
     generateEmailMFACode({ bcrypt, jwt }: EmailMFAServiceDeps): Promise<{
         emailMFACode: string;
         emailMFAToken: string;

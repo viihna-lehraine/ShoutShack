@@ -1,4 +1,3 @@
-import { ServiceFactory } from '../index/factory';
 import { UserInstanceInterface } from '../index/interfaces/models';
 import {
 	AppLoggerServiceInterface,
@@ -15,10 +14,10 @@ import {
 	PassportServiceInterface,
 	PasswordServiceInterface,
 	TOTPServiceInterface,
+	UserControllerDeps,
 	UserControllerInterface,
 	VaultServiceInterface
-} from '../index/interfaces/services';
-import { UserControllerDeps } from '../index/interfaces/serviceDeps';
+} from '../index/interfaces/main';
 import { validateDependencies } from '../utils/helpers';
 import { createUserModel } from '../models/User';
 import { generateEmailMFATemplate } from '../templates/emailMFACodeTemplate';
@@ -26,6 +25,16 @@ import passport from 'passport';
 import { RequestHandler } from 'express';
 import { serviceTTLConfig } from '../config/cache';
 import { Sequelize } from 'sequelize';
+import { AuthServiceFactory } from '../index/factory/subfactories/AuthServiceFactory';
+import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
+import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
+import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
+import { MiddlewareFactory } from '../index/factory/subfactories/MiddlewareFactory';
+import { VaultServiceFactory } from '../index/factory/subfactories/VaultServiceFactory';
+import { UserControllerFactory } from '../index/factory/subfactories/UserControllerFactory';
+import { PassportServiceFactory } from '../index/factory/subfactories/PassportServiceFactory';
+import { PreHTTPSFactory } from '../index/factory/subfactories/PreHTTPSFactory';
+import { DatabaseControllerFactory } from '../index/factory/subfactories/DatabaseControllerFactory';
 
 export class AuthController implements AuthControllerInterface {
 	private static instance: AuthController | null = null;
@@ -86,27 +95,33 @@ export class AuthController implements AuthControllerInterface {
 	public static async getInstance(): Promise<AuthController> {
 		if (!AuthController.instance) {
 			const backupCodeService =
-				await ServiceFactory.getBackupCodeService();
-			const emailMFAService = await ServiceFactory.getEmailMFAService();
+				await AuthServiceFactory.getBackupCodeService();
+			const emailMFAService =
+				await AuthServiceFactory.getEmailMFAService();
 			const JWTAuthMiddlewareService =
-				await ServiceFactory.getJWTAuthMiddlewareService();
-			const JWTService = await ServiceFactory.getJWTService();
+				await MiddlewareFactory.getJWTAuthMiddleware();
+			const JWTService = await AuthServiceFactory.getJWTService();
 			const passportAuthService =
-				await ServiceFactory.getPassportService();
+				await PassportServiceFactory.getPassportService();
 			const passportAuthMiddlewareService =
-				await ServiceFactory.getPassportAuthMiddlewareService();
-			const passwordService = await ServiceFactory.getPasswordService();
-			const TOTPService = await ServiceFactory.getTOTPService();
-			const UserController = await ServiceFactory.getUserController();
-			const cacheService = await ServiceFactory.getCacheService();
-			const logger = await ServiceFactory.getLoggerService();
-			const errorLogger = await ServiceFactory.getErrorLoggerService();
-			const errorHandler = await ServiceFactory.getErrorHandlerService();
-			const vault = await ServiceFactory.getVaultService();
-			const mailer = await ServiceFactory.getMailerService();
+				await MiddlewareFactory.getPassportAuthMiddleware();
+			const passwordService =
+				await AuthServiceFactory.getPasswordService();
+			const TOTPService = await AuthServiceFactory.getTOTPService();
+			const UserController =
+				await UserControllerFactory.getUserController();
+			const cacheService =
+				await CacheLayerServiceFactory.getCacheService();
+			const logger = await LoggerServiceFactory.getLoggerService();
+			const errorLogger =
+				await LoggerServiceFactory.getErrorLoggerService();
+			const errorHandler =
+				await ErrorHandlerServiceFactory.getErrorHandlerService();
+			const vault = await VaultServiceFactory.getVaultService();
+			const mailer = await PreHTTPSFactory.getMailerService();
 			const databaseController =
-				await ServiceFactory.getDatabaseController();
-			const sequelize = await databaseController.getSequelizeInstance();
+				await DatabaseControllerFactory.getDatabaseController();
+			const sequelize = databaseController.getSequelizeInstance();
 
 			AuthController.instance = new AuthController(
 				backupCodeService,

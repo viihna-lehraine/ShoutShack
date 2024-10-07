@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { JWTAuthMiddlewareServiceInterface } from '../index/interfaces/services';
+import { JWTAuthMiddlewareServiceInterface } from '../index/interfaces/main';
 export declare class JWTAuthMiddlewareService implements JWTAuthMiddlewareServiceInterface {
     private static instance;
     private logger;

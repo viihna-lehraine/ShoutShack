@@ -1,5 +1,4 @@
-import { TOTPServiceInterface } from '../index/interfaces/services';
-import { TOTPSecretInterface } from '../index/interfaces/serviceComponents';
+import { TOTPSecretInterface, TOTPServiceInterface } from '../index/interfaces/main';
 export declare class TOTPService implements TOTPServiceInterface {
     private static instance;
     private logger;

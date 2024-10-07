@@ -1,7 +1,0 @@
-# API
-
-***
-
-<br>
-
-Coming soon

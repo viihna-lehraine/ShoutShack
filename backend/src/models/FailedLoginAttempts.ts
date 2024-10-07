@@ -5,7 +5,7 @@ import {
 	InferCreationAttributes
 } from 'sequelize';
 import { User } from './User';
-import { ServiceFactory } from '../index/factory';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
 import { validateDependencies } from '../utils/helpers';
 import { FailedLoginAttemptsAttributes } from '../index/interfaces/models';
 

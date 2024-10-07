@@ -1,4 +1,4 @@
-import { MiddlewareStatusServiceInterface } from '../index/interfaces/services';
+import { MiddlewareStatusServiceInterface } from '../index/interfaces/main';
 export declare class MiddlewareStatusService implements MiddlewareStatusServiceInterface {
     private static instance;
     private middlewareStatus;

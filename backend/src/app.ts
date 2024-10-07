@@ -1,11 +1,9 @@
 import process from 'process';
 import { login } from './admin';
-import { ServiceFactory } from './index/factory';
+import { ServiceFactory } from './index/factory/ServiceFactory';
 import { VaultService } from './services/Vault';
-import { Application } from 'express';
-import { AppLoggerServiceInterface } from './index/interfaces/services';
+import { AppLoggerServiceInterface } from './index/interfaces/main';
 
-let app: Application;
 let logger: AppLoggerServiceInterface;
 
 async function start(): Promise<void> {
@@ -101,7 +99,6 @@ async function start(): Promise<void> {
 					emailMFAService,
 					fido2Service,
 					jwtService,
-					passportService,
 					passwordService,
 					totpService,
 					yubicoOTPService
@@ -110,7 +107,6 @@ async function start(): Promise<void> {
 					ServiceFactory.getEmailMFAService(),
 					ServiceFactory.getFIDO2Service(),
 					ServiceFactory.getJWTService(),
-					ServiceFactory.getPassportService(),
 					ServiceFactory.getPasswordService(),
 					ServiceFactory.getTOTPService(),
 					ServiceFactory.getYubicoOTPService()
@@ -120,11 +116,13 @@ async function start(): Promise<void> {
 					emailMFAService,
 					fido2Service,
 					jwtService,
-					passportService,
 					passwordService,
 					totpService,
 					yubicoOTPService
 				};
+			})
+			.then(async () => {
+				await ServiceFactory.getPassportService();
 			})
 			.then(async () => {
 				const [
@@ -156,7 +154,7 @@ async function start(): Promise<void> {
 				};
 			})
 			.then(async () => {
-				const httpsServer = await ServiceFactory.getHTTPSServer(app);
+				const httpsServer = await ServiceFactory.getHTTPSServer();
 				return httpsServer.startServer();
 			})
 			.then(async () => {

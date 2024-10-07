@@ -1,5 +1,4 @@
-import { YubicoOTPServiceInterface } from '../index/interfaces/services';
-import { YubClientInterface, YubicoOTPOptionsInterface } from '../index/interfaces/serviceComponents';
+import { YubClientInterface, YubicoOTPOptionsInterface, YubicoOTPServiceInterface } from '../index/interfaces/main';
 import '../../types/custom/yub.js';
 export declare class YubicoOTPService implements YubicoOTPServiceInterface {
     private static instance;
@@ -7,7 +6,7 @@ export declare class YubicoOTPService implements YubicoOTPServiceInterface {
     private errorLogger;
     private errorHandler;
     private envConfig;
-    private secrets;
+    private vault;
     private cacheService;
     private yubClient;
     private ttl;

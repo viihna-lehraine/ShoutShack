@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import { DatabaseControllerInterface } from '../index/interfaces/services';
+import { DatabaseControllerInterface } from '../index/interfaces/main';
 import { ModelOperations } from '../index/interfaces/models';
 export declare class DatabaseController implements DatabaseControllerInterface {
     private static instance;
