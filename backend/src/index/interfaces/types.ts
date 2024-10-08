@@ -1,4 +1,4 @@
-import { ErrorLoggerServiceInterface } from './main';
+import { ErrorLoggerServiceInterface } from './services';
 
 export type FeatureFlagValueType =
 	(typeof import('../interfaces/main').FeatureFlagNames)[FeatureFlagNamesType];

@@ -19,6 +19,36 @@ import { initializeSecurityPolicyPage } from './pages/securityPolicy.js';
 import { initializeSitemapPage } from './pages/sitemap.js';
 import { initializeTosPage } from './pages/tos.js';
 import { initializeTourPage } from './pages/tour.js';
-import { sanitizeInput, validatePassword, validatePasswordsMatch, updatePasswordStrength, } from './utils/utils.js';
+import {
+	sanitizeInput,
+	validatePassword,
+	validatePasswordsMatch,
+	updatePasswordStrength
+} from './utils/utils.js';
 export const { PORT } = globalConstants;
-export { initializeAboutPage, initializeConfirmPage, initializeContactPage, initializeDashboardPage, initializeFaqPage, initializeFeatureRequestPage, initializeFeedbackPage, initializeHelpPage, initializeIndexPage, initializeLoginPage, initializeNotFoundPage, initializePasswordResetPage, initializePrivacyPolicyPage, initializeRegisterPage, initializeResourcesPage, initializeSecurityAcknowledgementsPage, initializeSecurityPolicyPage, initializeSitemapPage, initializeTosPage, initializeTourPage, sanitizeInput, validatePassword, validatePasswordsMatch, updatePasswordStrength, };
+export {
+	initializeAboutPage,
+	initializeConfirmPage,
+	initializeContactPage,
+	initializeDashboardPage,
+	initializeFaqPage,
+	initializeFeatureRequestPage,
+	initializeFeedbackPage,
+	initializeHelpPage,
+	initializeIndexPage,
+	initializeLoginPage,
+	initializeNotFoundPage,
+	initializePasswordResetPage,
+	initializePrivacyPolicyPage,
+	initializeRegisterPage,
+	initializeResourcesPage,
+	initializeSecurityAcknowledgementsPage,
+	initializeSecurityPolicyPage,
+	initializeSitemapPage,
+	initializeTosPage,
+	initializeTourPage,
+	sanitizeInput,
+	validatePassword,
+	validatePasswordsMatch,
+	updatePasswordStrength
+};

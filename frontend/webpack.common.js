@@ -30,7 +30,7 @@ export default {
 		})
 	],
 	resolve: {
-		extensions: ['.js'],
+		extensions: ['.js', '.json', '.ts'],
 		alias: {
 			zxcvbn$: path.resolve(__dirname, 'node_modules/zxcvbn/dist/zxcvbn.js')
 		}

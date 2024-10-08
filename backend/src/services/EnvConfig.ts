@@ -8,8 +8,8 @@ import {
 	EnvConfigServiceInterface,
 	ErrorHandlerServiceInterface,
 	ErrorLoggerServiceInterface
-} from '../index/interfaces/main';
-import { HandleErrorStaticParameters } from '../index/interfaces/main';
+} from '../index/interfaces/services';
+import { HandleErrorStaticParameters } from '../index/interfaces/parameterObjects';
 import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';
 import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 

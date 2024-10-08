@@ -1,4 +1,3 @@
 export function initializeTourPage() {
-    document.addEventListener('DOMContentLoaded', function () {
-    });
+	document.addEventListener('DOMContentLoaded', function () {});
 }

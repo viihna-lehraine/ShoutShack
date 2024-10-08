@@ -1,4 +1,3 @@
-// declare const zxcvbn: (password: string) => any;
 import zxcvbn from 'zxcvbn';
 
 function sanitizeInput(input: string) {
@@ -20,31 +19,41 @@ function validatePassword(password: string): boolean {
 }
 
 function validatePasswordsMatch() {
-	const password = (document.getElementById(
-		'registration-box-user-password-input'
-	) as HTMLInputElement).value;
-	const confirmPassword = (document.getElementById(
-		'registration-box-user-password-confirm-input'
-	) as HTMLInputElement).value;
+	const password = (
+		document.getElementById(
+			'registration-box-user-password-input'
+		) as HTMLInputElement
+	).value;
+	const confirmPassword = (
+		document.getElementById(
+			'registration-box-user-password-confirm-input'
+		) as HTMLInputElement
+	).value;
 
 	if (password !== confirmPassword) {
-        (document
-			.getElementById('registration-box-user-password-confirm-input') as HTMLInputElement)
-			.setCustomValidity('Passwords do not match!');
+		(
+			document.getElementById(
+				'registration-box-user-password-confirm-input'
+			) as HTMLInputElement
+		).setCustomValidity('Passwords do not match!');
 	} else {
-		(document
-			.getElementById('registration-box-user-password-confirm-input') as HTMLInputElement)
-			.setCustomValidity('');
+		(
+			document.getElementById(
+				'registration-box-user-password-confirm-input'
+			) as HTMLInputElement
+		).setCustomValidity('');
 	}
 }
 
 function updatePasswordStrength() {
-	const password = (document.getElementById(
-		'registration-box-user-password-input'
-	) as HTMLInputElement).value;
+	const password = (
+		document.getElementById(
+			'registration-box-user-password-input'
+		) as HTMLInputElement
+	).value;
 	const result = zxcvbn(password);
 
-	const meter = document.getElementById('password-stength-meter')!;
+	const meter = document.getElementById('password-strength-meter')!;
 	const text = document.getElementById('password-strength-text')!;
 
 	meter.style.width = `${result.score * 25}%`;
@@ -59,5 +68,5 @@ export {
 	sanitizeInput,
 	validatePassword,
 	validatePasswordsMatch,
-	updatePasswordStrength,
+	updatePasswordStrength
 };

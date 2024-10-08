@@ -6,12 +6,16 @@ export function initializeRegisterPage(): void {
 		.addEventListener('submit', function (e: Event): void {
 			e.preventDefault();
 
-			const password = (document.getElementById(
-				'registration-box-user-password-input'
-			) as HTMLInputElement).value;
-			const confirmPassword = (document.getElementById(
-				'registration-box-user-password-confirm-input'
-			) as HTMLInputElement).value;
+			const password = (
+				document.getElementById(
+					'registration-box-user-password-input'
+				) as HTMLInputElement
+			).value;
+			const confirmPassword = (
+				document.getElementById(
+					'registration-box-user-password-confirm-input'
+				) as HTMLInputElement
+			).value;
 
 			if (password !== confirmPassword) {
 				alert('Passwords do not match!');
@@ -20,19 +24,25 @@ export function initializeRegisterPage(): void {
 
 			// continue with form submission
 			const formData = {
-				username: (document.getElementById(
-					'registration-box-user-username-input'
-				) as HTMLInputElement).value,
-				email: (document.getElementById('registration-box-user-email-input') as HTMLInputElement).value,
-				password: password,
+				username: (
+					document.getElementById(
+						'registration-box-user-username-input'
+					) as HTMLInputElement
+				).value,
+				email: (
+					document.getElementById(
+						'registration-box-user-email-input'
+					) as HTMLInputElement
+				).value,
+				password: password
 			};
 
 			fetch('/register', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(formData),
+				body: JSON.stringify(formData)
 			})
 				.then((response) => response.json())
 				.then((data) => {

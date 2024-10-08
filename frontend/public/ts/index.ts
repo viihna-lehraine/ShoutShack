@@ -1,34 +1,32 @@
 import { globalConstants } from './modules/config/globalConstants';
-import { initializeAboutPage } from './pages/about.js';
-import { initializeConfirmPage } from './pages/confirm.js';
-import { initializeContactPage } from './pages/contact.js';
-import { initializeDashboardPage } from './pages/dashboard.js';
-import { initializeFaqPage } from './pages/faq.js';
-import { initializeFeatureRequestPage } from './pages/featureRequest.js';
-import { initializeFeedbackPage } from './pages/feedback.js';
-import { initializeHelpPage } from './pages/help.js';
-import { initializeIndexPage } from './pages/index.js';
-import { initializeLoginPage } from './pages/login.js';
-import { initializeNotFoundPage } from './pages/notFound.js';
-import { initializePasswordResetPage } from './pages/passwordReset.js';
-import { initializePrivacyPolicyPage } from './pages/privacyPolicy.js';
-import { initializeRegisterPage } from './pages/register.js';
-import { initializeResourcesPage } from './pages/resources.js';
-import { initializeSecurityAcknowledgementsPage } from './pages/securityAcknowledgements.js';
-import { initializeSecurityPolicyPage } from './pages/securityPolicy.js';
-import { initializeSitemapPage } from './pages/sitemap.js';
-import { initializeTosPage } from './pages/tos.js';
-import { initializeTourPage } from './pages/tour.js';
+import { initializeAboutPage } from './pages/about';
+import { initializeConfirmPage } from './pages/confirm';
+import { initializeContactPage } from './pages/contact';
+import { initializeDashboardPage } from './pages/dashboard';
+import { initializeFaqPage } from './pages/faq';
+import { initializeFeatureRequestPage } from './pages/featureRequest';
+import { initializeFeedbackPage } from './pages/feedback';
+import { initializeHelpPage } from './pages/help';
+import { initializeIndexPage } from './pages/index';
+import { initializeLoginPage } from './pages/login';
+import { initializeNotFoundPage } from './pages/notFound';
+import { initializePasswordResetPage } from './pages/passwordReset';
+import { initializePrivacyPolicyPage } from './pages/privacyPolicy';
+import { initializeRegisterPage } from './pages/register';
+import { initializeResourcesPage } from './pages/resources';
+import { initializeSecurityAcknowledgementsPage } from './pages/securityAcknowledgements';
+import { initializeSecurityPolicyPage } from './pages/securityPolicy';
+import { initializeSitemapPage } from './pages/sitemap';
+import { initializeTosPage } from './pages/tos';
+import { initializeTourPage } from './pages/tour';
 import {
 	sanitizeInput,
 	validatePassword,
 	validatePasswordsMatch,
-	updatePasswordStrength,
+	updatePasswordStrength
 } from './utils/utils.js';
 
-export const { 
-	PORT
- } = globalConstants;
+export const { PORT } = globalConstants;
 export {
 	initializeAboutPage,
 	initializeConfirmPage,
@@ -53,5 +51,5 @@ export {
 	sanitizeInput,
 	validatePassword,
 	validatePasswordsMatch,
-	updatePasswordStrength,
+	updatePasswordStrength
 };

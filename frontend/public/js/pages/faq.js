@@ -1,4 +1,3 @@
 export function initializeFaqPage() {
-    document.addEventListener('DOMContentLoaded', function () {
-    });
+	document.addEventListener('DOMContentLoaded', function () {});
 }

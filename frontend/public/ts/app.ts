@@ -23,8 +23,13 @@ import {
 	initializeSecurityAcknowledgementsPage,
 	initializeSitemapPage,
 	initializeTosPage,
-	initializeTourPage,
+	initializeTourPage
 } from './index';
+
+// hot-reload support *DEV-NOTE* REMOVE IN PRODUCTION
+if (import.meta.hot) {
+	import.meta.hot.accept();
+}
 
 // Begin loading configurations
 (async () => {
@@ -48,14 +53,14 @@ import {
 		'security-acknowledgements-page': initializeSecurityAcknowledgementsPage,
 		'sitemap-page': initializeSitemapPage,
 		'tos-page': initializeTosPage,
-		'tour-page': initializeTourPage,
+		'tour-page': initializeTourPage
 	};
 
 	const currentPageId: string = document.body.id;
 
 	// Initialize the app if an initializer exists for the current page
 	if (pageInitializers[currentPageId]) {
-		pageInitializers[currentPageId];
+		pageInitializers[currentPageId]();
 	} else {
 		console.warn(`No initializer found for page ${currentPageId}`);
 	}

@@ -4,13 +4,11 @@ import fs from 'fs';
 
 let __filename = fileURLToPath(import.meta.url);
 let __dirname = dirname(__filename);
-
-// Defines location of compiled JS files
-let jsDir = resolve(__dirname, '../../public/js');
+let jsDir = resolve(__dirname, '../public/js');
 
 console.log(`Looking for files in: ${jsDir}`);
 
-// Recursively find all .js files in directory
+// recursively find all .js files in directory
 function findJsFiles(dir) {
     let results = [];
     let list = fs.readdirSync(dir);
@@ -20,9 +18,9 @@ function findJsFiles(dir) {
         let stat = fs.statSync(filePath);
         if (stat && stat.isDirectory()) {
             results.push(...findJsFiles(filePath));
-        } else if (stat && stat.isFile() && file.endsWith('.js')) {
-            results.push(filePath);
-        }
+        } else if (stat && stat.isFile() && file.endsWith('.js') && !file.endsWith('.ts')) {
+			results.push(filePath);
+		}
     });
 
     return results;
@@ -38,13 +36,13 @@ if (files.length === 0) {
     files.forEach((file) => addJsExtension(file));
 }
 
-// Ensures all import statements have exactly 1 instance of the .js extension
+// ensures all import statements have exactly 1 instance of the .js extension
 function addJsExtension(filePath) {
     console.log(`Processing file: ${filePath}`);
 
     let fileContent = fs.readFileSync(filePath, 'utf8');
 
-    // Update imports without extensions
+    // update imports without extensions
     let updatedContent = fileContent.replace(
         /import\s+(.+?)\s+from\s+['"](\.{1,2}\/[^'"]+)['"]/g,
         (fullMatch, imports, path) => {

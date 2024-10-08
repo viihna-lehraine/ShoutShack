@@ -1,4 +1,3 @@
 export function initializePrivacyPolicyPage() {
-    document.addEventListener('DOMContentLoaded', function () {
-    });
+	document.addEventListener('DOMContentLoaded', function () {});
 }

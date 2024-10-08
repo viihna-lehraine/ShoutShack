@@ -9,6 +9,12 @@ $dark-green: #073A18;
 $black-blue: #050728;
 $black-green: #011206;
 
+$screech-pink: #F97AD4; /* background */
+$screech-yellow: #BCEB30; /* center box */
+$screech-purple: #A22DED; /* big text color */
+$screech-light-blue: #0BE6B5; /* secondary box backgrounds */
+
+
 $box-shadow-1: 1px 1px 2px #010200AA;
 
 $standard-border: 1px solid $black-green;
@@ -25,6 +31,10 @@ $standard-border: 1px solid $black-green;
     --dark-green: #{$dark-green};
     --black-blue: #{$black-blue};
     --black-green: #{$black-green};
+	--screech-pink: #{$screech-pink};
+	--screech-yellow: #{$screech-yellow};
+	--screech-purple: #{$screech-purple};
+	--screech-light-blue: #{$screech-light-blue};
 
     --box-shadow-1: #{$box-shadow-1};
 

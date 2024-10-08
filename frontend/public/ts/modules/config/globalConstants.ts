@@ -1,5 +1,5 @@
 export const globalConstants: {
-    PORT: number;
+	PORT: number;
 } = {
-    PORT: 3000
+	PORT: 3000
 };

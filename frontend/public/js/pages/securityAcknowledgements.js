@@ -1,4 +1,3 @@
 export function initializeSecurityAcknowledgementsPage() {
-    document.addEventListener('DOMContentLoaded', function () {
-    });
+	document.addEventListener('DOMContentLoaded', function () {});
 }
