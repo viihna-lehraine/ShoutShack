@@ -1,1 +1,0 @@
-{"version":3,"file":"ResourceManagerProvider.d.ts","sourceRoot":"","sources":["../../../../../src/index/factory/providers/ResourceManagerProvider.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,wBAAwB,EAAE,MAAM,uBAAuB,CAAC;AAEjE,qBAAa,uBAAuB;IACnC,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAkD;WAErD,kBAAkB,IAAI,OAAO,CAAC,wBAAwB,CAAC;CAO3E"}

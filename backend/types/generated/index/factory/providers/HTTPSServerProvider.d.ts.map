@@ -1,1 +1,0 @@
-{"version":3,"file":"HTTPSServerProvider.d.ts","sourceRoot":"","sources":["../../../../../src/index/factory/providers/HTTPSServerProvider.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,oBAAoB,EAAE,MAAM,uBAAuB,CAAC;AAM7D,qBAAa,mBAAmB;IAC/B,OAAO,CAAC,MAAM,CAAC,QAAQ,CAA8C;WAEjD,cAAc,IAAI,OAAO,CAAC,oBAAoB,CAAC;CA6BnE"}

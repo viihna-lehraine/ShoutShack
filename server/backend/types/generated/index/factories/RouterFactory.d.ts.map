@@ -1,0 +1,1 @@
+{"version":3,"file":"RouterFactory.d.ts","sourceRoot":"","sources":["../../../../src/index/factories/RouterFactory.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,mBAAmB,EAAE,MAAM,wBAAwB,CAAC;AAE7D,qBAAa,aAAa;IACzB,OAAO,CAAC,MAAM,CAAC,UAAU,CAAoC;WAEzC,aAAa,IAAI,OAAO,CAAC,mBAAmB,CAAC;CAOjE"}

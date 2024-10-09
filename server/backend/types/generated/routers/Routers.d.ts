@@ -1,0 +1,123 @@
+import { NextFunction, Request, Response, Router } from 'express';
+import { AppLoggerServiceInterface, BaseRouterInterface, CacheServiceInterface, EnvConfigServiceInterface, ErrorHandlerServiceInterface, ErrorLoggerServiceInterface, GatekeeperServiceInterface, HelmetMiddlewareServiceInterface, JWTAuthMiddlewareServiceInterface, PassportAuthMiddlewareServiceInterface, StaticRouterInterface } from '../index/interfaces/main';
+export declare class BaseRouter implements BaseRouterInterface {
+    private static instance;
+    protected router: Router;
+    protected logger: AppLoggerServiceInterface;
+    protected errorLogger: ErrorLoggerServiceInterface;
+    protected errorHandler: ErrorHandlerServiceInterface;
+    protected envConfig: EnvConfigServiceInterface;
+    protected cacheService: CacheServiceInterface;
+    protected gatekeeperService: GatekeeperServiceInterface;
+    protected helmetService: HelmetMiddlewareServiceInterface;
+    protected JWTMiddleware: JWTAuthMiddlewareServiceInterface;
+    protected passportMiddleware: PassportAuthMiddlewareServiceInterface;
+    protected apiRouteTable: Record<string, Record<string, string>>;
+    protected healthRouteTable: Record<string, Record<string, string>>;
+    protected staticRouteTable: Record<string, Record<string, string>>;
+    protected testRouteTable: Record<string, Record<string, string>>;
+    protected constructor(logger: AppLoggerServiceInterface, errorLogger: ErrorLoggerServiceInterface, errorHandler: ErrorHandlerServiceInterface, envConfig: EnvConfigServiceInterface, cacheService: CacheServiceInterface, gatekeeperService: GatekeeperServiceInterface, helmetService: HelmetMiddlewareServiceInterface, JWTMiddleware: JWTAuthMiddlewareServiceInterface, passportMiddleware: PassportAuthMiddlewareServiceInterface);
+    static getInstance(): Promise<BaseRouter>;
+    getRouter(): Router;
+    private initializeBaseRouter;
+    private loadRouteTables;
+    private setUpRoutes;
+    private routeHandler;
+    private handleRoute;
+    private applyMiddlewares;
+    private applyCompression;
+    private applyGatekeeper;
+    private applyPassportAndJWTAuth;
+    private applySanitization;
+    private applySecurityHeaders;
+    protected asyncHandler: (fn: (req: Request, res: Response, next: NextFunction) => Promise<void | Response>) => ((req: Request, res: Response, next: NextFunction) => void);
+    shutdown(): Promise<void>;
+    protected handleRouteError(error: unknown, req: Request, res: Response, next: NextFunction): void;
+    private applyErrorHandler;
+}
+export declare class APIRouter extends BaseRouter {
+    private userController?;
+    private authController?;
+    constructor(logger: AppLoggerServiceInterface, errorLogger: ErrorLoggerServiceInterface, errorHandler: ErrorHandlerServiceInterface, envConfig: EnvConfigServiceInterface, cacheService: CacheServiceInterface, gatekeeperService: GatekeeperServiceInterface, helmetService: HelmetMiddlewareServiceInterface, JWTMiddleware: JWTAuthMiddlewareServiceInterface, passportMiddleware: PassportAuthMiddlewareServiceInterface);
+    private getUserController;
+    private getAuthController;
+    private setUpAPIRoutes;
+    getAPIRouter(): Router;
+}
+export declare class HealthRouter extends BaseRouter {
+    private healthCheckService;
+    private accessControl;
+    private csrfMiddleware;
+    private cacheTTL;
+    constructor(logger: AppLoggerServiceInterface, errorLogger: ErrorLoggerServiceInterface, errorHandler: ErrorHandlerServiceInterface, envConfig: EnvConfigServiceInterface, cacheService: CacheServiceInterface, gatekeeperService: GatekeeperServiceInterface, helmetService: HelmetMiddlewareServiceInterface, JWTMiddleware: JWTAuthMiddlewareServiceInterface, passportMiddleware: PassportAuthMiddlewareServiceInterface);
+    private initializeServices;
+    private setupRoutes;
+}
+export declare class StaticRouter extends BaseRouter implements StaticRouterInterface {
+    private staticRootPath;
+    private validCSSFiles;
+    private validFontFiles;
+    private validHTMLFiles;
+    private validIconFiles;
+    private validImageFiles;
+    private validJSFiles;
+    private validLogoFiles;
+    private validMDFiles;
+    private validTXTFiles;
+    private validXMLFiles;
+    private cssDirectory;
+    private fontDirectory;
+    private htmlDirectory;
+    private iconDirectory;
+    private imageDirectory;
+    private jsDirectory;
+    private logoDirectory;
+    private mdDirectory;
+    private txtDirectory;
+    private xmlDirectory;
+    private forbiddenDirectories;
+    private forbiddenExtensions;
+    private forbiddenFiles;
+    private validDirectories;
+    private validExtensions;
+    private cacheTTLs;
+    constructor(logger: AppLoggerServiceInterface, errorLogger: ErrorLoggerServiceInterface, errorHandler: ErrorHandlerServiceInterface, envConfig: EnvConfigServiceInterface, cacheService: CacheServiceInterface, gatekeeperService: GatekeeperServiceInterface, helmetService: HelmetMiddlewareServiceInterface, JWTMiddleware: JWTAuthMiddlewareServiceInterface, passportMiddleware: PassportAuthMiddlewareServiceInterface);
+    initializeStaticRouter(): Promise<void>;
+    private importRules;
+    private validateConfiguration;
+    handleRequest(req: Request, res: Response, next: NextFunction): Promise<void>;
+    private serveStaticFile;
+    private getCacheTTL;
+    private getCacheKey;
+    private readFileContent;
+    private serveIndexFile;
+    serveNotFoundPage(req: Request, res: Response, next: NextFunction): Promise<void>;
+    private serveCSSFile;
+    private serveHTMLFile;
+    private serveIconFile;
+    private serveImageFile;
+    private serveJSFile;
+    private serveLogoFile;
+    private serveMDFile;
+    private serveTXTFile;
+    private serveXMLFile;
+    private validateFiles;
+    private setUpPeriodicValidation;
+    private blockForbiddenFiles;
+}
+export declare class TestRouter extends BaseRouter {
+    private nodeEnv;
+    constructor(logger: AppLoggerServiceInterface, errorLogger: ErrorLoggerServiceInterface, errorHandler: ErrorHandlerServiceInterface, envConfig: EnvConfigServiceInterface, cacheService: CacheServiceInterface, gatekeeperService: GatekeeperServiceInterface, helmetService: HelmetMiddlewareServiceInterface, JWTMiddleware: JWTAuthMiddlewareServiceInterface, passportMiddleware: PassportAuthMiddlewareServiceInterface);
+    private setUpTestRoutes;
+    private testConnectRoute;
+    private testDeleteRoute;
+    private testGetRoute;
+    private testHeadRoute;
+    private testOptionsRoute;
+    private testPatchRoute;
+    private testPostRoute;
+    private testPutRoute;
+    private testTraceRoute;
+    private handleTestRouteErrors;
+}
+//# sourceMappingURL=Routers.d.ts.map

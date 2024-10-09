@@ -1,0 +1,139 @@
+import {
+	CreationOptional,
+	DataTypes,
+	InferAttributes,
+	InferCreationAttributes,
+	Model
+} from 'sequelize';
+import { User } from './User';
+import { validateDependencies } from '../utils/helpers';
+import { ServiceFactory } from '../index/factory/ServiceFactory';
+import { SecurityEventAttributes } from '../index/interfaces/models';
+
+class SecurityEvent
+	extends Model<
+		InferAttributes<SecurityEvent>,
+		InferCreationAttributes<SecurityEvent>
+	>
+	implements SecurityEventAttributes
+{
+	public id!: string;
+	public eventId!: string;
+	public eventType!: string;
+	public eventDescription!: string | null;
+	public ipAddress!: string;
+	public userAgent!: string;
+	public securityEventDate!: Date;
+	public securityEventLastUpdated!: CreationOptional<Date>;
+}
+
+export async function createSecurityEventModel(): Promise<
+	typeof SecurityEvent | null
+> {
+	const logger = await ServiceFactory.getLoggerService();
+	const errorLogger = await ServiceFactory.getErrorLoggerService();
+	const errorHandler = await ServiceFactory.getErrorHandlerService();
+
+	try {
+		const databaseController = await ServiceFactory.getDatabaseController();
+		const sequelize = databaseController.getSequelizeInstance();
+
+		if (!sequelize) {
+			const databaseError =
+				new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+					'Failed to initialize SecurityEvent model: Sequelize instance not found',
+					{ exposeToClient: false }
+				);
+			errorLogger.logError(databaseError.message);
+			errorHandler.handleError({ error: databaseError });
+			return null;
+		}
+
+		validateDependencies(
+			[{ name: 'sequelize', instance: sequelize }],
+			logger
+		);
+
+		SecurityEvent.init(
+			{
+				id: {
+					type: DataTypes.UUID,
+					defaultValue: DataTypes.UUIDV4,
+					primaryKey: true,
+					allowNull: false,
+					unique: true,
+					references: {
+						model: User,
+						key: 'id'
+					}
+				},
+				eventId: {
+					type: DataTypes.INTEGER,
+					autoIncrement: true,
+					allowNull: false,
+					unique: true
+				},
+				eventType: {
+					type: DataTypes.STRING,
+					allowNull: false,
+					validate: {
+						isIn: [
+							[
+								'login',
+								'failed-login',
+								'password-change',
+								'2fa-enabled',
+								'2fa-disabled',
+								'account-lock',
+								'other'
+							]
+						]
+					}
+				},
+				eventDescription: {
+					type: DataTypes.TEXT,
+					allowNull: true
+				},
+				ipAddress: {
+					type: DataTypes.STRING,
+					allowNull: false,
+					validate: {
+						isIP: true
+					}
+				},
+				userAgent: {
+					type: DataTypes.STRING,
+					allowNull: false
+				},
+				securityEventDate: {
+					type: DataTypes.DATE,
+					defaultValue: DataTypes.NOW,
+					allowNull: false
+				},
+				securityEventLastUpdated: {
+					type: DataTypes.DATE,
+					defaultValue: DataTypes.NOW,
+					allowNull: false
+				}
+			},
+			{
+				sequelize,
+				modelName: 'SecurityEvent',
+				timestamps: true
+			}
+		);
+
+		return SecurityEvent;
+	} catch (dbError) {
+		const databaseError =
+			new errorHandler.ErrorClasses.DatabaseErrorRecoverable(
+				`Failed to initialize SecurityEvent model: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+				{
+					exposeToClient: false
+				}
+			);
+		errorLogger.logInfo(databaseError.message);
+		errorHandler.handleError({ error: databaseError });
+		return null;
+	}
+}

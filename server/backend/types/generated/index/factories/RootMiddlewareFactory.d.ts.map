@@ -1,0 +1,1 @@
+{"version":3,"file":"RootMiddlewareFactory.d.ts","sourceRoot":"","sources":["../../../../src/index/factories/RootMiddlewareFactory.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,8BAA8B,EAAE,MAAM,wBAAwB,CAAC;AAExE,qBAAa,qBAAqB;IACjC,OAAO,CAAC,MAAM,CAAC,qBAAqB,CAC9B;WAEc,wBAAwB,IAAI,OAAO,CAAC,8BAA8B,CAAC;CAOvF"}

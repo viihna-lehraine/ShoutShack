@@ -1,0 +1,1 @@
+{"version":3,"file":"ResourceManagerFactory.d.ts","sourceRoot":"","sources":["../../../../src/index/factories/ResourceManagerFactory.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,wBAAwB,EAAE,MAAM,wBAAwB,CAAC;AAElE,qBAAa,sBAAsB;IAClC,OAAO,CAAC,MAAM,CAAC,eAAe,CACxB;WAEc,kBAAkB,IAAI,OAAO,CAAC,wBAAwB,CAAC;CAO3E"}

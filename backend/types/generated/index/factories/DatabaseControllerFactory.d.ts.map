@@ -1,1 +1,0 @@
-{"version":3,"file":"DatabaseControllerFactory.d.ts","sourceRoot":"","sources":["../../../../src/index/factories/DatabaseControllerFactory.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,2BAA2B,EAAE,MAAM,wBAAwB,CAAC;AAErE,qBAAa,yBAAyB;IACrC,OAAO,CAAC,MAAM,CAAC,kBAAkB,CAC3B;WAEc,qBAAqB,IAAI,OAAO,CAAC,2BAA2B,CAAC;CAOjF"}
