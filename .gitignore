@@ -22,3 +22,5 @@ backend/data/logs/server/test/*
 *.pem
 .sops.yaml
 secrets.json
+
+*policies/*

@@ -1,8 +1,6 @@
 import process from 'process';
-import { login } from '../../../.dev/viihna/backend/oldfiles/review-necessity/admin';
 import { ServiceFactory } from './index/factory/ServiceFactory';
-import { VaultService } from '../../../.dev/viihna/backend/oldfiles/review-necessity/Vault';
-import { AppLoggerServiceInterface } from './index/interfaces/main';
+import { AppLoggerServiceInterface } from './index/interfaces/services';
 
 let logger: AppLoggerServiceInterface;
 

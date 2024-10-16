@@ -3,10 +3,9 @@ import {
 	CacheServiceInterface,
 	EmailMFAServiceInterface,
 	ErrorLoggerServiceInterface,
-	ErrorHandlerServiceInterface,
-	VaultServiceInterface
-} from '../index/interfaces/main';
-import { EmailMFAServiceDeps } from '../index/interfaces/main';
+	ErrorHandlerServiceInterface
+} from '../index/interfaces/services';
+import { EmailMFAServiceDeps } from '../index/interfaces/serviceDeps';
 import { CacheLayerServiceFactory } from '../index/factory/subfactories/CacheLayerServiceFactory';
 import { ErrorHandlerServiceFactory } from '../index/factory/subfactories/ErrorHandlerServiceFactory';
 import { LoggerServiceFactory } from '../index/factory/subfactories/LoggerServiceFactory';

@@ -26,20 +26,21 @@ The project stack includes the following
 * Frontend
     * HTML5
     * CSS3
-	* TypeScript
-    * JavaScript
     * Sass
 
 * Server
     * Node.js 22.3.0
         * Express
 	* TypeScript
+	* Sequelize
 
 * Database
     * PostgreSQL 16.3
-        * Sequelize
 
-* TypeScript and JavaScript globally adhere to ES2022 standards and ES Modules syntax
+* Secrets
+	* HashiCorp Vault
+
+* TypeScript and JavaScript globally adhere to ES2022 standards and ES Modules syntax. Frontend is strictly JS-free.
 
 <br>
 

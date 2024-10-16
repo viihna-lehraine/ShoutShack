@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shoutshackDB
+      POSTGRES_USER: shoutshack_admin
+    ports:
+      - 5685:5685
+    networks:
+      - shoutshack-network
+    volumes:
+      - ./database/usr/local/share/postgresql
+      - pg_data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+networks:
+  shoutshack-network:
+    driver: bridge
+
+secrets:
+  db_password:
+    file: ./shoutshack_postgres/db_password.txt
+
+volumes:
+  pg_data:
+    driver: bridge

@@ -9,6 +9,7 @@ a {
 	padding: 0.8rem;
     height: 100%;
 }
+/* flex items-center h-full justify-center p-[0.8rem] */
 
 #index-bottom-bar-center-box {
 	position: relative;
@@ -21,6 +22,7 @@ a {
 	font-size: 1.2em;
 	font-weight: bold;
 }
+/* bg-screech-light-blue flex font-bold h-full justify-around items-center relative text-[1.2em] w-[68%]*/
 
 .index-left-column-buttons {
 	display: flex;
@@ -34,6 +36,7 @@ a {
 	color: var(--screech-purple);
 	z-index: 2;
 }
+/* flex font-bold items-center justify-center h-[18%] rounded-[25px] text-[1.7em] text-[var(--screech-purple)] w-[65%] z-[2] */
 
 #index-column {
 	width: 25vw;
@@ -43,6 +46,7 @@ a {
 	justify-content: space-around;
 	align-items: center;
 }
+/* flex-col items-center justify-around p-[12px] w-[v25] */
 
 #index-main-box {
 	position: relative;
@@ -51,6 +55,7 @@ a {
 	width: 99%;
 	height: 93%;
 }
+/* h-[93%] p-[10px] relative top-[2vh] w-[99%] */
 
 #index-main-box-content-box {
 	padding: 15px 10px 10px 10px;
@@ -68,3 +73,4 @@ a {
 	flex-direction: column;
 	align-items: center;
 }
+/* flex flex-1 flex-col items-center */
