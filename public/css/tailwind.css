@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+	@apply box-border font-mono m-0 p-0;
+}
+
+.container {
+	@apply bg-screech-pink flex h-dvh w-screen;
+}
+
+/* pink #F97AD4 */

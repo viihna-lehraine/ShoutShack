@@ -1,0 +1,6 @@
+*.env
+*tsconfig.json
+
+.dev/
+logs/*
+node_modules/

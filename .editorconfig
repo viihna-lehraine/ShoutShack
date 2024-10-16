@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = true
+quote_type = single
+
+[*.{js,ts}]
+indent_style = tab
+insert_final_newline = true
+quote_type = single
+
+[*.{md,yaml,yml}]
+indent_style = tab
+trim_trailing_whitespace = false
+
+[*.json]
+quote_type = double
