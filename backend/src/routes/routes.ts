@@ -7,12 +7,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default function routes(fastify: FastifyInstance) {
 	fastify.register(fastifyStatic, {
-		root: path.join(__dirname, '../../public'),
+		root: path.join(__dirname, '../../../public'),
 		prefix: '/'
 	});
 
 	fastify.get('/', async (request, reply) => {
-		console.log('Serving: ', path.join(__dirname, '../../public/html/about.html'));
+		console.log('Serving: ', path.join(__dirname, '../../../public/html/about.html'));
 		return reply.sendFile('html/index.html');
 	});
 

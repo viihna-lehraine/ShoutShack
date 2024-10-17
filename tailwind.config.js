@@ -24,6 +24,6 @@ export default {
 		}
   },
   plugins: [],
-	purge: ['./public/**/*.html']
+	content: ['./public/**/*.html']
 }
 

@@ -1,0 +1,5 @@
+{
+	"exec": "ts-node backend/dist/server.js",
+	"ext": "css,html,js,json,ts",
+	"watch": ["backend/config", "backend/dist"]
+}

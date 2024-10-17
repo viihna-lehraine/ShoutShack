@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
-import routes from './routes';
+import './config/loadEnv';
+import routes from './routes/routes';
 
 const fastify = Fastify({
     logger: {
@@ -12,6 +13,13 @@ const fastify = Fastify({
         }
     }
 });
+
+if (!process.env.SERVER_PORT || isNaN(parseInt(process.env.SERVER_PORT, 10))) {
+	console.error('SERVER_PORT is malformed or undefined. Check .env file.');
+	process.exit(1);
+}
+
+const SERVER_PORT = parseInt(process.env.SERVER_PORT, 10) || 3050;
 
 fastify.addHook('onClose', (instance, done) => {
 	console.log('Fastify is shutting down...');
@@ -40,8 +48,8 @@ routes(fastify);
 
 const start = async () => {
     try {
-        await fastify.listen({ port: 3000 });
-        console.log('Server running at http://localhost:3000');
+        await fastify.listen({ port: SERVER_PORT });
+        console.log(`Server running at http://localhost:${SERVER_PORT}}`);
     } catch (err) {
         console.error('Failed to start the server:', err);
         fastify.log.error(err);
