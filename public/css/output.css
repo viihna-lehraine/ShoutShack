@@ -803,11 +803,9 @@ video {
 }
 
 .container {
-  display: flex;
-  height: 100dvh;
+  height: 100vh;
   width: 100vw;
+  flex-direction: column;
   --tw-bg-opacity: 1;
   background-color: rgb(249 122 212 / var(--tw-bg-opacity));
 }
-
-/* pink #F97AD4 */

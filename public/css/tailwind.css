@@ -7,7 +7,5 @@
 }
 
 .container {
-	@apply bg-screech-pink flex h-dvh w-screen;
+	@apply bg-screech-pink flex-col h-[100vh] w-screen;
 }
-
-/* pink #F97AD4 */
