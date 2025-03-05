@@ -1,15 +1,39 @@
 # File: docker-compose.yml
 
 services:
+    db:
+        image: postgres:17.0
+        container_name: shoutshack-db
+        restart: always
+        environment:
+            POSTGRES_DB: shoutshack
+            POSTGRES_USER: viihna
+            POSTGRES_PASSWORD: fZc5QxKFt0J2lxlcZMxyOiLx
+        volumes:
+            - ./db/data:/var/lib/postgresql/data
+            - ./db/logs:/var/log/postgresql
+            - ./db/init:/docker-entrypoint-initdb.d
+            - ./db/backups:/db/backups
+        ports:
+            - '4553:5432'
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U viihna -d shoutshack']
+            interval: 10s
+            retries: 5
+            start_period: 10s
     server_backend:
         build: ./server/backend
         ports:
             - '3000:3000'
         environment:
             - NODE_ENV=development
+            - DATABASE_URL=postgresql://viihna:fZc5QxKFt0J2lxlcZMxyOiLx@db:4553/shoutshack
         volumes:
             - ./server/backend:/app
             - /app/node_modules
+        depends_on:
+            db:
+                condition: service_healthy
         healthcheck:
             test: ['CMD', 'curl', '-f', 'http://localhost:3000']
             interval: 10s
@@ -32,6 +56,11 @@ services:
         volumes:
             - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
             - ./.secrets:/etc/nginx/secrets:ro
+            - ./frontend/public:/usr/share/nginx/html
         depends_on:
             server_backend:
                 condition: service_healthy
+
+volumes:
+    postgres-data:
+    postgres-logs:

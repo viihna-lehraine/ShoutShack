@@ -13,6 +13,9 @@ RUN npm install
 # Copy rest of the application
 COPY . .
 
+# Install curl
+RUN apk add --no-cache curl
+
 # Expose port
 EXPOSE 3000
 

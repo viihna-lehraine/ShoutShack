@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"main": "index.js",
 	"scripts": {
-		"build": "npm run build:scss npm run build:tsc && vite build",
+		"build": "npm run build:css && npm run build:js && vite build",
 		"build:css": "sass src/styles/main.scss src/styles/main.css --no-source-map",
 		"build:js": "tsc",
 		"dev": "vite",

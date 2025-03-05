@@ -1,5 +1,3 @@
-// File: server/backend/src/index.ts
-
 /*
  * This file is part of ShoutShack.
  *
@@ -16,27 +14,3 @@
  * You should have received a copy of the GNU General Public License
  * along with ShoutShack. If not, see <https://www.gnu.org/licenses/>.
  */
-
-import Fastify from 'fastify';
-
-const fastify = Fastify({ logger: true });
-
-fastify.get('/', async () => {
-	return { message: 'ShoutShack API is running!' };
-});
-
-fastify.get('/api/', async () => {
-	return { message: 'ShoutShack API via Nginx!' };
-});
-
-const start = async () => {
-	try {
-		await fastify.listen({ port: 3000, host: '0.0.0.0' });
-		console.log('Fastify server running at http://localhost:3000/');
-	} catch (err) {
-		console.error(err);
-		process.exit(1);
-	}
-};
-
-start();

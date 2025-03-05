@@ -3,9 +3,14 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	root: 'src',
 	build: {
 		outDir: '../public',
 		emptyOutDir: true
-	}
+	},
+	resolve: {
+		alias: {
+			'@scripts': '/src/scripts/compiled'
+		}
+	},
+	root: 'src'
 });
