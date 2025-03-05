@@ -1,0 +1,29 @@
+{
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"baseUrl": ".",
+        "esModuleInterop": true,
+        "exactOptionalPropertyTypes": true,
+        "forceConsistentCasingInFileNames": true,
+        "inlineSourceMap": true,
+        "inlineSources": true,
+        "isolatedModules": true,
+		"module": "NodeNext",
+		"moduleResolution": "nodenext",
+		"noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+		"outDir": "./dist",
+		"resolveJsonModule": true,
+		"rootDir": "./src",
+		"target": "ESNext",
+		"skipLibCheck": false,
+		"strict": true,
+		"useUnknownInCatchVariables": true
+	},
+	"exclude": ["node_modules"],
+	"include": ["src/**/*.ts"]
+}

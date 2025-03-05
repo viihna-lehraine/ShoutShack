@@ -1,0 +1,30 @@
+{
+	"name": "shoutshack_frontend",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"build": "npm run build:scss npm run build:tsc && vite build",
+		"build:css": "sass src/styles/main.scss src/styles/main.css --no-source-map",
+		"build:js": "tsc",
+		"dev": "vite",
+		"sass:watch": "sass --watch src/styles/main.scss src/styles/main.css --no-source-map"
+	},
+	"author": "Viihna Lehraine",
+	"license": "GNU GPLv3",
+	"dependencies": {
+		"vite": "^6.2.0"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^8.26.0",
+		"@typescript-eslint/parser": "^8.26.0",
+		"autoprefixer": "^10.4.20",
+		"eslint": "^9.21.0",
+		"eslint-config-prettier": "^10.0.2",
+		"eslint-plugin-prettier": "^5.2.3",
+		"postcss": "^8.5.3",
+		"prettier": "^3.5.3",
+		"sass": "^1.85.1",
+		"tailwindcss": "4.0.9",
+		"typescript": "^5.8.2"
+	}
+}
