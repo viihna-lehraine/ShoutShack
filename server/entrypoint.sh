@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# File: server/entrypoint.sh
+
 set -e
 
 echo "Current directory: $(pwd)"

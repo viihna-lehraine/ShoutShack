@@ -1,16 +1,33 @@
 #!/bin/sh
 
+# File: db/docker-entrypoint-initdb.d/entrypoint.sh
+
 set -e
 
 echo "Running database entrypoint script..."
 
-# check for required secrets
-if [ -f "/run/secrets/POSTGRES_DB" ]; then
-    POSTGRES_DB=$(cat /run/secrets/POSTGRES_DB)
-else
-    echo "Error: Missing /run/secrets/POSTGRES_DB" >&2
+# wait for secrets to become available
+MAX_RETRIES=10
+RETRY_INTERVAL=2
+
+for i in $(seq 1 $MAX_RETRIES); do
+    if [ -f "/run/secrets/POSTGRES_DB" ] && [ -f "/run/secrets/POSTGRES_USER" ] && [ -f "/run/secrets/POSTGRES_PASSWORD" ]; then
+        POSTGRES_DB=$(cat /run/secrets/POSTGRES_DB)
+        POSTGRES_USER=$(cat /run/secrets/POSTGRES_USER)
+        POSTGRES_PASSWORD=$(cat /run/secrets/POSTGRES_PASSWORD)
+        break
+    fi
+
+    echo "Secrets not found. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+    sleep $RETRY_INTERVAL
+done
+
+# final check after retries
+if [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
+    echo "Error: Secrets never became available!" >&2
     exit 1
 fi
+
 
 # load secrets
 POSTGRES_DB=$(cat /run/secrets/POSTGRES_DB)
@@ -27,6 +44,49 @@ if [ ! -f "/var/lib/postgresql/data/PG_VERSION" ]; then
     su postgres -c "initdb -D /var/lib/postgresql/data"
     chown -R postgres:postgres /var/lib/postgresql/data
     chmod 700 /var/lib/postgresql/data
+
+    # ensure PostgreSQL is ready before running commands
+    until su postgres -c "pg_isready -q"; do
+        echo "Waiting for PostgreSQL to be ready..."
+        sleep 1
+    done
+
+    # create the database user if it doesn't exist
+    echo "Checking if PostgreSQL user exists..."
+    su postgres -c "psql -d postgres -c \"
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$POSTGRES_USER') THEN
+            CREATE USER \\\"$POSTGRES_USER\\\" WITH ENCRYPTED PASSWORD '$POSTGRES_PASSWORD';
+        ELSE
+            ALTER USER \\\"$POSTGRES_USER\\\" WITH LOGIN;
+        END IF;
+    END
+    \$\$;
+    \""
+
+    # create the database if it doesn't exist
+    echo "Checking if PostgreSQL database exists..."
+    su postgres -c "psql -d postgres -c \"
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '$POSTGRES_DB') THEN
+            CREATE DATABASE \\\"$POSTGRES_DB\\\" OWNER \\\"$POSTGRES_USER\\\";
+        END IF;
+    END
+    \$\$;
+    \""
+
+    # ensure user has full privileges on the DB
+    su postgres -c "psql -d postgres -c \"GRANT ALL PRIVILEGES ON DATABASE \\\"$POSTGRES_DB\\\" TO \\\"$POSTGRES_USER\\\";\""
+
+    # Debugging output: Verify user and DB creation
+    echo "Verifying PostgreSQL user and database creation..."
+    echo "PostgreSQL users:"
+    su postgres -c "psql -d postgres -c \"SELECT usename FROM pg_user;\""
+
+    echo "PostgreSQL databases:"
+    su postgres -c "psql -d postgres -c \"SELECT datname FROM pg_database;\""
 fi
 
 # ensure the log directory exists
@@ -34,8 +94,8 @@ mkdir -p /var/log/postgresql
 chown -R postgres:postgres /var/log/postgresql
 chmod 755 /var/log/postgresql
 
-# ensure the log filename matches the expected format in postgresql.conf
-LOG_FILENAME="postgresql-$(date +%Y-%m-%d_%H%M%S).log"
+# ensure the log filename matches the expected format
+LOG_FILENAME="postgresql.log"
 touch "/var/log/postgresql/$LOG_FILENAME"
 chown postgres:postgres "/var/log/postgresql/$LOG_FILENAME"
 chmod 644 "/var/log/postgresql/$LOG_FILENAME"
@@ -53,7 +113,7 @@ chmod -R 775 /var/run/crond
 echo "Starting cron..."
 /usr/sbin/cron -f &
 
-# debugging output: Check what's in the data directory
+# debugging output: check what's in the data directory
 echo "Checking /var/lib/postgresql/data contents:"
 ls -lah /var/lib/postgresql/data
 

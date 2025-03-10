@@ -1,3 +1,5 @@
+# File: server/Dockerfile
+
 # use official Node.js image
 FROM node:23-alpine
 

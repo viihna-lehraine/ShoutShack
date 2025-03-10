@@ -1,3 +1,5 @@
+# File: frontend/Dockerfile
+
 # use Node.js for frontend build
 FROM node:23-alpine
 
