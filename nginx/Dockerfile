@@ -1,17 +1,19 @@
-# File: nginx/Dockerfile
-
 FROM nginx:latest
 
-# Remove default Nginx config
+# remove default Nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom Nginx config into the container
+# copy custom Nginx config into the container
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Ensure correct file permissions
+# ensure correct file permissions
 RUN mkdir -p /usr/share/nginx/html && \
 	chown -R nginx:nginx /usr/share/nginx/html && \
 	chmod -R 755 /usr/share/nginx/html
 
-# Turn off Nginx daemon mode
-CMD ["nginx", "-g", "daemon off;"]
+# copy log rotation script
+COPY logrotate.sh /usr/local/bin/logrotate.sh
+RUN chmod +x /usr/local/bin/logrotate.sh
+
+# run log rotation in background & start Nginx
+CMD ["/bin/sh", "-c", "/usr/local/bin/logrotate.sh & nginx -g 'daemon off;'"]

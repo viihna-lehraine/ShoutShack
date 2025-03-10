@@ -1,5 +1,6 @@
 .dev/viihna/
 .github/
 .secrets/
+logs/
 
 *node_modules/

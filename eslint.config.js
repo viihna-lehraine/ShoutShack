@@ -1,8 +1,8 @@
-// File: server/backend/eslint.config.js
+// File: eslint.config.js
 
 export default [
 	{
-		ignores: ['node_modules/', 'dist/']
+		ignores: ['**/node_modules/', '**/dist/']
 	},
 	{
 		languageOptions: {

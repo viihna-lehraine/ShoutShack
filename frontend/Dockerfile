@@ -1,19 +1,20 @@
-# File: frontend/Dockerfile
-
-# Use Node.js for frontend build
+# use Node.js for frontend build
 FROM node:23-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# ensure logs directory exists
+RUN mkdir -p /var/log/frontend && chown -R node:node /var/log/frontend
+
+# install dependencies
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy project files
+# copy project files
 COPY . .
 
-# Expose Vite dev server port
+# expose Vite dev server port
 EXPOSE 5173
 
-# Start Vite
-CMD ["npm", "run", "dev"]
+# start Vite and log output
+CMD ["sh", "-c", "npm run dev 2>&1 | tee /var/log/frontend/frontend-$(date '+%Y-%m-%d_%H%M%S').log"]

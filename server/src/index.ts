@@ -1,5 +1,3 @@
-// File: server/backend/src/index.ts
-
 /*
  * This file is part of ShoutShack.
  *

@@ -1,10 +1,13 @@
 {
 	"name": "shoutshack_backend",
 	"version": "1.0.0",
-	"main": "index.js",
+	"main": "build/index.js",
 	"scripts": {
-		"dev": "ts-node src/index.ts"
+		"build": "rm -rf ./build && tsc",
+		"dev": "ts-node src/index.ts",
+		"start": "node build/index.js"
 	},
+	"type": "module",
 	"author": "Viihna Lehraine",
 	"license": "GNU GPLv3",
 	"dependencies": {
