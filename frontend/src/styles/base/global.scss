@@ -1,0 +1,11 @@
+@use 'variables';
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	font-family: variables.$font-stack;
+	background-color: variables.$background-color;
+	text-align: center;
+}

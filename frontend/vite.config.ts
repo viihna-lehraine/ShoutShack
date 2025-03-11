@@ -3,14 +3,20 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	base: './',
 	build: {
+		assetsDir: 'assets',
+		emptyOutDir: true,
+		manifest: true,
 		outDir: '../public',
-		emptyOutDir: true
+		rollupOptions: {
+			input: 'src/index.html'
+		},
+		sourcemap: true
 	},
-	resolve: {
-		alias: {
-			'@scripts': '/src/scripts/compiled'
-		}
-	},
-	root: 'src'
+	root: 'src',
+	server: {
+		open: true,
+		port: 5173
+	}
 });

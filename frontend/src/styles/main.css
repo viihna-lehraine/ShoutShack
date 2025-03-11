@@ -1,9 +1,3 @@
-/* frontend/src/styles/main.scss */
-/* frontend/src/styles/partials/_variables.scss */
-/* frontend/src/styles/main.scss */
-/* frontend/src/styles/partials/_mixins.scss */
-/* frontend/src/styles/main.scss */
-/* frontend/src/styles/partials/_global.scss */
 * {
   box-sizing: border-box;
 }
@@ -14,7 +8,11 @@ body {
   text-align: center;
 }
 
-/* File: frontend/src/styles/partials/_components.scss */
+@media (max-width: 600px) {
+  body {
+    background-color: lightgray;
+  }
+}
 button {
   background: #0070f3;
   color: white;
@@ -23,9 +21,44 @@ button {
   cursor: pointer;
 }
 
-/* frontend/src/styles/partials/_media_queries.scss */
-@media (max-width: 600px) {
-  body {
-    background-color: lightgray;
+.page-index {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "header header" "sidebar main" "footer footer";
+  min-height: 100vh;
+}
+.page-index header {
+  grid-area: header;
+  background: #0070f3;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+.page-index .sidebar {
+  grid-area: sidebar;
+  background: #ff4081;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+.page-index main {
+  grid-area: main;
+  padding: 40px;
+  text-align: center;
+}
+.page-index footer {
+  grid-area: footer;
+  background: #222;
+  color: white;
+  padding: 10px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .page-index {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas: "header" "main" "sidebar" "footer";
   }
 }

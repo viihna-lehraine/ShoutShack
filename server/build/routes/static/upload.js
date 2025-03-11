@@ -1,8 +1,0 @@
-export const registerUploadRoutes = (fastify) => {
-    fastify.register(import('@fastify/static'), {
-        root: '/var/www/shoutshack/uploads',
-        prefix: '/uploads',
-        serve: false // *TODO: address this later
-    });
-};
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidXBsb2FkLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL3JvdXRlcy9zdGF0aWMvdXBsb2FkLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUVBLE1BQU0sQ0FBQyxNQUFNLG9CQUFvQixHQUFHLENBQUMsT0FBd0IsRUFBRSxFQUFFO0lBQ2hFLE9BQU8sQ0FBQyxRQUFRLENBQUMsTUFBTSxDQUFDLGlCQUFpQixDQUFDLEVBQUU7UUFDM0MsSUFBSSxFQUFFLDZCQUE2QjtRQUNuQyxNQUFNLEVBQUUsVUFBVTtRQUNsQixLQUFLLEVBQUUsS0FBSyxDQUFDLDRCQUE0QjtLQUN6QyxDQUFDLENBQUM7QUFDSixDQUFDLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBGYXN0aWZ5SW5zdGFuY2UgfSBmcm9tICdmYXN0aWZ5JztcblxuZXhwb3J0IGNvbnN0IHJlZ2lzdGVyVXBsb2FkUm91dGVzID0gKGZhc3RpZnk6IEZhc3RpZnlJbnN0YW5jZSkgPT4ge1xuXHRmYXN0aWZ5LnJlZ2lzdGVyKGltcG9ydCgnQGZhc3RpZnkvc3RhdGljJyksIHtcblx0XHRyb290OiAnL3Zhci93d3cvc2hvdXRzaGFjay91cGxvYWRzJyxcblx0XHRwcmVmaXg6ICcvdXBsb2FkcycsXG5cdFx0c2VydmU6IGZhbHNlIC8vICpUT0RPOiBhZGRyZXNzIHRoaXMgbGF0ZXJcblx0fSk7XG59O1xuIl19

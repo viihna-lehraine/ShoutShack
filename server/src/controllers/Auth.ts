@@ -1,11 +1,12 @@
 // File: server/src/controllers/Auth.ts
 
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { client } from '../db/main.js';
+import { dbClientPromise } from '../db/main.js';
 
 export class AuthController {
 	static async signup(request: FastifyRequest, reply: FastifyReply) {
 		const { username, password } = request.body as { username: string; password: string };
+		const client = await dbClientPromise;
 		const existingUser = await client.query('SELECT * FROM users WHERE username = $1', [
 			username
 		]);
@@ -26,6 +27,7 @@ export class AuthController {
 
 	static async login(request: FastifyRequest, reply: FastifyReply) {
 		const { username, password } = request.body as { username: string; password: string };
+		const client = await dbClientPromise;
 		const user = await client.query('SELECT * FROM users WHERE username = $1', [username]);
 
 		if (user.rowCount === 0) {
@@ -45,6 +47,7 @@ export class AuthController {
 
 	static async getProfile(request: FastifyRequest, reply: FastifyReply) {
 		const userId = request.user.userId;
+		const client = await dbClientPromise;
 		const user = await client.query('SELECT username, email FROM users WHERE id = $1', [
 			userId
 		]);

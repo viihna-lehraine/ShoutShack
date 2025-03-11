@@ -1,7 +1,8 @@
-/* frontend/src/styles/main.scss */
+@use 'base/variables';
+@use 'base/mixins';
+@use 'base/global';
+@use 'base/media_queries';
 
-@use './partials/_variables';
-@use './partials/_mixins';
-@use './partials/_global';
-@use './partials/_components';
-@use './partials/_media_queries';
+@use 'components/buttons';
+
+@use 'pages/index';

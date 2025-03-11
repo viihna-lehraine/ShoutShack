@@ -1,24 +1,25 @@
-# File: frontend/Dockerfile
-
 FROM node:23-alpine
 
+# work in /app as root user for building
 WORKDIR /app
 
-# install dependencies separately to cache them
+# copy package files and install dependencies
 COPY package.json package-lock.json ./
 RUN npm install --frozen-lockfile
 
-# copy the rest of the frontend source
+# copy the rest of your frontend code
 COPY . .
 
-# ensure logs directory exists
+# fix ownership so that "node" user can run the dev server
+RUN chown -R node:node /app
+
+# create logs directory & fix permissions
 RUN mkdir -p /var/log/frontend && chown -R node:node /var/log/frontend
 
-# set user to non-root for security
+# switch to Node user
 USER node
 
-# expose Vite dev server port
+# expose Vite dev port
 EXPOSE 5173
 
-# start Vite dev server with logging
-CMD ["sh", "-c", "npm run dev 2>&1 | tee /var/log/frontend/frontend-$(date '+%Y-%m-%d_%H%M%S').log"]
+CMD ["sh", "-c", "chown -R node:node /app/node_modules && npm run dev"]

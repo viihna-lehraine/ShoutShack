@@ -1,7 +1,0 @@
-/* File: frontend/src/styles/partials/_components.scss */
-
-@use 'mixins';
-
-button {
-	@include mixins.button-style;
-}

@@ -68,6 +68,7 @@ services:
 volumes:
     db_data:
     frontend_public:
+    vite_cache:
 
 networks:
     shoutshack_network:

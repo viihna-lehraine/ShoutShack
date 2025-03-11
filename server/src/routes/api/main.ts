@@ -3,11 +3,12 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { AuthController } from '../../controllers/Auth.js';
 import fs from 'fs/promises';
-import { client } from '../../db/main.js';
+import { dbClientPromise } from '../../db/main.js';
 
 export const registerApiRoutes = (fastify: FastifyInstance) => {
 	fastify.get('/health', async (_, reply: FastifyReply) => {
 		try {
+			const client = await dbClientPromise;
 			await client.query('SELECT 1');
 			console.log('Database connection is healthy.');
 
