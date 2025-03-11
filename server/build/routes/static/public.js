@@ -1,0 +1,7 @@
+export const registerPublicRoutes = (fastify) => {
+    fastify.register(import('@fastify/static'), {
+        root: '/usr/share/nginx/html/public',
+        prefix: '/public'
+    });
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicHVibGljLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL3JvdXRlcy9zdGF0aWMvcHVibGljLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUVBLE1BQU0sQ0FBQyxNQUFNLG9CQUFvQixHQUFHLENBQUMsT0FBd0IsRUFBRSxFQUFFO0lBQ2hFLE9BQU8sQ0FBQyxRQUFRLENBQUMsTUFBTSxDQUFDLGlCQUFpQixDQUFDLEVBQUU7UUFDM0MsSUFBSSxFQUFFLDhCQUE4QjtRQUNwQyxNQUFNLEVBQUUsU0FBUztLQUNqQixDQUFDLENBQUM7QUFDSixDQUFDLENBQUEiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBGYXN0aWZ5SW5zdGFuY2UgfSBmcm9tICdmYXN0aWZ5JztcblxuZXhwb3J0IGNvbnN0IHJlZ2lzdGVyUHVibGljUm91dGVzID0gKGZhc3RpZnk6IEZhc3RpZnlJbnN0YW5jZSkgPT4ge1xuXHRmYXN0aWZ5LnJlZ2lzdGVyKGltcG9ydCgnQGZhc3RpZnkvc3RhdGljJyksIHtcblx0XHRyb290OiAnL3Vzci9zaGFyZS9uZ2lueC9odG1sL3B1YmxpYycsXG5cdFx0cHJlZml4OiAnL3B1YmxpYydcblx0fSk7XG59XG4iXX0=

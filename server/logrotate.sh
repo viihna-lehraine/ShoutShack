@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LOG_DIR="/server/logs"
+LOG_DIR="/logs/server"
 TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
 
 # redirect stdout and stderr to log files

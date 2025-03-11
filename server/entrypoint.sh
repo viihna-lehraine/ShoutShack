@@ -4,13 +4,13 @@
 
 set -e
 
+echo "Server starting..."
 echo "Current directory: $(pwd)"
 ls -lah
 
-export POSTGRES_HOST=$(cat /run/secrets/POSTGRES_HOST)
-export POSTGRES_DB=$(cat /run/secrets/POSTGRES_DB)
-export POSTGRES_USER=$(cat /run/secrets/POSTGRES_USER)
-export POSTGRES_PASSWORD=$(cat /run/secrets/POSTGRES_PASSWORD)
+# set permissions
+chown -R node:node /app/build
 
-echo "Running node /app/build/index.js"
-exec node /app/build/index.js
+# start the server
+echo "Running node /app/build/start.js"
+exec node /app/build/start.js

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# File: db/docker-entrypoint-initdb.d/backup.sh
+
 set -e
 
 BACKUP_DIR="/db/backups"

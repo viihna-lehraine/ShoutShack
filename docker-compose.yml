@@ -1,0 +1,75 @@
+services:
+    db:
+        build: ./db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: 'shoutshack'
+            POSTGRES_USER: 'viihna'
+            POSTGRES_PASSWORD: 'fZc5QxKFt0J2lxlcZMxyOiLx'
+        volumes:
+            - db_data:/var/lib/postgresql/data
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/db/backups:/var/lib/postgresql/backups
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/db:/var/log/postgresql
+        ports:
+            - '5432:5432'
+        networks:
+            - shoutshack_network
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U $POSTGRES_USER -d $POSTGRES_DB']
+            interval: 10s
+            retries: 5
+            start_period: 20s
+            timeout: 5s
+
+    server:
+        build: ./server
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: 'shoutshack'
+            POSTGRES_HOST: 'db'
+            POSTGRES_PASSWORD: 'fZc5QxKFt0J2lxlcZMxyOiLx'
+            POSTGRES_USER: 'viihna'
+        entrypoint: ['/usr/local/bin/entrypoint.sh']
+        volumes:
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/server/conf/.env:/app/conf/.env:ro
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/server:/server/logs
+        ports:
+            - '3000:3000'
+        networks:
+            - shoutshack_network
+        depends_on:
+            db:
+                condition: service_healthy
+
+    frontend:
+        build: ./frontend
+        restart: unless-stopped
+        volumes:
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/frontend:/var/log/frontend
+        ports:
+            - '5173:5173'
+        networks:
+            - shoutshack_network
+
+    nginx:
+        build: ./nginx
+        restart: unless-stopped
+        volumes:
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/nginx/uploads:/usr/share/nginx/uploads
+            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/nginx:/var/log/nginx
+            - frontend_public:/usr/share/nginx/html
+        ports:
+            - '80:80'
+        networks:
+            - shoutshack_network
+
+volumes:
+    db_data:
+    frontend_public:
+
+networks:
+    shoutshack_network:
+        name: shoutshack_network
+        driver: bridge
