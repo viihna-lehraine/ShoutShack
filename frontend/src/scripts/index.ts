@@ -13,4 +13,21 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with ShoutShack. If not, see <https://www.gnu.org/licenses/>.
+ *
  */
+
+import { initBrowsePage } from './browse.js';
+import { initFaqPage } from './faq.js';
+
+const pageHandlers: Record<string, () => void> = {
+	browse: initBrowsePage,
+	faq: initFaqPage
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+	const page = document.body.dataset.page ?? '';
+
+	if (page in pageHandlers) {
+		pageHandlers[page]();
+	}
+});

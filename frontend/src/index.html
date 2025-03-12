@@ -1,29 +1,119 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Welcome to ShoutShack</title>
-		<link rel="stylesheet" href="./styles/main.css" />
+		<title>ShoutShack - SCREAM A SCREAMY SCREAM!!!</title>
+		<link rel="stylesheet" href="./styles/index.css" />
+		<link rel="icon" type="image/svg+xml" href="../static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="../static/icons/favicon-android-chrome.png" />
 	</head>
-	<body class="page-index">
-		<header>
-			<h1>ShoutShack</h1>
-		</header>
 
-		<main>
-			<p>Catchy Slogan!</p>
-			<button>Explore Now</button>
-		</main>
+	<body data-page="index">
 
-		<aside class="sidebar">
-			<p>Sidebar content or menu</p>
-		</aside>
+		<div id="root">
 
-		<footer>
-			<p>&copy; 2025 ShoutShack. No tracking. No bullshit.</p>
-		</footer>
+			<header class="header-bar">
+				<div class="logo-container">
+					<h1>ShoutShack</h1>
+				</div>
+			</header>
+
+			<div class="page-row-main">
+
+				<div class="nav-btns-column">
+
+					<button class="nav-btn">
+						<a href="./pages/login.html">
+							Login
+						</a>
+					</button>
+
+					<button class="nav-btn">
+						<a href="./pages/sign_up.html">
+							Sign Up
+						</a>
+					</button>
+
+					<button class="nav-btn">
+						<a href="./pages/browse.html">
+							Browse
+						</a>
+					</button>
+
+				</div>
+
+				<div class="mc-column">
+					<div class="mc-container">
+
+						<div class="mc-title-row mc-row">
+							<h1>Welcome to ShoutShack!</h1>
+						</div>
+
+						<div class="mc-row">
+							<p>Text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text.</p>
+						</div>
+
+						<div class="mc-row">
+							<p>Text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text</p>
+						</div>
+
+						<div class="mc-row">
+							<p>Text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text</p>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="featured-pages-column">
+
+					<div class="featured-pages-container">
+
+						<div class="featured-pages-title-bar">
+							Featured ShoutBooks
+						</div>
+
+						<div class="featured-pages-grid">
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+						</div>
+
+					</div>
+
+				</div>
+
+			</div>
+
+			<div class="footer-bar">
+				<div class="footer-bar-content">
+					<span class="footer-deco-left">〰</span>
+					<a href="./pages/faq.html">
+						FAQ
+					</a>
+					<span>•</span>
+					<a href="./pages/terms_of_service.html">
+						Terms
+					</a>
+					<span>•</span>
+					<a href="./pages/staff.html">Staff</a>
+					<span>•</span>
+					<a href="./pages/contact.html">Contact</a>
+					<span class="footer-deco-right">〰</span>
+				</div>
+			</div>
+
+		</div>
 
 		<script type="module" src="./scripts/index.ts"></script>
+
 	</body>
+
 </html>

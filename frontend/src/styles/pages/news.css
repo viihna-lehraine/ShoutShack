@@ -1,0 +1,46 @@
+@import url('../global.css');
+@import url('../partials/variables.css');
+
+.news-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	height: calc(100vh - 8vh - 18.5vh);
+	overflow-y: auto;
+	padding: 2rem 1rem;
+}
+
+.news-feed {
+	width: 80%;
+	max-width: 900px;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.news-post {
+	background: var(--div-bg);
+	border: 2px solid black;
+	padding: 1.5rem;
+	border-radius: 5px;
+	box-shadow: 3px 3px 0 black;
+}
+
+.news-post h2 {
+	margin: 0;
+	color: var(--font-color);
+	font-size: 1.8rem;
+}
+
+.news-meta {
+	font-size: 0.9rem;
+	color: var(--font-color);
+	opacity: 0.8;
+}
+
+.news-post p {
+	margin-top: 0.5rem;
+	color: var(--font-color);
+	line-height: 1.4;
+}

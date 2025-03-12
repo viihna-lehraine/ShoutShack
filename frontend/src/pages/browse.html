@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>ShoutBooks - Our Community!</title>
+		<link rel="stylesheet" href="../styles/pages/browse.css" />
+		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+	</head>
+
+	<body data-page="browse">
+
+		<div id="root">
+
+			<header class="header-bar">
+				<div class="logo-container">
+					<h1>Browse ShoutBooks</h1>
+				</div>
+			</header>
+
+			<div class="page-row-main">
+
+				<div class="nav-btns-column">
+					<button class="nav-btn"><a href="../index.html">Home</a></button>
+					<button class="nav-btn"><a href="./faq.html">FAQ</a></button>
+					<button class="nav-btn"><a href="./policies.html">Policies</a></button>
+				</div>
+
+				<div class="mc-column">
+					<div class="mc-container">
+
+						<div class="mc-title-row">
+							<h1>📚 Public ShoutBooks</h1>
+						</div>
+
+						<div class="browse-controls">
+							<label for="view-mode">View:</label>
+							<select id="view-mode">
+								<option value="grid">Grid</option>
+								<option value="list">List</option>
+							</select>
+
+							<label for="sort-mode">Sort by:</label>
+							<select id="sort-mode">
+								<option value="newest">Newest</option>
+								<option value="popular">Most Popular</option>
+							</select>
+						</div>
+
+						<div id="shoutbooks-container" class="browse-grid">
+							<div class="shoutbook-item">
+								<img src="../static/images/placeholder.png" alt="ShoutBook Cover">
+								<p>ShoutBook Title</p>
+							</div>
+							<div class="shoutbook-item">
+								<img src="../static/images/placeholder.png" alt="ShoutBook Cover">
+								<p>ShoutBook Title</p>
+							</div>
+							<div class="shoutbook-item">
+								<img src="../static/images/placeholder.png" alt="ShoutBook Cover">
+								<p>ShoutBook Title</p>
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+			</div>
+
+			<div class="footer-bar">
+				<div class="footer-bar-content">
+					<a href="./faq.html">FAQ</a> •
+					<a href="./policies.html">Policies</a> •
+					<a href="./staff.html">Staff</a> •
+					<a href="./contact.html">Contact</a>
+				</div>
+			</div>
+
+		</div>
+
+		<script src="../scripts/browse.js"></script>
+
+	</body>
+
+</html>

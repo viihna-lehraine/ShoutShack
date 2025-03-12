@@ -1,0 +1,43 @@
+@import url('../global.css');
+@import url('../partials/variables.css');
+
+.faq-container {
+	display: flex;
+	flex-direction: column;
+	width: 90%;
+	margin: auto;
+	gap: 15px;
+}
+
+.faq-item {
+	background: var(--div-bg);
+	border: 2px solid var(--font-color);
+	padding: 10px;
+	border-radius: 10px;
+	transition: all 0.3s ease-in-out;
+}
+
+.faq-question {
+	font-size: 1.2rem;
+	font-weight: bold;
+	cursor: pointer;
+	color: var(--link-color);
+	text-transform: uppercase;
+	transition: color 0.2s ease-in-out;
+}
+
+.faq-question:hover {
+	color: var(--link-hover);
+}
+
+.faq-answer {
+	font-size: 1rem;
+	display: none;
+	padding-top: 5px;
+	color: var(--font-color);
+}
+
+/* Expandable FAQ effect */
+.faq-item.open .faq-answer {
+	display: block;
+}

@@ -1,0 +1,31 @@
+@import url('../global.css');
+@import url('../partials/variables.css');
+
+.contact-row {
+	text-align: center;
+	padding: 15px;
+}
+
+.contact-row h2 {
+	font-size: 1.4rem;
+	color: var(--link-hover);
+	margin-bottom: 5px;
+}
+
+.contact-row a {
+	font-size: 1.2rem;
+	color: var(--link-color);
+}
+
+.contact-row a:hover {
+	color: var(--link-hover);
+}
+
+.contact-discord {
+	font-size: 1.2rem;
+	font-weight: bold;
+	color: var(--font-color);
+	background: var(--btn-bg);
+	padding: 3px 8px;
+	border-radius: 5px;
+}

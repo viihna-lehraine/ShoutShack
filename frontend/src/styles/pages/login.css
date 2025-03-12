@@ -1,0 +1,72 @@
+@import url('../global.css');
+@import url('../partials/variables.css');
+
+.login-form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 80%;
+	margin: auto;
+	gap: 10px;
+}
+
+login-form label {
+	font-size: 1.2rem;
+	font-weight: bold;
+	color: var(--font-color);
+	text-transform: uppercase;
+}
+
+.login-form input {
+	width: 100%;
+	padding: 10px;
+	border: 2px solid var(--font-color);
+	border-radius: 10px;
+	background: var(--page-bg);
+	color: var(--font-color);
+	font-size: 1rem;
+	text-align: center;
+}
+
+.login-form input:focus {
+	outline: none;
+	border-color: var(--link-hover);
+	box-shadow: 0 0 10px var(--link-hover);
+}
+
+.login-btn {
+	width: 100%;
+	padding: 12px;
+	font-size: 1.4rem;
+	font-weight: bold;
+	color: var(--font-color);
+	background: var(--btn-bg);
+	border: none;
+	border-radius: 20px;
+	cursor: pointer;
+	transition: all 0.2s ease-in-out;
+	text-shadow: 2px 2px 1px rgba(0, 0, 0, 0.5);
+}
+
+.login-btn:hover {
+	transform: translateY(-2px);
+	background: var(--link-hover);
+}
+
+.forgot-password,
+.signup-redirect {
+	margin-top: 15px;
+	font-size: 1.1rem;
+	text-align: center;
+}
+
+.forgot-password a,
+.signup-redirect a {
+	color: var(--link-color);
+	font-weight: bold;
+}
+
+.forgot-password a:hover,
+.signup-redirect a:hover {
+	color: var(--link-hover);
+}

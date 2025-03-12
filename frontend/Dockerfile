@@ -1,25 +1,27 @@
-FROM node:23-alpine
+FROM node:23-alpine AS builder
 
-# work in /app as root user for building
 WORKDIR /app
-
-# copy package files and install dependencies
 COPY package.json package-lock.json ./
 RUN npm install --frozen-lockfile
 
-# copy the rest of your frontend code
+# copy frontend source code
 COPY . .
 
-# fix ownership so that "node" user can run the dev server
-RUN chown -R node:node /app
+# build frontend for production
+RUN npm run build
 
-# create logs directory & fix permissions
-RUN mkdir -p /var/log/frontend && chown -R node:node /var/log/frontend
+# explicitly copy static assets into the final build directory
+RUN cp -r ./static/* ./public/
 
-# switch to Node user
-USER node
+FROM nginx:alpine
 
-# expose Vite dev port
-EXPOSE 5173
+# remove default nginx page
+RUN rm -rf /usr/share/nginx/html/*
 
-CMD ["sh", "-c", "chown -R node:node /app/node_modules && npm run dev"]
+# copy built files into nginx HTML directory
+COPY --from=builder /app/public /usr/share/nginx/html
+
+# expose port 80
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

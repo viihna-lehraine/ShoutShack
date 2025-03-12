@@ -1,0 +1,12 @@
+:root {
+	--page-bg: #af28d5;
+	--div-bg: #ee4bba;
+	--btn-bg: #f182ba;
+	--font-color: #91f1df;
+
+	/* Link Colors */
+	--link-color: #00f7ff;
+	--link-hover: #ffba08;
+	--link-active: #ff003c;
+	--link-visited: #502ca4;
+}

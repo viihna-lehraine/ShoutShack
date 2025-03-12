@@ -1,0 +1,68 @@
+@import url('./global.css');
+@import url('./partials/variables.css');
+
+html,
+body {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.page-row-main {
+	display: flex;
+	flex: 1;
+	width: 100vw;
+	border: 1px solid black;
+	overflow: hidden;
+}
+
+.featured-pages-column {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	border-left: 1px solid black;
+	border-right: 1px solid black;
+}
+
+.featured-pages-container {
+	display: flex;
+	flex-direction: column;
+	height: 90%;
+	width: 80%;
+	border: 1px solid black;
+}
+
+.featured-pages-title-bar {
+	width: 100%;
+	text-align: center;
+	font-size: 1.2rem;
+	font-weight: bold;
+	padding: 10px 0;
+	border-bottom: 2px solid var(--font-color);
+}
+
+.featured-pages-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+	gap: 5px;
+	width: 100%;
+	height: 100%;
+	padding: 10px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--font-color) var(--page-bg);
+}
+
+.featured-pages-grid img {
+	width: 100%;
+	height: auto;
+	border-radius: 5px;
+	border: 1px solid black;
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>ShoutShack - Log In</title>
+		<link rel="stylesheet" href="../styles/pages/login.css" />
+		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+	</head>
+
+	<body data-page="login">
+
+		<div id="root">
+
+			<header class="header-bar">
+				<div class="logo-container">
+					<h1>ShoutShack</h1>
+				</div>
+			</header>
+
+			<div class="page-row-main">
+
+				<div class="mc-column">
+					<div class="mc-container">
+
+						<div class="mc-title-row mc-row">
+							<h1>Welcome Back!</h1>
+						</div>
+
+						<form class="login-form">
+							<label for="username">Username or Email</label>
+							<input type="text" id="username" name="username" required>
+
+							<label for="password">Password</label>
+							<input type="password" id="password" name="password" required>
+
+							<button type="submit" class="login-btn">🔓 Log In 🔓</button>
+						</form>
+
+						<div class="forgot-password">
+							❓ Forgot your password? <a href="reset_password.html">Reset here</a>
+						</div>
+
+						<div class="signup-redirect">
+							🎭 New to ShoutShack? 🎭 <a href="sign_up.html">Create an account</a>
+						</div>
+
+					</div>
+				</div>
+
+			</div>
+
+			<div class="footer-bar">
+				<div class="footer-bar-content">
+					<span class="footer-deco-left">〰</span>
+					<a href="./faq.html">FAQ</a>
+					<span>•</span>
+					<a href="./policies.html">Policies</a>
+					<span>•</span>
+					<a href="./staff.html">Staff</a>
+					<span>•</span>
+					<a href="./contact.html">Contact</a>
+					<span class="footer-deco-right">〰</span>
+				</div>
+			</div>
+
+		</div>
+
+		<script type="module" src="../scripts/index.ts"></script>
+
+	</body>
+
+</html>

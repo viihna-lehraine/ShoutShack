@@ -1,0 +1,76 @@
+@import url('../global.css');
+@import url('../partials/variables.css');
+
+html,
+body {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.browse-controls {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.browse-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 10px;
+}
+
+.browse-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.shoutbook-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	background-color: var(--div-bg);
+	padding: 10px;
+	border: 1px solid black;
+	border-radius: 5px;
+}
+
+.shoutbook-item img {
+	width: 100%;
+	max-width: 150px;
+	height: auto;
+	border-radius: 5px;
+}
+
+.footer-bar {
+	display: flex;
+	height: 8vh;
+	width: 100vw;
+	justify-content: center;
+	align-items: center;
+	background-color: var(--div-bg);
+	overflow: hidden;
+	border: 1px solid black;
+	flex-shrink: 0;
+}
+
+.footer-bar-content {
+	display: flex;
+	width: 70%;
+	max-width: 100%;
+	justify-content: center;
+	gap: 1rem;
+	align-items: center;
+	font-size: 1.3rem;
+	font-weight: bold;
+	text-transform: uppercase;
+	white-space: nowrap;
+	text-align: center;
+}
