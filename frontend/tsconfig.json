@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
 		"baseUrl": ".",
 		"esModuleInterop": true,
@@ -8,6 +9,8 @@
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"isolatedModules": true,
+		"jsx": "react-jsx",
+		"lib": ["DOM", "ESNext"],
 		"module": "NodeNext",
 		"moduleResolution": "nodenext",
 		"noEmit": true,
@@ -22,8 +25,9 @@
 		"target": "ESNext",
 		"skipLibCheck": false,
 		"strict": true,
+		"types": ["react", "react-dom"],
 		"useUnknownInCatchVariables": true
 	},
 	"exclude": ["node_modules"],
-	"include": ["src/scripts/**/*.ts"]
+	"include": ["src"]
 }

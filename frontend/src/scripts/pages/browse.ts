@@ -1,3 +1,5 @@
+// File: frontend/src/scripts/pages/browse.ts
+
 export function initBrowsePage() {
 	const viewMode = document.getElementById('view-mode') as HTMLSelectElement;
 	const shoutbooksContainer = document.getElementById('shoutbooks-container') as HTMLElement;

@@ -1,5 +1,6 @@
 @import url('./global.css');
 @import url('./partials/variables.css');
+@import url('./components/modal.css');
 
 html,
 body {

@@ -23,12 +23,18 @@ export const registerSecurityMiddleware = (app: FastifyInstance) => {
 				styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
 				imgSrc: ["'self'", 'data:', 'cdn.jsdelivr.net'],
 				fontSrc: ["'self'", 'fonts.gstatic.com'],
-				connectSrc: ["'self'"]
+				connectSrc: ["'self'"],
+				objectSrc: ["'none'"],
+				upgradeInsecureRequests: []
 			}
 		},
+		dnsPrefetchControl: { allow: false },
 		frameguard: { action: 'deny' }, // anti-clickjacking
+		hidePoweredBy: true,
 		// TODO: turn this on when HTTPS works
 		// hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // enforce HTTPS
+		permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+		referrerPolicy: { policy: 'no-referrer' },
 		xssFilter: true
 	});
 
@@ -46,7 +52,12 @@ export const registerSecurityMiddleware = (app: FastifyInstance) => {
 	});
 
 	// 4. Compression
-	app.register(fastifyCompress, { global: true });
+	app.register(fastifyCompress, {
+		customTypes: /^text\/|\+json$|\+xml$/,
+		global: true,
+		encodings: ['gzip', 'deflate', 'br'],
+		threshold: 1024
+	});
 
 	console.log('✅ Security middleware registered');
 };

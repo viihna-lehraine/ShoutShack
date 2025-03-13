@@ -5,9 +5,9 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>ShoutShack - FAQ</title>
-		<link rel="stylesheet" href="../styles/pages/faq.css" />
-		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
-		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+		<link rel="stylesheet" href="/styles/pages/faq.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="/static/icons/favicon-android-chrome.png" />
 	</head>
 
 	<body data-page="faq">
@@ -20,65 +20,67 @@
 				</div>
 			</header>
 
-			<div class="page-row-main">
+			<div class="faq-page-main">
+				<div class="faq-container">
+					<h1 class="faq-title">FAQ - Frequently Asked Screams</h1>
 
-				<div class="mc-column">
-					<div class="mc-container">
+					<div class="faq-item">
+						<div class="faq-question">❓ What is ShoutShack?</div>
+						<div class="faq-answer">ShoutShack is a place where you can scream into the void... but stylishly.</div>
+					</div>
 
-						<div class="mc-title-row mc-row">
-							<h1>FAQ - Frequently Asked Screams</h1>
-						</div>
+					<div class="faq-item">
+						<div class="faq-question">❓ How do I sign up?</div>
+						<div class="faq-answer">Click "Sign Up" and follow the unholy ritual of account creation.</div>
+					</div>
 
-						<div class="faq-container">
-							<div class="faq-item">
-								<div class="faq-question">❓ What is ShoutShack?</div>
-								<div class="faq-answer">ShoutShack is a place where you can scream into the void... but stylishly.</div>
-							</div>
+					<div class="faq-item">
+						<div class="faq-question">❓ Can I customize my page?</div>
+						<div class="faq-answer">Yes! HTML/CSS customization is enabled for free-tier users.</div>
+					</div>
 
-							<div class="faq-item">
-								<div class="faq-question">❓ How do I sign up?</div>
-								<div class="faq-answer">Click "Sign Up" and follow the unholy ritual of account creation.</div>
-							</div>
+					<div class="faq-item">
+						<div class="faq-question">❓ Is this site mobile-friendly?</div>
+						<div class="faq-answer">We try our best, but things might get funky. Embrace the chaos.</div>
+					</div>
 
-							<div class="faq-item">
-								<div class="faq-question">❓ Can I customize my page?</div>
-								<div class="faq-answer">Yes! HTML/CSS customization is enabled for free-tier users.</div>
-							</div>
-
-							<div class="faq-item">
-								<div class="faq-question">❓ Is this site mobile-friendly?</div>
-								<div class="faq-answer">We try our best, but things might get funky. Embrace the chaos.</div>
-							</div>
-
-							<div class="faq-item">
-								<div class="faq-question">❓ Who made this?</div>
-								<div class="faq-answer">A deranged individual who refuses to let old web aesthetics die.</div>
-							</div>
-						</div>
-
+					<div class="faq-item">
+						<div class="faq-question">❓ Who made this?</div>
+						<div class="faq-answer">A deranged individual who refuses to let old web aesthetics die.</div>
 					</div>
 				</div>
-
 			</div>
 
 			<div class="footer-bar">
 				<div class="footer-bar-content">
 					<span class="footer-deco-left">〰</span>
-					<a href="./faq.html">FAQ</a>
+					<a href="/pages/faq.html">
+						FAQ
+					</a>
 					<span>•</span>
-					<a href="./policies.html">Policies</a>
+					<a href="/pages/policies.html">
+						Policies
+					</a>
 					<span>•</span>
-					<a href="./staff.html">Staff</a>
+					<a href="/pages/staff.html">Staff</a>
 					<span>•</span>
-					<a href="./contact.html">Contact</a>
+					<a href="/pages/contact.html">Contact</a>
 					<span class="footer-deco-right">〰</span>
 				</div>
 			</div>
 
 		</div>
 
-		<script type="module" src="../scripts/faq.js"></script>
+		<script type="module" src="/scripts/app.js"></script>
 
 	</body>
+
+	<noscript>
+		<div id="no-js-warning">
+			<p>Heads up! ShoutShack is designed to work with JavaScript disabled, but some features may not work as intended.</p>
+
+			<button id="dismiss-js-warning">Got it</button>
+		</div>
+	</noscript>
 
 </html>

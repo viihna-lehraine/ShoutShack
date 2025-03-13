@@ -5,9 +5,9 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>ShoutShack Terms of Service</title>
-		<link rel="stylesheet" href="../styles/pages/policies.css" />
-		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
-		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+		<link rel="stylesheet" href="/styles/pages/policies.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="/static/icons/favicon-android-chrome.png" />
 	</head>
 
 	<body data-page="policies">
@@ -23,9 +23,9 @@
 			<div class="page-row-main">
 
 				<div class="nav-btns-column">
-					<button class="nav-btn"><a href="./index.html">Home</a></button>
-					<button class="nav-btn"><a href="./faq.html">FAQ</a></button>
-					<button class="nav-btn"><a href="./contact.html">Contact</a></button>
+					<button class="nav-btn"><a href="/index.html">Home</a></button>
+					<button class="nav-btn"><a href="/pages/faq.html">FAQ</a></button>
+					<button class="nav-btn"><a href="/pages/contact.html">Contact</a></button>
 				</div>
 
 				<div class="mc-column">
@@ -36,36 +36,47 @@
 						</div>
 
 						<div class="mc-row">
-							<p>These are the policies that apply when using ShoutShack. By using this site, you agree to follow these terms.</p>
+							<nav>
+								<ul>
+									<li><a href="#content-guidelines">Content Guidelines</a></li>
+									<li><a href="#cookie-policy">Cookie Policy</a></li>
+									<li><a href="#data-requests">Data Requests</a></li>
+									<li><a href="#dmca">DMCA Policy</a></li>
+									<li><a href="#privacy-policy">Privacy Policy</a></li>
+									<li><a href="#security">Security</a></li>
+									<li><a href="#terms-of-service">Terms of Service</a></li>
+
+								</ul>
+							</nav>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/terms_of_service.html">📑 Terms of Service</a></h2>
+							<h2><a href="/pages/policies/terms_of_service.html">📑 Terms of Service</a></h2>
 							<p>The official rules and guidelines for using ShoutShack.</p>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/privacy_policy.html">🔒 Privacy Policy</a></h2>
+							<h2><a href="/pages/policies/privacy_policy.html">🔒 Privacy Policy</a></h2>
 							<p>How we handle your data and protect your privacy.</p>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/security.html">🛡 Security Acknowledgements</a></h2>
+							<h2><a href="/pages/policies/security.html">🛡 Security Acknowledgements</a></h2>
 							<p>Security measures in place and how to report vulnerabilities.</p>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/content_guidelines.html">📌 Content Guidelines</a></h2>
+							<h2><a href="/pages/policies/content_guidelines.html">📌 Content Guidelines</a></h2>
 							<p>What content is allowed on ShoutShack and what isn’t.</p>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/cookies.html">🍪 Cookies & Tracking</a></h2>
+							<h2><a href="/pages/policies/cookies.html">🍪 Cookies & Tracking</a></h2>
 							<p>Details on whether we use cookies or track user behavior.</p>
 						</div>
 
 						<div class="mc-row">
-							<h2><a href="./policies/data_requests.html">📥 User Data Requests</a></h2>
+							<h2><a href="/pages/policies/data_requests.html">📥 User Data Requests</a></h2>
 							<p>How you can request account deletion or access your stored data.</p>
 						</div>
 
@@ -77,21 +88,33 @@
 			<div class="footer-bar">
 				<div class="footer-bar-content">
 					<span class="footer-deco-left">〰</span>
-					<a href="./faq.html">FAQ</a>
+					<a href="/pages/faq.html">
+						FAQ
+					</a>
 					<span>•</span>
-					<a href="./policies.html">Policies</a>
+					<a href="/pages/policies.html">
+						Policies
+					</a>
 					<span>•</span>
-					<a href="./staff.html">Staff</a>
+					<a href="/pages/staff.html">Staff</a>
 					<span>•</span>
-					<a href="./contact.html">Contact</a>
+					<a href="/pages/contact.html">Contact</a>
 					<span class="footer-deco-right">〰</span>
 				</div>
 			</div>
 
 		</div>
 
-		<script type="module" src="../scripts/index.ts"></script>
+		<script type="module" src="/scripts/app.ts"></script>
 
 	</body>
+
+	<noscript>
+		<div id="no-js-warning">
+			<p>Heads up! ShoutShack is designed to work with JavaScript disabled, but some features may not work as intended.</p>
+
+			<button id="dismiss-js-warning">Got it</button>
+		</div>
+	</noscript>
 
 </html>

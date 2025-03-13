@@ -1,18 +1,23 @@
 // File: server/src/routes/api/main.ts
 
 import { FastifyInstance, FastifyReply } from 'fastify';
-import { AuthController } from '../../controllers/Auth.js';
+import { AuthController } from '../../controllers/AuthController.js';
 import fs from 'fs/promises';
-import { dbClientPromise } from '../../db/main.js';
+import { query } from '../../db/main.js';
 
 export const registerApiRoutes = (fastify: FastifyInstance) => {
 	fastify.get('/health', async (_, reply: FastifyReply) => {
 		try {
-			const client = await dbClientPromise;
-			await client.query('SELECT 1');
+			await query('SELECT 1');
 			console.log('Database connection is healthy.');
 
-			const backups = await fs.readdir('/db/backups');
+			let backups = [];
+			try {
+				backups = await fs.readdir('/db/backups');
+			} catch (err) {
+				console.error('Failed to read backups directory:', err);
+			}
+
 			reply.send({
 				status: 'ok',
 				db: 'connected',
@@ -27,7 +32,18 @@ export const registerApiRoutes = (fastify: FastifyInstance) => {
 		}
 	});
 
+	// auth routes
 	fastify.post('/signup', AuthController.signup);
-	fastify.post('/signup', AuthController.login);
+	fastify.post('/login', AuthController.login);
+	fastify.get('/verify', AuthController.verify);
 	fastify.get('/profile', { preHandler: fastify.authenticate }, AuthController.getProfile);
+
+	if (fastify.authenticate) {
+		fastify.get('/profile', { preHandler: fastify.authenticate }, AuthController.getProfile);
+	} else {
+		console.warn(
+			"Warning: `fastify.authenticate` is not defined! Profile route won't be protected."
+		);
+		fastify.get('/profile', AuthController.getProfile);
+	}
 };

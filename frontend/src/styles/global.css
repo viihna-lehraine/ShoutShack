@@ -168,11 +168,22 @@ a:visited {
 	text-align: center;
 }
 
+.footer-copyright {
+	font-size: 0.8rem;
+	font-style: italic;
+	font-weight: normal;
+	position: absolute;
+	padding-top: 5px;
+	right: 5.5%;
+	text-transform: none;
+}
+
 .nav-btn {
 	padding: 20px;
 	font-size: 1.4rem;
 	background-color: var(--btn-bg);
 	border-radius: 70%;
 	border: none;
+	-webkit-text-stroke: 1px #000000;
 	box-shadow: 3px 3px 1px rgba(0, 0, 0, 0.5);
 }

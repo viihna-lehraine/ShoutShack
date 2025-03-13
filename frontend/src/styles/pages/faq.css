@@ -1,20 +1,42 @@
 @import url('../global.css');
 @import url('../partials/variables.css');
 
+html,
+body {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.faq-page-main {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	align-items: center;
+	justify-content: center;
+	width: 100vw;
+}
+
 .faq-container {
 	display: flex;
 	flex-direction: column;
 	width: 90%;
+	max-width: 800px;
 	margin: auto;
 	gap: 15px;
 }
 
 .faq-item {
 	background: var(--div-bg);
-	border: 2px solid var(--font-color);
+	border-bottom: 2px dashed var(--btn-bg);
 	padding: 10px;
+	cursor: pointer;
 	border-radius: 10px;
-	transition: all 0.3s ease-in-out;
+	transition: background 0.2s ease-in-out;
 }
 
 .faq-question {
@@ -23,7 +45,8 @@
 	cursor: pointer;
 	color: var(--link-color);
 	text-transform: uppercase;
-	transition: color 0.2s ease-in-out;
+	text-shadow: 2px 2px 0.5px black;
+	transition: max-height 0.3 ease-out;
 }
 
 .faq-question:hover {
@@ -31,13 +54,19 @@
 }
 
 .faq-answer {
-	font-size: 1rem;
 	display: none;
+	font-size: 1rem;
 	padding-top: 5px;
+	margin-top: 10px;
+	line-height: 1.4;
 	color: var(--font-color);
 }
 
-/* Expandable FAQ effect */
+.faq-item:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/* FAQ answer active state */
 .faq-item.open .faq-answer {
 	display: block;
 }

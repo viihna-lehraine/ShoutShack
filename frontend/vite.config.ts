@@ -1,22 +1,25 @@
 // File: frontend/vite.config.ts
 
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-	base: './',
+	base: '/',
 	build: {
 		assetsDir: 'assets',
-		emptyOutDir: true,
-		manifest: true,
+		emptyOutDir: false,
 		outDir: '../public',
 		rollupOptions: {
-			input: 'src/index.html'
-		},
-		sourcemap: true
+			input: 'index.html'
+		}
 	},
+	plugins: [react()],
+	publicDir: '../public',
 	root: 'src',
 	server: {
+		host: '0.0.0.0',
 		open: true,
-		port: 5173
+		port: 5173,
+		strictPort: true
 	}
 });

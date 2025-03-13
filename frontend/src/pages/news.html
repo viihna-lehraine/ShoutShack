@@ -7,9 +7,9 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Check It Out!</title>
-		<link rel="stylesheet" href="../styles/pages/news.css" />
-		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
-		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+		<link rel="stylesheet" href="/styles/pages/news.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="/static/icons/favicon-android-chrome.png" />
 	</head>
 
 	<body data-page="news">
@@ -38,24 +38,36 @@
 
 			</main>
 
-			<footer class="footer-bar">
+			<div class="footer-bar">
 				<div class="footer-bar-content">
 					<span class="footer-deco-left">〰</span>
-					<a href="./faq.html">FAQ</a>
+					<a href="/pages/faq.html">
+						FAQ
+					</a>
 					<span>•</span>
-					<a href="./policies.html">Policies</a>
+					<a href="/pages/policies.html">
+						Policies
+					</a>
 					<span>•</span>
-					<a href="./staff.html">Staff</a>
+					<a href="/pages/staff.html">Staff</a>
 					<span>•</span>
-					<a href="./contact.html">Contact</a>
+					<a href="/pages/contact.html">Contact</a>
 					<span class="footer-deco-right">〰</span>
 				</div>
-			</footer>
+			</div>
 
 		</div>
 
-		<script type="module" src="../scripts/index.ts"></script>
+		<script type="module" src="/scripts/app.ts"></script>
 
 	</body>
+
+	<noscript>
+		<div id="no-js-warning">
+			<p>Heads up! ShoutShack is designed to work with JavaScript disabled, but some features may not work as intended.</p>
+
+			<button id="dismiss-js-warning">Got it</button>
+		</div>
+	</noscript>
 
 </html>

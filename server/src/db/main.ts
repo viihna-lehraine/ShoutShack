@@ -1,34 +1,36 @@
 // File: server/src/db/main.ts
 
 import { env } from '../config/env.js';
-import pkg from 'pg';
+import { Pool } from 'pg';
 
-const { Client } = pkg;
+export const dbClient = new Pool({
+	user: env.POSTGRES_USER,
+	host: env.POSTGRES_HOST,
+	database: env.POSTGRES_DB,
+	password: env.POSTGRES_PASSWORD,
+	port: env.POSTGRES_PORT
+});
 
-const connectDB = async () => {
-	const client = new Client({
-		user: env.POSTGRES_USER,
-		host: env.POSTGRES_HOST,
-		database: env.POSTGRES_DB,
-		password: env.POSTGRES_PASSWORD,
-		port: env.POSTGRES_PORT
-	});
+export async function query(sql: string, params?: any[]) {
+	const client = await dbClient.connect();
 
-	for (let i = 0; i < 10; i++) {
-		try {
-			console.log(`Connecting to database... Attempt ${i + 1} out of 10`);
-			await client.connect();
-			console.log('Database connected successfully.');
-
-			return client;
-		} catch (err) {
-			console.error('Database connection failed:', err);
-			await new Promise(res => setTimeout(res, 3000));
-		}
+	try {
+		const result = await client.query(sql, params);
+		return result.rows;
+	} catch (error) {
+		console.error('Database query error:', error);
+		throw error;
+	} finally {
+		client.release();
 	}
+}
 
-	throw new Error('Could not connect to Postgres after 10 attempts.');
-};
-
-// export promise instead of awaiting it
-export const dbClientPromise: Promise<pkg.Client> = connectDB();
+(async () => {
+	try {
+		await dbClient.query('SELECT 1');
+		console.log('Database connection successful.');
+	} catch (error) {
+		console.error('Database connection error:', error);
+		process.exit(1);
+	}
+})();

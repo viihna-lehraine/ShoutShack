@@ -5,9 +5,9 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Meet the ShoutShack Staff!</title>
-		<link rel="stylesheet" href="../styles/pages/staff.css" />
-		<link rel="icon" type="image/svg+xml" href="../../static/icons/favicon.svg" />
-		<link rel="shortcut icon" type="image/png" href="../../static/icons/favicon-android-chrome.png" />
+		<link rel="stylesheet" href="/styles/pages/staff.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
+		<link rel="shortcut icon" type="image/png" href="/static/icons/favicon-android-chrome.png" />
 	</head>
 
 	<body data-page="staff">
@@ -23,9 +23,9 @@
 			<div class="page-row-main">
 
 				<div class="nav-btns-column">
-					<button class="nav-btn"><a href="./index.html">Home</a></button>
-					<button class="nav-btn"><a href="./faq.html">FAQ</a></button>
-					<button class="nav-btn"><a href="./contact.html">Contact</a></button>
+					<button class="nav-btn"><a href="/index.html">Home</a></button>
+					<button class="nav-btn"><a href="/pages/faq.html">FAQ</a></button>
+					<button class="nav-btn"><a href="/pages/contact.html">Contact</a></button>
 				</div>
 
 				<div class="mc-column">
@@ -36,7 +36,7 @@
 						</div>
 
 						<div class="mc-row staff-profile">
-							<img src="../static/images/viihna-avatar.png" alt="Viihna Lehraine" class="staff-avatar" />
+							<img src="/static/images/viihna-avatar.png" alt="Viihna Lehraine" class="staff-avatar" />
 								<p><strong>Role:</strong> Supreme ShoutShack Overlord, Backend Wizard, Code Gremlin</p>
 								<p><strong>Bio:</strong> I built this place from the ground up with blood, sweat, and sheer spite. I tinker, I break things, I fix them again, and I scream into the void when TypeScript does things it shouldn’t (spoiler alert - that's 100% of the time).</p>
 								<p><strong>Contact:</strong> <a href="mailto:admin@shoutshack.com">admin@shoutshack.com</a></p>
@@ -49,9 +49,9 @@
 					<div class="featured-pages-container">
 						<div class="featured-pages-title-bar">Featured ShoutBooks</div>
 						<div class="featured-pages-grid">
-							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
-							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
-							<img src="../static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="/static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="/static/images/featured.jpeg" alt="Featured ShoutBook" />
+							<img src="/static/images/featured.jpeg" alt="Featured ShoutBook" />
 						</div>
 					</div>
 				</div>
@@ -61,21 +61,30 @@
 			<div class="footer-bar">
 				<div class="footer-bar-content">
 					<span class="footer-deco-left">〰</span>
-					<a href="./faq.html">FAQ</a>
+					<a href="/pages/faq.html">
+						FAQ
+					</a>
 					<span>•</span>
-					<a href="./policies.html">Policies</a>
+					<a href="/pages/policies.html">
+						Policies
+					</a>
 					<span>•</span>
-					<a href="./staff.html">Staff</a>
+					<a href="/pages/staff.html">Staff</a>
 					<span>•</span>
-					<a href="./contact.html">Contact</a>
+					<a href="/pages/contact.html">Contact</a>
 					<span class="footer-deco-right">〰</span>
 				</div>
 			</div>
 
 		</div>
 
-		<script type="module" src="../scripts/index.ts"></script>
+		<script type="module" src="/scripts/app.ts"></script>
 
 	</body>
+
+	<div id="no-js-warning">
+		<p>Heads up! ShoutShack is designed to work with JavaScript disabled, but some features may not work as intended.</p>
+		<button id="dismiss-js-warning">Got it</button>
+	</div>
 
 </html>

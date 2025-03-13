@@ -21,6 +21,7 @@
 		"@types/bcrypt": "^5.0.2",
 		"@types/fs-extra": "^11.0.4",
 		"@types/node-cron": "^3.0.11",
+		"@types/nodemailer": "^6.4.17",
 		"@types/pg": "^8.11.11",
 		"@types/pino": "^7.0.4",
 		"argon2": "^0.41.1",
@@ -30,7 +31,8 @@
 		"fastify-plugin": "^5.0.1",
 		"fs-extra": "^11.3.0",
 		"node-cron": "^3.0.3",
-		"pg": "^8.13.3",
+		"nodemailer": "^6.10.0",
+		"pg": "^8.14.0",
 		"pino": "^9.6.0",
 		"pino-pretty": "^13.0.0"
 	},
