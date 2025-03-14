@@ -64,6 +64,9 @@ services:
             - '80:80'
         networks:
             - shoutshack_network
+        depends_on:
+            - frontend
+            - server
 
 volumes:
     db_data:

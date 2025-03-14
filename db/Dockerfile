@@ -10,23 +10,20 @@ RUN mkdir -p /var/lib/postgresql/backups /db/backups \
     && chown -R postgres:postgres /var/lib/postgresql/backups /db/backups
 
 # copy configuration files
-COPY postgresql.conf /etc/postgresql/postgresql.conf
-COPY pg_hba.conf /etc/postgresql/pg_hba.conf
-RUN chown postgres:postgres /etc/postgresql/*.conf
+COPY postgresql.conf /var/lib/postgresql/data/postgresql.conf
+COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
+RUN chown postgres:postgres /var/lib/postgresql/data/*.conf
 
 # copy initialization scripts
 COPY docker-entrypoint-initdb.d/ /docker-entrypoint-initdb.d/
 RUN chmod -R 755 /docker-entrypoint-initdb.d/
 
-# copy backup script
+# copy and configure backup script
 COPY docker-entrypoint-initdb.d/backup.sh /usr/local/bin/backup.sh
 RUN chmod +x /usr/local/bin/backup.sh
 
-# set up cron job for automatic backups (every 6 hours)
+# ensure cron runs in the background
 RUN echo "0 */6 * * * postgres /usr/local/bin/backup.sh" | crontab -u postgres -
 
-# use default Postgres entrypoint
-ENTRYPOINT ["docker-entrypoint.sh"]
-
-# default command starts PostgreSQL
-CMD ["postgres"]
+# start PostgreSQL with cron
+CMD ["bash", "-c", "cron && exec postgres"]

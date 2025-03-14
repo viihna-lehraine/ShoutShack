@@ -2,6 +2,17 @@
 
 export { AppError } from './classes/ErrorClasses.js';
 
+export interface Database {
+	users: {
+		id?: number;
+		email: string;
+		password: string;
+		verified: boolean;
+		verification_token: string | null;
+		created_at?: Date;
+	};
+}
+
 export interface EnvVars {
 	CPU_THRESHOLD: number;
 	CPU_LIMIT: number;

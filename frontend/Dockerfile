@@ -1,27 +1,16 @@
-FROM node:23-alpine AS builder
+# File: frontend/Dockerfile
 
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile
-
-# copy frontend source code
-COPY . .
-
-# build frontend for production
-RUN npm run build
-
-# explicitly copy static assets into the final build directory
-RUN cp -r ./static/* ./public/
-
+# use a minimal Nginx image to serve static files
 FROM nginx:alpine
 
-# remove default nginx page
+# remove default Nginx static files
 RUN rm -rf /usr/share/nginx/html/*
 
-# copy built files into nginx HTML directory
-COPY --from=builder /app/public /usr/share/nginx/html
+# copy your pre-built files into Nginx's static file directory
+COPY dist/ /usr/share/nginx/html/
 
-# expose port 80
+# expose container port
 EXPOSE 80
 
+# start Nginx
 CMD ["nginx", "-g", "daemon off;"]
