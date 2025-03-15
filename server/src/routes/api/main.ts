@@ -3,12 +3,10 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { AuthController } from '../../controllers/AuthController.js';
 import fs from 'fs/promises';
-import { query } from '../../db/main.js';
 
 export const registerApiRoutes = (fastify: FastifyInstance) => {
 	fastify.get('/health', async (_, reply: FastifyReply) => {
 		try {
-			await query('SELECT 1');
 			console.log('Database connection is healthy.');
 
 			let backups = [];
@@ -32,13 +30,11 @@ export const registerApiRoutes = (fastify: FastifyInstance) => {
 		}
 	});
 
-	// auth routes
 	fastify.post('/signup', AuthController.signup);
 	fastify.post('/login', AuthController.login);
 	fastify.get('/verify', AuthController.verify);
-	fastify.get('/profile', { preHandler: fastify.authenticate }, AuthController.getProfile);
 
-	if (fastify.authenticate) {
+	if (fastify.hasDecorator('authenticate')) {
 		fastify.get('/profile', { preHandler: fastify.authenticate }, AuthController.getProfile);
 	} else {
 		console.warn(

@@ -1,4 +1,6 @@
-import { MutexContract } from '../../types/index.js';
+// File: server/src/services/Mutex.ts
+
+import { MutexContract } from '../types/index.js';
 
 export class Mutex implements MutexContract {
 	#locked: boolean = false;

@@ -1,77 +1,57 @@
 services:
     db:
-        build: ./db
+        image: postgres:17.0
         restart: unless-stopped
-        environment:
-            POSTGRES_DB: 'shoutshack'
-            POSTGRES_USER: 'viihna'
-            POSTGRES_PASSWORD: 'fZc5QxKFt0J2lxlcZMxyOiLx'
+        env_file:
+            - .env
         volumes:
             - db_data:/var/lib/postgresql/data
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/db/backups:/var/lib/postgresql/backups
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/db:/var/log/postgresql
+            - /home/viihna/Projects/shoutshack/db/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+            - /home/viihna/Projects/shoutshack/db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+            - /home/viihna/Projects/shoutshack/db/backups:/var/lib/postgresql/backups
         ports:
             - '5432:5432'
         networks:
             - shoutshack_network
-        healthcheck:
-            test: ['CMD-SHELL', 'pg_isready -U $POSTGRES_USER -d $POSTGRES_DB']
-            interval: 10s
-            retries: 5
-            start_period: 20s
-            timeout: 5s
+        command: ['postgres', '-c', 'config_file=/etc/postgresql/postgresql.conf']
 
     server:
         build: ./server
         restart: unless-stopped
-        environment:
-            POSTGRES_DB: 'shoutshack'
-            POSTGRES_HOST: 'db'
-            POSTGRES_PASSWORD: 'fZc5QxKFt0J2lxlcZMxyOiLx'
-            POSTGRES_USER: 'viihna'
-        entrypoint: ['/usr/local/bin/entrypoint.sh']
+        env_file:
+            - .env
         volumes:
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/server/conf/.env:/app/conf/.env:ro
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/server:/server/logs
+            - /home/viihna/Projects/shoutshack/server/conf/.env:/app/conf/.env:ro
+            - /home/viihna/Projects/shoutshack/server/logs:/app/logs
         ports:
             - '3000:3000'
         networks:
             - shoutshack_network
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '5'
         depends_on:
-            db:
-                condition: service_healthy
-
-    frontend:
-        build: ./frontend
-        restart: unless-stopped
-        volumes:
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/frontend:/var/log/frontend
-        ports:
-            - '5173:5173'
-        networks:
-            - shoutshack_network
+            - db
 
     nginx:
-        build: ./nginx
+        image: nginx:latest
         restart: unless-stopped
         volumes:
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/nginx/uploads:/usr/share/nginx/uploads
-            - /home/viihna/viihnaFolders/cs-work/projects/shoutshack-v3/logs/nginx:/var/log/nginx
-            - frontend_public:/usr/share/nginx/html
+            - /home/viihna/Projects/shoutshack/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - /home/viihna/Projects/shoutshack/nginx/uploads:/usr/share/nginx/uploads
+            - ./frontend/dist:/usr/share/nginx/html:ro
         ports:
             - '80:80'
         networks:
             - shoutshack_network
         depends_on:
-            - frontend
             - server
+        command: ['nginx', '-g', 'daemon off;']
 
 volumes:
     db_data:
-    frontend_public:
-    vite_cache:
 
 networks:
     shoutshack_network:

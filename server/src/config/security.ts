@@ -59,5 +59,5 @@ export const registerSecurityMiddleware = (app: FastifyInstance) => {
 		threshold: 1024
 	});
 
-	console.log('✅ Security middleware registered');
+	console.log('Security middleware registered');
 };

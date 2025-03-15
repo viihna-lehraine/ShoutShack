@@ -5,7 +5,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { utils } from '../common/utils/main.js';
+import { utils } from '../utils/main.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +26,12 @@ if (ENV_PATH) {
 }
 
 export const env: EnvVars = {
+	EMAIL_HOST: utils.parseString(process.env.EMAIL_HOST, 'EMAIL_HOST'),
+	EMAIL_PASSWORD: utils.parseString(process.env.EMAIL_PASSWORD, 'EMAIL_PASSWORD'),
+	EMAIL_PORT: utils.parseNumber(process.env.EMAIL_PORT),
+	EMAIL_SECURE: utils.parseBoolean(process.env.EMAIL_SECURE),
+	EMAIL_USER: utils.parseString(process.env.EMAIL_USER, 'EMAIL_USER'),
+
 	CPU_THRESHOLD: utils.parseNumber(process.env.CPU_THRESHOLD),
 	CPU_LIMIT: utils.parseNumber(process.env.CPU_LIMIT),
 	MEMORY_THRESHOLD: utils.parseNumber(process.env.MEMORY_THRESHOLD),
@@ -46,7 +52,10 @@ export const env: EnvVars = {
 
 	ALLOW_UPLOADS: utils.parseBoolean(process.env.ALLOW_UPLOADS),
 
+	LOG_ARCHIVE_DIR: utils.parseString(process.env.LOG_ARCHIVE_DIR, 'LOG_ARCHIVE_DIR'),
+	LOG_DIR: utils.parseString(process.env.LOG_DIR, 'LOG_DIR'),
 	LOG_LEVEL: utils.parseString(process.env.LOG_LEVEL, 'LOG_LEVEL'),
+	LOG_RETENTION_DAYS: utils.parseNumber(process.env.LOG_RETENTION_DAYS),
 
 	POSTGRES_DB: utils.parseString(process.env.POSTGRES_DB, 'POSTGRES_DB'),
 	POSTGRES_HOST: utils.parseString(process.env.POSTGRES_HOST, 'POSTGRES_HOST'),
@@ -58,4 +67,4 @@ export const env: EnvVars = {
 	SERVER_PORT: utils.parseNumber(process.env.SERVER_PORT)
 } as const;
 
-console.log('Loaded environment variables:', env);
+console.log('Loaded environment variables.');

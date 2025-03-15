@@ -3,7 +3,9 @@
 import { Database } from '../types/index.js';
 import { env } from '../config/env.js';
 import { Kysely, PostgresDialect } from 'kysely';
-import { Pool } from 'pg';
+import pg from 'pg';
+
+const { Pool } = pg;
 
 export const db = new Kysely<Database>({
 	dialect: new PostgresDialect({

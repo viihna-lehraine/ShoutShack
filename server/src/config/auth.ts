@@ -26,13 +26,5 @@ export const registerAuth = (app: FastifyInstance) => {
 		}
 	});
 
-	app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
-		try {
-			await request.jwtVerify();
-		} catch (err) {
-			reply.code(401).send({ error: 'Unauthorized' });
-		}
-	});
-
 	console.log('Authentication middleware registered');
 };

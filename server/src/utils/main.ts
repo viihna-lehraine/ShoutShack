@@ -1,6 +1,6 @@
-// File: server/src/common/main.ts
+// File: server/src/utils/main.ts
 
-import { Utilities } from '../../types/index.js';
+import { Utilities } from '../types/index.js';
 
 const parseBoolean = (value: string | undefined): boolean => {
 	if (!value) throw new Error('Missing required boolean environment variable!');
