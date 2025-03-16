@@ -1,0 +1,105 @@
+name: ShoutShack CI/CD Pipeline
+
+on:
+    push:
+        branches:
+            - main
+            - dev
+    pull_request:
+
+jobs:
+    build-and-test:
+        name: Install, Lint, Type Check, Test, and Audit
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:17.0
+                env:
+                    POSTGRES_DB: shoutshack
+                    POSTGRES_USER: viihna
+                    POSTGRES_PASSWORD: testpassword
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U viihna -d shoutshack"
+                    --health-interval 5s
+                    --health-timeout 3s
+                    --health-retries 10
+                volumes:
+                    - ./db/test/test-db.sql:/docker-entrypoint-initdb.d/test-db.sql
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js and pnpm
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20.x
+                  cache: 'pnpm'
+
+            - name: Install pnpm
+              run: npm install -g pnpm
+
+            - name: Cache dependencies
+              uses: actions/cache@v3
+              with:
+                  path: ~/.pnpm-store
+                  key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run Linter
+              run: pnpm run lint
+
+            - name: Run TypeScript Type Check
+              run: pnpm run type-check
+
+            - name: Run Security Audit (ignore warnings)
+              run: pnpm audit --audit-level=high || true
+
+            - name: 🕵️Debug Database Logs (if failing)
+              if: always()
+              run: docker logs $(docker ps -q --filter ancestor=postgres:17.0) || true
+
+            - name: Wait for Database to be Ready
+              run: |
+                  echo "Waiting for database to be ready..."
+                  for i in {1..30}; do
+                    pg_isready -h postgres -U viihna -d shoutshack && break
+                    echo "Database not ready yet, retrying in 2s..."
+                    sleep 2
+                  done
+
+            - name: Run Backend Tests with Coverage
+              run: pnpm run test -- --coverage
+
+            - name: Upload Test Coverage Report (on failure)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-coverage
+                  path: coverage/
+
+    notify:
+        name: Send Discord Notification
+        runs-on: ubuntu-latest
+        needs: build-and-test
+        if: always()
+
+        steps:
+            - name: Send Discord Notification
+              uses: Ilshidur/action-discord@master
+              env:
+                  DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SECRET }}
+              with:
+                  args: |
+                      **ShoutShack CI/CD Pipeline** 🚀
+                      - **Status:** ${{ job.status }}
+                      - **Branch:** `${{ github.ref }}`
+                      - **Commit:** `${{ github.sha }}`
+                      - **Triggered by:** `${{ github.actor }}`
+                      - **Run Details:** [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
