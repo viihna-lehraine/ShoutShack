@@ -1,4 +1,6 @@
 export interface EnvVars {
+	NODE_ENV: NodeEnv;
+
 	EMAIL_HOST: string;
 	EMAIL_PASSWORD: string;
 	EMAIL_PORT: number;
@@ -38,3 +40,5 @@ export interface EnvVars {
 	SERVER_HOST: string;
 	SERVER_PORT: number;
 }
+
+export type NodeEnv = 'dev' | 'test' | 'prod';

@@ -1,4 +1,4 @@
-// File: server/src/config/security.ts
+// File: server/src/middleware/security.ts
 
 import { FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
@@ -6,7 +6,7 @@ import helmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCompress from '@fastify/compress';
 
-export const registerSecurityMiddleware = (app: FastifyInstance) => {
+export const registerSecurityPlugin = (app: FastifyInstance) => {
 	// 1. CORS
 	app.register(fastifyCors, {
 		origin: ['https://shoutshack.example.com', 'http://localhost:5173'],

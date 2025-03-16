@@ -1,6 +1,6 @@
 // File: server/src/config/env.ts
 
-import { EnvVars } from '../types/index.js';
+import { EnvVars, NodeEnv } from '../types/index.js';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -26,6 +26,8 @@ if (ENV_PATH) {
 }
 
 export const env: EnvVars = {
+	NODE_ENV: utils.parseString(process.env.NODE_ENV, 'NODE_ENV') as NodeEnv,
+
 	EMAIL_HOST: utils.parseString(process.env.EMAIL_HOST, 'EMAIL_HOST'),
 	EMAIL_PASSWORD: utils.parseString(process.env.EMAIL_PASSWORD, 'EMAIL_PASSWORD'),
 	EMAIL_PORT: utils.parseNumber(process.env.EMAIL_PORT),
@@ -52,8 +54,14 @@ export const env: EnvVars = {
 
 	ALLOW_UPLOADS: utils.parseBoolean(process.env.ALLOW_UPLOADS),
 
-	LOG_ARCHIVE_DIR: utils.parseString(process.env.LOG_ARCHIVE_DIR, 'LOG_ARCHIVE_DIR'),
-	LOG_DIR: utils.parseString(process.env.LOG_DIR, 'LOG_DIR'),
+	LOG_ARCHIVE_DIR:
+		process.env.NODE_ENV === 'dev'
+			? './logs/archive'
+			: utils.parseString(process.env.LOG_ARCHIVE_DIR, 'LOG_ARCHIVE_DIR'),
+	LOG_DIR:
+		process.env.NODE_ENV === 'dev'
+			? './logs/'
+			: utils.parseString(process.env.LOG_DIR, 'LOG_DIR'),
 	LOG_LEVEL: utils.parseString(process.env.LOG_LEVEL, 'LOG_LEVEL'),
 	LOG_RETENTION_DAYS: utils.parseNumber(process.env.LOG_RETENTION_DAYS),
 

@@ -6,14 +6,17 @@ FROM node:23-alpine
 WORKDIR /app
 
 # install dependencies separately for better caching
-COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile --omit=dev
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
-# copy built application
-COPY build/ ./build
+# copy entire directory
+COPY . ./
 
 # ensure required tools are installed
 RUN apk add --no-cache curl
+
+# compile TypeScript
+RUN pnpm run build
 
 # use non-root user for security
 USER node

@@ -1,10 +1,10 @@
-// File: server/config/auth.ts
+// File: server/middleware/auth.ts
 
 import argon2 from 'argon2';
-import { env } from './env.js';
+import { env } from '../config/env.js';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
-export const registerAuth = (app: FastifyInstance) => {
+export const registerAuthPlugin = (app: FastifyInstance) => {
 	app.register(import('@fastify/jwt'), {
 		secret: process.env.JWT_SECRET!
 	});

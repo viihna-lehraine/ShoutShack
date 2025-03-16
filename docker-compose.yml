@@ -6,6 +6,7 @@ services:
             - .env
         volumes:
             - db_data:/var/lib/postgresql/data
+            - /home/viihna/Projects/shoutshack/db/init:/docker-entrypoint-initdb.d
             - /home/viihna/Projects/shoutshack/db/postgresql.conf:/etc/postgresql/postgresql.conf:ro
             - /home/viihna/Projects/shoutshack/db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
             - /home/viihna/Projects/shoutshack/db/backups:/var/lib/postgresql/backups

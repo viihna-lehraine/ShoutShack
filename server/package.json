@@ -4,7 +4,7 @@
 	"main": "build/start.js",
 	"scripts": {
 		"build": "rm -rf ./build && tsc",
-		"dev": "ts-node src/start.ts",
+		"dev": "tsx watch --inspect --enable-source-maps src/start.ts",
 		"start": "node build/start.js"
 	},
 	"type": "module",
@@ -35,7 +35,6 @@
 		"nodemailer": "^6.10.0",
 		"pg": "^8.14.0",
 		"pino": "^9.6.0",
-		"pino-multi-stream": "^6.0.0",
 		"pino-pretty": "^13.0.0",
 		"zod": "^3.24.2"
 	},
@@ -46,9 +45,26 @@
 		"eslint": "^9.21.0",
 		"eslint-config-prettier": "^10.0.2",
 		"eslint-plugin-prettier": "^5.2.3",
+		"nodemon": "^3.1.9",
 		"prettier": "^3.5.3",
 		"ts-node": "^10.9.2",
+		"tsx": "^4.19.3",
 		"typescript": "^5.8.2",
 		"vitest": "^3.0.7"
+	},
+	"overrides": {
+		"@swc/core": "^1.2.5",
+		"typescript": "^5.8.2"
+	},
+	"pnpm": {
+		"ignoredBuiltDependencies": [
+			"argon2",
+			"bcrypt",
+			"esbuild"
+		],
+		"onlyBuiltDependencies": [
+			"argon2",
+			"bcrypt"
+		]
 	}
 }

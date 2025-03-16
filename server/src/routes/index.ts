@@ -4,12 +4,12 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'fs/promises';
 import path from 'path';
 import { registerApiRoutes } from './api/main.js';
-import { registerStaticRoutes } from './static/main.js';
 
 export const registerRoutes = (fastify: FastifyInstance) => {
-	registerApiRoutes(fastify);
+	console.debug('Registering routes');
 
-	registerStaticRoutes(fastify);
+	console.debug('Calling registerApiRoutes');
+	registerApiRoutes(fastify);
 
 	fastify.setNotFoundHandler(async (_request: FastifyRequest, reply: FastifyReply) => {
 		try {

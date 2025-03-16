@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "rm -rf ./dist && vite build && mkdir -p ./dist/static && cp -r ./static/* ./dist/static/",
-		"clean": "rm -rf node_modules dist && npm cache clean --force",
+		"clean": "rm -rf node_modules dist && pnpm cache clean --force",
 		"dev": "vite",
 		"typecheck": "tsc --noEmit"
 	},
@@ -30,5 +30,11 @@
 		"process": "^0.11.10",
 		"typescript": "^5.8.2",
 		"vite": "^6.2.1"
+	},
+	"packageManager": "pnpm@10.6.3",
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild"
+		]
 	}
 }
