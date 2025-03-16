@@ -99,8 +99,8 @@ fi
 
 if [ "$PUSH_IMAGE" = true ]; then
 	echo "📤 Pushing latest server image to Docker Hub..."
-	docker tag shoutshack-server:latest viihna/shoutshack-server:latest
-	docker push viihna/shoutshack-server:latest
+	docker tag shoutshack-server:latest viihnatech/shoutshack-server:latest
+	docker push viihnatech/shoutshack-server:latest
 	echo "✅ Image pushed successfully."
 	exit 0
 fi
@@ -149,14 +149,14 @@ echo "⚡ No valid options provided. Use '-h' for help."
 exit 1
 
 # 📖 Quick Reference:
-# - (no args)      → Starts Docker (no build), then exits
-# -b               → Builds the server, then exits (unless build fails)
-# -B               → Full rebuild (clears cache, rebuilds containers)
-# -d               → Destroys all containers & volumes
-# -u               → Start Docker in foreground mode
-# -U               → Start Docker in detached mode
-# -p               → Push the latest server image to Docker Hub
-# -i               → Interactive mode (live control of containers)
-# -b -i           → Builds the server, then enters interactive mode
-# -B -i           → Full rebuild, then enters interactive mode
-# -h               → Display usage guide
+# - (no args)		→ Starts Docker (no build), then exits
+# -b				→ Builds the server, then exits (unless build fails)
+# -B				→ Full rebuild (clears cache, rebuilds containers)
+# -d				→ Destroys all containers & volumes
+# -u				→ Start Docker in foreground mode
+# -U				→ Start Docker in detached mode
+# -p				→ Push the latest server image to Docker Hub
+# -i				→ Interactive mode (live control of containers)
+# -b -i				→ Builds the server, then enters interactive mode
+# -B -i				→ Full rebuild, then enters interactive mode
+# -h				→ Display usage guide
