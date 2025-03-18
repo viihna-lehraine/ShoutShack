@@ -5,6 +5,7 @@ set -e
 BACKUP_DIR='/home/viihna/Projects/shoutshack/db/backups'
 BACKUP_FILE="$BACKUP_DIR/db_backup_$(date +%F_%H-%M-%S).sql"
 ENCRYPTED_FILE="${BACKUP_FILE}.enc"
+MAX_BACKUPS=10
 
 GPG_KEY="$(gpg --list-secret-keys --keyid-format=long | awk '/sec/ {print $2}' | cut -d'/' -f2 | head -n 1)"
 
@@ -14,6 +15,18 @@ if [[ -z "$GPG_KEY" ]]; then
 fi
 
 mkdir -p "$BACKUP_DIR"
+
+echo "Checking backup directory for cleanup tasks..."
+
+NUM_BACKUPS=$(find "$BACKUP_DIR" -maxdepth 1 -type f -name "*.sql.enc" | wc -l)
+
+if [ "$NUM_BACKUPS" -gt "$MAX_BACKUPS" ]; then
+	echo "Moving old backups to archive..."
+	find "$BACKUP_DIR" -maxdepth 1 -type f -name "*.sql.enc" | sort | head -n "$((NUM_BACKUPS - MAX_BACKUPS))" | xargs -I {} mv {} "$ARCHIVE_DIR/"
+	echo "Old backups archived."
+else
+	echo "No backups need to be archived."
+fi
 
 export PGPASSFILE="$HOME/.pgpass"
 

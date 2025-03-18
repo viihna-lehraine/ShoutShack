@@ -1,6 +1,6 @@
 // File: frontend/src/scripts/events/registry.ts
 
-import { addFormListeners } from './forms.ts';
+import { addFormListeners } from './forms.js';
 import { addModalListeners } from './modals.js';
 import { addNoScriptListener } from './noScript.js';
 

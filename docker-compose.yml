@@ -1,60 +1,61 @@
 services:
-    db:
-        image: postgres:17.0
-        restart: unless-stopped
-        env_file:
-            - .env
-        volumes:
-            - db_data:/var/lib/postgresql/data
-            - /home/viihna/Projects/shoutshack/db/init:/docker-entrypoint-initdb.d
-            - /home/viihna/Projects/shoutshack/db/postgresql.conf:/etc/postgresql/postgresql.conf:ro
-            - /home/viihna/Projects/shoutshack/db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
-            - /home/viihna/Projects/shoutshack/db/backups:/var/lib/postgresql/backups
-        ports:
-            - '5432:5432'
-        networks:
-            - shoutshack_network
-        command: ['postgres', '-c', 'config_file=/etc/postgresql/postgresql.conf']
+  db:
+    image: postgres:17.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ${{ github.workspace }}/db/test/test-db.sql:/docker-entrypoint-initdb.d/test-db.sql
+      - /home/viihna/Projects/shoutshack/db/init:/docker-entrypoint-initdb.d
+      - /home/viihna/Projects/shoutshack/db/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - /home/viihna/Projects/shoutshack/db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - /home/viihna/Projects/shoutshack/db/backups:/var/lib/postgresql/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - shoutshack_network
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
 
-    server:
-        build: ./server
-        restart: unless-stopped
-        env_file:
-            - .env
-        volumes:
-            - /home/viihna/Projects/shoutshack/server/conf/.env:/app/conf/.env:ro
-            - /home/viihna/Projects/shoutshack/server/logs:/app/logs
-        ports:
-            - '3000:3000'
-        networks:
-            - shoutshack_network
-        logging:
-            driver: 'json-file'
-            options:
-                max-size: '10m'
-                max-file: '5'
-        depends_on:
-            - db
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /home/viihna/Projects/shoutshack/backend/conf/.env:/app/conf/.env:ro
+      - /home/viihna/Projects/shoutshack/backend/logs:/app/logs
+    ports:
+      - "3000:3000"
+    networks:
+      - shoutshack_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      - db
 
-    nginx:
-        image: nginx:latest
-        restart: unless-stopped
-        volumes:
-            - /home/viihna/Projects/shoutshack/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-            - /home/viihna/Projects/shoutshack/nginx/uploads:/usr/share/nginx/uploads
-            - ./frontend/dist:/usr/share/nginx/html:ro
-        ports:
-            - '80:80'
-        networks:
-            - shoutshack_network
-        depends_on:
-            - server
-        command: ['nginx', '-g', 'daemon off;']
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    volumes:
+      - /home/viihna/Projects/shoutshack/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /home/viihna/Projects/shoutshack/nginx/uploads:/usr/share/nginx/uploads
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+    networks:
+      - shoutshack_network
+    depends_on:
+      - backend
+    command: ["nginx", "-g", "daemon off;"]
 
 volumes:
-    db_data:
+  db_data:
 
 networks:
-    shoutshack_network:
-        name: shoutshack_network
-        driver: bridge
+  shoutshack_network:
+    name: shoutshack_network
+    driver: bridge

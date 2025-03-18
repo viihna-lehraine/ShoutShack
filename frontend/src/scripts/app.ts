@@ -15,3 +15,5 @@ async function start(): Promise<void> {
 }
 
 start();
+
+export {};

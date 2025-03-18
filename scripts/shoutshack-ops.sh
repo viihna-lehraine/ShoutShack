@@ -27,12 +27,12 @@ while getopts "bBdUupi h" opt; do
 		echo "📖 Usage Guide: ./shoutshack-ops.sh [options]"
 		echo ""
 		echo "Available options:"
-		echo "  -b   Build the server (without full rebuild)"
+		echo "  -b   Build the backend server (without full rebuild)"
 		echo "  -B   Full rebuild (clears cache, rebuilds containers)"
 		echo "  -d   Destroy all containers and volumes"
 		echo "  -u   Start Docker in foreground mode"
 		echo "  -U   Start Docker in detached mode"
-		echo "  -p   Push the latest server image to Docker Hub"
+		echo "  -p   Push the latest backend server image to Docker Hub"
 		echo "  -i   Interactive mode (allows live control of containers)"
 		echo "  -h   Show this help message"
 		exit 0
@@ -46,8 +46,8 @@ while getopts "bBdUupi h" opt; do
 done
 
 if [ "$BUILD" = true ]; then
-	echo "🛠️  Building server..."
-	(cd server && pnpm run build) || {
+	echo "🛠️  Building backend server..."
+	(cd backend && pnpm run build) || {
 		echo "❌ Server build failed!"
 		BUILD_FAILED=true
 	}
@@ -55,7 +55,7 @@ fi
 
 if [ "$FULL_REBUILD" = true ]; then
 	echo "🔄 Performing full rebuild..."
-	if ! (cd server && pnpm run build); then
+	if ! (cd backend && pnpm run build); then
 		echo "❌ Server build failed!"
 		BUILD_FAILED=true
 	fi
@@ -99,8 +99,8 @@ fi
 
 if [ "$PUSH_IMAGE" = true ]; then
 	echo "📤 Pushing latest server image to Docker Hub..."
-	docker tag shoutshack-server:latest viihnatech/shoutshack-server:latest
-	docker push viihnatech/shoutshack-server:latest
+	docker tag shoutshack-backend:latest viihnatech/shoutshack-backend:latest
+	docker push viihnatech/shoutshack-backend:latest
 	echo "✅ Image pushed successfully."
 	exit 0
 fi
