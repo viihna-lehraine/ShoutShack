@@ -8,5 +8,8 @@ logs/
 *node_modules/
 tls/
 
+backend/dist
+frontend/dist
+
 vault/data/*
 scripts/unseal.sh

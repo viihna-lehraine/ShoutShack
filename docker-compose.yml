@@ -27,8 +27,6 @@ services:
     volumes:
       - /home/viihna/Projects/shoutshack/backend/conf/.env:/app/conf/.env:ro
       - /home/viihna/Projects/shoutshack/backend/logs:/app/logs
-    ports:
-      - "3000:3000"
     networks:
       - shoutshack_network
     logging:
@@ -36,12 +34,14 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    expose:
+      - "3000"
     depends_on:
       - db
       - vault
 
   nginx:
-    image: nginx:latest
+    image: ./nginx
     restart: unless-stopped
     volumes:
       - /home/viihna/Projects/shoutshack/nginx/tls/nginx.crt:/etc/nginx/certs/nginx.crt:ro
@@ -79,7 +79,6 @@ services:
       - /home/viihna/Projects/shoutshack/vault/tls:/vault/tls:rw
       - /home/viihna/Projects/shoutshack/vault/config:/vault/config
       - /home/viihna/Projects/shoutshack/vault/entrypoint.sh:/vault/entrypoint.sh:ro
-
     command:
       ["/bin/sh", "-c", "/vault/entrypoint.sh && vault server -config=/vault/config/config.hcl"]
 

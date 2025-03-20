@@ -15,6 +15,7 @@ fs.mkdirSync(env.LOG_DIR, { recursive: true });
 const logFilePath = path.join(env.LOG_DIR, 'shoutshack.log');
 
 export const app = Fastify({
+	trustProxy: true,
 	logger: {
 		level: env.LOG_LEVEL || 'info',
 		transport: {
@@ -47,6 +48,17 @@ const start = async () => {
 		registerRoutes(app);
 
 		registerGlobalErrorHandler(app);
+
+		app.addHook('onRequest', async (request, reply) => {
+			const allowedIPs = ['172.18.0.5'];
+			const clientIP = request.ip;
+
+			console.log(`Incoming request from IP: ${clientIP}`);
+
+			if (!allowedIPs.includes(clientIP)) {
+				reply.code(403).send({ error: 'Forbidden' });
+			}
+		});
 
 		await app.listen({ port: env.SERVER_PORT, host: env.SERVER_HOST });
 
