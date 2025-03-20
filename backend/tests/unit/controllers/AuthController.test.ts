@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthController } from '../../../src/controllers/AuthController.js';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { UserRepository } from '../../../src/db/repositories/UserRepository';
-import { sendVerificationEmail } from '../../../src/services/mailer';
-import argon2 from 'argon2';
+import { sendVerificationEmail } from '../../../src/common/services/mailer';
+import * as argon2 from 'argon2';
 
 vi.mock('../../../src/db/repositories/UserRepository', () => ({
 	UserRepository: {
@@ -25,14 +25,14 @@ vi.mock('../../../src/services/mailer', () => ({
 	sendVerificationEmail: vi.fn<(email: string, token: string) => Promise<void>>()
 }));
 
-vi.mock('argon2', () => ({
-	hash: vi.fn<(password: string, options?: any) => Promise<string>>(() =>
-		Promise.resolve('hashed_password')
-	),
-	verify: vi.fn<(hashedPassword: string, password: string) => Promise<boolean>>(() =>
-		Promise.resolve(true)
-	)
-}));
+vi.mock('argon2', async importOriginal => {
+	const actual = (await importOriginal()) as typeof argon2;
+	return {
+		...actual,
+		hash: vi.fn(() => Promise.resolve('$argon2id$v=19$m=4096,t=3,p=1$hash$')),
+		verify: vi.fn(() => Promise.resolve(true))
+	};
+});
 
 beforeEach(() => {
 	vi.restoreAllMocks();
@@ -53,7 +53,8 @@ describe('AuthController', () => {
 	describe('signup()', () => {
 		it('should create a user and send verification email', async () => {
 			const mockRequest = {
-				body: { email: 'test@example.com', password: 'ValidPass123' }
+				body: { email: 'test@example.com', password: 'ValidPass123' },
+				query: {}
 			} as unknown as FastifyRequest;
 
 			(UserRepository.findUserByEmail as ReturnType<typeof vi.fn>).mockResolvedValue(null);

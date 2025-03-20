@@ -6,7 +6,7 @@ import helmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCompress from '@fastify/compress';
 
-export const registerSecurityPlugin = (app: FastifyInstance) => {
+export const securityPlugin = (app: FastifyInstance) => {
 	// 1. CORS
 	app.register(fastifyCors, {
 		origin: ['https://shoutshack.example.com', 'http://localhost:5173'],

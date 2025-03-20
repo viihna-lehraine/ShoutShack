@@ -1,6 +1,6 @@
-// File: backend/src/services/scheduler.ts
+// File: backend/src/common/services/scheduler.ts
 
-import { CronJob } from '../types/index.js';
+import { CronJob } from '../../types/index.js';
 import cron from 'node-cron';
 
 const cronJobs: CronJob[] = [];

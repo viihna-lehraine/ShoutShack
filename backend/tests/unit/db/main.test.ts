@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import { db } from '../../../src/db/main.js';
-import { env } from '../../../src/config/env.js';
+import { env } from '../../../src/env/load.js';
 
 vi.mock('pg', () => {
 	return {

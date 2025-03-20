@@ -1,10 +1,20 @@
-# ShoutShack API Documentation
+# API
 
 **Version:** 1.0.0
 **Base URL:** `http://localhost/api`
 **Authentication:** Bearer Token (JWT)
 
 ---
+
+## 1. All Routes
+
+```
+/api/health/	http://localhost:3000/api/health	(GET, HEAD)
+/api/login/		http://localhost:3000/api/login		(POST)
+/api/profile/	http://localhost:3000/api/profile	(POST)
+/api/signup/	http://localhost:3000/api/signup	(POST)
+/api/verify/	http://localhost:3000/api/verify	(GET, HEAD)
+```
 
 ## 1. Health Check
 

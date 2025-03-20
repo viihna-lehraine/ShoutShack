@@ -5,10 +5,10 @@ import { app } from '../../src/start.js';
 import * as fs from 'fs';
 import { PathLike } from 'fs';
 import * as path from 'path';
-import { registerAuthPlugin } from '../../src/plugins/auth.js';
-import { registerGlobalErrorHandler } from '../../src/services/errorHandler.js';
+import { authPlugin } from '../../src/plugins/auth.js';
+import { registerGlobalErrorHandler } from '../../src/common/services/errorHandler.js';
 import { registerRoutes } from '../../src/routes/index.js';
-import { registerSecurityPlugin } from '../../src/plugins/security.js';
+import { securityPlugin } from '../../src/plugins/security.js';
 
 vi.mock('fs');
 vi.mock('path');
@@ -61,8 +61,8 @@ describe('App Startup', () => {
 	});
 
 	it('should register necessary plugins', async () => {
-		const registerAuthPluginSpy = vi.fn(registerAuthPlugin);
-		const registerSecurityPluginSpy = vi.fn(registerSecurityPlugin);
+		const registerAuthPluginSpy = vi.fn(authPlugin);
+		const registerSecurityPluginSpy = vi.fn(securityPlugin);
 		const registerRoutesSpy = vi.fn(registerRoutes);
 		const registerGlobalErrorHandlerSpy = vi.fn(registerGlobalErrorHandler);
 
@@ -91,15 +91,13 @@ it('should log successful startup messages', async () => {
 
 it('should exit with code 1 if startup fails', async () => {
 	const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-	const processExitSpy = vi
-		.spyOn(process, 'exit')
-		.mockImplementation((code?: string | number | null) => {
-			// Check that the exit code is 1
-			expect(code).toBe(1);
-			// Do nothing here, matching 'never' return type
-		});
+	const processExitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+		code?: string | number | null
+	) => {
+		expect(code).toBe(1);
+	}) as any);
 
-	vi.mocked(registerSecurityPlugin).mockImplementation(() => {
+	vi.mocked(securityPlugin).mockImplementation(() => {
 		throw new Error('Plugin registration failed');
 	});
 

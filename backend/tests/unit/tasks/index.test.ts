@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTasks } from '../../../src/tasks/index.js';
-import { registerCronJob } from '../../../src/services/scheduler.js';
+import { registerCronJob } from '../../../src/common/services/scheduler.js';
 import { rotateLogs } from '../../../src/tasks/logRotation.js';
 
 vi.mock('../../../src/services/scheduler.js', () => ({
@@ -28,6 +28,7 @@ describe('registerTasks', () => {
 	});
 
 	it('should register the log rotation cron job', () => {
+		registerTasks();
 		expect(registerCronJob).toHaveBeenCalledWith('0 0 * * *', rotateLogs);
 	});
 });

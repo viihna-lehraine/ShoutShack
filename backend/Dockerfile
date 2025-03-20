@@ -13,7 +13,7 @@ RUN corepack enable && pnpm install --frozen-lockfile --prod
 COPY . ./
 
 # ensure required tools are installed
-RUN apk add --no-cache curl
+RUN apk update && apk add --no-cache curl --repository=http://dl-3.alpinelinux.org/alpine/edge/main
 
 # compile TypeScript
 RUN pnpm run build
@@ -25,4 +25,4 @@ USER node
 EXPOSE 3000
 
 # start the server
-CMD ["node", "/app/build/start.js"]
+CMD ["node", "/app/dist/start.js"]

@@ -1,6 +1,12 @@
 *.log*
 *.env
+*.asc
+.sops
 
 .dev/viihna/
 logs/
 *node_modules/
+tls/
+
+vault/data/*
+scripts/unseal.sh

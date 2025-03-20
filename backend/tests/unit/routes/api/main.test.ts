@@ -40,19 +40,22 @@ vi
 		return undefined as never;
 	}) as unknown as typeof AuthController.getProfile;
 
-describe('registerApiRoutes()', () => {
+describe('registerApiRoutes()', async () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
 	it('should register API routes with the correct prefix', () => {
 		registerApiRoutes(fastifyMock);
-
 		expect(fastifyMock.register).toHaveBeenCalledWith(expect.any(Function), { prefix: '/api' });
 	});
 
-	it('should register health check, signup, login, and verify routes', () => {
+	it('should register health check, signup, login, and verify routes', async () => {
 		registerApiRoutes(fastifyMock);
+
+		const registerFn = (fastifyMock.register as unknown as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		await registerFn(fastifyMock);
 
 		expect(fastifyMock.get).toHaveBeenCalledWith('/health', expect.any(Function));
 		expect(fastifyMock.post).toHaveBeenCalledWith('/signup', AuthController.signup);
@@ -71,10 +74,18 @@ describe('registerApiRoutes()', () => {
 		);
 	});
 
-	it('should register /profile route without authentication if not available', () => {
-		fastifyMock.hasDecorator = vi.fn(() => false);
+	it('should register /profile route with authentication if available', async () => {
+		fastifyMock.hasDecorator = vi.fn(() => true);
 		registerApiRoutes(fastifyMock);
 
-		expect(fastifyMock.get).toHaveBeenCalledWith('/profile', AuthController.getProfile);
+		const registerFn = (fastifyMock.register as unknown as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		await registerFn(fastifyMock);
+
+		expect(fastifyMock.get).toHaveBeenCalledWith(
+			'/profile',
+			{ preHandler: expect.any(Function) },
+			AuthController.getProfile
+		);
 	});
 });

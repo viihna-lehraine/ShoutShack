@@ -15,8 +15,8 @@ beforeEach(() => {
 	process.env = {};
 });
 
-describe('Environment Configuration', () => {
-	it('should load environment variables from the first available .env file', () => {
+describe('Environment Configuration', async () => {
+	it('should load environment variables from the first available .env file', async () => {
 		const mockEnvPath = path.resolve(process.cwd(), 'backend/conf/.env');
 
 		vi.spyOn(fs, 'existsSync')
@@ -24,7 +24,7 @@ describe('Environment Configuration', () => {
 			.mockReturnValueOnce(false)
 			.mockReturnValueOnce(true);
 
-		const { env } = require('./env');
+		const { env } = await import('../../../src/env/load.js');
 
 		expect(dotenv.config).toHaveBeenCalledWith({ path: mockEnvPath });
 		expect(env).toBeDefined();

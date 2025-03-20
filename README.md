@@ -32,13 +32,12 @@ The project stack includes the following
 
 <br>
 
--   TypeScript 5.8
--   JavaScript
+-   TypeScript
 -   HTML
 -   CSS
--   Node.js 22.3.0
+-   Node.js
 -   Fastify
--   Postgres 17.0
+-   Postgres
 -   HashiCorp Vault
 -   Docker
 

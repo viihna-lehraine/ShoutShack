@@ -1,7 +1,7 @@
 // File: backend/src/controllers/AuthController.ts
 
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { sendVerificationEmail } from '../services/mailer.js';
+import { sendVerificationEmail } from '../common/services/mailer.js';
 import argon2 from 'argon2';
 import { loginSchema, signupSchema } from '../config/index.js';
 import { UserRepository } from '../db/repositories/UserRepository.js';
@@ -70,7 +70,10 @@ export class AuthController {
 				return reply.status(401).send({ error: 'Unauthorized' });
 			}
 
-			request.session.user = { id: user.id, email: user.email };
+			(request.session as { user?: { id: number; email: string } }).user = {
+				id: user.id,
+				email: user.email
+			};
 
 			return reply.send({ message: 'Login successful' });
 		} catch (error) {
@@ -85,7 +88,7 @@ export class AuthController {
 
 	static async getProfile(request: FastifyRequest, reply: FastifyReply) {
 		try {
-			const userId = request.session.user?.id;
+			const userId = (request.session as { user?: { id: number; email: string } }).user?.id;
 
 			if (!userId) {
 				return reply.status(401).send({ error: 'Unauthorized' });

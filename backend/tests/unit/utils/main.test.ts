@@ -1,7 +1,7 @@
 // File: backend/tests/unit/utils/main.test.ts
 
 import { describe, it, expect } from 'vitest';
-import { utils } from '../../../src/utils/main.js';
+import { utils } from '../../../src/common/utils/main.js';
 
 describe('utils', () => {
 	describe('parseBoolean', () => {

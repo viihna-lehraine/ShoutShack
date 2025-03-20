@@ -1,6 +1,6 @@
-// File: backend/src/services/errorHandler.ts
+// File: backend/src/common/services/errorHandler.ts
 
-import { AppError } from '../types/index.js';
+import { AppError } from '../../types/index.js';
 import { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export const registerGlobalErrorHandler = (app: FastifyInstance) => {

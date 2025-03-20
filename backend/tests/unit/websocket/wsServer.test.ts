@@ -3,56 +3,59 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { WebSocketServer, WebSocket } from 'ws';
 import { WebSocketManager } from '../../../src/websocket/WebSocketManager.js';
-import { env } from '../../../src/env/load.js';
 
-// ✅ Mock WebSocket class
 class MockWebSocket extends WebSocket {
 	send = vi.fn();
 	close = vi.fn();
 	readyState = WebSocket.OPEN;
 }
 
-// ✅ Mock console.log to prevent test pollution
+let wss: WebSocketServer;
+let wsClient: WebSocket;
+
 vi.spyOn(console, 'log').mockImplementation(() => {});
 
 describe('WebSocket Server', () => {
 	let wss: WebSocketServer;
 	let mockWs: MockWebSocket;
 
-	beforeEach(() => {
-		(WebSocketManager as any).clients.clear(); // Reset clients before each test
-		wss = new WebSocketServer({ port: env.WS_PORT });
-		mockWs = new MockWebSocket('ws://localhost');
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		WebSocketManager['clients'].clear();
+
+		wss = new WebSocketServer({ port: 8081 });
+
+		wss.on('connection', (ws, req) => {
+			WebSocketManager.handleConnection(ws, req);
+		});
+
+		wsClient = new WebSocket('ws://localhost:8122');
+		await new Promise(resolve => wsClient.once('open', resolve));
+	});
+
+	afterEach(() => {
+		wsClient.close();
+		wss.close();
 	});
 
 	it('should accept WebSocket connections', () => {
-		const req = { socket: { remoteAddress: '127.0.0.1' } };
-		wss.emit('connection', mockWs, req);
-
-		expect((WebSocketManager as any).clients.size).toBe(1);
-		expect(console.log).toHaveBeenCalledWith(`Client connected: 127.0.0.1`);
+		expect(WebSocketManager['clients'].size).toBe(1);
 	});
 
-	it('should handle messages correctly', () => {
-		const req = { socket: { remoteAddress: '127.0.0.1' } };
-		wss.emit('connection', mockWs, req);
+	it('should handle messages correctly', async () => {
+		const messageSpy = vi.spyOn(wsClient, 'send');
 
-		const message = 'Hello, server!';
-		mockWs.emit('message', Buffer.from(message));
+		wsClient.send('Hello, server!');
+		await new Promise(resolve => setTimeout(resolve, 100));
 
-		expect(mockWs.send).toHaveBeenCalledWith(`Echo: ${message}`);
+		expect(messageSpy).toHaveBeenCalledWith('Echo: Hello, server!');
 	});
 
-	it('should remove clients on disconnect', () => {
-		const req = { socket: { remoteAddress: '127.0.0.1' } };
-		wss.emit('connection', mockWs, req);
+	it('should remove clients on disconnect', async () => {
+		wsClient.close();
+		await new Promise(resolve => setTimeout(resolve, 100));
 
-		expect((WebSocketManager as any).clients.size).toBe(1);
-
-		mockWs.emit('close');
-
-		expect((WebSocketManager as any).clients.size).toBe(0);
-		expect(console.log).toHaveBeenCalledWith(`Client disconnected: 127.0.0.1`);
+		expect(WebSocketManager['clients'].size).toBe(0);
 	});
 
 	afterEach(() => {

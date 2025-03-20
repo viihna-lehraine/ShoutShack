@@ -1,0 +1,61 @@
+events {}
+
+http {
+	include mime.types;
+	default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log warn;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml+rss text/javascript;
+
+    server {
+        listen 80;
+        listen [::]:80;
+        http2 on;
+        server_name localhost;
+
+        root /usr/share/nginx/html;
+        index index.html;
+        error_log /var/log/nginx/error.log debug;
+
+        add_header X-Frame-Options SAMEORIGIN;
+        add_header X-XSS-Protection "1; mode=block";
+        add_header X-Content-Type-Options nosniff;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self';";
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location ~* \.(css|eot|gif|ico|jpeg|jpg|js|json|map|mp3|mp4|ogg|otf|png|svg|txt|ttf|wav|webm|woff|woff|xml)$ {
+            root /usr/share/nginx/html;
+            expires max;
+            access_log off;
+            add_header Cache-Control "public, max-age=31536000";
+            try_files $uri =404;
+        }
+
+        location /api/ {
+    		resolver 127.0.0.11 valid=10s;
+    		set $upstream shoutshack-server-1:3000;
+    		proxy_pass http://$upstream;
+    		proxy_http_version 1.1;
+
+    		proxy_set_header Upgrade $http_upgrade;
+    		proxy_set_header Connection "keep-alive";
+    		proxy_set_header Host $host;
+    		proxy_set_header X-Real-IP $remote_addr;
+    		proxy_set_header X-Forwarded-Proto $scheme;
+    		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		}
+    }
+}

@@ -6,6 +6,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fs from 'fs/promises';
 
 const fastifyMock = {
+	register: vi.fn(),
 	setNotFoundHandler: vi.fn() as unknown as FastifyInstance['setNotFoundHandler']
 } as unknown as FastifyInstance;
 
@@ -39,6 +40,7 @@ describe('registerRoutes()', () => {
 	});
 
 	it('should register API routes', () => {
+		expect(fastifyMock.register).toHaveBeenCalled();
 		expect(fastifyMock.setNotFoundHandler).toHaveBeenCalled();
 	});
 

@@ -1,6 +1,5 @@
 // File: backend/plugins/auth.ts
 
-import '../types/main.d.ts';
 import { NodeEnv } from '../types/index.js';
 import argon2 from 'argon2';
 import { env } from '../env/load.js';
@@ -8,7 +7,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fastifySession from '@fastify/session';
 import fastifyCookie from '@fastify/cookie';
 
-export const registerAuthPlugin = (app: FastifyInstance) => {
+export const authPlugin = (app: FastifyInstance) => {
 	app.register(fastifyCookie);
 	app.register(fastifySession, {
 		secret: env.SESSION_SECRET,
@@ -31,7 +30,7 @@ export const registerAuthPlugin = (app: FastifyInstance) => {
 	});
 
 	app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
-		if (!request.session.user) {
+		if (!(request.session as { user?: { id: number; email: string } }).user) {
 			return reply.code(401).send({ error: 'Unauthorized' });
 		}
 	});

@@ -14,7 +14,72 @@ set -e
 
 cd "$DIR_NAME"
 
-while getopts "bBdUupi h" opt; do
+print_ascii_art() {
+	echo "                     ____  _                 _   ____  _                _    "
+	echo "                    / ___|| |__   ___  _   _| |_/ ___|| |__   __ _  ___ | | __"
+	echo "                    \___ \| '_ \ / _ \| | | | __\___ \| '_ \ / _\` |/ __| |/ /"
+	echo "                     ___) | | | | (_) | |_| | |_ ___) | | | | (_| | (__|   < "
+	echo "                    |____/|_| |_|\___/ \__,_|\__|____/|_| |_|\__,_|\___|_|\_\ "
+	echo ""
+	echo ".............................................::...:........=**+**:........::.................::::::-"
+	echo ".....................................:-=++==+++---:::.....:=*+:..::........::.........::::::::::::::"
+	echo ".............................:::-+***+*###************+++-:=*+:...::......:::::::::::::::::::-------"
+	echo "......................-++=+++******#****#######*#*#******#*+*+:....:::::::::::::::::::::::::=*=-=+++"
+	echo "....................:+****###****#######%%%#*##############*++:.:.:::::::::::::::::::::::::-==::==-+"
+	echo "...................-+*#****####*########%%######%#########***+-:::::::::::::::::::::::::::::-=-=+*#%"
+	echo "................::-+*########%%######%%%%%%%%%%%%########*+*++-::::::::::::::::::::::::::-=--===+**+"
+	echo "............:..:-=+*###%%%##%%%%%#####%%%@@@%%%%%#%#%%%##+-=*+-::::::::::::::::::::::::::==+-=******"
+	echo ".............::=*##%%%%%%%%%#####%%###%%%%%@@%%%%%%@%%%#+--=*+-::::::::::::::::::::::::::----=*#**#%"
+	echo "............:-*##%##%%%%%%%%%%%%%%%%####%%%%%%%%%%%%%%*=:::+*+-::::===+=:::-:::::::::::::::=-:=+++*+"
+	echo ".............=##%%%%@%%%%%###%%##*********++*########*-::::=*+-++--=###+=-=++=-++--=-:::::::+++=-+**"
+	echo "............-*%%%%@@@@@@@@%%%##*+============+++++++++=::::+*++#%+++##*****##*##%#*+-:.....-=++*+*%%"
+	echo "....::.....:*%%%%@@@%%@@@@@%%#*+==========-==========+=-=--+**##%#%%%%%#%%%%%%%%%%%#*-=::-::-::-=--="
+	echo ":::........:*%%%%%%%%%%%%%%##*++=========--=============*+*+**%%%%%%%%%%%%%%@%%%%%%%%#==-:::::-==-=+"
+	echo ".......::::-#%%%%%%%%%%%%%%#*+++==========-=============+#*+**%%%%%%@%%%%%%%%@%%%%%@@%+---::::-=*##*"
+	echo "=++*********#%%%%%%%%%%%%%##*++++==================++=++*#%%@#%%%%@%@%%@%%%%@@@@@@%@@#=+=-::::--+*=-"
+	echo "************#%%%%@%%%%%%%%%#**++++========+#%%@@@@@%%%%@@@@@%#%%%%%@@%%@%@@@@@@@@@@@@%*-=-::::::::::"
+	echo "*+++========*%%%%@@@%@%%%%%#*+++++++++#%%#%@@@@@@@@@@@@@@@@@%#%@@%@@@@@@@@@@@@@@@@@%@%#*+---::::::::"
+	echo "+***********#%%%@@@@@%%%%%######%%@@@@@@@@@@@@@@@@@@%++%@@@@##%@@@@@@@@@@@@@@@@@%@@@@@@%%*#**+=+----"
+	echo "++++++++++++*%@@@@@%%%%@@@@@@@@@%%###%%%%@@@@@@@@@@%*===#%%#*#%%%@@@@@@@@@@@@@@@@@@@@@@%%%%%%%%%%##+"
+	echo "+++++++++=+++%@@%%%**+++#####*++++++=+*##%%@@@@@@%%++=====+***+**+*#%%@@@@@@@@@@@@@@@%@@@@@@@@@@@@@@"
+	echo "%%%#*#***=+++#%@@%%++++*+**###*+++++=====+**####*+++++====+***+++*+++++*#%@@@@@@@@@@@@@@@@@@@@@@@@@@"
+	echo "%###****+=+++*%@@@%*+=++*++*##*++++++=============++++==+++***+++++++++++++*#%@@@@@@@@@@@@%%%%%%@@@@"
+	echo "%###**+*++++++*%@@@#*++=+*++*##*+++++++===========+***##*****#%%%%%%%%%@@%@@@@@@@@@@@@@@%#******@@@%"
+	echo "%###**+*+=++=++#%@@@%*++===+*#%#*+++++++=============+++****#%#%%%%#%##@@#%@%############*+++++*@@%#"
+	echo "%###**+*+======+#%@@@%#*++=+*##%*++++++++============+*###*+*#+==**#%##@%****#######%####*+++++*@@%#"
+	echo "==========+++++++*%@@@%%####*####*+++++++=========++*###*+==::=+##*#%%#%%*##########%%%##*+===+*@@##"
+	echo "+++++++++++++++++++*#%%##**####%%##*++++++=======+*****##**+++*###*#%##%%*##########%%%##+===++*@%##"
+	echo "+++++++++++++++++++++*#*****###%%###**++++++++===+*+++==+#%*++==++*#******#%%%%#########*+===+++++++"
+	echo "++++++++++++++++++++*********##########*++++++===+*+===+**##*++===+****++*%@%%%%%%%%%%%%#+++++++++++"
+	echo "===================+**++******#####******+++++++++++++**++++========######%@@%%%%%%%%%%%*++*++**++++"
+	echo "===========++++=--=++*+++++*****######*****+++++++++++*#%##***+++====+%@@@@%#####***################"
+	echo "=========*#*##=----++++++++++++***########****++++++++*#%%%@%%%#*++====#@@@*************************"
+	echo "------=##**#%%@#=--=+*++=+++++++++****#########**####%%%%%@@#+===========*###***********************"
+	echo "::::-*%#****#@@@%*--=+*++========++++***###%%%%@@@@@@@@@@@@#*%%###*+++++=+=+********************####"
+	echo "::-#%#*#**#@%%@@@@%+-=++*+========+++++**##%%%%@@@%@@%#@@@@@@%%%%%%%%%**++==+**************#########"
+	echo "-*###%####%@%%%%%@#%#+=+++*+=====++=++++++*#%%%%@#+***%@@@@@@#%%%%%%%%#*++===+***#%###***###**######"
+	echo " #%#+#*###%%%%%%%%%##@@#=++=+**========++++****%%#%*++****%%%#******##%%#*++===+++%@%@@@@@%#*+++*%@@#"
+	echo "*#*%#%%%@@@@@@%%%@@%%%#%#*+*+=+*+*+++++***++=+*%%%@#**++++++*++++++**##**++====+#%%%%@@@@#+*****##%@"
+	echo "##%%%@@%%@@@@@%%%@@%@@%%@#%%%*+======++++======*@#@@@%#*++++*+++++++*###*+++===++*******###%%%%%%%##"
+	echo "#%@@%@%@@@%@%%**#%%@%%%%%%%#@@%+===============+#**@@@@@%****++++++++*###*+++++=++******************"
+	echo "%@@@@@@@%%%%%**#%@@%@@%%%###%@@*%*=============+%@*#@@@@@@@%#***++++++*###**+++++=+*****************"
+	echo "@@@@%%**%#%%%@@@@@@@@@%%%##%+#%%#%#+===========+%@%*@@@@@+%@@%%#*************+++++===+****##********"
+	echo "%@@@%#***#%%%@@%####%@@@%%##==+##%%#++=========*@@%#@@@@@@@@@%#@@%%####%###*****++===++++++++++*****"
+	echo "@%@@@%####%#@@%######%@%%%%%%%%%%%#%%%*========#@@##@@@@@@@@@@@@@@@@@@@%%#%%##*+++===++*##********##"
+	echo "@@@@@%@@@@@@@@@%%##%%+%@@%%%%%%@#@%%@%#+*======####@@@@@@@%%@@@@@@@@@@@@%#*+**++++===++####*********"
+	echo "##%@%#@@@@@@@@@@%%#%%%%%%@@@%%#%#%#%%@%#%#*====###%@@@@@@@@%@@#%@%%%@@@@@%#***++=====+*##%%#********"
+	echo "*%**@%#@@@@#%%#%@@@@@@@@@@@@@@%%#%%=+@@@@@@%*+++#@@@@**@@@@%@@%*#@%%%@%#%@@#**+++====+%@@@@%#%%#****"
+	echo "#%%**@%%@@##%%%#%@@@@@%%%##%%@@%%#%=+%%@@@@%%%*%@@@@%%@@@@@%#@@*++#%%%%%%%@%#**++++==#@@@@@@@%@%#***"
+	echo "%%##*%@@%@%#**###%@@@@#%#%%%%%@@@%%%%#%@@@@@%%%@@@@@@@@@@@@@#%@@@%%%@%#%%@@@%#**++++*%%%@@#%@@#*%##*"
+	echo "%%#%#%@@@@@%%####%@@@####*#%%%@#%@@@@%%%%%@@@%%%@@@@@@@@@@@@@@@%##%%%@##%%%%%%#*++++#%%#%%%%%@@%%#%*"
+	echo "@@%%%%@@%%@@@@%@@@%##%%%%%###%@@@@@@%%%@%%%@@@%@@@@@@@@@@@@@%#%#+%%%@@@**#%@%%#**++*#%%%%%#%@#%%%%#%"
+	echo "@@@@@@@@%%##%@@@@%######%@@@@%@@@@@@@@%%%%+@@@%%@@@@@@@@@@@@@@@%#%%%@@@@@@@%%@@*++++*#%%%@%#%%##%@@@"
+	echo "@@@@@@@@%%%*#%@@@@@%@@#*%@@@@@%@@@@@@@%%%**@@@%@@@@@@==#@@@@@%#%@%%@%@@@@@@@@@%%*+++++*#%%@@@%%%%%@%"
+	echo "@@@@@@@@@@@%%@@@@@@@@@@@@@%%%#*#@@@%%%%%@#=+@@%%%@@@@@%@@@@@@@@%#@%%%%%@@@@@@@@%%#*++++++*%@@@%%%@#%"
+	echo ""
+}
+
+while getopts "bBdUupi:h" opt; do
 	case "$opt" in
 	b) BUILD=true ;;
 	B) FULL_REBUILD=true ;;
@@ -24,22 +89,20 @@ while getopts "bBdUupi h" opt; do
 	p) PUSH_IMAGE=true ;;
 	i) INTERACTIVE=true ;;
 	h)
-		echo "📖 Usage Guide: ./shoutshack-ops.sh [options]"
-		echo ""
-		echo "Available options:"
-		echo "  -b   Build the backend server (without full rebuild)"
-		echo "  -B   Full rebuild (clears cache, rebuilds containers)"
-		echo "  -d   Destroy all containers and volumes"
-		echo "  -u   Start Docker in foreground mode"
-		echo "  -U   Start Docker in detached mode"
-		echo "  -p   Push the latest backend server image to Docker Hub"
-		echo "  -i   Interactive mode (allows live control of containers)"
-		echo "  -h   Show this help message"
-		exit 0
+		print_ascii_art
+		echo "📖 ShoutShack Ops - DevOps Control Script"
+		echo "Usage: ShSh [options]"
+		echo "Options:"
+		echo "  -b       Build the backend server"
+		echo "  -B       Full rebuild"
+		echo "  -d       Destroy all Docker containers"
+		echo "  -u       Start Docker containers in foreground"
+		echo "  -U       Start Docker containers in detached mode"
+		echo "  -p       Push image to Docker Hub"
+		echo "  -i       Interactive mode"
 		;;
 	*)
 		echo "❌ Invalid option: -$OPTARG"
-		echo "ℹ️  Use '-h' for usage guide."
 		exit 1
 		;;
 	esac
@@ -113,33 +176,60 @@ if [ "$INTERACTIVE" = true ]; then
 		read -r CMD
 		case "$CMD" in
 		down)
-			echo "📴 Stopping Docker containers..."
+			echo "Stopping Docker containers..."
 			docker compose down
 			exit 0
 			;;
 		restart)
-			echo "🔄 Restarting Docker containers..."
+			echo "Restarting Docker containers..."
 			docker compose down && docker compose up --build -d &
 			sleep 3
 			;;
+		restart-service)
+			echo "Restarting a specific service... (Enter name)"
+			read -r SERVICE
+			docker restart "$SERVICE"
+			;;
+		rebuild)
+			echo "Rebuilding a specific service... (Enter name)"
+			read -r SERVICE
+			docker compose up -d --build "$SERVICE"
+			;;
 		logs)
-			echo "📜 Showing logs (Press ENTER to return to menu)..."
-			(docker compose logs -f) </dev/tty
+			echo "Showing logs for a service (Press ENTER to return to menu)..."
+			read -r SERVICE
+			(docker compose logs -f "$SERVICE") </dev/tty
 			;;
 		status)
-			echo "📊 Docker container status:"
-			docker ps
+			echo "Docker container status:"
+			docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 			;;
 		shell)
-			echo "🐚 Attaching to running container..."
-			docker exec -it shoutshack-server-1 sh
+			echo "Entering shell of a running container (Enter name)..."
+			read -r CONTAINER
+			docker exec -it "$CONTAINER" sh
+			;;
+		fixvolumes)
+			echo "Fixing Fedora Docker volume permissions..."
+			sudo chown -R "$USER:$USER" /var/lib/docker/volumes
+			;;
+		prune)
+			echo "WARNING: This will delete ALL unused images, volumes, and containers!"
+			echo "Type 'yes' to confirm:"
+			read -r CONFIRM
+			if [ "$CONFIRM" = "yes" ]; then
+				docker system prune -af
+				echo "Docker system pruned."
+			else
+				echo "Aborted."
+			fi
 			;;
 		exit)
-			echo "❌ Exiting without stopping Docker."
+			echo "Exiting without stopping Docker."
 			exit 0
 			;;
 		*)
-			echo "❔ Unknown command. Available commands: down, restart, logs, status, shell, exit"
+			echo "Unknown command. Available commands: down, restart, restart-service, rebuild, logs, status, shell, prune, fixvolumes, exit"
 			;;
 		esac
 	done
@@ -147,16 +237,3 @@ fi
 
 echo "⚡ No valid options provided. Use '-h' for help."
 exit 1
-
-# 📖 Quick Reference:
-# - (no args)		→ Starts Docker (no build), then exits
-# -b				→ Builds the server, then exits (unless build fails)
-# -B				→ Full rebuild (clears cache, rebuilds containers)
-# -d				→ Destroys all containers & volumes
-# -u				→ Start Docker in foreground mode
-# -U				→ Start Docker in detached mode
-# -p				→ Push the latest server image to Docker Hub
-# -i				→ Interactive mode (live control of containers)
-# -b -i				→ Builds the server, then enters interactive mode
-# -B -i				→ Full rebuild, then enters interactive mode
-# -h				→ Display usage guide

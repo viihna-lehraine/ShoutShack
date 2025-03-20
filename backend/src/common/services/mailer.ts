@@ -1,7 +1,7 @@
-// File: backend/src/services/mailer.ts
+// File: backend/src/common/services/mailer.ts
 
 import nodemailer from 'nodemailer';
-import { env } from '../env/load.js';
+import { env } from '../../env/load.js';
 
 const transporter = nodemailer.createTransport({
 	host: env.EMAIL_HOST,

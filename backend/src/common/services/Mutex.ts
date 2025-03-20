@@ -1,6 +1,6 @@
-// File: backend/src/services/Mutex.ts
+// File: backend/src/common/services/Mutex.ts
 
-import { MutexContract } from '../types/index.js';
+import { MutexContract } from '../../types/index.js';
 
 export class Mutex implements MutexContract {
 	#locked: boolean = false;
